@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Primary Meta Tags -->
+    <title>Inclufy Marketing - AI-Powered Marketing Automation</title>
+    <meta name="title" content="Inclufy Marketing - AI-Powered Marketing Automation" />
+    <meta name="description" content="Create professional marketing content 10x faster with AI that understands your brand. Generate tutorials, commercials, social posts, emails, and more." />
+    <meta name="author" content="Inclufy Marketing" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://inclufy.com/" />
+    <meta property="og:title" content="Inclufy Marketing - AI-Powered Marketing Automation" />
+    <meta property="og:description" content="Create professional marketing content 10x faster with AI that understands your brand." />
+    <meta property="og:image" content="/og-image.png" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://inclufy.com/" />
+    <meta property="twitter:title" content="Inclufy Marketing - AI-Powered Marketing Automation" />
+    <meta property="twitter:description" content="Create professional marketing content 10x faster with AI that understands your brand." />
+    <meta property="twitter:image" content="/og-image.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Luxe Design System Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;700;900&display=swap" rel="stylesheet">
+    <!-- Legacy Font (can be removed if not used) -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
+    <!-- Theme Color - Updated to Luxe Primary -->
+    <meta name="theme-color" content="#7c3aed" />
+    
+    <!-- Dark mode theme color -->
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#3b1876" />
+
+    <!-- Additional Performance Optimizations -->
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    
+    <!-- Script to prevent FOUC (Flash of Unstyled Content) for dark mode -->
+    <script>
+      // Apply dark mode immediately to prevent flash
+      if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark')
+      } else {
+        document.documentElement.classList.remove('dark')
+      }
+    </script>
+  </head>
+
+  <body class="luxe-app luxe-scrollbar">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    
+    <!-- No-JS fallback -->
+    <noscript>
+      <div style="text-align: center; padding: 2rem; font-family: 'Inter', sans-serif;">
+        <h1 style="color: #7c3aed; font-family: 'Playfair Display', serif;">Inclufy Marketing</h1>
+        <p>This application requires JavaScript to be enabled.</p>
+      </div>
+    </noscript>
+  </body>
+</html>
