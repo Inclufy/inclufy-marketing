@@ -1,0 +1,147 @@
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional, List
+from pydantic import BaseModel, field_validator
+import logging
+import os
+import openai
+
+from dependencies import get_current_user
+
+logger = logging.getLogger(__name__)
+
+router = APIRouter(prefix="/api/content", tags=["Content Generation"])
+
+
+class GenerateEmailInput(BaseModel):
+    type: str
+    product: str
+    audience: str
+    goal: str
+    variants: int = 1
+
+    @field_validator("type")
+    @classmethod
+    def valid_type(cls, v):
+        allowed = {"welcome", "promotional", "newsletter", "follow-up", "re-engagement"}
+        if v not in allowed:
+            raise ValueError(f"type must be one of {allowed}")
+        return v
+
+
+class GenerateSocialInput(BaseModel):
+    topic: str
+    platform: str
+    style: Optional[str] = "professional"
+
+    @field_validator("platform")
+    @classmethod
+    def valid_platform(cls, v):
+        allowed = {"twitter", "linkedin", "instagram", "facebook"}
+        if v not in allowed:
+            raise ValueError(f"platform must be one of {allowed}")
+        return v
+
+
+class ImproveContentInput(BaseModel):
+    content: str
+    goal: str
+
+    @field_validator("goal")
+    @classmethod
+    def valid_goal(cls, v):
+        allowed = {"clarity", "engagement", "conversion", "seo"}
+        if v not in allowed:
+            raise ValueError(f"goal must be one of {allowed}")
+        return v
+
+    @field_validator("content")
+    @classmethod
+    def content_not_empty(cls, v):
+        if not v.strip():
+            raise ValueError("Content cannot be empty")
+        return v
+
+
+def _get_openai_client():
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="AI service not configured")
+    return openai.OpenAI(api_key=api_key)
+
+
+@router.post("/email")
+def generate_email(
+    data: GenerateEmailInput,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        client = _get_openai_client()
+        prompt = (
+            f"Generate a {data.type} email campaign.\n"
+            f"Product: {data.product}\n"
+            f"Target audience: {data.audience}\n"
+            f"Goal: {data.goal}\n"
+            f"Generate {data.variants} variant(s).\n"
+            "Return JSON with: subject, preheader, body_html, cta_text for each variant."
+        )
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": "You are an expert email marketer."}, {"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        return {"result": response.choices[0].message.content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Email generation failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to generate email content")
+
+
+@router.post("/social")
+def generate_social(
+    data: GenerateSocialInput,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        client = _get_openai_client()
+        prompt = (
+            f"Generate a {data.platform} post about: {data.topic}\n"
+            f"Style: {data.style}\n"
+            "Return JSON with: text, hashtags, optimal_post_time."
+        )
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": "You are a social media expert."}, {"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        return {"result": response.choices[0].message.content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Social post generation failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to generate social post")
+
+
+@router.post("/improve")
+def improve_content(
+    data: ImproveContentInput,
+    current_user: dict = Depends(get_current_user),
+):
+    try:
+        client = _get_openai_client()
+        prompt = (
+            f"Improve the following content for {data.goal}:\n\n"
+            f"{data.content}\n\n"
+            "Return JSON with: improved_content, changes_made (array of strings), score_before (0-100), score_after (0-100)."
+        )
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": "You are a content optimization expert."}, {"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
+        )
+        return {"result": response.choices[0].message.content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Content improvement failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to improve content")

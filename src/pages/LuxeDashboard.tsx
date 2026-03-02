@@ -1,308 +1,416 @@
-// src/pages/LuxeDashboard.tsx
-// Showcase of the Luxe Design System applied to Inclufy Marketing
-
-import { useState } from 'react';
+// src/pages/LuxuryDashboard.tsx
+import React, { useState } from 'react';
 import { 
-  Sparkles, 
   TrendingUp, 
   Users, 
-  DollarSign, 
+  Target, 
+  DollarSign,
   Activity,
-  Bell,
-  Plus,
-  ChevronRight,
-  Star,
-  Zap,
-  Target,
-  Brain,
-  Palette,
-  Globe,
-  ArrowRight,
-  Download,
-  Calendar,
   BarChart3,
   PieChart,
-  Layers
+  Zap,
+  Award,
+  Clock,
+  Calendar,
+  ArrowUpRight,
+  ArrowDownRight,
+  MoreVertical,
+  Filter,
+  Download,
+  Sparkles,
+  Crown,
+  Gem
 } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
-const LuxeDashboard = () => {
-  const [selectedPeriod, setSelectedPeriod] = useState('month');
-  
-  const stats = [
-    {
-      title: 'Total Revenue',
-      value: '$127,543',
-      change: '+23%',
-      trend: 'up',
-      icon: DollarSign,
-      gradient: 'from-emerald-500 to-teal-600'
-    },
-    {
-      title: 'Active Campaigns',
-      value: '24',
-      change: '+12%',
-      trend: 'up',
-      icon: Activity,
-      gradient: 'from-purple-500 to-pink-600'
-    },
-    {
-      title: 'Total Contacts',
-      value: '12,847',
-      change: '+18%',
-      trend: 'up',
-      icon: Users,
-      gradient: 'from-blue-500 to-indigo-600'
-    },
-    {
-      title: 'Conversion Rate',
-      value: '3.24%',
-      change: '+0.8%',
-      trend: 'up',
-      icon: Target,
-      gradient: 'from-orange-500 to-red-600'
-    }
-  ];
-
-  const campaigns = [
-    { name: 'Summer Sale 2024', status: 'active', performance: 87, revenue: '$45,230' },
-    { name: 'Product Launch', status: 'scheduled', performance: 0, revenue: '-' },
-    { name: 'Newsletter May', status: 'completed', performance: 92, revenue: '$12,450' },
-  ];
-
-  const fadeIn = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0 },
-    transition: { duration: 0.5 }
-  };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-purple-50 to-pink-50 dark:from-gray-950 dark:via-purple-950 dark:to-pink-950">
-      {/* Premium Navigation */}
-      <nav className="luxe-nav px-6 py-4 border-b border-white/10">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <motion.h1 
-              className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text flex items-center gap-2"
-              whileHover={{ scale: 1.05 }}
-            >
-              <Sparkles className="w-6 h-6 text-purple-600" />
-              Inclufy
-            </motion.h1>
-            <div className="hidden md:flex gap-1">
-              <a href="#" className="luxe-nav-item luxe-nav-item-active">Dashboard</a>
-              <a href="#" className="luxe-nav-item">Campaigns</a>
-              <a href="#" className="luxe-nav-item">Journeys</a>
-              <a href="#" className="luxe-nav-item">Analytics</a>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="luxe-button luxe-button-glass relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-            </button>
-            <button className="luxe-button luxe-button-premium">
-              <Zap className="w-4 h-4" />
-              Upgrade to Pro
-            </button>
-          </div>
+// Luxury metric card with glassmorphism effect
+const LuxuryMetricCard = ({ 
+  title, 
+  value, 
+  change, 
+  icon: Icon, 
+  color,
+  subtitle,
+  sparkline = true 
+}: any) => (
+  <Card className="group relative overflow-hidden border-gray-200 dark:border-gray-800 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
+    {/* Gradient background */}
+    <div className={cn(
+      "absolute inset-0 opacity-5 group-hover:opacity-10 transition-opacity",
+      color === 'purple' && "bg-gradient-to-br from-purple-600 to-pink-600",
+      color === 'blue' && "bg-gradient-to-br from-blue-600 to-cyan-600",
+      color === 'green' && "bg-gradient-to-br from-emerald-600 to-green-600",
+      color === 'amber' && "bg-gradient-to-br from-amber-600 to-orange-600"
+    )} />
+    
+    <CardContent className="relative p-6">
+      <div className="flex items-start justify-between mb-4">
+        <div className={cn(
+          "p-3 rounded-2xl",
+          color === 'purple' && "bg-gradient-to-br from-purple-500 to-pink-500",
+          color === 'blue' && "bg-gradient-to-br from-blue-500 to-cyan-500",
+          color === 'green' && "bg-gradient-to-br from-emerald-500 to-green-500",
+          color === 'amber' && "bg-gradient-to-br from-amber-500 to-orange-500"
+        )}>
+          <Icon className="h-6 w-6 text-white" />
         </div>
-      </nav>
-
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 to-pink-600/10 backdrop-blur-3xl" />
-        <div className="relative max-w-7xl mx-auto px-6 py-12">
-          <motion.div {...fadeIn} className="text-center md:text-left">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              <span className="luxe-heading">Welcome back, Sami</span>
-            </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-400">
-              Your marketing campaigns are performing 
-              <span className="text-green-600 font-semibold"> 23% better </span>
-              than last month
-            </p>
-          </motion.div>
+        <div className="flex items-center gap-1">
+          {change > 0 ? (
+            <ArrowUpRight className="h-4 w-4 text-green-600" />
+          ) : (
+            <ArrowDownRight className="h-4 w-4 text-red-600" />
+          )}
+          <span className={cn(
+            "text-sm font-semibold",
+            change > 0 ? "text-green-600" : "text-red-600"
+          )}>
+            {Math.abs(change)}%
+          </span>
         </div>
       </div>
-
-      <div className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Stats Grid */}
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ staggerChildren: 0.1 }}
-        >
-          {stats.map((stat, index) => (
-            <motion.div
-              key={stat.title}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ y: -4 }}
-              className="luxe-card luxe-glass p-6 backdrop-blur-xl border border-white/20"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
-                  <stat.icon className="w-6 h-6 text-white" />
-                </div>
-                <span className={`text-sm font-semibold ${stat.trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-                  {stat.change}
-                </span>
-              </div>
-              <h3 className="text-gray-600 dark:text-gray-400 text-sm font-medium">{stat.title}</h3>
-              <p className="text-3xl font-bold mt-1 bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
-                {stat.value}
-              </p>
-              <div className="mt-4 h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-                <motion.div 
-                  className={`h-full bg-gradient-to-r ${stat.gradient}`}
-                  initial={{ width: 0 }}
-                  animate={{ width: '75%' }}
-                  transition={{ duration: 1, delay: 0.5 }}
-                />
-              </div>
-            </motion.div>
+      
+      <div>
+        <p className="text-sm font-medium text-gray-600 dark:text-gray-400">{title}</p>
+        <p className="text-3xl font-bold mt-1 bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
+          {value}
+        </p>
+        {subtitle && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{subtitle}</p>
+        )}
+      </div>
+      
+      {sparkline && (
+        <div className="mt-4 h-12 flex items-end gap-1">
+          {[40, 60, 45, 70, 55, 80, 65, 75, 85, 90].map((height, i) => (
+            <div
+              key={i}
+              className={cn(
+                "flex-1 rounded-sm transition-all",
+                color === 'purple' && "bg-purple-200 dark:bg-purple-800",
+                color === 'blue' && "bg-blue-200 dark:bg-blue-800",
+                color === 'green' && "bg-green-200 dark:bg-green-800",
+                color === 'amber' && "bg-amber-200 dark:bg-amber-800"
+              )}
+              style={{ height: `${height}%` }}
+            />
           ))}
-        </motion.div>
-
-        {/* Main Content Grid */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Campaigns Section */}
-          <motion.div 
-            className="lg:col-span-2"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.3 }}
-          >
-            <Card className="luxe-card luxe-glass backdrop-blur-xl border border-white/20">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-semibold luxe-heading">Active Campaigns</h2>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Monitor your campaign performance</p>
-                </div>
-                <button className="luxe-button luxe-button-primary">
-                  <Plus className="w-4 h-4" />
-                  New Campaign
-                </button>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {campaigns.map((campaign, index) => (
-                  <motion.div 
-                    key={campaign.name}
-                    className="p-4 rounded-xl bg-white/50 dark:bg-gray-900/50 border border-gray-200/50 dark:border-gray-700/50 hover:border-purple-500/50 transition-all"
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.4 + index * 0.1 }}
-                    whileHover={{ x: 4 }}
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                          <BarChart3 className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold">{campaign.name}</h3>
-                          <span className={`text-xs px-2 py-1 rounded-full ${
-                            campaign.status === 'active' ? 'bg-green-100 text-green-700' :
-                            campaign.status === 'scheduled' ? 'bg-blue-100 text-blue-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
-                            {campaign.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-500">Revenue</p>
-                        <p className="font-semibold">{campaign.revenue}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Performance</span>
-                        <span className="font-medium">{campaign.performance}%</span>
-                      </div>
-                      <Progress value={campaign.performance} className="h-2" />
-                    </div>
-                  </motion.div>
-                ))}
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* AI Features Section */}
-          <motion.div 
-            className="space-y-6"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4 }}
-          >
-            {/* Premium Feature Card */}
-            <Card className="luxe-card bg-gradient-to-br from-purple-600 to-pink-600 text-white border-0 overflow-hidden relative">
-              <div className="absolute inset-0 bg-black/20" />
-              <CardHeader className="relative z-10">
-                <div className="luxe-badge luxe-badge-premium mb-3">
-                  PREMIUM FEATURE
-                </div>
-                <h3 className="text-2xl font-semibold mb-2">AI Content Studio</h3>
-                <p className="text-purple-100">
-                  Generate compelling content with our advanced AI engine
-                </p>
-              </CardHeader>
-              <CardContent className="relative z-10 space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span>Credits Used</span>
-                    <span>2,450 / 5,000</span>
-                  </div>
-                  <Progress value={49} className="h-2 bg-purple-800" />
-                </div>
-                <button className="w-full luxe-button bg-white text-purple-600 hover:bg-purple-50">
-                  <Brain className="w-4 h-4" />
-                  Generate Content
-                </button>
-              </CardContent>
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="luxe-card luxe-glass backdrop-blur-xl border border-white/20">
-              <CardHeader>
-                <h3 className="text-xl font-semibold luxe-heading">Quick Actions</h3>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {[
-                  { icon: Palette, label: 'Brand Kit', color: 'from-blue-500 to-cyan-500' },
-                  { icon: Globe, label: 'Social Scheduler', color: 'from-green-500 to-emerald-500' },
-                  { icon: Layers, label: 'Journey Builder', color: 'from-orange-500 to-amber-500' },
-                ].map((action, index) => (
-                  <motion.button
-                    key={action.label}
-                    className="w-full p-3 rounded-lg bg-white/50 dark:bg-gray-900/50 border border-gray-200/50 dark:border-gray-700/50 hover:border-purple-500/50 transition-all flex items-center justify-between group"
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    whileHover={{ x: 4 }}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg bg-gradient-to-br ${action.color} text-white`}>
-                        <action.icon className="w-5 h-5" />
-                      </div>
-                      <span className="font-medium">{action.label}</span>
-                    </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
-                  </motion.button>
-                ))}
-              </CardContent>
-            </Card>
-          </motion.div>
         </div>
+      )}
+    </CardContent>
+  </Card>
+);
+
+// Performance indicator component
+const PerformanceIndicator = ({ label, value, target, color }: any) => {
+  const percentage = (value / target) * 100;
+  const isExceeding = percentage > 100;
+  
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{value.toLocaleString()}</span>
+          <span className="text-xs text-gray-500">/ {target.toLocaleString()}</span>
+          {isExceeding && <Crown className="h-4 w-4 text-amber-500" />}
+        </div>
+      </div>
+      <div className="relative">
+        <Progress 
+          value={Math.min(percentage, 100)} 
+          className="h-2" 
+        />
+        {isExceeding && (
+          <div className="absolute inset-0 h-2 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-amber-500 to-orange-500 animate-pulse"
+              style={{ width: `${percentage - 100}%`, marginLeft: 'auto' }}
+            />
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-gray-500">{percentage.toFixed(1)}% achieved</span>
+        {isExceeding && (
+          <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
+            Exceeding Target
+          </Badge>
+        )}
       </div>
     </div>
   );
 };
 
-export default LuxeDashboard;
+export default function LuxuryDashboard() {
+  const [dateRange, setDateRange] = useState('month');
+  const [activeTab, setActiveTab] = useState('overview');
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Executive Header */}
+      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-6">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
+                  Executive Dashboard
+                </h1>
+                <p className="text-gray-600 dark:text-gray-400 mt-1">
+                  Welcome back, Sami. Your performance is <span className="text-green-600 font-semibold">23% above target</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Select value={dateRange} onValueChange={setDateRange}>
+                  <SelectTrigger className="w-36 h-10">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="week">This Week</SelectItem>
+                    <SelectItem value="month">This Month</SelectItem>
+                    <SelectItem value="quarter">This Quarter</SelectItem>
+                    <SelectItem value="year">This Year</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline" className="h-10">
+                  <Filter className="h-4 w-4 mr-2" />
+                  Filter
+                </Button>
+                <Button className="h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Report
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content with Proper Tabs Structure */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <TabsList className="bg-transparent border-0 p-0 h-auto">
+              <TabsTrigger 
+                value="overview" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger 
+                value="performance" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
+              >
+                <TrendingUp className="h-4 w-4 mr-2" />
+                Performance
+              </TabsTrigger>
+              <TabsTrigger 
+                value="analytics" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
+              >
+                <BarChart3 className="h-4 w-4 mr-2" />
+                Analytics
+              </TabsTrigger>
+              <TabsTrigger 
+                value="intelligence" 
+                className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
+              >
+                <Gem className="h-4 w-4 mr-2" />
+                Intelligence
+              </TabsTrigger>
+            </TabsList>
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <TabsContent value="overview" className="space-y-6 mt-0">
+            {/* Key Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <LuxuryMetricCard
+                title="Total Revenue"
+                value="$1.2M"
+                change={23}
+                icon={DollarSign}
+                color="purple"
+                subtitle="$287K above target"
+              />
+              <LuxuryMetricCard
+                title="Active Campaigns"
+                value="47"
+                change={12}
+                icon={Activity}
+                color="blue"
+                subtitle="12 launching this week"
+              />
+              <LuxuryMetricCard
+                title="Conversion Rate"
+                value="4.8%"
+                change={8}
+                icon={Target}
+                color="green"
+                subtitle="Industry avg: 3.2%"
+              />
+              <LuxuryMetricCard
+                title="Customer LTV"
+                value="$3,450"
+                change={-3}
+                icon={Users}
+                color="amber"
+                subtitle="Per customer"
+              />
+            </div>
+
+            {/* Performance Goals */}
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle>Q4 Performance Goals</CardTitle>
+                    <CardDescription>Track your progress towards quarterly targets</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <PerformanceIndicator
+                  label="Revenue Target"
+                  value={1200000}
+                  target={980000}
+                  color="purple"
+                />
+                <PerformanceIndicator
+                  label="New Customers"
+                  value={2847}
+                  target={3000}
+                  color="blue"
+                />
+                <PerformanceIndicator
+                  label="Campaign ROI"
+                  value={385}
+                  target={300}
+                  color="green"
+                />
+                <PerformanceIndicator
+                  label="Brand Reach"
+                  value={125000}
+                  target={100000}
+                  color="amber"
+                />
+              </CardContent>
+            </Card>
+
+            {/* AI Insights */}
+            <Card className="border-gray-200 dark:border-gray-800 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle>AI-Powered Insights</CardTitle>
+                    <CardDescription>Real-time intelligence from your marketing data</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="p-4 bg-white dark:bg-gray-900 rounded-xl border border-purple-200 dark:border-purple-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
+                        <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Opportunity Detected</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          Email campaigns show 47% higher engagement on Tuesdays. Consider rescheduling.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-white dark:bg-gray-900 rounded-xl border border-green-200 dark:border-green-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
+                        <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Growth Trend</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          Mobile conversions up 23% this month. Mobile-first strategy paying off.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-4 bg-white dark:bg-gray-900 rounded-xl border border-amber-200 dark:border-amber-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900 rounded-lg">
+                        <Award className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-sm">Achievement Unlocked</h4>
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                          You're in the top 5% of marketers this quarter. Keep it up!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="performance" className="space-y-6 mt-0">
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle>Performance Analytics</CardTitle>
+                <CardDescription>Deep dive into your marketing performance metrics</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 dark:text-gray-400">Performance analytics content will be displayed here...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6 mt-0">
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle>Advanced Analytics</CardTitle>
+                <CardDescription>Comprehensive data analysis and reporting</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 dark:text-gray-400">Advanced analytics content will be displayed here...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="intelligence" className="space-y-6 mt-0">
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle>Business Intelligence</CardTitle>
+                <CardDescription>AI-powered insights and recommendations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-600 dark:text-gray-400">Business intelligence content will be displayed here...</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </div>
+      </Tabs>
+    </div>
+  );
+}

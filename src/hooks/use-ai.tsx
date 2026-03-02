@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { getAIService } from '@/services/ai-service';
+import { getAIService } from '@/services/ai.service';
 
 interface UseAIOptions {
   provider?: 'openai' | 'anthropic';
@@ -238,15 +238,110 @@ export const useAI = (options?: UseAIOptions) => {
     }
   }, [aiService, options, toast]);
 
+  // Phase 2 - Core Monetization Methods
+
+  const processBrandKnowledge = useCallback(async (documents: Array<{ type: string; content: string }>) => {
+    setLoading(true);
+    try {
+      const result = await aiService.processBrandKnowledge(documents);
+      options?.onSuccess?.(result);
+      toast({ title: "Brand Knowledge Processed!", description: "Brand insights extracted." });
+      return result;
+    } catch (error) {
+      const err = error as Error;
+      options?.onError?.(err);
+      toast({ title: "Processing Failed", description: err.message, variant: "destructive" });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [aiService, options, toast]);
+
+  const analyzeWebsite = useCallback(async (websiteContent: string) => {
+    setLoading(true);
+    try {
+      const result = await aiService.analyzeWebsite(websiteContent);
+      options?.onSuccess?.(result);
+      toast({ title: "Website Analyzed!", description: "Analysis complete." });
+      return result;
+    } catch (error) {
+      const err = error as Error;
+      options?.onError?.(err);
+      toast({ title: "Analysis Failed", description: err.message, variant: "destructive" });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [aiService, options, toast]);
+
+  const generatePresentation = useCallback(async (websiteAnalysis: any, prospectInfo: any) => {
+    setLoading(true);
+    try {
+      const result = await aiService.generatePresentation(websiteAnalysis, prospectInfo);
+      options?.onSuccess?.(result);
+      toast({ title: "Presentation Generated!", description: "Slides are ready." });
+      return result;
+    } catch (error) {
+      const err = error as Error;
+      options?.onError?.(err);
+      toast({ title: "Generation Failed", description: err.message, variant: "destructive" });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [aiService, options, toast]);
+
+  const generateEmailCampaign = useCallback(async (params: { type: string; product: string; audience: string; goal: string; variants?: number }) => {
+    setLoading(true);
+    try {
+      const result = await aiService.generateEmailCampaign(params);
+      options?.onSuccess?.(result);
+      toast({ title: "Email Campaign Generated!", description: "Campaign content ready." });
+      return result;
+    } catch (error) {
+      const err = error as Error;
+      options?.onError?.(err);
+      toast({ title: "Generation Failed", description: err.message, variant: "destructive" });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [aiService, options, toast]);
+
+  const generateLandingPage = useCallback(async (params: { type: string; product: string; audience: string; uniqueValue: string; goals: string }) => {
+    setLoading(true);
+    try {
+      const result = await aiService.generateLandingPage(params);
+      options?.onSuccess?.(result);
+      toast({ title: "Landing Page Generated!", description: "Page content ready." });
+      return result;
+    } catch (error) {
+      const err = error as Error;
+      options?.onError?.(err);
+      toast({ title: "Generation Failed", description: err.message, variant: "destructive" });
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, [aiService, options, toast]);
+
   return {
     loading,
+    // Phase 1 - Foundation
+    processBrandKnowledge,
+    analyzeWebsite,
+    generatePresentation,
+    analyzeWebsiteAndGeneratePresentation,
+    researchProspect,
+    // Phase 2 - Core Monetization
+    generateEmailCampaign,
+    generateLandingPage,
+    analyzeContent,
+    improveContent,
+    // Existing
     generateTutorial,
     generateCommercial,
     generateSocialPost,
-    improveContent,
     generateIdeas,
-    analyzeContent,
-    analyzeWebsiteAndGeneratePresentation,
-    researchProspect,
   };
 };

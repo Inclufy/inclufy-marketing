@@ -1,0 +1,89 @@
+/* Add to src/index.css or create src/styles/responsive.css */
+
+@layer utilities {
+  /* Responsive container widths */
+  .container-responsive {
+    @apply w-full mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  .container-narrow {
+    @apply max-w-4xl mx-auto;
+  }
+  
+  .container-wide {
+    @apply max-w-7xl mx-auto;
+  }
+  
+  /* Better spacing for cards on different screen sizes */
+  .card-grid-responsive {
+    @apply grid gap-4 sm:gap-6 lg:gap-8;
+    @apply grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+  
+  /* Improved typography sizing */
+  .heading-responsive {
+    @apply text-2xl sm:text-3xl lg:text-4xl font-bold;
+  }
+  
+  .subheading-responsive {
+    @apply text-base sm:text-lg lg:text-xl text-gray-600 dark:text-gray-400;
+  }
+  
+  /* Better card padding */
+  .card-padding-responsive {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+  
+  /* Sidebar adjustments */
+  .main-with-sidebar-collapsed {
+    @apply ml-16;
+  }
+  
+  .main-with-sidebar-expanded {
+    @apply ml-64;
+  }
+  
+  /* Auto-hide sidebar on small screens */
+  @media (max-width: 1024px) {
+    .sidebar-auto-collapse {
+      @apply w-16;
+    }
+    
+    .main-auto-adjust {
+      @apply ml-16;
+    }
+  }
+  
+  /* Extra large screens - use more space */
+  @media (min-width: 1920px) {
+    .container-wide {
+      @apply max-w-screen-2xl;
+    }
+    
+    .card-grid-responsive {
+      @apply grid-cols-4 xl:grid-cols-5;
+    }
+  }
+}
+
+/* Improve readability with better line heights and spacing */
+@layer base {
+  body {
+    @apply antialiased;
+  }
+  
+  /* Better text readability */
+  p, li {
+    @apply leading-relaxed;
+  }
+  
+  /* Consistent card shadows */
+  .card-shadow {
+    @apply shadow-sm hover:shadow-md transition-shadow duration-200;
+  }
+  
+  /* Improve focus states for accessibility */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-purple-600;
+  }
+}

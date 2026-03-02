@@ -7,11 +7,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Globe, 
-  Search, 
-  Loader2, 
+import {
+  Globe,
+  Search,
+  Loader2,
   TrendingUp,
   Users,
   DollarSign,
@@ -19,19 +18,21 @@ import {
   Zap,
   AlertCircle,
   CheckCircle,
-  Copy,
   ExternalLink,
   BarChart3,
   Building,
   Sparkles,
-  FileText,
-  Download
+  Download,
 } from "lucide-react";
 import { toast } from "sonner";
 
+/** -----------------------------
+ * Types
+ * ------------------------------ */
+
 interface AnalysisResult {
   url: string;
-  status: 'analyzing' | 'completed' | 'error';
+  status: "analyzing" | "completed" | "error";
   data?: {
     productFeatures: string[];
     uniqueSellingPoints: string[];
@@ -56,6 +57,56 @@ interface CompetitorComparison {
   competitor3: boolean;
 }
 
+/**
+ * From basic analysis to comprehensive market intelligence
+ * NOTE: Keep interfaces OUTSIDE the component and OUTSIDE JSX.
+ * If these types already exist elsewhere, feel free to import them and remove these placeholders.
+ */
+type Trend = { name: string; description?: string };
+type Regulation = { name: string; region?: string; summary?: string };
+type PrivacyLaw = { name: string; region?: string };
+type Certification = { name: string; issuer?: string };
+type ReportingRequirement = { name: string; frequency?: string };
+type KPI = { name: string; unit?: string; target?: string };
+type Metric = { name: string; unit?: string; benchmark?: string };
+type Practice = { name: string; description?: string };
+type Indicator = { name: string; level?: string };
+
+interface EnhancedMarketContext {
+  industry: {
+    classification: {
+      sector: string;
+      subsector: string;
+      naics_code: string;
+      sic_code: string;
+    };
+    dynamics: {
+      market_size: number;
+      growth_rate: number;
+      maturity: "emerging" | "growing" | "mature" | "declining";
+      key_trends: Trend[];
+    };
+  };
+
+  regulations: {
+    compliance_requirements: Regulation[];
+    data_privacy_laws: PrivacyLaw[];
+    industry_certifications: Certification[];
+    reporting_obligations: ReportingRequirement[];
+  };
+
+  benchmarks: {
+    operational_kpis: KPI[];
+    financial_metrics: Metric[];
+    best_practices: Practice[];
+    maturity_indicators: Indicator[];
+  };
+}
+
+/** -----------------------------
+ * Component
+ * ------------------------------ */
+
 const WebsiteAnalyzer = () => {
   const [url, setUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -66,22 +117,23 @@ const WebsiteAnalyzer = () => {
 
   const mockAnalysisData: AnalysisResult = {
     url: "",
-    status: 'completed',
+    status: "completed",
     data: {
       productFeatures: [
         "AI-powered content generation",
         "Brand voice consistency",
         "Multi-channel publishing",
         "Real-time analytics",
-        "Team collaboration tools"
+        "Team collaboration tools",
       ],
       uniqueSellingPoints: [
         "10x faster than traditional agencies",
         "Maintains brand voice across all content",
         "No-code workflow automation",
-        "Enterprise-grade security"
+        "Enterprise-grade security",
       ],
-      targetAudience: "Marketing managers at mid-size B2B companies (50-500 employees) who need to scale content production while maintaining quality and brand consistency",
+      targetAudience:
+        "Marketing managers at mid-size B2B companies (50-500 employees) who need to scale content production while maintaining quality and brand consistency",
       competitors: ["contentful.com", "jasper.ai", "copy.ai"],
       pricing: "Subscription-based, starting at $299/month for small teams",
       messaging: {
@@ -90,17 +142,17 @@ const WebsiteAnalyzer = () => {
         valueProps: [
           "Save 20+ hours per week on content creation",
           "Maintain perfect brand consistency",
-          "Scale without hiring more writers"
-        ]
+          "Scale without hiring more writers",
+        ],
       },
       opportunities: [
         "Emphasize ROI and time savings more prominently",
         "Add more social proof and case studies",
         "Create comparison pages vs competitors",
-        "Strengthen mobile experience"
-      ]
+        "Strengthen mobile experience",
+      ],
     },
-    timestamp: new Date()
+    timestamp: new Date(),
   };
 
   const startAnalysis = () => {
@@ -111,17 +163,17 @@ const WebsiteAnalyzer = () => {
 
     // Simulate analysis progress
     const interval = setInterval(() => {
-      setAnalysisProgress(prev => {
+      setAnalysisProgress((prev) => {
         if (prev >= 100) {
           clearInterval(interval);
           setIsAnalyzing(false);
-          
+
           // Set mock data
           const result = { ...mockAnalysisData, url };
           setCurrentAnalysis(result);
           setRecentAnalyses([result, ...recentAnalyses]);
           toast.success("Website analysis completed!");
-          
+
           return 100;
         }
         return prev + 20;
@@ -141,15 +193,15 @@ const WebsiteAnalyzer = () => {
 
   const exportAnalysis = () => {
     if (!currentAnalysis?.data) return;
-    
+
     const content = JSON.stringify(currentAnalysis.data, null, 2);
-    const blob = new Blob([content], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
+    const blob = new Blob([content], { type: "application/json" });
+    const fileUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = fileUrl;
     a.download = `website-analysis-${new Date().toISOString()}.json`;
     a.click();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(fileUrl);
     toast.success("Analysis exported!");
   };
 
@@ -192,10 +244,7 @@ const WebsiteAnalyzer = () => {
                 disabled={isAnalyzing}
                 className="flex-1"
               />
-              <Button 
-                onClick={startAnalysis} 
-                disabled={!url || isAnalyzing}
-              >
+              <Button onClick={startAnalysis} disabled={!url || isAnalyzing}>
                 {isAnalyzing ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -209,7 +258,7 @@ const WebsiteAnalyzer = () => {
                 )}
               </Button>
             </div>
-            
+
             {isAnalyzing && (
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
@@ -246,9 +295,7 @@ const WebsiteAnalyzer = () => {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Product Features
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">Product Features</CardTitle>
                   <Zap className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -259,9 +306,7 @@ const WebsiteAnalyzer = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    USPs Found
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">USPs Found</CardTitle>
                   <Target className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -272,9 +317,7 @@ const WebsiteAnalyzer = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Competitors
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">Competitors</CardTitle>
                   <Building className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -285,9 +328,7 @@ const WebsiteAnalyzer = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Opportunities
-                  </CardTitle>
+                  <CardTitle className="text-sm font-medium">Opportunities</CardTitle>
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -328,9 +369,7 @@ const WebsiteAnalyzer = () => {
                     <Zap className="h-5 w-5" />
                     Product Features
                   </CardTitle>
-                  <CardDescription>
-                    Core capabilities extracted from the website
-                  </CardDescription>
+                  <CardDescription>Core capabilities extracted from the website</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -350,9 +389,7 @@ const WebsiteAnalyzer = () => {
                     <Target className="h-5 w-5" />
                     Unique Selling Points
                   </CardTitle>
-                  <CardDescription>
-                    What makes this product stand out
-                  </CardDescription>
+                  <CardDescription>What makes this product stand out</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -477,9 +514,7 @@ const WebsiteAnalyzer = () => {
                   <TrendingUp className="h-5 w-5" />
                   Strategic Opportunities
                 </CardTitle>
-                <CardDescription>
-                  Recommendations based on the analysis
-                </CardDescription>
+                <CardDescription>Recommendations based on the analysis</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
@@ -505,9 +540,7 @@ const WebsiteAnalyzer = () => {
         <Card>
           <CardHeader>
             <CardTitle>Recent Analyses</CardTitle>
-            <CardDescription>
-              Quick access to your previous website analyses
-            </CardDescription>
+            <CardDescription>Quick access to your previous website analyses</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -521,12 +554,12 @@ const WebsiteAnalyzer = () => {
                     <Globe className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="text-sm font-medium">{analysis.url}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {analysis.timestamp.toLocaleString()}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{analysis.timestamp.toLocaleString()}</p>
                     </div>
                   </div>
-                  <Badge variant={analysis.status === 'completed' ? 'success' : 'secondary'}>
+
+                  {/* Use "default" if your Badge doesn't have a "success" variant */}
+                  <Badge variant={analysis.status === "completed" ? "default" : "secondary"}>
                     {analysis.status}
                   </Badge>
                 </div>

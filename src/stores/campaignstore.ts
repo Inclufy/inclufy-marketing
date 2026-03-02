@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { supabase } from '@/lib/supabase/client'
 import { api } from '@/lib/supabase/api'
 
 interface CampaignStore {
