@@ -24,6 +24,7 @@ from routers import (
     export,
     email_sending,
     payments,
+    content_library,
 )
 
 app = FastAPI(title="Inclufy Marketing API", version="1.0.0")
@@ -96,3 +97,4 @@ app.include_router(brand_memory.router)
 app.include_router(export.router)
 app.include_router(email_sending.router)
 app.include_router(payments.router)
+app.include_router(content_library.router)

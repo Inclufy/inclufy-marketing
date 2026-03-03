@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,12 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAI } from "@/hooks/use-ai";
-import { 
-  Mail, 
-  Sparkles, 
-  Copy, 
-  Download, 
+import { api } from "@/lib/api";
+import {
+  Mail,
+  Sparkles,
+  Copy,
+  Download,
   Settings,
   Eye,
   Loader2,
@@ -24,7 +25,9 @@ import {
   Users,
   Zap,
   RefreshCw,
-  CheckCircle
+  CheckCircle,
+  Send,
+  Save
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -47,6 +50,13 @@ const EmailCampaignGenerator = () => {
   const [enableAB, setEnableAB] = useState(false);
   const [variants, setVariants] = useState<EmailVariant[]>([]);
   const [selectedVariant, setSelectedVariant] = useState<string>("");
+  const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [emailProvider, setEmailProvider] = useState<{ configured: boolean; provider: string | null }>({ configured: false, provider: null });
+
+  useEffect(() => {
+    api.get("/email/provider").then(r => setEmailProvider(r.data)).catch(() => {});
+  }, []);
 
   const campaignTypes = [
     { value: "promotional", label: "Promotional", icon: Target },
@@ -138,6 +148,62 @@ const EmailCampaignGenerator = () => {
     toast.success("Campaign exported!");
   };
 
+  const saveCampaignAndSend = async () => {
+    const variant = variants.find(v => v.id === selectedVariant);
+    if (!variant) return;
+
+    setSending(true);
+    try {
+      // First save as a campaign
+      const campaignRes = await api.post("/campaigns/", {
+        name: `Email: ${variant.subject}`,
+        type: "email",
+        description: `${campaignType} email for ${product}`,
+        status: "draft",
+        content: { subject: variant.subject, preheader: variant.preheader, body: variant.body, cta: variant.cta },
+        settings: { ab_testing: enableAB, audience: targetAudience, goal },
+      });
+
+      const campaignId = campaignRes.data?.id;
+
+      // Then send the campaign
+      await api.post("/email/send-campaign", {
+        campaign_id: campaignId,
+        subject: variant.subject,
+        html_body: `<div>${variant.body.replace(/\n/g, "<br/>")}</div>`,
+        text_body: variant.body,
+      });
+
+      toast.success("Campaign saved and emails sent to all contacts!");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to send campaign");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const saveCampaignDraft = async () => {
+    const variant = variants.find(v => v.id === selectedVariant);
+    if (!variant) return;
+
+    setSaving(true);
+    try {
+      await api.post("/campaigns/", {
+        name: `Email: ${variant.subject}`,
+        type: "email",
+        description: `${campaignType} email for ${product}`,
+        status: "draft",
+        content: { subject: variant.subject, preheader: variant.preheader, body: variant.body, cta: variant.cta },
+        settings: { ab_testing: enableAB, audience: targetAudience, goal },
+      });
+      toast.success("Campaign saved as draft!");
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || "Failed to save campaign");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -152,10 +218,22 @@ const EmailCampaignGenerator = () => {
           </p>
         </div>
         {variants.length > 0 && (
-          <Button onClick={exportCampaign} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export Campaign
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={saveCampaignDraft} variant="outline" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save Draft
+            </Button>
+            <Button onClick={exportCampaign} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+            {emailProvider.configured && (
+              <Button onClick={saveCampaignAndSend} disabled={sending} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                {sending ? "Sending..." : "Send to Contacts"}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 

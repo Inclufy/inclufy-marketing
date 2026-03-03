@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAI } from "@/hooks/use-ai";
+import { api } from "@/lib/api";
 import { 
   Globe, 
   Sparkles, 
@@ -23,7 +24,8 @@ import {
   Zap,
   CheckCircle,
   ArrowRight,
-  BarChart3
+  BarChart3,
+  Save
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -154,6 +156,26 @@ const LandingPageGenerator = () => {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Landing page exported!");
+  };
+
+  const [saving, setSaving] = useState(false);
+
+  const saveToLibrary = async () => {
+    setSaving(true);
+    try {
+      await api.post("/content-library/", {
+        title: `Landing Page: ${product}`,
+        content_type: "landing_page",
+        content: { pageType, product, targetAudience, uniqueValue, goals, sections },
+        metadata: { page_type: pageType },
+        tags: ["landing-page", pageType],
+      });
+      toast.success("Saved to content library!");
+    } catch {
+      toast.error("Failed to save to library");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const renderSectionContent = (section: LandingPageSection) => {
@@ -319,10 +341,16 @@ const LandingPageGenerator = () => {
           </p>
         </div>
         {sections.length > 0 && (
-          <Button onClick={exportPage} variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Export Copy
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={saveToLibrary} variant="outline" disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Save to Library
+            </Button>
+            <Button onClick={exportPage} variant="outline">
+              <Download className="mr-2 h-4 w-4" />
+              Export
+            </Button>
+          </div>
         )}
       </div>
 
