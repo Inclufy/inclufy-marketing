@@ -87,3 +87,41 @@ def test_list_events_empty_when_no_org(client_no_org, mock_db):
     response = client_no_org.get("/api/analytics/events")
     assert response.status_code == 200
     assert response.json() == []
+
+
+# --- OVERVIEW ---
+
+def test_overview_returns_all_sections(client, mock_db):
+    # All table queries return data
+    mock_db.table.return_value.select.return_value.eq.return_value.execute.return_value = MagicMock(
+        data=[
+            {"id": "1", "status": "active", "type": "email", "budget_amount": 500, "created_at": "2026-03-01T10:00:00Z", "name": "Test"},
+        ]
+    )
+    mock_db.table.return_value.select.return_value.eq.return_value.order.return_value.limit.return_value.execute.return_value = MagicMock(
+        data=[
+            {"event_type": "email_sent", "timestamp": "2026-03-01T10:00:00Z", "campaign_id": "1"},
+            {"event_type": "email_opened", "timestamp": "2026-03-01T11:00:00Z", "campaign_id": "1"},
+        ]
+    )
+    response = client.get("/api/analytics/overview")
+    assert response.status_code == 200
+    data = response.json()
+    assert "campaigns" in data
+    assert "contacts" in data
+    assert "emails" in data
+    assert "content" in data
+    assert "events" in data
+    assert "timeline" in data["campaigns"]
+    assert "by_status" in data["campaigns"]
+    assert "by_type" in data["campaigns"]
+
+
+def test_overview_empty_when_no_org(client_no_org, mock_db):
+    response = client_no_org.get("/api/analytics/overview")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["campaigns"]["total"] == 0
+    assert data["contacts"]["total"] == 0
+    assert data["emails"]["sent"] == 0
+    assert data["content"]["total"] == 0

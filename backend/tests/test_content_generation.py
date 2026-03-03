@@ -85,3 +85,36 @@ def test_improve_content_valid_goals(client, mock_db):
             json={"content": "Test content to improve", "goal": goal},
         )
         assert response.status_code != 422, f"Goal '{goal}' should be valid"
+
+
+# --- CONTENT WRITER ---
+
+def test_write_content_missing_fields(client):
+    response = client.post("/api/content/write", json={})
+    assert response.status_code == 422
+
+
+def test_write_content_empty_prompt(client):
+    response = client.post(
+        "/api/content/write",
+        json={"prompt": "   ", "content_type": "blog"},
+    )
+    assert response.status_code == 422
+
+
+def test_write_content_invalid_type(client):
+    response = client.post(
+        "/api/content/write",
+        json={"prompt": "Test prompt", "content_type": "invalid_type"},
+    )
+    assert response.status_code == 422
+
+
+def test_write_content_valid_types(client, mock_db):
+    """Test that all valid content types are accepted."""
+    for ct in ["blog", "article", "ad_copy", "product_description", "press_release", "script"]:
+        response = client.post(
+            "/api/content/write",
+            json={"prompt": "Write about marketing", "content_type": ct},
+        )
+        assert response.status_code != 422, f"Content type '{ct}' should be valid"

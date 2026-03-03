@@ -9,8 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, Image, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 // Loading fallback component
 function PageLoader() {
@@ -57,41 +56,12 @@ const EnterpriseGovernance = lazy(() => import("./pages/EnterpriseGovernance"));
 const EcosystemExpansion = lazy(() => import("./pages/EcosystemExpansion"));
 const ContactManager = lazy(() => import("./pages/ContactManager"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
+const AIWriter = lazy(() => import("./pages/AIWriter"));
+const ImageGenerator = lazy(() => import("./pages/ImageGenerator"));
 
 // Layouts
 const LuxuryTopNavLayout = lazy(() => import("@/components/layouts/LuxuryTopNavLayout"));
 const AuthLayout = lazy(() => import("@/layouts/AuthLayout"));
-
-// Placeholder components for features in development
-const AIWriter = () => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
-    <div className="text-center max-w-2xl mx-auto">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center mx-auto mb-6">
-        <Sparkles className="w-10 h-10 text-white" />
-      </div>
-      <h1 className="text-4xl font-bold mb-4">AI Writer</h1>
-      <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-        Generate compelling content with AI assistance. Coming soon!
-      </p>
-      <Badge variant="secondary">In Development</Badge>
-    </div>
-  </div>
-);
-
-const ImageGenerator = () => (
-  <div className="flex flex-col items-center justify-center min-h-[60vh] p-8">
-    <div className="text-center max-w-2xl mx-auto">
-      <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center mx-auto mb-6">
-        <Image className="w-10 h-10 text-white" />
-      </div>
-      <h1 className="text-4xl font-bold mb-4">Image Generator</h1>
-      <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-        Create stunning visuals with AI. Coming soon!
-      </p>
-      <Badge variant="secondary">In Development</Badge>
-    </div>
-  </div>
-);
 
 // Query client configuration
 const queryClient = new QueryClient({

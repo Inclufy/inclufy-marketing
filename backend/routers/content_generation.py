@@ -42,6 +42,28 @@ class GenerateSocialInput(BaseModel):
         return v
 
 
+class GenerateWriterInput(BaseModel):
+    prompt: str
+    content_type: str = "blog"
+    tone: str = "professional"
+    length: str = "medium"
+
+    @field_validator("content_type")
+    @classmethod
+    def valid_content_type(cls, v):
+        allowed = {"blog", "article", "ad_copy", "product_description", "press_release", "script"}
+        if v not in allowed:
+            raise ValueError(f"content_type must be one of {allowed}")
+        return v
+
+    @field_validator("prompt")
+    @classmethod
+    def prompt_not_empty(cls, v):
+        if not v.strip():
+            raise ValueError("Prompt cannot be empty")
+        return v
+
+
 class ImproveContentInput(BaseModel):
     content: str
     goal: str
@@ -145,3 +167,34 @@ def improve_content(
     except Exception as e:
         logger.error("Content improvement failed: %s", e)
         raise HTTPException(status_code=500, detail="Failed to improve content")
+
+
+@router.post("/write")
+def generate_content(
+    data: GenerateWriterInput,
+    current_user: dict = Depends(get_current_user),
+):
+    """General-purpose AI content writer."""
+    try:
+        client = _get_openai_client()
+        length_guide = {"short": "200-300 words", "medium": "500-700 words", "long": "1000-1500 words"}
+        prompt = (
+            f"Write a {data.content_type} about: {data.prompt}\n"
+            f"Tone: {data.tone}\n"
+            f"Length: approximately {length_guide.get(data.length, '500-700 words')}\n"
+            "Return JSON with: title, content (in markdown), summary (1-2 sentences), word_count."
+        )
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert content writer who creates compelling marketing content."},
+                {"role": "user", "content": prompt},
+            ],
+            response_format={"type": "json_object"},
+        )
+        return {"result": response.choices[0].message.content}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Content write failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to generate content")

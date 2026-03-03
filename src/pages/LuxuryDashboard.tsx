@@ -34,7 +34,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  BarChart, Bar, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
+} from 'recharts';
 import api from '@/lib/api';
+
+const CHART_COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
 interface DashboardStats {
   campaigns: { total: number; active: number; draft: number };
@@ -167,6 +173,7 @@ export default function LuxuryDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
+  const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -174,12 +181,14 @@ export default function LuxuryDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [dashRes, campaignsRes] = await Promise.all([
+      const [dashRes, campaignsRes, overviewRes] = await Promise.all([
         api.get('/analytics/dashboard'),
         api.get('/campaigns/'),
+        api.get('/analytics/overview').catch(() => ({ data: null })),
       ]);
       setStats(dashRes.data);
       setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : []);
+      setOverview(overviewRes.data);
     } catch (err: any) {
       console.error('Dashboard fetch error:', err);
       setError(err.response?.data?.detail || err.message || 'Failed to load dashboard data');
@@ -251,7 +260,22 @@ export default function LuxuryDashboard() {
                   <Filter className="h-4 w-4 mr-2" />
                   Filter
                 </Button>
-                <Button className="h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700">
+                <Button
+                  className="h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
+                  onClick={async () => {
+                    try {
+                      const res = await api.get('/export/analytics/pdf', { responseType: 'blob' });
+                      const url = window.URL.createObjectURL(new Blob([res.data]));
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `Analytics_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                    } catch (err) {
+                      console.error('Export failed:', err);
+                    }
+                  }}
+                >
                   <Download className="h-4 w-4 mr-2" />
                   Export Report
                 </Button>
@@ -516,61 +540,181 @@ export default function LuxuryDashboard() {
           </TabsContent>
 
           <TabsContent value="performance" className="space-y-6 mt-0">
+            {/* Email Performance */}
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Performance Analytics</CardTitle>
-                <CardDescription>Campaign performance metrics from events data</CardDescription>
+                <CardTitle>Email Performance</CardTitle>
+                <CardDescription>Delivery, opens, and clicks from your email campaigns</CardDescription>
               </CardHeader>
               <CardContent>
-                {campaigns.length > 0 ? (
-                  <div className="space-y-4">
-                    {campaigns.filter(c => c.status === 'active').map((campaign) => (
-                      <div key={campaign.id} className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-semibold">{campaign.name}</h4>
-                          <Badge>{campaign.type}</Badge>
-                        </div>
-                        <p className="text-sm text-gray-500">
-                          Budget: ${(campaign.budget_amount || 0).toLocaleString()} &middot; Status: {campaign.status}
-                        </p>
+                {overview?.emails?.sent > 0 ? (
+                  <div className="space-y-6">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <BarChart data={[
+                        { name: 'Sent', value: overview.emails.sent },
+                        { name: 'Opened', value: overview.emails.opened },
+                        { name: 'Clicked', value: overview.emails.clicked },
+                      ]}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis dataKey="name" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                          <Cell fill="#8b5cf6" />
+                          <Cell fill="#3b82f6" />
+                          <Cell fill="#10b981" />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20">
+                        <p className="text-2xl font-bold text-purple-600">{overview.emails.sent}</p>
+                        <p className="text-xs text-gray-500 mt-1">Emails Sent</p>
                       </div>
-                    ))}
-                    {campaigns.filter(c => c.status === 'active').length === 0 && (
-                      <p className="text-gray-500 text-center py-8">No active campaigns to show performance for.</p>
-                    )}
+                      <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
+                        <p className="text-2xl font-bold text-blue-600">{overview.emails.open_rate}%</p>
+                        <p className="text-xs text-gray-500 mt-1">Open Rate</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
+                        <p className="text-2xl font-bold text-green-600">{overview.emails.click_rate}%</p>
+                        <p className="text-xs text-gray-500 mt-1">Click Rate</p>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                    Create campaigns to see performance data here.
-                  </p>
+                  <div className="text-center py-8">
+                    <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">Send emails to see performance metrics.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Active Campaigns List */}
+            <Card className="border-gray-200 dark:border-gray-800">
+              <CardHeader>
+                <CardTitle>Active Campaigns</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {campaigns.filter(c => c.status === 'active').length > 0 ? (
+                  <div className="space-y-3">
+                    {campaigns.filter(c => c.status === 'active').map((campaign) => (
+                      <div key={campaign.id} className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800">
+                        <div className="flex items-center gap-3">
+                          <div className="w-2 h-2 rounded-full bg-green-500" />
+                          <div>
+                            <p className="font-medium text-sm">{campaign.name}</p>
+                            <p className="text-xs text-gray-500">{campaign.type}</p>
+                          </div>
+                        </div>
+                        {campaign.budget_amount && (
+                          <span className="text-sm font-medium">${campaign.budget_amount.toLocaleString()}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-center py-8">No active campaigns.</p>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6 mt-0">
+            {/* Growth Timeline */}
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Advanced Analytics</CardTitle>
-                <CardDescription>Comprehensive data analysis</CardDescription>
+                <CardTitle>Growth Timeline</CardTitle>
+                <CardDescription>Campaigns, contacts, and content over the last 6 months</CardDescription>
               </CardHeader>
               <CardContent>
-                {totalCampaigns > 0 ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {Object.entries(typeDistribution).map(([type, count]) => (
-                      <div key={type} className="p-4 border rounded-lg text-center">
-                        <p className="text-2xl font-bold">{count}</p>
-                        <p className="text-sm text-gray-500 capitalize">{type}</p>
-                      </div>
-                    ))}
-                  </div>
+                {overview?.campaigns?.timeline?.some((d: any) => d.count > 0) ||
+                 overview?.contacts?.timeline?.some((d: any) => d.count > 0) ? (
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={(overview?.campaigns?.timeline || []).map((item: any, i: number) => ({
+                      month: item.month,
+                      campaigns: item.count,
+                      contacts: overview?.contacts?.timeline?.[i]?.count || 0,
+                      content: overview?.content?.timeline?.[i]?.count || 0,
+                    }))}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis dataKey="month" />
+                      <YAxis allowDecimals={false} />
+                      <Tooltip />
+                      <Legend />
+                      <Bar dataKey="campaigns" fill="#8b5cf6" name="Campaigns" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="contacts" fill="#3b82f6" name="Contacts" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="content" fill="#10b981" name="Content" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
-                  <p className="text-gray-600 dark:text-gray-400 text-center py-8">
-                    Analytics data will appear once you create campaigns.
-                  </p>
+                  <div className="text-center py-8">
+                    <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500">Data will appear here as you create campaigns and content.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Campaign Type Pie */}
+              <Card className="border-gray-200 dark:border-gray-800">
+                <CardHeader>
+                  <CardTitle>Campaign Types</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {Object.keys(typeDistribution).length > 0 ? (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <PieChart>
+                        <Pie
+                          data={Object.entries(typeDistribution).map(([name, value]) => ({ name, value }))}
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={80}
+                          dataKey="value"
+                          label={({ name, value }) => `${name} (${value})`}
+                        >
+                          {Object.keys(typeDistribution).map((_, i) => (
+                            <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-[220px] flex items-center justify-center text-gray-500">
+                      <p>No campaigns yet.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Content Breakdown */}
+              <Card className="border-gray-200 dark:border-gray-800">
+                <CardHeader>
+                  <CardTitle>Content Library</CardTitle>
+                  <CardDescription>{overview?.content?.total || 0} items</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {overview?.content?.total > 0 ? (
+                    <div className="grid grid-cols-2 gap-3">
+                      {Object.entries(overview.content.by_type || {}).map(([type, count], i) => (
+                        <div key={type} className="p-3 rounded-lg border text-center">
+                          <p className="text-xl font-bold" style={{ color: CHART_COLORS[i % CHART_COLORS.length] }}>
+                            {count as number}
+                          </p>
+                          <p className="text-xs text-gray-500 capitalize mt-1">{type.replace('_', ' ')}</p>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="h-[220px] flex items-center justify-center text-gray-500">
+                      <p>No content saved yet.</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="intelligence" className="space-y-6 mt-0">
