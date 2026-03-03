@@ -58,6 +58,8 @@ const ContactManager = lazy(() => import("./pages/ContactManager"));
 const PricingPage = lazy(() => import("./pages/PricingPage"));
 const AIWriter = lazy(() => import("./pages/AIWriter"));
 const ImageGenerator = lazy(() => import("./pages/ImageGenerator"));
+const Profile = lazy(() => import("./pages/Profile"));
+const AppSettings = lazy(() => import("./pages/Settings"));
 
 // Layouts
 const LuxuryTopNavLayout = lazy(() => import("@/components/layouts/LuxuryTopNavLayout"));
@@ -189,6 +191,11 @@ export default function App() {
                       <Route path="ecosystem" element={<EcosystemExpansion />} />
                       <Route path="tutorial-creator" element={<TutorialCreator />} />
                       <Route path="commercial-creator" element={<CommercialCreator />} />
+
+                      {/* User Routes */}
+                      <Route path="profile" element={<Profile />} />
+                      <Route path="settings" element={<AppSettings />} />
+                      <Route path="help" element={<Navigate to="/app/quick-start" replace />} />
                     </Route>
 
                     {/* Legacy redirects */}

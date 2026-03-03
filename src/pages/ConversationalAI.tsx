@@ -568,10 +568,28 @@ const ConversationalAI = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-[400px] flex items-center justify-center text-muted-foreground">
-                <div className="text-center space-y-4">
-                  <BarChart3 className="h-12 w-12 mx-auto" />
-                  <p>Analytics dashboard coming soon...</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="p-4 border rounded-lg text-center">
+                  <p className="text-2xl font-bold text-purple-600">0</p>
+                  <p className="text-xs text-gray-500 mt-1">Conversations</p>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                  <p className="text-2xl font-bold text-blue-600">0</p>
+                  <p className="text-xs text-gray-500 mt-1">Messages</p>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                  <p className="text-2xl font-bold text-green-600">0%</p>
+                  <p className="text-xs text-gray-500 mt-1">Resolution Rate</p>
+                </div>
+                <div className="p-4 border rounded-lg text-center">
+                  <p className="text-2xl font-bold text-amber-600">0s</p>
+                  <p className="text-xs text-gray-500 mt-1">Avg Response</p>
+                </div>
+              </div>
+              <div className="h-[250px] flex items-center justify-center text-muted-foreground border rounded-lg">
+                <div className="text-center space-y-2">
+                  <BarChart3 className="h-10 w-10 mx-auto text-gray-300" />
+                  <p className="text-sm">Start conversations to see analytics data</p>
                 </div>
               </div>
             </CardContent>
