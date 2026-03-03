@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, UploadFile, File
 from typing import Optional, List
 from supabase import Client
 from pydantic import BaseModel, field_validator
 import uuid
+import csv
+import io
 import logging
 
 from dependencies import get_current_user, get_supabase_client
@@ -187,3 +189,123 @@ def contact_stats(
     except Exception as e:
         logger.error("Failed to get contact stats: %s", e)
         raise HTTPException(status_code=500, detail="Failed to retrieve contact statistics")
+
+
+# CSV column name mappings (common variations → our field names)
+CSV_COLUMN_MAP = {
+    "email": "email",
+    "e-mail": "email",
+    "email_address": "email",
+    "emailaddress": "email",
+    "phone": "phone",
+    "phone_number": "phone",
+    "phonenumber": "phone",
+    "telephone": "phone",
+    "first_name": "first_name",
+    "firstname": "first_name",
+    "first name": "first_name",
+    "voornaam": "first_name",
+    "last_name": "last_name",
+    "lastname": "last_name",
+    "last name": "last_name",
+    "achternaam": "last_name",
+    "name": "first_name",
+    "country": "country",
+    "land": "country",
+    "city": "city",
+    "stad": "city",
+    "plaats": "city",
+}
+
+
+@router.post("/import")
+async def import_contacts_csv(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+    db: Client = Depends(get_supabase_client),
+):
+    org_id = current_user.get("organization_id")
+    if not org_id:
+        raise HTTPException(status_code=403, detail="No organization found for user")
+
+    if not file.filename or not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=422, detail="Only CSV files are supported")
+
+    try:
+        contents = await file.read()
+        # Try UTF-8 first, fall back to latin-1
+        try:
+            text = contents.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            text = contents.decode("latin-1")
+
+        reader = csv.DictReader(io.StringIO(text))
+
+        if not reader.fieldnames:
+            raise HTTPException(status_code=422, detail="CSV file has no headers")
+
+        # Map CSV columns to our fields
+        column_mapping = {}
+        for csv_col in reader.fieldnames:
+            normalized = csv_col.strip().lower().replace("-", "_")
+            if normalized in CSV_COLUMN_MAP:
+                column_mapping[csv_col] = CSV_COLUMN_MAP[normalized]
+
+        if "email" not in column_mapping.values():
+            # Check if any column maps to email
+            raise HTTPException(
+                status_code=422,
+                detail=f"CSV must contain an 'email' column. Found columns: {list(reader.fieldnames)}",
+            )
+
+        imported = 0
+        skipped = 0
+        errors = []
+
+        for row_num, row in enumerate(reader, start=2):
+            try:
+                record = {
+                    "organization_id": org_id,
+                    "source": "csv_import",
+                    "tags": [],
+                    "attributes": {},
+                }
+
+                for csv_col, our_field in column_mapping.items():
+                    value = row.get(csv_col, "").strip()
+                    if value:
+                        record[our_field] = value
+
+                # Skip rows without email
+                if not record.get("email") or "@" not in record.get("email", ""):
+                    skipped += 1
+                    continue
+
+                # Store unmapped columns in attributes
+                for csv_col in reader.fieldnames:
+                    if csv_col not in column_mapping:
+                        value = row.get(csv_col, "").strip()
+                        if value:
+                            record["attributes"][csv_col] = value
+
+                db.table("contacts").insert(record).execute()
+                imported += 1
+
+            except Exception as e:
+                skipped += 1
+                if len(errors) < 10:
+                    errors.append(f"Row {row_num}: {str(e)[:100]}")
+
+        return {
+            "success": True,
+            "imported": imported,
+            "skipped": skipped,
+            "total_rows": imported + skipped,
+            "errors": errors,
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("CSV import failed: %s", e)
+        raise HTTPException(status_code=500, detail=f"CSV import failed: {str(e)}")

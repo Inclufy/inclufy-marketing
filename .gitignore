@@ -23,6 +23,10 @@ __pycache__/
 *.pyo
 .venv/
 venv/
+venv_test/
+*.backup
+*.broken
+*.working
 
 # Backup directories
 backend.backup/

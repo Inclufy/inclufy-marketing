@@ -1,5 +1,14 @@
 import { describe, it, expect, vi } from 'vitest';
 
+// Mock supabase before anything else
+vi.mock('@/lib/supabase/client', () => ({
+  supabase: {
+    auth: {
+      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
+    },
+  },
+}));
+
 // vi.hoisted runs before vi.mock hoisting, so these are accessible
 const { interceptorStore } = vi.hoisted(() => {
   const interceptorStore: {
@@ -61,35 +70,35 @@ describe('API client', () => {
   });
 
   describe('request interceptor', () => {
-    it('adds authorization header when token exists in localStorage', () => {
+    it('adds authorization header when token exists in localStorage', async () => {
       localStorage.setItem('access_token', 'test-token-123');
 
       const config = { headers: {} as Record<string, string> };
-      const result = interceptorStore.requestFn(config);
+      const result = await interceptorStore.requestFn(config);
 
       expect(result.headers.Authorization).toBe('Bearer test-token-123');
       localStorage.removeItem('access_token');
     });
 
-    it('uses token from sessionStorage as fallback', () => {
+    it('uses token from sessionStorage as fallback', async () => {
       localStorage.removeItem('access_token');
       localStorage.removeItem('token');
       sessionStorage.setItem('access_token', 'session-token-456');
 
       const config = { headers: {} as Record<string, string> };
-      const result = interceptorStore.requestFn(config);
+      const result = await interceptorStore.requestFn(config);
 
       expect(result.headers.Authorization).toBe('Bearer session-token-456');
       sessionStorage.removeItem('access_token');
     });
 
-    it('does not add authorization header when no token', () => {
+    it('does not add authorization header when no token', async () => {
       localStorage.removeItem('access_token');
       localStorage.removeItem('token');
       sessionStorage.removeItem('access_token');
 
       const config = { headers: {} as Record<string, string> };
-      const result = interceptorStore.requestFn(config);
+      const result = await interceptorStore.requestFn(config);
 
       expect(result.headers.Authorization).toBeUndefined();
     });

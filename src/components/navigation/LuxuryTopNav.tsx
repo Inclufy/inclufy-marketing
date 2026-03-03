@@ -295,13 +295,11 @@ export default function LuxuryTopNav() {
           <div className="flex items-center gap-8">
             <Link to="/app" className="flex items-center gap-3">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg">
-                  <Hexagon className="w-6 h-6 text-white" />
-                </div>
+                <img src="/favicon.svg" alt="Inclufy Marketing" className="w-10 h-10 rounded-xl shadow-lg" />
               </div>
               <div className="hidden sm:block">
                 <h1 className="text-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text">
-                  Inclufy Pro
+                  Inclufy Marketing
                 </h1>
               </div>
             </Link>

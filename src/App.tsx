@@ -55,9 +55,12 @@ const BrandKits = lazy(() => import("./pages/BrandKits"));
 const RevenueIntelligence = lazy(() => import("./pages/RevenueIntelligence"));
 const EnterpriseGovernance = lazy(() => import("./pages/EnterpriseGovernance"));
 const EcosystemExpansion = lazy(() => import("./pages/EcosystemExpansion"));
+const ContactManager = lazy(() => import("./pages/ContactManager"));
+const PricingPage = lazy(() => import("./pages/PricingPage"));
 
-// Layout
+// Layouts
 const LuxuryTopNavLayout = lazy(() => import("@/components/layouts/LuxuryTopNavLayout"));
+const AuthLayout = lazy(() => import("@/layouts/AuthLayout"));
 
 // Placeholder components for features in development
 const AIWriter = () => (
@@ -113,8 +116,13 @@ export default function App() {
                   <Routes>
                     {/* PUBLIC ROUTES */}
                     <Route path="/" element={<Homepage />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
+                    <Route path="/pricing" element={<PricingPage />} />
+
+                    {/* AUTH ROUTES - Split-screen layout */}
+                    <Route element={<AuthLayout />}>
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                    </Route>
 
                     {/* PROTECTED APP ROUTES - Now using LuxuryTopNavLayout */}
                     <Route path="/app" element={
@@ -193,6 +201,9 @@ export default function App() {
                         <Route path="agents" element={<ConversationalAI />} />
                         <Route path="triggers" element={<CampaignOrchestrator />} />
                       </Route>
+
+                      {/* Contacts */}
+                      <Route path="contacts" element={<ContactManager />} />
 
                       {/* Libraries */}
                       <Route path="content-library" element={<ContentLibrary />} />

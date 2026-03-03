@@ -101,9 +101,7 @@ const Homepage = () => {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-                <Sparkles className="w-6 h-6 text-white" />
-              </div>
+              <img src="/favicon.svg" alt="Inclufy Marketing" className="w-10 h-10 rounded-xl shadow-lg" />
               <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
                 Inclufy Marketing
               </h1>
@@ -421,10 +419,8 @@ const Homepage = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-xl font-bold text-white">Inclufy</h3>
+                <img src="/favicon.svg" alt="Inclufy Marketing" className="w-10 h-10 rounded-xl" />
+                <h3 className="text-xl font-bold text-white">Inclufy Marketing</h3>
               </div>
               <p className="text-sm">
                 AI-powered marketing automation that delivers results.
