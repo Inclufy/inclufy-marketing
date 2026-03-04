@@ -296,7 +296,7 @@ export default function Onboarding() {
     <div className="min-h-screen text-white" style={{ background: 'linear-gradient(135deg, #0a0a0f 0%, #1a0a2e 50%, #0a0a0f 100%)' }}>
       {/* Top bar with step indicator */}
       <div className="fixed top-0 left-0 right-0 z-50 border-b border-white/10" style={{ backgroundColor: 'rgba(10,10,15,0.9)', backdropFilter: 'blur(16px)' }}>
-        <div className="max-w-4xl mx-auto px-6 py-3">
+        <div className="max-w-6xl mx-auto px-6 py-3">
           {/* Logo row */}
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
@@ -343,7 +343,7 @@ export default function Onboarding() {
       </div>
 
       {/* Content */}
-      <div className="max-w-4xl mx-auto px-6 pt-32 pb-12">
+      <div className="max-w-6xl mx-auto px-6 pt-28 pb-12">
         <AnimatePresence mode="wait">
           {/* ─── STEP 1: Company Basics ─────────────────── */}
           {step === 1 && (
