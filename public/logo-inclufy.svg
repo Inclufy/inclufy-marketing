@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 64">
+  <defs>
+    <linearGradient id="logobg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#7C3AED"/>
+      <stop offset="50%" style="stop-color:#8B5CF6"/>
+      <stop offset="100%" style="stop-color:#EC4899"/>
+    </linearGradient>
+    <linearGradient id="logoacc" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F9A8D4"/>
+      <stop offset="100%" style="stop-color:#FBBF24"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Icon -->
+  <rect x="0" y="0" width="64" height="64" rx="14" fill="url(#logobg)"/>
+
+  <!-- Rising bars -->
+  <g transform="translate(32,30)">
+    <rect x="-16" y="2" width="8" height="20" rx="3" fill="white" opacity="0.95"/>
+    <rect x="-4" y="-8" width="8" height="30" rx="3" fill="white" opacity="0.95"/>
+    <rect x="8" y="-18" width="8" height="40" rx="3" fill="white" opacity="0.95"/>
+    <!-- Sparkle -->
+    <circle cx="12" cy="-22" r="3" fill="url(#logoacc)"/>
+    <!-- Accent dots -->
+    <circle cx="-12" cy="-4" r="1.8" fill="url(#logoacc)" opacity="0.8"/>
+    <circle cx="0" cy="-14" r="1.8" fill="url(#logoacc)" opacity="0.8"/>
+  </g>
+
+  <!-- Text -->
+  <text x="80" y="42" fill="white" font-family="Inter,system-ui,sans-serif" font-size="30" font-weight="700" letter-spacing="-0.5">Inclufy<tspan fill="#EC4899">.</tspan></text>
+</svg>
