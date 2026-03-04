@@ -22,9 +22,8 @@ export default {
        * - Add Luxe expected families for headings/body where needed
        */
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', "system-ui", "sans-serif"],
-        display: ['"Playfair Display"', "serif"],
-        primary: ["Inter", "system-ui", "sans-serif"],
+        sans: ["Roboto", "system-ui", "sans-serif"],
+        display: ["Roboto", "system-ui", "sans-serif"],
       },
 
       /**

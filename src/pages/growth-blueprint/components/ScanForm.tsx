@@ -69,7 +69,7 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto">
       <div className="bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-6 mb-8">
         <div className="flex items-start gap-4">
           <div className="p-3 bg-white rounded-lg">

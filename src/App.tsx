@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { LanguageProvider } from "@/contexts/LanguageContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
@@ -60,6 +61,23 @@ const AIWriter = lazy(() => import("./pages/AIWriter"));
 const ImageGenerator = lazy(() => import("./pages/ImageGenerator"));
 const Profile = lazy(() => import("./pages/Profile"));
 const AppSettings = lazy(() => import("./pages/Settings"));
+const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
+const Onboarding = lazy(() => import("./pages/Onboarding"));
+const ContentHub = lazy(() => import("./pages/ContentHub"));
+
+// Tenant Admin Portal pages
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminOrganizations = lazy(() => import("./pages/admin/AdminOrganizations"));
+const AdminIntegrations = lazy(() => import("./pages/admin/AdminIntegrations"));
+const AdminSubscriptions = lazy(() => import("./pages/admin/AdminSubscriptions"));
+const AdminDemoRequests = lazy(() => import("./pages/admin/AdminDemoRequests"));
+const AdminRegistrations = lazy(() => import("./pages/admin/AdminRegistrations"));
+const AdminTrainings = lazy(() => import("./pages/admin/AdminTrainings"));
+const AdminInvoices = lazy(() => import("./pages/admin/AdminInvoices"));
+const AdminActivity = lazy(() => import("./pages/admin/AdminActivity"));
+const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 
 // Layouts
 const LuxuryTopNavLayout = lazy(() => import("@/components/layouts/LuxuryTopNavLayout"));
@@ -81,6 +99,7 @@ export default function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
+          <LanguageProvider>
           <TooltipProvider>
             <BrowserRouter>
               <AuthProvider>
@@ -96,6 +115,13 @@ export default function App() {
                       <Route path="/signup" element={<Signup />} />
                     </Route>
 
+                    {/* ONBOARDING - Full-screen, no sidebar */}
+                    <Route path="/app/onboarding" element={
+                      <ProtectedRoute>
+                        <Onboarding />
+                      </ProtectedRoute>
+                    } />
+
                     {/* PROTECTED APP ROUTES - Now using LuxuryTopNavLayout */}
                     <Route path="/app" element={
                       <ProtectedRoute>
@@ -106,6 +132,7 @@ export default function App() {
 
                       {/* Core - Phase 0 */}
                       <Route path="dashboard" element={<LuxuryDashboard />} />
+                      <Route path="content-hub" element={<ContentHub />} />
                       <Route path="analytics" element={<Analytics />} />
                       <Route path="reports" element={<Reports />} />
                       <Route path="quick-start" element={<QuickStart />} />
@@ -195,7 +222,23 @@ export default function App() {
                       {/* User Routes */}
                       <Route path="profile" element={<Profile />} />
                       <Route path="settings" element={<AppSettings />} />
+                      <Route path="admin" element={<SuperAdmin />} />
                       <Route path="help" element={<Navigate to="/app/quick-start" replace />} />
+
+                      {/* ─── TENANT ADMIN PORTAL ────────────────────────── */}
+                      <Route path="tenant-admin" element={<AdminLayout />}>
+                        <Route index element={<AdminDashboard />} />
+                        <Route path="activity" element={<AdminActivity />} />
+                        <Route path="users" element={<AdminUsers />} />
+                        <Route path="organizations" element={<AdminOrganizations />} />
+                        <Route path="integrations" element={<AdminIntegrations />} />
+                        <Route path="subscriptions" element={<AdminSubscriptions />} />
+                        <Route path="demo-requests" element={<AdminDemoRequests />} />
+                        <Route path="registrations" element={<AdminRegistrations />} />
+                        <Route path="trainings" element={<AdminTrainings />} />
+                        <Route path="invoices" element={<AdminInvoices />} />
+                        <Route path="settings" element={<AdminSettings />} />
+                      </Route>
                     </Route>
 
                     {/* Legacy redirects */}
@@ -212,6 +255,7 @@ export default function App() {
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>
+          </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>
     </ErrorBoundary>

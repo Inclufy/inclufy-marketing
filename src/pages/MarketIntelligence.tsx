@@ -133,7 +133,7 @@ export default function MarketIntelligence() {
   };
 
   return (
-    <div className="container max-w-7xl mx-auto py-8 px-4">
+    <div className="w-full py-2">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">

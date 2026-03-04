@@ -75,42 +75,42 @@ const performanceData = [
 ];
 
 const campaignStatusData = [
-  { name: 'Active', value: 12, color: '#7c3aed' },
-  { name: 'Scheduled', value: 5, color: '#f59e0b' },
-  { name: 'Completed', value: 18, color: '#10b981' },
-  { name: 'Draft', value: 3, color: '#94a3b8' },
+  { name: 'Actief', value: 12, color: '#7c3aed' },
+  { name: 'Gepland', value: 5, color: '#f59e0b' },
+  { name: 'Voltooid', value: 18, color: '#10b981' },
+  { name: 'Concept', value: 3, color: '#94a3b8' },
 ];
 
 const engagementData = [
-  { name: 'Highly Active', value: 28, color: '#10b981' },
-  { name: 'Active', value: 45, color: '#3b82f6' },
-  { name: 'Moderate', value: 20, color: '#f59e0b' },
-  { name: 'Inactive', value: 7, color: '#ef4444' },
+  { name: 'Zeer Actief', value: 28, color: '#10b981' },
+  { name: 'Actief', value: 45, color: '#3b82f6' },
+  { name: 'Matig', value: 20, color: '#f59e0b' },
+  { name: 'Inactief', value: 7, color: '#ef4444' },
 ];
 
 const recentActivities = [
   {
     id: 1,
     user: 'Sarah Chen',
-    action: 'launched campaign',
-    target: 'Summer Sale 2024',
-    time: '2 hours ago',
+    action: 'lanceerde campagne',
+    target: 'Zomer Uitverkoop 2024',
+    time: '2 uur geleden',
     type: 'campaign',
   },
   {
     id: 2,
     user: 'Mike Johnson',
-    action: 'generated content',
+    action: 'genereerde content',
     target: '5 social media posts',
-    time: '3 hours ago',
+    time: '3 uur geleden',
     type: 'ai',
   },
   {
     id: 3,
     user: 'Emily Davis',
-    action: 'created journey',
+    action: 'maakte klantreis aan',
     target: 'Onboarding Flow v2',
-    time: '5 hours ago',
+    time: '5 uur geleden',
     type: 'journey',
   },
   {

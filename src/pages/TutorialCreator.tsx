@@ -1,6 +1,4 @@
 import { useState, useRef } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -523,10 +521,9 @@ const TutorialCreator = () => {
     const actorImage = getActorImage(currentStep);
 
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="pt-24 pb-16 px-4">
-          <div className="container mx-auto max-w-4xl">
+      <div className="w-full">
+        <main className="space-y-6">
+          <div className="w-full">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-2xl font-bold text-foreground">
                 {tutorialTitle || "Tutorial Preview"}
@@ -617,17 +614,15 @@ const TutorialCreator = () => {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
 
   // Editor mode UI
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pt-24 pb-16 px-4">
-        <div className="container mx-auto max-w-4xl">
+    <div className="w-full">
+      <main className="space-y-6">
+        <div className="w-full">
           {/* Header section */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div className="flex items-center gap-3">
@@ -936,7 +931,6 @@ const TutorialCreator = () => {
           </Button>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

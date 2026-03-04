@@ -30,9 +30,9 @@ export default function GrowthBlueprint() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="w-full">
       <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-        <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="px-6 py-8">
           <div className="flex items-center gap-4 mb-4">
             <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl">
               <Sparkles className="w-8 h-8" />
@@ -49,7 +49,7 @@ export default function GrowthBlueprint() {
           </div>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="w-full py-6">
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-6">
             <TabsTrigger value="new-scan" className="flex items-center gap-2"><Sparkles className="w-4 h-4" />New Scan</TabsTrigger>

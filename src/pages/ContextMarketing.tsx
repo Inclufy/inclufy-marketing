@@ -67,10 +67,10 @@ const sections = [
 
 export default function ContextMarketing() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="w-full">
       {/* Header */}
       <div className="bg-white dark:bg-gray-900 border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full py-2">
           <div className="flex items-center gap-4 mb-2">
             <div className="p-3 rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600">
               <LayoutDashboard className="h-6 w-6 text-white" />
@@ -88,7 +88,7 @@ export default function ContextMarketing() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-10">
+      <div className="w-full py-2 space-y-10">
         {sections.map((section) => (
           <div key={section.title}>
             <div className="flex items-center gap-3 mb-4">

@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -358,10 +356,9 @@ const BrandKits = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      <main className="pt-24 pb-16 px-4">
-        <div className="container mx-auto max-w-5xl">
+    <div className="w-full">
+      <main className="space-y-6">
+        <div className="w-full">
           {/* Header */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
             <div className="flex items-center gap-3">
@@ -706,7 +703,6 @@ const BrandKits = () => {
           )}
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

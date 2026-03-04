@@ -218,10 +218,10 @@ export default function LuxuryDashboard() {
   const recentCampaigns = campaigns.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="w-full">
       {/* Executive Header */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="w-full">
           <div className="py-6">
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -287,7 +287,7 @@ export default function LuxuryDashboard() {
 
       {/* Error Banner */}
       {error && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="w-full pt-4">
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
             <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
             <div className="flex-1">
@@ -306,7 +306,7 @@ export default function LuxuryDashboard() {
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="w-full">
             <TabsList className="bg-transparent border-0 p-0 h-auto">
               <TabsTrigger
                 value="overview"
@@ -340,7 +340,7 @@ export default function LuxuryDashboard() {
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="w-full py-8">
           <TabsContent value="overview" className="space-y-6 mt-0">
             {/* Key Metrics - Connected to real data */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

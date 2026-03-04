@@ -1,6 +1,7 @@
 // src/components/navigation/LuxuryTopNav.tsx
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronDown,
@@ -51,85 +52,85 @@ import { Badge } from '@/components/ui/badge';
 // Navigation structure with dropdowns
 const navigationItems = [
   {
-    label: 'Overview',
+    label: 'Overzicht',
     href: '/app/dashboard',
     icon: Crown,
   },
   {
-    label: 'Setup',
+    label: 'Instellingen',
     icon: Building,
     children: [
-      { label: 'Brand Setup', href: '/app/setup/brand', icon: Palette, progress: 100 },
-      { label: 'Target Audience', href: '/app/setup/audience', icon: Users, progress: 75 },
-      { label: 'Goals & KPIs', href: '/app/setup/goals', icon: Target, progress: 50 },
-      { label: 'Competition', href: '/app/setup/competition', icon: Globe, progress: 25 },
+      { label: 'Merk Setup', href: '/app/setup/brand', icon: Palette, progress: 100 },
+      { label: 'Doelgroep', href: '/app/setup/audience', icon: Users, progress: 75 },
+      { label: 'Doelen & KPI\'s', href: '/app/setup/goals', icon: Target, progress: 50 },
+      { label: 'Concurrentie', href: '/app/setup/competition', icon: Globe, progress: 25 },
     ]
   },
   {
-    label: 'Intelligence',
+    label: 'Intelligentie',
     icon: Brain,
     children: [
-      { 
-        label: 'Growth Blueprint',
+      {
+        label: 'Groei Blauwdruk',
         href: '/app/growth-blueprint',
         icon: Sparkles,
         badge: 'AI',
-        description: 'Complete business analysis in 60 seconds'
+        description: 'Complete bedrijfsanalyse in 60 seconden'
       },
-      { 
+      {
         label: 'Marketing Scanner',
         href: '/app/intelligence/scanner',
         icon: Search,
-        badge: 'NEW',
-        description: 'AI-powered brand & market analysis'
+        badge: 'NIEUW',
+        description: 'AI-gestuurde merk- & marktanalyse'
       },
-      { 
-        label: 'Brand Memory', 
+      {
+        label: 'Merkgeheugen',
         href: '/app/intelligence/brand',
         icon: Brain,
-        badge: 'AI' 
+        badge: 'AI'
       },
-      { 
-        label: 'Market Insights', 
+      {
+        label: 'Marktinzichten',
         href: '/app/intelligence/market',
-        icon: TrendingUp 
+        icon: TrendingUp
       },
-      { 
-        label: 'Competitive Analysis', 
+      {
+        label: 'Concurrentieanalyse',
         href: '/app/intelligence/competitors',
-        icon: Users 
+        icon: Users
       },
-      { 
-        label: 'Content Studio', 
+      {
+        label: 'Content Studio',
         href: '/app/content-studio',
         icon: Sparkles,
-        badge: 'NEW' 
+        badge: 'NIEUW'
       }
     ]
   },
   {
-    label: 'Campaigns',
+    label: 'Campagnes',
     icon: Rocket,
     children: [
-      { label: 'Campaign Manager', href: '/app/campaigns', icon: Rocket, badge: '7' },
-      { label: 'Email Marketing', href: '/app/campaigns/email', icon: Mail },
+      { label: 'Campagne Beheer', href: '/app/campaigns', icon: Rocket, badge: '7' },
+      { label: 'E-mail Marketing', href: '/app/campaigns/email', icon: Mail },
       { label: 'Social Media', href: '/app/campaigns/social', icon: Share2 },
-      { label: 'Landing Pages', href: '/app/campaigns/landing', icon: FileText },
+      { label: 'Landingspagina\'s', href: '/app/campaigns/landing', icon: FileText },
     ]
   },
   {
-    label: 'Automation',
+    label: 'Automatisering',
     icon: Bot,
     badge: 'PRO',
     children: [
       { label: 'Workflows', href: '/app/automation/workflows', icon: GitBranch, badge: '23' },
-      { label: 'Customer Journeys', href: '/app/automation/journeys', icon: Activity },
+      { label: 'Klantreis', href: '/app/automation/journeys', icon: Activity },
       { label: 'AI Agents', href: '/app/automation/agents', icon: Bot, badge: 'BETA' },
-      { label: 'Smart Triggers', href: '/app/automation/triggers', icon: Sparkles },
+      { label: 'Slimme Triggers', href: '/app/automation/triggers', icon: Sparkles },
     ]
   },
   {
-    label: 'Analytics',
+    label: 'Analyse',
     href: '/app/analytics',
     icon: BarChart3,
   },
@@ -284,8 +285,19 @@ const NavigationDropdown = ({ item, isActive }: { item: any; isActive: boolean }
 
 export default function LuxuryTopNav() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/login');
+    } catch (error) {
+      console.error('Failed to sign out:', error);
+    }
+  };
 
   return (
     <nav className="sticky top-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
@@ -349,7 +361,7 @@ export default function LuxuryTopNav() {
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                   <Input
                     type="search"
-                    placeholder="Search..."
+                    placeholder="Zoeken..."
                     className="pl-10 pr-4 w-64 h-9"
                     autoFocus
                     onBlur={() => setSearchOpen(false)}
@@ -366,7 +378,7 @@ export default function LuxuryTopNav() {
                   className="h-9 gap-2"
                 >
                   <Search className="h-4 w-4" />
-                  <span className="hidden lg:inline text-sm text-gray-500">Search</span>
+                  <span className="hidden lg:inline text-sm text-gray-500">Zoeken</span>
                   <kbd className="hidden lg:inline-block px-1.5 py-0.5 text-xs font-semibold text-gray-500 bg-gray-100 dark:bg-gray-800 rounded">
                     ⌘K
                   </kbd>
@@ -411,25 +423,37 @@ export default function LuxuryTopNav() {
                 <DropdownMenuItem asChild>
                   <Link to="/app/profile" className="cursor-pointer">
                     <UserIcon className="mr-2 h-4 w-4" />
-                    Profile
+                    Profiel
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/app/settings" className="cursor-pointer">
                     <Settings className="mr-2 h-4 w-4" />
-                    Settings
+                    Instellingen
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/app/tenant-admin" className="cursor-pointer">
+                    <Crown className="mr-2 h-4 w-4" />
+                    Admin Portal
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/app/admin" className="cursor-pointer">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Org Admin
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/app/help" className="cursor-pointer">
                     <HelpCircle className="mr-2 h-4 w-4" />
-                    Help Center
+                    Helpcentrum
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 cursor-pointer">
+                <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={handleSignOut}>
                   <LogOut className="mr-2 h-4 w-4" />
-                  Sign Out
+                  Uitloggen
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

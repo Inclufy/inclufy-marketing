@@ -81,7 +81,7 @@ export default function BrandSetup() {
     (logoFile ? 25 : 0);
 
   return (
-    <div className="container max-w-6xl mx-auto py-8 px-4">
+    <div className="w-full py-2">
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">

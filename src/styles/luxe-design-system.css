@@ -69,12 +69,12 @@
 }
 
 /* ===== TYPOGRAPHY ===== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Playfair+Display:wght@400;700;900&display=swap');
+/* Font import is in index.css to avoid @import ordering issues */
 
 :root {
   /* Font Families */
-  --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Playfair Display', serif;
+  --font-primary: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
   
   /* Font Sizes */
   --text-xs: 0.75rem;     /* 12px */

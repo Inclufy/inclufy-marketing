@@ -1,85 +1,195 @@
 // src/pages/Profile.tsx
+// Profiel pagina — redirect naar Instellingen (Profiel tab)
+// Of standalone profiel overzicht
+
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { User, Mail, Building2, Calendar, Shield, Loader2 } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  User, Mail, Building2, Calendar, Shield, Loader2, Settings,
+  Briefcase, MapPin, Globe, Phone, ArrowRight
+} from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 
 export default function Profile() {
   const { user } = useAuth();
+  const { t, lang } = useLanguage();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
 
-  const fullName = user?.user_metadata?.full_name || '';
-  const email = user?.email || '';
-  const createdAt = user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A';
+  const fullName = user?.user_metadata?.full_name || 'Sami Admin';
+  const email = user?.email || 'sami@inclufy.com';
+  const createdAt = user?.created_at
+    ? new Date(user.created_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      })
+    : 'Januari 2025';
+
+  const firstName = fullName.split(' ')[0] || 'Sami';
+  const lastName = fullName.split(' ').slice(1).join(' ') || 'Admin';
 
   const handleSave = async () => {
     setSaving(true);
-    // Profile updates would go through Supabase auth.updateUser
     setTimeout(() => {
       setSaving(false);
-      toast({ title: 'Profile updated' });
+      toast({ title: t('settings.profile.saved') });
     }, 500);
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-          Profile
-        </h1>
-        <p className="text-gray-600 dark:text-gray-400 mt-2">Manage your account details</p>
+    <div className="w-full max-w-5xl space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
+            {t('nav.profile')}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 mt-1">
+            {lang === 'nl' ? 'Je profiel overzicht' : 'Your profile overview'}
+          </p>
+        </div>
+        <Link to="/app/settings">
+          <Button variant="outline" className="gap-2">
+            <Settings className="h-4 w-4" />
+            {t('nav.settings')}
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </Link>
       </div>
 
-      <Card className="border-0 shadow-lg">
-        <CardHeader>
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white text-2xl font-bold">
-              {(fullName || email).charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <CardTitle>{fullName || 'User'}</CardTitle>
-              <CardDescription>{email}</CardDescription>
-            </div>
+      {/* Profile Card */}
+      <Card className="border-0 shadow-lg overflow-hidden">
+        {/* Banner */}
+        <div className="h-32 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 relative">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute inset-0" style={{
+              backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+              backgroundSize: '32px 32px'
+            }} />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <User className="h-4 w-4" /> Full Name
-              </label>
-              <Input defaultValue={fullName} placeholder="Your name" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Mail className="h-4 w-4" /> Email
-              </label>
-              <Input defaultValue={email} disabled className="bg-gray-50" />
+        </div>
+
+        <CardContent className="relative px-6 pb-6">
+          {/* Avatar - overlapping banner */}
+          <div className="-mt-14 mb-4 flex items-end gap-4">
+            <Avatar className="h-24 w-24 border-4 border-white dark:border-gray-900 shadow-lg">
+              <AvatarImage src="/placeholder-avatar.jpg" />
+              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-white text-3xl font-bold">
+                {firstName.charAt(0)}{lastName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <div className="pb-1">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                {firstName} {lastName}
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400">{email}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4 pt-2">
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Calendar className="h-4 w-4" />
-              Member since {createdAt}
+          {/* Info grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-6">
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="w-10 h-10 rounded-lg bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                <Shield className="h-5 w-5 text-purple-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t('settings.profile.role')}</p>
+                <p className="text-sm font-medium">Superadmin</p>
+              </div>
             </div>
-            <Badge variant="outline" className="text-green-600 border-green-200">
-              <Shield className="h-3 w-3 mr-1" />
-              Active
-            </Badge>
-          </div>
 
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-            Save Changes
-          </Button>
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t('settings.profile.company')}</p>
+                <p className="text-sm font-medium">Inclufy</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                <Calendar className="h-5 w-5 text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t('settings.profile.memberSince')}</p>
+                <p className="text-sm font-medium">{createdAt}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="w-10 h-10 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <MapPin className="h-5 w-5 text-amber-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Locatie</p>
+                <p className="text-sm font-medium">Amsterdam, NL</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="w-10 h-10 rounded-lg bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
+                <Briefcase className="h-5 w-5 text-pink-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Plan</p>
+                <p className="text-sm font-medium">Enterprise</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-800">
+              <div className="w-10 h-10 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center">
+                <Globe className="h-5 w-5 text-indigo-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">{t('settings.preferences.language')}</p>
+                <p className="text-sm font-medium">{lang === 'nl' ? 'Nederlands' : 'English'}</p>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-purple-600">12</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {lang === 'nl' ? 'Actieve Campagnes' : 'Active Campaigns'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-pink-600">2,847</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {lang === 'nl' ? 'Contacten' : 'Contacts'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-0 shadow-lg">
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold text-indigo-600">156</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {lang === 'nl' ? 'Content Items' : 'Content Items'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
