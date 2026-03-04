@@ -90,12 +90,9 @@ export default function Signup() {
       className="text-white"
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 mb-8">
-        <Link to="/" className="flex items-center gap-3">
-          <img src="/favicon.svg" alt="Inclufy" className="w-10 h-10 rounded-xl" />
-          <span className="text-xl font-semibold tracking-tight">
-            Inclufy<span className="text-purple-400">.</span>
-          </span>
+      <div className="flex items-center mb-8">
+        <Link to="/" className="flex items-center">
+          <img src="/logo-inclufy.svg" alt="Inclufy - AI Marketing" className="h-11" />
         </Link>
       </div>
 

@@ -165,11 +165,8 @@ export default function Homepage() {
       {/* ═══ NAVIGATION ═══ */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/favicon.svg" alt="Inclufy" className="w-9 h-9 rounded-lg" />
-            <span className="text-lg font-semibold tracking-tight">
-              Inclufy<span className="text-purple-400">.</span>
-            </span>
+          <Link to="/" className="flex items-center">
+            <img src="/logo-inclufy.svg" alt="Inclufy - AI Marketing" className="h-10" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8 text-sm text-gray-400">
@@ -226,8 +223,8 @@ export default function Homepage() {
             >
               The Future of
               <br />
-              <span className="bg-gradient-to-r from-purple-400 via-rose-400 to-amber-300 text-transparent bg-clip-text">
-                Marketing
+              <span className="bg-gradient-to-r from-purple-400 via-pink-400 to-amber-300 text-transparent bg-clip-text">
+                AI Marketing
               </span>
               {' '}is Here
             </motion.h1>
@@ -608,11 +605,8 @@ export default function Homepage() {
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
             {/* Brand */}
             <div className="col-span-2">
-              <div className="flex items-center gap-3 mb-4">
-                <img src="/favicon.svg" alt="Inclufy" className="w-9 h-9 rounded-lg" />
-                <span className="text-lg font-semibold">
-                  Inclufy<span className="text-purple-400">.</span>
-                </span>
+              <div className="flex items-center mb-4">
+                <img src="/logo-inclufy.svg" alt="Inclufy - AI Marketing" className="h-10" />
               </div>
               <p className="text-sm text-gray-500 max-w-xs leading-relaxed">
                 The AI-native marketing platform that understands your brand and scales your output.

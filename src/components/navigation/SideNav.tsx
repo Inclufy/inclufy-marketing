@@ -155,20 +155,13 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
     >
       {/* ─── Logo ─────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-4 h-14 border-b border-gray-200 dark:border-gray-800 shrink-0">
-        <Link to="/app" className="flex items-center gap-3 min-w-0">
-          <img
-            src="/favicon.svg"
-            alt="Inclufy"
-            className="w-8 h-8 rounded-lg shadow-md shrink-0"
-          />
-          {!collapsed && (
-            <motion.h1
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="text-base font-bold bg-gradient-to-r from-indigo-600 to-purple-600 text-transparent bg-clip-text whitespace-nowrap"
-            >
-              Inclufy Marketing
-            </motion.h1>
+        <Link to="/app" className="flex items-center min-w-0">
+          {collapsed ? (
+            <img src="/favicon.svg" alt="Inclufy" className="w-8 h-8 rounded-lg shadow-md shrink-0" />
+          ) : (
+            <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}>
+              <img src="/logo-inclufy-dark.svg" alt="Inclufy - AI Marketing" className="h-9" />
+            </motion.div>
           )}
         </Link>
       </div>

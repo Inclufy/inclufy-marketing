@@ -299,9 +299,8 @@ export default function Onboarding() {
         <div className="max-w-6xl mx-auto px-6 py-3">
           {/* Logo row */}
           <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-3">
-              <img src="/favicon.svg" alt="Inclufy" className="w-7 h-7 rounded-lg" />
-              <span className="font-semibold text-white text-sm">Inclufy<span className="text-purple-400">.</span></span>
+            <div className="flex items-center">
+              <img src="/logo-inclufy.svg" alt="Inclufy - AI Marketing" className="h-8" />
             </div>
             <span className="text-xs text-gray-400">
               {step} / {TOTAL_STEPS}

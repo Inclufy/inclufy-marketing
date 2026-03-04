@@ -171,11 +171,8 @@ export default function PricingPage() {
       {/* ═══ NAV ═══ */}
       <nav className="fixed top-0 inset-x-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-3">
-            <img src="/favicon.svg" alt="Inclufy" className="w-9 h-9 rounded-lg" />
-            <span className="text-lg font-semibold tracking-tight">
-              Inclufy<span className="text-purple-400">.</span>
-            </span>
+          <Link to="/" className="flex items-center">
+            <img src="/logo-inclufy.svg" alt="Inclufy - AI Marketing" className="h-10" />
           </Link>
           <div className="flex items-center gap-3">
             <Link to="/login">
