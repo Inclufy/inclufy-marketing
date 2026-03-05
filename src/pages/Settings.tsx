@@ -3,6 +3,7 @@
 // 2FA enrollment via Supabase MFA (TOTP)
 
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import {
   User, Shield, Settings as SettingsIcon, Key, Lock, Bell, Moon, Sun, Globe,
   Loader2, Eye, EyeOff, Monitor, Copy, Check, Plus, Trash2, Smartphone, Laptop,
-  QrCode, ShieldCheck, ShieldOff, AlertTriangle
+  QrCode, ShieldCheck, ShieldOff, AlertTriangle, RotateCcw
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -36,6 +37,7 @@ export default function Settings() {
   const { user } = useAuth();
   const { t, lang, setLang } = useLanguage();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>('profile');
   const [saving, setSaving] = useState(false);
 
@@ -279,7 +281,7 @@ export default function Settings() {
       </div>
 
       {/* ─── PROFILE TAB ──────────────────────────────────── */}
-      {activeTab === 'profile' && (
+      {activeTab === 'profile' && (<>
         <Card className="border-0 shadow-lg">
           <CardHeader>
             <CardTitle className="text-xl">{t('settings.profile.title')}</CardTitle>
@@ -366,7 +368,36 @@ export default function Settings() {
             </Button>
           </CardContent>
         </Card>
-      )}
+
+        {/* Onboarding herstarten */}
+        <Card className="border-0 shadow-lg border-l-4 border-l-amber-500/50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <RotateCcw className="h-4 w-4" />
+                  {lang === 'nl' ? 'Onboarding herstarten' : 'Restart Onboarding'}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {lang === 'nl'
+                    ? 'Doorloop de onboarding wizard opnieuw om je bedrijfsinstellingen bij te werken.'
+                    : 'Go through the onboarding wizard again to update your business settings.'}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await supabase.auth.updateUser({ data: { onboarding_completed: false } });
+                  navigate('/app/onboarding');
+                }}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {lang === 'nl' ? 'Herstarten' : 'Restart'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </>)}
 
       {/* ─── SECURITY TAB ─────────────────────────────────── */}
       {activeTab === 'security' && (

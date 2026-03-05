@@ -23,6 +23,7 @@ function PageLoader() {
 
 // Lazy-loaded pages (code-splitting)
 const Homepage = lazy(() => import("./pages/Homepage"));
+const IQHelixROCvA = lazy(() => import("./pages/IQHelixROCvA"));
 const Login = lazy(() => import("@/pages/auth/Login"));
 const Signup = lazy(() => import("@/pages/auth/Signup"));
 const LuxuryDashboard = lazy(() => import("@/pages/LuxuryDashboard"));
@@ -108,6 +109,7 @@ export default function App() {
                     {/* PUBLIC ROUTES */}
                     <Route path="/" element={<Homepage />} />
                     <Route path="/pricing" element={<PricingPage />} />
+                    <Route path="/cases/iq-helix-rocva" element={<IQHelixROCvA />} />
 
                     {/* AUTH ROUTES - Split-screen layout */}
                     <Route element={<AuthLayout />}>

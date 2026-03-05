@@ -258,7 +258,7 @@ export default function Onboarding() {
   const handleFinish = async () => {
     setSaving(true);
     try {
-      await supabase.auth.updateUser({
+      const { error } = await supabase.auth.updateUser({
         data: {
           onboarding_completed: true,
           brand_name: data.companyName,
@@ -284,12 +284,17 @@ export default function Onboarding() {
           example_content: data.exampleContent,
         },
       });
+      if (error) {
+        toast({ title: nl ? 'Fout bij opslaan' : 'Save failed', description: error.message, variant: 'destructive' });
+        setSaving(false);
+        return;
+      }
       toast({ title: nl ? 'Onboarding voltooid!' : 'Onboarding complete!' });
-    } catch {
-      // continue anyway
+      navigate('/app/dashboard', { replace: true });
+    } catch (err) {
+      toast({ title: nl ? 'Fout bij opslaan' : 'Save failed', description: String(err), variant: 'destructive' });
     } finally {
       setSaving(false);
-      navigate('/app/dashboard', { replace: true });
     }
   };
 
@@ -390,11 +395,18 @@ export default function Onboarding() {
 
       {/* ─── Content ─────────────────────────────────────────────── */}
       <div className="max-w-6xl mx-auto px-6 pt-32 pb-12">
-        <AnimatePresence mode="wait">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 40 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -40 }}
+            transition={{ duration: 0.25 }}
+          >
 
           {/* ═══ STEP 1: Bedrijfsinformatie ═══════════════════════ */}
           {step === 1 && (
-            <StepWrapper key="step1">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Building2 className="w-8 h-8 text-purple-400" />
@@ -513,12 +525,12 @@ export default function Onboarding() {
                   </div>
                 </CardContent>
               </Card>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 2: Website Analyse ══════════════════════════ */}
           {step === 2 && (
-            <StepWrapper key="step2">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Search className="w-8 h-8 text-purple-400" />
@@ -587,12 +599,12 @@ export default function Onboarding() {
                   )}
                 </CardContent>
               </Card>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 3: Product of Dienst ════════════════════════ */}
           {step === 3 && (
-            <StepWrapper key="step3">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Package className="w-8 h-8 text-purple-400" />
@@ -706,12 +718,12 @@ export default function Onboarding() {
                   </button>
                 )}
               </div>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 4: Doelgroep ════════════════════════════════ */}
           {step === 4 && (
-            <StepWrapper key="step4">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Users className="w-8 h-8 text-purple-400" />
@@ -861,12 +873,12 @@ export default function Onboarding() {
                   </div>
                 </CardContent>
               </Card>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 5: Marketingdoelen ══════════════════════════ */}
           {step === 5 && (
-            <StepWrapper key="step5">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Target className="w-8 h-8 text-purple-400" />
@@ -909,12 +921,12 @@ export default function Onboarding() {
                   );
                 })}
               </div>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 6: Merkprofiel ═════════════════════════════ */}
           {step === 6 && (
-            <StepWrapper key="step6">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Palette className="w-8 h-8 text-purple-400" />
@@ -1057,12 +1069,12 @@ export default function Onboarding() {
                   </div>
                 </CardContent>
               </Card>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 7: Concurrenten ════════════════════════════ */}
           {step === 7 && (
-            <StepWrapper key="step7">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <Swords className="w-8 h-8 text-purple-400" />
@@ -1141,12 +1153,12 @@ export default function Onboarding() {
                   </p>
                 </CardContent>
               </Card>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 8: Portfolio / Bestaande Content ═══════════ */}
           {step === 8 && (
-            <StepWrapper key="step8">
+            <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
                   <FolderOpen className="w-8 h-8 text-purple-400" />
@@ -1216,12 +1228,12 @@ export default function Onboarding() {
                   </p>
                 </CardContent>
               </Card>
-            </StepWrapper>
+            </>
           )}
 
           {/* ═══ STEP 9: Samenvatting ════════════════════════════ */}
           {step === 9 && (
-            <StepWrapper key="step9">
+            <>
               <div className="text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl bg-green-500/20 flex items-center justify-center mx-auto mb-6">
                   <Rocket className="w-10 h-10 text-green-400" />
@@ -1417,9 +1429,10 @@ export default function Onboarding() {
                 <ArrowLeft className="w-4 h-4" />
                 {t('onboarding.previous')}
               </button>
-            </StepWrapper>
+            </>
           )}
 
+        </motion.div>
         </AnimatePresence>
 
         {/* ─── Navigation Footer (steps 1-8) ───────────────────── */}
@@ -1494,15 +1507,8 @@ function scoreBg(score: number) {
   return 'bg-red-500/10 border-red-500/20';
 }
 
-function StepWrapper({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: 30 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -30 }}
-      transition={{ duration: 0.3 }}
-    >
-      {children}
-    </motion.div>
-  );
+function scoreLabel(score: number) {
+  if (score >= 80) return 'Excellent';
+  if (score >= 50) return 'OK';
+  return 'Needs work';
 }
