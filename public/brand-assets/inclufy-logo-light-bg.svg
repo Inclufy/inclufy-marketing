@@ -1,15 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 64">
   <defs>
     <linearGradient id="logobg2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#7C3AED"/>
-      <stop offset="40%" style="stop-color:#EC4899"/>
-      <stop offset="70%" style="stop-color:#F9A8D4"/>
-      <stop offset="100%" style="stop-color:#FBBF24"/>
+      <stop offset="0%" style="stop-color:#C084FC"/>
+      <stop offset="50%" style="stop-color:#F472B6"/>
+      <stop offset="100%" style="stop-color:#FCD34D"/>
     </linearGradient>
     <linearGradient id="textgrad2" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#7C3AED"/>
-      <stop offset="50%" style="stop-color:#EC4899"/>
-      <stop offset="100%" style="stop-color:#FBBF24"/>
+      <stop offset="0%" style="stop-color:#9333EA"/>
+      <stop offset="50%" style="stop-color:#DB2777"/>
+      <stop offset="100%" style="stop-color:#D97706"/>
     </linearGradient>
   </defs>
 
@@ -27,8 +26,8 @@
   </g>
 
   <!-- Brand name with gradient (for light backgrounds) -->
-  <text x="80" y="35" fill="url(#textgrad2)" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="700" letter-spacing="-0.5">Inclufy<tspan fill="#FBBF24">.</tspan></text>
+  <text x="80" y="35" fill="url(#textgrad2)" font-family="Inter,system-ui,sans-serif" font-size="28" font-weight="700" letter-spacing="-0.5">Inclufy<tspan fill="#DB2777">.</tspan></text>
 
-  <!-- Tagline -->
-  <text x="80" y="54" fill="#6B7280" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="500" letter-spacing="1.5">AI MARKETING</text>
+  <!-- Tagline: AI MARKETING -->
+  <text x="80" y="54" fill="#6B7280" font-family="Inter,system-ui,sans-serif" font-size="13" font-weight="500" letter-spacing="1.5"><tspan fill="url(#textgrad2)" font-weight="700">AI</tspan> MARKETING</text>
 </svg>
