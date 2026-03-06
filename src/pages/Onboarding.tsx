@@ -22,6 +22,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase/client';
+import { brandMemoryService } from '@/services/brand/brand-memory.service';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 
@@ -289,6 +290,38 @@ export default function Onboarding() {
         setSaving(false);
         return;
       }
+      // ── Bridge: populate Brand Memory from onboarding data ──
+      try {
+        const filteredProducts = data.products.filter(p => p.name.trim());
+        const toneMap: Record<string, string> = {
+          professional: nl ? 'Zakelijk en betrouwbaar' : 'Business-like and trustworthy',
+          friendly: nl ? 'Warm en benaderbaar' : 'Warm and approachable',
+          innovative: nl ? 'Vernieuwend en gedurfd' : 'Forward-thinking and bold',
+          luxury: nl ? 'Premium en exclusief' : 'Premium and exclusive',
+          playful: nl ? 'Speels en energiek' : 'Playful and energetic',
+          authoritative: nl ? 'Gezaghebbend en expert' : 'Authoritative and expert',
+        };
+        await brandMemoryService.upsertActive({
+          brand_name: data.companyName,
+          brand_description: filteredProducts.map(p => p.description).filter(Boolean).join('. '),
+          industries: data.industry ? [data.industry] : [],
+          audiences: [
+            data.audienceType && `${data.audienceType}`,
+            data.idealCustomer,
+            data.occupation && (nl ? `Beroep: ${data.occupation}` : `Role: ${data.occupation}`),
+            data.ageGroup && (nl ? `Leeftijd: ${data.ageGroup}` : `Age: ${data.ageGroup}`),
+          ].filter(Boolean) as string[],
+          regions: data.country ? [data.country] : [],
+          languages: data.language ? [data.language] : ['nl'],
+          urls: [data.website, ...data.socialAccounts.filter(s => s.url.trim()).map(s => s.url)].filter(Boolean),
+          usps: filteredProducts.flatMap(p => p.usp ? [p.usp] : []),
+          tone_attributes: data.tone ? [{ attribute: data.tone, description: toneMap[data.tone] || data.tone }] : [],
+        });
+      } catch {
+        // Brand Memory sync is best-effort; don't block onboarding completion
+        console.warn('Brand Memory sync failed (non-blocking)');
+      }
+
       toast({ title: nl ? 'Onboarding voltooid!' : 'Onboarding complete!' });
       navigate('/app/dashboard', { replace: true });
     } catch (err) {
