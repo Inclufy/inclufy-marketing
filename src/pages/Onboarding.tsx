@@ -87,6 +87,21 @@ const SOCIAL_PLATFORMS = [
   { key: 'twitter', label: 'X / Twitter', icon: Twitter },
 ];
 
+const BRAND_VALUES = [
+  { key: 'innovation', nl: 'Innovatie', en: 'Innovation' },
+  { key: 'quality', nl: 'Kwaliteit', en: 'Quality' },
+  { key: 'trust', nl: 'Vertrouwen', en: 'Trust' },
+  { key: 'sustainability', nl: 'Duurzaamheid', en: 'Sustainability' },
+  { key: 'customer-first', nl: 'Klant Eerst', en: 'Customer First' },
+  { key: 'simplicity', nl: 'Eenvoud', en: 'Simplicity' },
+  { key: 'transparency', nl: 'Transparantie', en: 'Transparency' },
+  { key: 'speed', nl: 'Snelheid', en: 'Speed' },
+  { key: 'creativity', nl: 'Creativiteit', en: 'Creativity' },
+  { key: 'expertise', nl: 'Expertise', en: 'Expertise' },
+  { key: 'community', nl: 'Community', en: 'Community' },
+  { key: 'inclusivity', nl: 'Inclusiviteit', en: 'Inclusivity' },
+];
+
 // ─── Types ──────────────────────────────────────────────────────────────
 
 interface Product {
@@ -113,6 +128,7 @@ interface OnboardingData {
   // Step 1: Company
   companyName: string;
   website: string;
+  tagline: string;
   industry: string;
   country: string;
   language: string;
@@ -137,6 +153,10 @@ interface OnboardingData {
   primaryColor: string;
   secondaryColor: string;
   tone: string;
+  mission: string;
+  brandValues: string[];
+  messagingDos: string;
+  messagingDonts: string;
   logoFile: File | null;
   logoPreview: string | null;
   // Step 7: Competitors
@@ -150,6 +170,7 @@ interface OnboardingData {
 const initialData: OnboardingData = {
   companyName: '',
   website: '',
+  tagline: '',
   industry: '',
   country: 'nl',
   language: 'nl',
@@ -169,6 +190,10 @@ const initialData: OnboardingData = {
   primaryColor: '#7c3aed',
   secondaryColor: '#ec4899',
   tone: 'professional',
+  mission: '',
+  brandValues: [],
+  messagingDos: '',
+  messagingDonts: '',
   logoFile: null,
   logoPreview: null,
   competitors: [{ name: '', website: '' }],
@@ -264,12 +289,17 @@ export default function Onboarding() {
           onboarding_completed: true,
           brand_name: data.companyName,
           website: data.website,
+          tagline: data.tagline,
           industry: data.industry,
           country: data.country,
           language: data.language,
           primary_color: data.primaryColor,
           secondary_color: data.secondaryColor,
           brand_tone: data.tone,
+          mission: data.mission,
+          brand_values: data.brandValues,
+          messaging_dos: data.messagingDos,
+          messaging_donts: data.messagingDonts,
           products: data.products.filter(p => p.name.trim() || p.description.trim()),
           audience_type: data.audienceType,
           ideal_customer: data.idealCustomer,
@@ -290,7 +320,7 @@ export default function Onboarding() {
         setSaving(false);
         return;
       }
-      // ── Bridge: populate Brand Memory from onboarding data ──
+      // ── Bridge: populate Brand Memory from onboarding data (24 fields) ──
       try {
         const filteredProducts = data.products.filter(p => p.name.trim());
         const toneMap: Record<string, string> = {
@@ -300,26 +330,76 @@ export default function Onboarding() {
           luxury: nl ? 'Premium en exclusief' : 'Premium and exclusive',
           playful: nl ? 'Speels en energiek' : 'Playful and energetic',
           authoritative: nl ? 'Gezaghebbend en expert' : 'Authoritative and expert',
+          casual: nl ? 'Ontspannen en informeel' : 'Relaxed and informal',
         };
         await brandMemoryService.upsertActive({
+          // Core identity
           brand_name: data.companyName,
+          tagline: data.tagline,
+          mission: data.mission,
           brand_description: filteredProducts.map(p => p.description).filter(Boolean).join('. '),
+
+          // Brand characteristics
+          brand_values: data.brandValues,
+
+          // Market definition
           industries: data.industry ? [data.industry] : [],
           audiences: [
             data.audienceType && `${data.audienceType}`,
             data.idealCustomer,
             data.occupation && (nl ? `Beroep: ${data.occupation}` : `Role: ${data.occupation}`),
             data.ageGroup && (nl ? `Leeftijd: ${data.ageGroup}` : `Age: ${data.ageGroup}`),
+            data.painPoints && (nl ? `Pijnpunten: ${data.painPoints}` : `Pain points: ${data.painPoints}`),
+            data.customerSector && (nl ? `Sector: ${data.customerSector}` : `Sector: ${data.customerSector}`),
+            data.companySize && (nl ? `Bedrijfsgrootte: ${data.companySize}` : `Company size: ${data.companySize}`),
           ].filter(Boolean) as string[],
           regions: data.country ? [data.country] : [],
           languages: data.language ? [data.language] : ['nl'],
-          urls: [data.website, ...data.socialAccounts.filter(s => s.url.trim()).map(s => s.url)].filter(Boolean),
+
+          // Competitive advantages
           usps: filteredProducts.flatMap(p => p.usp ? [p.usp] : []),
+          differentiators: filteredProducts.flatMap(p => p.features ? p.features.split(',').map(f => f.trim()).filter(Boolean) : []),
+          proof_points: filteredProducts.flatMap(p => p.problemSolved ? [p.problemSolved] : []),
+
+          // Voice & messaging
           tone_attributes: data.tone ? [{ attribute: data.tone, description: toneMap[data.tone] || data.tone }] : [],
+          messaging_dos: data.messagingDos,
+          messaging_donts: data.messagingDonts,
+
+          // References
+          urls: [data.website, ...data.socialAccounts.filter(s => s.url.trim()).map(s => s.url)].filter(Boolean),
+
+          // Examples
+          examples_good: [data.exampleContent, data.existingCampaigns].filter(Boolean).join('\n\n---\n\n'),
+
+          // Extended fields
+          competitors: data.competitors.filter(c => c.name.trim()),
+          marketing_goals: data.marketingGoals,
+          primary_color: data.primaryColor,
+          secondary_color: data.secondaryColor,
         });
       } catch {
         // Brand Memory sync is best-effort; don't block onboarding completion
         console.warn('Brand Memory sync failed (non-blocking)');
+      }
+
+      // ── Sync default Brand Kit with onboarding colors ──
+      try {
+        const { data: defaultKit } = await supabase
+          .from('brand_kits')
+          .select('id')
+          .eq('is_default', true)
+          .maybeSingle();
+        if (defaultKit) {
+          await supabase.from('brand_kits').update({
+            primary_color: data.primaryColor,
+            secondary_color: data.secondaryColor,
+            tagline: data.tagline || undefined,
+            name: data.companyName || undefined,
+          }).eq('id', defaultKit.id);
+        }
+      } catch {
+        console.warn('Brand kit sync failed (non-blocking)');
       }
 
       toast({ title: nl ? 'Onboarding voltooid!' : 'Onboarding complete!' });
@@ -480,6 +560,20 @@ export default function Onboarding() {
                         className="h-12 pl-10 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                       />
                     </div>
+                  </div>
+
+                  {/* Tagline */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-200">
+                      {nl ? 'Tagline / Slogan' : 'Tagline / Slogan'}
+                      <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                    </label>
+                    <Input
+                      value={data.tagline}
+                      onChange={e => update({ tagline: e.target.value })}
+                      placeholder={nl ? 'bijv. "Marketing die werkt"' : 'e.g. "Marketing that works"'}
+                      className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                    />
                   </div>
 
                   {/* Industry */}
@@ -1063,6 +1157,87 @@ export default function Onboarding() {
                     </div>
                   </div>
 
+                  {/* Brand Values */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-200">
+                      {nl ? 'Merkwaarden' : 'Brand Values'}
+                      <span className="text-gray-500 text-xs ml-2">({nl ? 'selecteer max. 5' : 'select up to 5'})</span>
+                    </label>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {BRAND_VALUES.map((val, idx) => {
+                        const selected = data.brandValues.includes(val.key);
+                        return (
+                          <motion.button
+                            key={val.key}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.03 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => {
+                              const values = selected
+                                ? data.brandValues.filter(v => v !== val.key)
+                                : data.brandValues.length < 5 ? [...data.brandValues, val.key] : data.brandValues;
+                              update({ brandValues: values });
+                            }}
+                            className={cn(
+                              'px-3 py-2.5 rounded-lg text-xs font-medium border transition-all',
+                              selected
+                                ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                                : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15 hover:border-purple-500/50'
+                            )}
+                          >
+                            {nl ? val.nl : val.en}
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Mission */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-200">
+                      {nl ? 'Missie' : 'Mission'}
+                      <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                    </label>
+                    <Textarea
+                      value={data.mission}
+                      onChange={e => update({ mission: e.target.value })}
+                      placeholder={nl ? 'bijv. "We helpen MKB-bedrijven groeien met AI-gestuurde marketing"' : 'e.g. "We help SMBs grow with AI-powered marketing"'}
+                      rows={2}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                    />
+                  </div>
+
+                  {/* Messaging Guidelines */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-200">
+                        {nl ? 'Wel zeggen' : 'Do Say'}
+                        <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                      </label>
+                      <Textarea
+                        value={data.messagingDos}
+                        onChange={e => update({ messagingDos: e.target.value })}
+                        placeholder={nl ? 'bijv. "Gebruik altijd u/uw, nooit je/jij"' : 'e.g. "Always use inclusive language"'}
+                        rows={2}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-200">
+                        {nl ? 'Niet zeggen' : "Don't Say"}
+                        <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                      </label>
+                      <Textarea
+                        value={data.messagingDonts}
+                        onChange={e => update({ messagingDonts: e.target.value })}
+                        placeholder={nl ? 'bijv. "Vermijd jargon, geen superlatieven"' : 'e.g. "Avoid jargon, no superlatives"'}
+                        rows={2}
+                        className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                      />
+                    </div>
+                  </div>
+
                   {/* Logo Upload */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
@@ -1289,6 +1464,7 @@ export default function Onboarding() {
                       <h3 className="font-semibold text-white">{nl ? 'Bedrijf' : 'Company'}</h3>
                     </div>
                     <p className="text-sm text-white font-medium">{data.companyName}</p>
+                    {data.tagline && <p className="text-xs text-gray-300 italic mt-0.5">"{data.tagline}"</p>}
                     <p className="text-xs text-gray-400 mt-1">
                       {data.industry && `${data.industry} \u00B7 `}
                       {COUNTRIES.find(c => c.value === data.country)?.[nl ? 'label' : 'en'] || data.country}
@@ -1390,6 +1566,15 @@ export default function Onboarding() {
                       </span>
                     </div>
                     {data.logoPreview && <img src={data.logoPreview} alt="" className="h-8 mt-2 object-contain" />}
+                    {data.mission && <p className="text-xs text-gray-500 mt-2">{data.mission.slice(0, 80)}{data.mission.length > 80 ? '...' : ''}</p>}
+                    {data.brandValues.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {data.brandValues.map(v => {
+                          const val = BRAND_VALUES.find(bv => bv.key === v);
+                          return val ? <Badge key={v} className="bg-white/10 text-gray-300 border-0 text-[10px]">{nl ? val.nl : val.en}</Badge> : null;
+                        })}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 

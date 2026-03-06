@@ -39,6 +39,12 @@ export type BrandMemoryRow = {
   examples_poor: string;
   test_prompt: string;
 
+  // Extended fields (bridged from onboarding)
+  competitors: { name: string; website: string }[];
+  marketing_goals: string[];
+  primary_color: string;
+  secondary_color: string;
+
   is_active: boolean;
   version: number;
   created_at: string;
@@ -99,6 +105,10 @@ class BrandMemoryService {
         examples_good: "",
         examples_poor: "",
         test_prompt: "",
+        competitors: [],
+        marketing_goals: [],
+        primary_color: "#7c3aed",
+        secondary_color: "#ec4899",
         is_active: true,
         version: 1,
       })
