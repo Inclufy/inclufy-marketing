@@ -40,6 +40,7 @@ import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+import BrandStylePreview from '@/components/BrandStylePreview';
 import { brandMemoryService, type BrandMemoryRow } from "@/services/brand/brand-memory.service";
 import { brandEntitiesService, type BrandEntity } from "@/services/brand/brand-entities.service";
 import { brandDocumentsService, type BrandDocumentRow } from "@/services/brand/brand-documents.service";
@@ -613,9 +614,10 @@ export default function BrandMemory() {
       )}
 
       <Tabs defaultValue="brand" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="brand">{nl ? 'Merkidentiteit' : fr ? 'Identite de Marque' : 'Brand Identity'}</TabsTrigger>
           <TabsTrigger value="tone">{nl ? 'Stem & Toon' : fr ? 'Voix & Ton' : 'Voice & Tone'}</TabsTrigger>
+          <TabsTrigger value="preview">{nl ? 'Preview' : fr ? 'Aperçu' : 'Preview'}</TabsTrigger>
           <TabsTrigger value="entities">{nl ? 'ICP / Producten' : fr ? 'ICP / Produits' : 'ICP / Products'}</TabsTrigger>
           <TabsTrigger value="knowledge">{nl ? 'Kennisbank' : fr ? 'Base de Connaissances' : 'Knowledge Base'}</TabsTrigger>
           <TabsTrigger value="examples">{nl ? 'Voorbeelden' : fr ? 'Exemples' : 'Examples'}</TabsTrigger>
@@ -779,6 +781,90 @@ export default function BrandMemory() {
                   rows={4}
                 />
               </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Preview: Brand Style Mockups */}
+        <TabsContent value="preview" className="space-y-6">
+          <BrandStylePreview
+            brandName={bm?.brand_name || ''}
+            tagline={bm?.tagline || ''}
+            primaryColor={bm?.primary_color || '#7c3aed'}
+            secondaryColor={bm?.secondary_color || '#ec4899'}
+            tone={bm?.tone_attributes?.[0]?.attribute || 'professional'}
+            mission={bm?.mission || ''}
+            logoUrl={null}
+            lang={lang as 'nl' | 'en' | 'fr'}
+            usps={bm?.usps || []}
+          />
+
+          {/* Huisstijl Guide */}
+          <Card>
+            <CardHeader>
+              <CardTitle>{nl ? 'Huisstijl Gids' : fr ? 'Guide de Style' : 'Brand Style Guide'}</CardTitle>
+              <CardDescription>{nl ? 'Overzicht van je merkrichtlijnen voor consistent gebruik' : fr ? 'Aperçu de vos directives de marque pour un usage cohérent' : 'Overview of your brand guidelines for consistent use'}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Tone */}
+                <div className="p-4 rounded-lg border">
+                  <h4 className="text-sm font-semibold mb-2">{nl ? 'Merktoon' : fr ? 'Ton de marque' : 'Brand Tone'}</h4>
+                  {(bm?.tone_attributes || []).length > 0 ? (
+                    <div className="space-y-1">
+                      {bm?.tone_attributes?.map((t, i) => (
+                        <div key={i}>
+                          <Badge variant="secondary" className="text-xs">{t.attribute}</Badge>
+                          {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
+                        </div>
+                      ))}
+                    </div>
+                  ) : <p className="text-xs text-muted-foreground">{nl ? 'Nog niet ingesteld' : fr ? 'Pas encore défini' : 'Not yet set'}</p>}
+                </div>
+
+                {/* Messaging Do's */}
+                <div className="p-4 rounded-lg border">
+                  <h4 className="text-sm font-semibold mb-2 text-green-600">{nl ? 'Wel Zeggen' : fr ? 'À Dire' : "Do's"}</h4>
+                  {bm?.messaging_dos ? (
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{bm.messaging_dos}</p>
+                  ) : <p className="text-xs text-muted-foreground">{nl ? 'Nog niet ingesteld' : fr ? 'Pas encore défini' : 'Not yet set'}</p>}
+                </div>
+
+                {/* Messaging Don'ts */}
+                <div className="p-4 rounded-lg border">
+                  <h4 className="text-sm font-semibold mb-2 text-red-600">{nl ? 'Niet Zeggen' : fr ? 'À Ne Pas Dire' : "Don'ts"}</h4>
+                  {bm?.messaging_donts ? (
+                    <p className="text-xs text-muted-foreground whitespace-pre-line">{bm.messaging_donts}</p>
+                  ) : <p className="text-xs text-muted-foreground">{nl ? 'Nog niet ingesteld' : fr ? 'Pas encore défini' : 'Not yet set'}</p>}
+                </div>
+              </div>
+
+              {/* Brand Values */}
+              {(bm?.brand_values || []).length > 0 && (
+                <div className="p-4 rounded-lg border">
+                  <h4 className="text-sm font-semibold mb-2">{nl ? 'Merkwaarden' : fr ? 'Valeurs de marque' : 'Brand Values'}</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {bm?.brand_values?.map((v, i) => (
+                      <Badge key={i} variant="outline" className="text-xs">{v}</Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* USPs */}
+              {(bm?.usps || []).length > 0 && (
+                <div className="p-4 rounded-lg border">
+                  <h4 className="text-sm font-semibold mb-2">{nl ? 'Unique Selling Points' : fr ? 'Propositions Uniques' : 'Unique Selling Points'}</h4>
+                  <ul className="space-y-1">
+                    {bm?.usps?.map((u, i) => (
+                      <li key={i} className="text-xs text-muted-foreground flex items-start gap-2">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500 shrink-0 mt-0.5" />
+                        {u}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

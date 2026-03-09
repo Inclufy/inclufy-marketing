@@ -25,6 +25,7 @@ import { supabase } from '@/lib/supabase/client';
 import { brandMemoryService } from '@/services/brand/brand-memory.service';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
+import BrandStylePreview from '@/components/BrandStylePreview';
 
 const TOTAL_STEPS = 10;
 
@@ -1830,6 +1831,21 @@ export default function Onboarding() {
                     </CardContent>
                   </Card>
                 )}
+              </div>
+
+              {/* Brand Style Preview */}
+              <div className="mb-8 bg-[#1a1a2e] border border-white/15 rounded-xl p-6">
+                <BrandStylePreview
+                  brandName={data.companyName}
+                  tagline={data.tagline}
+                  primaryColor={data.primaryColor}
+                  secondaryColor={data.secondaryColor}
+                  tone={data.tone}
+                  mission={data.mission}
+                  logoUrl={data.logoPreview}
+                  lang={lang as 'nl' | 'en' | 'fr'}
+                  usps={data.products.filter(p => p.name.trim()).map(p => p.usp || p.description).filter(Boolean)}
+                />
               </div>
 
               {/* Start AI Marketing button */}
