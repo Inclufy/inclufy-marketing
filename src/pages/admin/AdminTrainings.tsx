@@ -16,6 +16,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Training {
   id: string;
@@ -29,6 +30,9 @@ interface Training {
 }
 
 export default function AdminTrainings() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [trainings, setTrainings] = useState<Training[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,15 +54,15 @@ export default function AdminTrainings() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Trainingen</h1>
-          <p className="text-sm text-gray-500">{trainings.length} trainingen</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Trainingen' : fr ? 'Formations' : 'Trainings'}</h1>
+          <p className="text-sm text-gray-500">{trainings.length} {nl ? 'trainingen' : fr ? 'formations' : 'trainings'}</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+            <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
           </Button>
           <Button className="bg-purple-600 hover:bg-purple-700">
-            <Plus className="h-4 w-4 mr-2" /> Training Toevoegen
+            <Plus className="h-4 w-4 mr-2" /> {nl ? 'Training Toevoegen' : fr ? 'Ajouter une formation' : 'Add Training'}
           </Button>
         </div>
       </div>
@@ -71,10 +75,10 @@ export default function AdminTrainings() {
         <Card className="border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-16 text-gray-500">
             <GraduationCap className="h-12 w-12 mb-4 text-gray-300" />
-            <p className="text-lg font-medium">Geen trainingen</p>
-            <p className="text-sm mb-4">Plan een training voor je gebruikers</p>
+            <p className="text-lg font-medium">{nl ? 'Geen trainingen' : fr ? 'Aucune formation' : 'No trainings'}</p>
+            <p className="text-sm mb-4">{nl ? 'Plan een training voor je gebruikers' : fr ? 'Planifiez une formation pour vos utilisateurs' : 'Schedule a training for your users'}</p>
             <Button className="bg-purple-600 hover:bg-purple-700">
-              <Plus className="h-4 w-4 mr-2" /> Eerste Training Aanmaken
+              <Plus className="h-4 w-4 mr-2" /> {nl ? 'Eerste Training Aanmaken' : fr ? 'Creer la premiere formation' : 'Create First Training'}
             </Button>
           </CardContent>
         </Card>
@@ -95,11 +99,11 @@ export default function AdminTrainings() {
                     <h3 className="font-semibold text-gray-900 dark:text-white">{training.title}</h3>
                     <p className="text-sm text-gray-500 mt-1">{training.description}</p>
                     <div className="flex items-center gap-4 mt-3 text-xs text-gray-400">
-                      <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{training.participants || 0} deelnemers</span>
-                      <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{training.scheduled_at ? new Date(training.scheduled_at).toLocaleDateString('nl-NL') : '-'}</span>
+                      <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" />{training.participants || 0} {nl ? 'deelnemers' : fr ? 'participants' : 'participants'}</span>
+                      <span className="flex items-center gap-1"><Calendar className="h-3.5 w-3.5" />{training.scheduled_at ? new Date(training.scheduled_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB') : '-'}</span>
                     </div>
                   </div>
-                  <Badge variant="outline" className="text-xs">{training.status || 'gepland'}</Badge>
+                  <Badge variant="outline" className="text-xs">{training.status || (nl ? 'gepland' : fr ? 'planifie' : 'scheduled')}</Badge>
                 </div>
               </CardContent>
             </Card>

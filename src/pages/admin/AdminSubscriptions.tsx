@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Subscription {
   id: string;
@@ -28,24 +29,27 @@ interface Subscription {
   created_at: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  active: { label: 'Actief', icon: CheckCircle, color: 'bg-emerald-100 text-emerald-700' },
-  canceled: { label: 'Geannuleerd', icon: XCircle, color: 'bg-red-100 text-red-700' },
-  past_due: { label: 'Achterstallig', icon: AlertTriangle, color: 'bg-amber-100 text-amber-700' },
-  trialing: { label: 'Trial', icon: Clock, color: 'bg-blue-100 text-blue-700' },
-};
-
-const PLAN_LABELS: Record<string, string> = {
-  starter: 'Starter',
-  professional: 'Professional',
-  enterprise: 'Enterprise',
-  free: 'Gratis',
-};
-
 export default function AdminSubscriptions() {
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const STATUS_CONFIG: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+    active: { label: nl ? 'Actief' : fr ? 'Actif' : 'Active', icon: CheckCircle, color: 'bg-emerald-100 text-emerald-700' },
+    canceled: { label: nl ? 'Geannuleerd' : fr ? 'Annule' : 'Canceled', icon: XCircle, color: 'bg-red-100 text-red-700' },
+    past_due: { label: nl ? 'Achterstallig' : fr ? 'En retard' : 'Past Due', icon: AlertTriangle, color: 'bg-amber-100 text-amber-700' },
+    trialing: { label: 'Trial', icon: Clock, color: 'bg-blue-100 text-blue-700' },
+  };
+
+  const PLAN_LABELS: Record<string, string> = {
+    starter: 'Starter',
+    professional: 'Professional',
+    enterprise: 'Enterprise',
+    free: nl ? 'Gratis' : fr ? 'Gratuit' : 'Free',
+  };
 
   const fetchData = async () => {
     try {
@@ -69,11 +73,11 @@ export default function AdminSubscriptions() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Abonnementen</h1>
-          <p className="text-sm text-gray-500">{subscriptions.length} abonnementen | MRR: &euro;{totalMRR.toFixed(2)}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Abonnementen' : fr ? 'Abonnements' : 'Subscriptions'}</h1>
+          <p className="text-sm text-gray-500">{subscriptions.length} {nl ? 'abonnementen' : fr ? 'abonnements' : 'subscriptions'} | MRR: &euro;{totalMRR.toFixed(2)}</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+          <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -106,8 +110,8 @@ export default function AdminSubscriptions() {
           ) : subscriptions.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-500">
               <CreditCard className="h-12 w-12 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Geen abonnementen</p>
-              <p className="text-sm">Er zijn nog geen abonnementen geregistreerd</p>
+              <p className="text-lg font-medium">{nl ? 'Geen abonnementen' : fr ? 'Aucun abonnement' : 'No subscriptions'}</p>
+              <p className="text-sm">{nl ? 'Er zijn nog geen abonnementen geregistreerd' : fr ? 'Aucun abonnement n\'a encore ete enregistre' : 'No subscriptions have been registered yet'}</p>
             </div>
           ) : (
             <table className="w-full">
@@ -115,9 +119,9 @@ export default function AdminSubscriptions() {
                 <tr className="border-b border-gray-200 dark:border-gray-800">
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Plan</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Bedrag</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Interval</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Aangemaakt</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Bedrag' : fr ? 'Montant' : 'Amount'}</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Interval' : fr ? 'Intervalle' : 'Interval'}</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Aangemaakt' : fr ? 'Cree le' : 'Created'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -130,9 +134,9 @@ export default function AdminSubscriptions() {
                         <Badge className={`${statusConfig.color} border-0 text-xs`}>{statusConfig.label}</Badge>
                       </td>
                       <td className="py-3 px-4">&euro;{sub.amount.toFixed(2)}</td>
-                      <td className="py-3 px-4 text-sm text-gray-500">{sub.interval === 'year' ? 'Jaarlijks' : 'Maandelijks'}</td>
+                      <td className="py-3 px-4 text-sm text-gray-500">{sub.interval === 'year' ? (nl ? 'Jaarlijks' : fr ? 'Annuel' : 'Yearly') : (nl ? 'Maandelijks' : fr ? 'Mensuel' : 'Monthly')}</td>
                       <td className="py-3 px-4 text-sm text-gray-500">
-                        {sub.created_at ? new Date(sub.created_at).toLocaleDateString('nl-NL') : '-'}
+                        {sub.created_at ? new Date(sub.created_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB') : '-'}
                       </td>
                     </tr>
                   );

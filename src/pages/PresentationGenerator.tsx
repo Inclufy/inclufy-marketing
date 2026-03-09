@@ -1,5 +1,6 @@
 // src/pages/PresentationGenerator.tsx
 import { useState, useEffect } from 'react';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { PresentationGenerator as PresentationGeneratorComponent } from '@/components/PresentationGenerator';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,9 @@ interface SavedPresentation {
 }
 
 export default function PresentationGenerator() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const { user } = useAuth();
   const [savedPresentations, setSavedPresentations] = useState<SavedPresentation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,7 +54,7 @@ export default function PresentationGenerator() {
 
       if (error) {
         console.error('Error loading presentations:', error);
-        toast.error('Failed to load saved presentations');
+        toast.error(nl ? 'Opgeslagen presentaties laden mislukt' : fr ? '\u00c9chec du chargement des pr\u00e9sentations enregistr\u00e9es' : 'Failed to load saved presentations');
       } else {
         setSavedPresentations(data || []);
       }
@@ -62,7 +66,7 @@ export default function PresentationGenerator() {
   };
 
   const deletePresentation = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this presentation?')) return;
+    if (!confirm(nl ? 'Weet u zeker dat u deze presentatie wilt verwijderen?' : fr ? '\u00cates-vous s\u00fbr de vouloir supprimer cette pr\u00e9sentation ?' : 'Are you sure you want to delete this presentation?')) return;
 
     try {
       const { error } = await supabase
@@ -72,14 +76,14 @@ export default function PresentationGenerator() {
 
       if (error) throw error;
 
-      toast.success('Presentation deleted');
+      toast.success(nl ? 'Presentatie verwijderd' : fr ? 'Pr\u00e9sentation supprim\u00e9e' : 'Presentation deleted');
       setSavedPresentations(prev => prev.filter(p => p.id !== id));
       if (selectedPresentation?.id === id) {
         setSelectedPresentation(null);
       }
     } catch (error) {
       console.error('Error deleting:', error);
-      toast.error('Failed to delete presentation');
+      toast.error(nl ? 'Presentatie verwijderen mislukt' : fr ? '\u00c9chec de la suppression de la pr\u00e9sentation' : 'Failed to delete presentation');
     }
   };
 
@@ -103,9 +107,9 @@ export default function PresentationGenerator() {
     <div className="container mx-auto px-4 py-6 space-y-6">
       <Tabs defaultValue="generate" className="space-y-6">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="generate">Generate New</TabsTrigger>
+          <TabsTrigger value="generate">{nl ? 'Nieuw Genereren' : fr ? 'G\u00e9n\u00e9rer nouveau' : 'Generate New'}</TabsTrigger>
           <TabsTrigger value="saved">
-            Saved Presentations
+            {nl ? 'Opgeslagen Presentaties' : fr ? 'Pr\u00e9sentations enregistr\u00e9es' : 'Saved Presentations'}
             {savedPresentations.length > 0 && (
               <Badge variant="secondary" className="ml-2">
                 {savedPresentations.length}
@@ -123,10 +127,10 @@ export default function PresentationGenerator() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Presentation className="h-5 w-5" />
-                Saved Presentations
+                {nl ? 'Opgeslagen Presentaties' : fr ? 'Pr\u00e9sentations enregistr\u00e9es' : 'Saved Presentations'}
               </CardTitle>
               <CardDescription>
-                View and manage your previously generated presentations
+                {nl ? 'Bekijk en beheer uw eerder gegenereerde presentaties' : fr ? 'Consultez et g\u00e9rez vos pr\u00e9sentations g\u00e9n\u00e9r\u00e9es pr\u00e9c\u00e9demment' : 'View and manage your previously generated presentations'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -137,8 +141,8 @@ export default function PresentationGenerator() {
               ) : savedPresentations.length === 0 ? (
                 <div className="text-center py-8 text-gray-500">
                   <Presentation className="h-12 w-12 mx-auto mb-3 text-gray-300" />
-                  <p>No saved presentations yet.</p>
-                  <p className="text-sm">Generate your first presentation to see it here.</p>
+                  <p>{nl ? 'Nog geen opgeslagen presentaties.' : fr ? 'Aucune pr\u00e9sentation enregistr\u00e9e.' : 'No saved presentations yet.'}</p>
+                  <p className="text-sm">{nl ? 'Genereer uw eerste presentatie om deze hier te zien.' : fr ? 'G\u00e9n\u00e9rez votre premi\u00e8re pr\u00e9sentation pour la voir ici.' : 'Generate your first presentation to see it here.'}</p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -159,7 +163,7 @@ export default function PresentationGenerator() {
                               {new Date(presentation.created_at).toLocaleDateString()}
                             </span>
                             {presentation.content?.presentation?.slides && (
-                              <span>{presentation.content.presentation.slides.length} slides</span>
+                              <span>{presentation.content.presentation.slides.length} {nl ? 'dia\'s' : fr ? 'diapositives' : 'slides'}</span>
                             )}
                           </div>
                         </div>
@@ -198,21 +202,21 @@ export default function PresentationGenerator() {
           {selectedPresentation && (
             <Card>
               <CardHeader>
-                <CardTitle>{selectedPresentation.company_name} - Presentation Details</CardTitle>
+                <CardTitle>{selectedPresentation.company_name} - {nl ? 'Presentatiedetails' : fr ? 'D\u00e9tails de la pr\u00e9sentation' : 'Presentation Details'}</CardTitle>
                 <CardDescription>
-                  Generated on {new Date(selectedPresentation.created_at).toLocaleString()}
+                  {nl ? 'Gegenereerd op' : fr ? 'G\u00e9n\u00e9r\u00e9 le' : 'Generated on'} {new Date(selectedPresentation.created_at).toLocaleString()}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div>
-                    <h4 className="font-medium mb-2">Executive Summary</h4>
+                    <h4 className="font-medium mb-2">{nl ? 'Samenvatting' : fr ? 'R\u00e9sum\u00e9 ex\u00e9cutif' : 'Executive Summary'}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {selectedPresentation.content?.presentation?.executiveSummary}
                     </p>
                   </div>
                   <div>
-                    <h4 className="font-medium mb-2">Slides ({selectedPresentation.content?.presentation?.slides?.length || 0})</h4>
+                    <h4 className="font-medium mb-2">{nl ? 'Dia\'s' : fr ? 'Diapositives' : 'Slides'} ({selectedPresentation.content?.presentation?.slides?.length || 0})</h4>
                     <div className="space-y-2">
                       {selectedPresentation.content?.presentation?.slides?.map((slide: any, index: number) => (
                         <div key={index} className="pl-4 border-l-2 border-gray-200">

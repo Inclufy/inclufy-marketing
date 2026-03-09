@@ -27,6 +27,7 @@ import FeatureComparison from '@/components/context-marketing/FeatureComparison'
 import CompetitiveAlerts from '@/components/context-marketing/CompetitiveAlerts';
 import BattleCards from '@/components/context-marketing/BattleCards';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface CompetitiveInsights {
   totalCompetitors: number;
@@ -38,6 +39,9 @@ interface CompetitiveInsights {
 }
 
 export default function CompetitiveContextDashboard() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [insights, setInsights] = useState<CompetitiveInsights>({
@@ -83,7 +87,7 @@ export default function CompetitiveContextDashboard() {
 
     } catch (error) {
       console.error('Error loading competitive data:', error);
-      toast.error('Failed to load competitive intelligence');
+      toast.error(nl ? 'Fout bij laden van concurrentie-informatie' : fr ? '\u00c9chec du chargement des donn\u00e9es concurrentielles' : 'Failed to load competitive intelligence');
     } finally {
       setLoading(false);
     }
@@ -93,14 +97,14 @@ export default function CompetitiveContextDashboard() {
     setRefreshing(true);
     await loadCompetitiveData();
     setRefreshing(false);
-    toast.success('Competitive data refreshed');
+    toast.success(nl ? 'Concurrentiedata vernieuwd' : fr ? 'Donn\u00e9es concurrentielles actualis\u00e9es' : 'Competitive data refreshed');
   };
 
   const getCompetitiveStatus = (score: number) => {
-    if (score >= 80) return { label: 'Leading', color: 'text-green-600' };
-    if (score >= 60) return { label: 'Competitive', color: 'text-yellow-600' };
-    if (score >= 40) return { label: 'Challenged', color: 'text-orange-600' };
-    return { label: 'At Risk', color: 'text-red-600' };
+    if (score >= 80) return { label: nl ? 'Leidend' : fr ? 'Leader' : 'Leading', color: 'text-green-600' };
+    if (score >= 60) return { label: nl ? 'Concurrerend' : fr ? 'Comp\u00e9titif' : 'Competitive', color: 'text-yellow-600' };
+    if (score >= 40) return { label: nl ? 'Uitgedaagd' : fr ? 'Contest\u00e9' : 'Challenged', color: 'text-orange-600' };
+    return { label: nl ? 'Risico' : fr ? '\u00c0 risque' : 'At Risk', color: 'text-red-600' };
   };
 
   const status = getCompetitiveStatus(insights.competitiveScore);
@@ -110,14 +114,14 @@ export default function CompetitiveContextDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">Competitive Intelligence</h2>
+          <h2 className="text-2xl font-bold">{nl ? 'Concurrentie-intelligentie' : fr ? 'Intelligence Concurrentielle' : 'Competitive Intelligence'}</h2>
           <p className="text-gray-600 dark:text-gray-400">
-            Monitor competitors and maintain your market advantage
+            {nl ? 'Monitor concurrenten en behoud je marktvoordeel' : fr ? 'Surveillez les concurrents et maintenez votre avantage concurrentiel' : 'Monitor competitors and maintain your market advantage'}
           </p>
         </div>
         <Button onClick={handleRefresh} disabled={refreshing} variant="outline">
           <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
+          {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -130,13 +134,13 @@ export default function CompetitiveContextDashboard() {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Competitors</CardTitle>
+              <CardTitle className="text-sm font-medium">{nl ? 'Totaal Concurrenten' : fr ? 'Total Concurrents' : 'Total Competitors'}</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{insights.totalCompetitors}</div>
               <p className="text-xs text-muted-foreground">
-                {insights.directCompetitors} direct
+                {insights.directCompetitors} {nl ? 'direct' : fr ? 'directs' : 'direct'}
               </p>
             </CardContent>
           </Card>
@@ -149,7 +153,7 @@ export default function CompetitiveContextDashboard() {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Market Coverage</CardTitle>
+              <CardTitle className="text-sm font-medium">{nl ? 'Marktdekking' : fr ? 'Couverture du March\u00e9' : 'Market Coverage'}</CardTitle>
               <Target className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -166,7 +170,7 @@ export default function CompetitiveContextDashboard() {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Competitive Score</CardTitle>
+              <CardTitle className="text-sm font-medium">{nl ? 'Concurrentiescore' : fr ? 'Score Concurrentiel' : 'Competitive Score'}</CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -185,7 +189,7 @@ export default function CompetitiveContextDashboard() {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unread Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium">{nl ? 'Ongelezen Meldingen' : fr ? 'Alertes Non Lues' : 'Unread Alerts'}</CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -193,7 +197,7 @@ export default function CompetitiveContextDashboard() {
                 {insights.unreadAlerts}
               </div>
               <p className="text-xs text-muted-foreground">
-                Requires attention
+                {nl ? 'Vereist aandacht' : fr ? 'N\u00e9cessite une attention' : 'Requires attention'}
               </p>
             </CardContent>
           </Card>
@@ -206,18 +210,18 @@ export default function CompetitiveContextDashboard() {
         >
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Last Analysis</CardTitle>
+              <CardTitle className="text-sm font-medium">{nl ? 'Laatste Analyse' : fr ? 'Derni\u00e8re Analyse' : 'Last Analysis'}</CardTitle>
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-sm font-medium">
-                {insights.lastAnalysis 
-                  ? new Date(insights.lastAnalysis).toLocaleDateString()
-                  : 'Never'
+                {insights.lastAnalysis
+                  ? new Date(insights.lastAnalysis).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-US')
+                  : (nl ? 'Nooit' : fr ? 'Jamais' : 'Never')
                 }
               </div>
               <p className="text-xs text-muted-foreground">
-                Auto-monitoring active
+                {nl ? 'Automatische monitoring actief' : fr ? 'Surveillance automatique active' : 'Auto-monitoring active'}
               </p>
             </CardContent>
           </Card>
@@ -227,13 +231,13 @@ export default function CompetitiveContextDashboard() {
       {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="competitors">Competitors</TabsTrigger>
-          <TabsTrigger value="analysis">Analysis</TabsTrigger>
-          <TabsTrigger value="features">Features</TabsTrigger>
-          <TabsTrigger value="battlecards">Battle Cards</TabsTrigger>
+          <TabsTrigger value="overview">{nl ? 'Overzicht' : fr ? 'Aper\u00e7u' : 'Overview'}</TabsTrigger>
+          <TabsTrigger value="competitors">{nl ? 'Concurrenten' : fr ? 'Concurrents' : 'Competitors'}</TabsTrigger>
+          <TabsTrigger value="analysis">{nl ? 'Analyse' : fr ? 'Analyse' : 'Analysis'}</TabsTrigger>
+          <TabsTrigger value="features">{nl ? 'Functies' : fr ? 'Fonctionnalit\u00e9s' : 'Features'}</TabsTrigger>
+          <TabsTrigger value="battlecards">{nl ? 'Strijdkaarten' : fr ? 'Fiches de Combat' : 'Battle Cards'}</TabsTrigger>
           <TabsTrigger value="alerts">
-            Alerts {alerts.length > 0 && <Badge className="ml-1">{alerts.length}</Badge>}
+            {nl ? 'Meldingen' : fr ? 'Alertes' : 'Alerts'} {alerts.length > 0 && <Badge className="ml-1">{alerts.length}</Badge>}
           </TabsTrigger>
         </TabsList>
 
@@ -241,44 +245,44 @@ export default function CompetitiveContextDashboard() {
           {/* Quick Actions */}
           <Card>
             <CardHeader>
-              <CardTitle>Quick Actions</CardTitle>
+              <CardTitle>{nl ? 'Snelle Acties' : fr ? 'Actions Rapides' : 'Quick Actions'}</CardTitle>
               <CardDescription>
-                Common competitive intelligence tasks
+                {nl ? 'Veelgebruikte concurrentie-intelligentie taken' : fr ? 'T\u00e2ches courantes d\'intelligence concurrentielle' : 'Common competitive intelligence tasks'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-20 flex flex-col gap-2"
                   onClick={() => setActiveTab('competitors')}
                 >
                   <Plus className="w-5 h-5" />
-                  Add Competitor
+                  {nl ? 'Concurrent Toevoegen' : fr ? 'Ajouter un Concurrent' : 'Add Competitor'}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-20 flex flex-col gap-2"
                   onClick={() => setActiveTab('analysis')}
                 >
                   <BarChart3 className="w-5 h-5" />
-                  View Analysis
+                  {nl ? 'Analyse Bekijken' : fr ? 'Voir l\'Analyse' : 'View Analysis'}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-20 flex flex-col gap-2"
                   onClick={() => setActiveTab('features')}
                 >
                   <Shield className="w-5 h-5" />
-                  Compare Features
+                  {nl ? 'Functies Vergelijken' : fr ? 'Comparer les Fonctionnalit\u00e9s' : 'Compare Features'}
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-20 flex flex-col gap-2"
                   onClick={() => setActiveTab('battlecards')}
                 >
                   <Sword className="w-5 h-5" />
-                  Battle Cards
+                  {nl ? 'Strijdkaarten' : fr ? 'Fiches de Combat' : 'Battle Cards'}
                 </Button>
               </div>
             </CardContent>
@@ -287,9 +291,9 @@ export default function CompetitiveContextDashboard() {
           {/* Competitive Landscape */}
           <Card>
             <CardHeader>
-              <CardTitle>Competitive Landscape</CardTitle>
+              <CardTitle>{nl ? 'Concurrentielandschap' : fr ? 'Paysage Concurrentiel' : 'Competitive Landscape'}</CardTitle>
               <CardDescription>
-                Market positioning at a glance
+                {nl ? 'Marktpositionering in \u00e9\u00e9n oogopslag' : fr ? 'Positionnement sur le march\u00e9 en un coup d\'\u0153il' : 'Market positioning at a glance'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -301,9 +305,9 @@ export default function CompetitiveContextDashboard() {
           {alerts.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Recent Competitive Alerts</CardTitle>
+                <CardTitle>{nl ? 'Recente Concurrentie-meldingen' : fr ? 'Alertes Concurrentielles R\u00e9centes' : 'Recent Competitive Alerts'}</CardTitle>
                 <CardDescription>
-                  Latest competitor activities requiring attention
+                  {nl ? 'Laatste concurrentactiviteiten die aandacht vereisen' : fr ? 'Derni\u00e8res activit\u00e9s des concurrents n\u00e9cessitant une attention' : 'Latest competitor activities requiring attention'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -314,35 +318,35 @@ export default function CompetitiveContextDashboard() {
         </TabsContent>
 
         <TabsContent value="competitors" className="space-y-4">
-          <CompetitorsList 
+          <CompetitorsList
             competitors={competitors}
             onUpdate={loadCompetitiveData}
           />
         </TabsContent>
 
         <TabsContent value="analysis" className="space-y-4">
-          <CompetitorAnalysis 
+          <CompetitorAnalysis
             competitors={competitors}
             onUpdate={loadCompetitiveData}
           />
         </TabsContent>
 
         <TabsContent value="features" className="space-y-4">
-          <FeatureComparison 
+          <FeatureComparison
             competitors={competitors}
             onUpdate={loadCompetitiveData}
           />
         </TabsContent>
 
         <TabsContent value="battlecards" className="space-y-4">
-          <BattleCards 
+          <BattleCards
             competitors={competitors}
             onUpdate={loadCompetitiveData}
           />
         </TabsContent>
 
         <TabsContent value="alerts" className="space-y-4">
-          <CompetitiveAlerts 
+          <CompetitiveAlerts
             alerts={alerts}
             onUpdate={loadCompetitiveData}
           />

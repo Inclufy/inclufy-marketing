@@ -1,5 +1,6 @@
 // src/pages/CampaignOrchestrator.tsx
 import { useState, useEffect, useCallback } from "react";
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,10 @@ interface Campaign {
 }
 
 export default function CampaignOrchestrator() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -151,7 +156,7 @@ export default function CampaignOrchestrator() {
 
   // Delete campaign via API
   const handleDeleteCampaign = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this campaign?')) return;
+    if (!confirm(nl ? 'Weet je zeker dat je deze campagne wilt verwijderen?' : fr ? 'Êtes-vous sûr de vouloir supprimer cette campagne ?' : 'Are you sure you want to delete this campaign?')) return;
 
     try {
       setSaving(true);
@@ -177,7 +182,7 @@ export default function CampaignOrchestrator() {
     try {
       setSaving(true);
       const payload = {
-        name: `${campaign.name} (Copy)`,
+        name: `${campaign.name} (${nl ? 'Kopie' : fr ? 'Copie' : 'Copy'})`,
         type: campaign.type,
         description: campaign.description,
         budget_amount: campaign.budget_amount,
@@ -213,10 +218,10 @@ export default function CampaignOrchestrator() {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-              Campaign Orchestrator
+              {nl ? 'Campagne Orchestrator' : fr ? 'Orchestrateur de Campagnes' : 'Campaign Orchestrator'}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Manage and optimize your marketing campaigns
+              {nl ? 'Beheer en optimaliseer je marketingcampagnes' : fr ? 'Gérez et optimisez vos campagnes marketing' : 'Manage and optimize your marketing campaigns'}
             </p>
           </div>
         </div>
@@ -224,37 +229,37 @@ export default function CampaignOrchestrator() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchCampaigns} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
           </Button>
 
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
             <DialogTrigger asChild>
               <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                 <Plus className="h-5 w-5 mr-2" />
-                New Campaign
+                {nl ? 'Nieuwe Campagne' : fr ? 'Nouvelle Campagne' : 'New Campaign'}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
-                <DialogTitle>Create New Campaign</DialogTitle>
+                <DialogTitle>{nl ? 'Nieuwe Campagne Aanmaken' : fr ? 'Créer une Nouvelle Campagne' : 'Create New Campaign'}</DialogTitle>
                 <DialogDescription>
-                  Set up your campaign details and launch when ready
+                  {nl ? 'Stel je campagnedetails in en lanceer wanneer je klaar bent' : fr ? 'Configurez les détails de votre campagne et lancez quand vous êtes prêt' : 'Set up your campaign details and launch when ready'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <Label htmlFor="name">Campaign Name</Label>
+                  <Label htmlFor="name">{nl ? 'Campagnenaam' : fr ? 'Nom de la Campagne' : 'Campaign Name'}</Label>
                   <Input
                     id="name"
                     value={newCampaign.name}
                     onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                    placeholder="Summer Sale 2024"
+                    placeholder={nl ? 'Zomeruitverkoop 2024' : fr ? 'Soldes d\'Été 2024' : 'Summer Sale 2024'}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="type">Campaign Type</Label>
+                    <Label htmlFor="type">{nl ? 'Campagnetype' : fr ? 'Type de Campagne' : 'Campaign Type'}</Label>
                     <Select
                       value={newCampaign.type}
                       onValueChange={(value) => setNewCampaign({ ...newCampaign, type: value })}
@@ -263,16 +268,16 @@ export default function CampaignOrchestrator() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="email">Email</SelectItem>
-                        <SelectItem value="multi-channel">Multi-channel</SelectItem>
+                        <SelectItem value="email">{nl ? 'E-mail' : fr ? 'E-mail' : 'Email'}</SelectItem>
+                        <SelectItem value="multi-channel">{nl ? 'Multi-kanaal' : fr ? 'Multi-canal' : 'Multi-channel'}</SelectItem>
                         <SelectItem value="sms">SMS</SelectItem>
-                        <SelectItem value="push">Push Notification</SelectItem>
+                        <SelectItem value="push">{nl ? 'Pushmelding' : fr ? 'Notification Push' : 'Push Notification'}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
 
                   <div>
-                    <Label htmlFor="budget">Budget ($)</Label>
+                    <Label htmlFor="budget">{nl ? 'Budget (€)' : fr ? 'Budget (€)' : 'Budget ($)'}</Label>
                     <Input
                       id="budget"
                       type="number"
@@ -283,19 +288,19 @@ export default function CampaignOrchestrator() {
                 </div>
 
                 <div>
-                  <Label htmlFor="description">Description</Label>
+                  <Label htmlFor="description">{nl ? 'Beschrijving' : fr ? 'Description' : 'Description'}</Label>
                   <Textarea
                     id="description"
                     value={newCampaign.description}
                     onChange={(e) => setNewCampaign({ ...newCampaign, description: e.target.value })}
-                    placeholder="Describe your campaign objective..."
+                    placeholder={nl ? 'Beschrijf je campagnedoel...' : fr ? 'Décrivez l\'objectif de votre campagne...' : 'Describe your campaign objective...'}
                     rows={3}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="starts_at">Start Date</Label>
+                    <Label htmlFor="starts_at">{nl ? 'Startdatum' : fr ? 'Date de Début' : 'Start Date'}</Label>
                     <Input
                       id="starts_at"
                       type="date"
@@ -304,7 +309,7 @@ export default function CampaignOrchestrator() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="ends_at">End Date</Label>
+                    <Label htmlFor="ends_at">{nl ? 'Einddatum' : fr ? 'Date de Fin' : 'End Date'}</Label>
                     <Input
                       id="ends_at"
                       type="date"
@@ -315,7 +320,7 @@ export default function CampaignOrchestrator() {
                 </div>
 
                 <div>
-                  <Label htmlFor="subject">Email Subject Line</Label>
+                  <Label htmlFor="subject">{nl ? 'E-mail Onderwerpregel' : fr ? 'Objet de l\'E-mail' : 'Email Subject Line'}</Label>
                   <Input
                     id="subject"
                     value={newCampaign.content.subject}
@@ -323,12 +328,12 @@ export default function CampaignOrchestrator() {
                       ...newCampaign,
                       content: { ...newCampaign.content, subject: e.target.value }
                     })}
-                    placeholder="Limited Time: 50% Off Everything"
+                    placeholder={nl ? 'Beperkte Tijd: 50% Korting op Alles' : fr ? 'Offre Limitée : 50% de Réduction sur Tout' : 'Limited Time: 50% Off Everything'}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="body">Message</Label>
+                  <Label htmlFor="body">{nl ? 'Bericht' : fr ? 'Message' : 'Message'}</Label>
                   <Textarea
                     id="body"
                     value={newCampaign.content.body}
@@ -336,7 +341,7 @@ export default function CampaignOrchestrator() {
                       ...newCampaign,
                       content: { ...newCampaign.content, body: e.target.value }
                     })}
-                    placeholder="Your campaign message..."
+                    placeholder={nl ? 'Je campagnebericht...' : fr ? 'Votre message de campagne...' : 'Your campaign message...'}
                     rows={4}
                   />
                 </div>
@@ -354,13 +359,13 @@ export default function CampaignOrchestrator() {
                   />
                   <Label htmlFor="ai-optimization" className="flex items-center gap-2 cursor-pointer">
                     <Brain className="h-4 w-4 text-purple-600" />
-                    Enable AI Optimization
+                    {nl ? 'AI-optimalisatie Inschakelen' : fr ? 'Activer l\'Optimisation IA' : 'Enable AI Optimization'}
                   </Label>
                 </div>
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                    Cancel
+                    {nl ? 'Annuleren' : fr ? 'Annuler' : 'Cancel'}
                   </Button>
                   <Button
                     onClick={handleCreateCampaign}
@@ -368,7 +373,7 @@ export default function CampaignOrchestrator() {
                     className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
                   >
                     {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                    Create Campaign
+                    {nl ? 'Campagne Aanmaken' : fr ? 'Créer une Campagne' : 'Create Campaign'}
                   </Button>
                 </div>
               </div>
@@ -382,7 +387,7 @@ export default function CampaignOrchestrator() {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-800 dark:text-red-200 flex-1">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => setError(null)}>Dismiss</Button>
+          <Button variant="outline" size="sm" onClick={() => setError(null)}>{nl ? 'Sluiten' : fr ? 'Fermer' : 'Dismiss'}</Button>
         </div>
       )}
 
@@ -390,7 +395,7 @@ export default function CampaignOrchestrator() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Active Campaigns</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Actieve Campagnes' : fr ? 'Campagnes Actives' : 'Active Campaigns'}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -398,7 +403,7 @@ export default function CampaignOrchestrator() {
             ) : (
               <>
                 <div className="text-2xl font-bold">{activeCount}</div>
-                <p className="text-xs text-gray-500">of {campaigns.length} total</p>
+                <p className="text-xs text-gray-500">{nl ? `van ${campaigns.length} totaal` : fr ? `sur ${campaigns.length} au total` : `of ${campaigns.length} total`}</p>
               </>
             )}
           </CardContent>
@@ -406,7 +411,7 @@ export default function CampaignOrchestrator() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Budget</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Totaal Budget' : fr ? 'Budget Total' : 'Total Budget'}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -416,7 +421,7 @@ export default function CampaignOrchestrator() {
                 <div className="text-2xl font-bold text-purple-600">
                   ${totalBudget > 0 ? (totalBudget / 1000).toFixed(1) + 'K' : '0'}
                 </div>
-                <p className="text-xs text-gray-500">Allocated budget</p>
+                <p className="text-xs text-gray-500">{nl ? 'Toegewezen budget' : fr ? 'Budget alloué' : 'Allocated budget'}</p>
               </>
             )}
           </CardContent>
@@ -424,7 +429,7 @@ export default function CampaignOrchestrator() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Draft</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Concept' : fr ? 'Brouillon' : 'Draft'}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -434,7 +439,7 @@ export default function CampaignOrchestrator() {
                 <div className="text-2xl font-bold text-amber-600">
                   {campaigns.filter(c => c.status === 'draft').length}
                 </div>
-                <p className="text-xs text-gray-500">Ready to launch</p>
+                <p className="text-xs text-gray-500">{nl ? 'Klaar om te lanceren' : fr ? 'Prêt à lancer' : 'Ready to launch'}</p>
               </>
             )}
           </CardContent>
@@ -442,7 +447,7 @@ export default function CampaignOrchestrator() {
 
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Campaign Types</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Campagnetypes' : fr ? 'Types de Campagne' : 'Campaign Types'}</CardTitle>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -452,7 +457,7 @@ export default function CampaignOrchestrator() {
                 <div className="text-2xl font-bold text-blue-600">
                   {new Set(campaigns.map(c => c.type)).size}
                 </div>
-                <p className="text-xs text-gray-500">Different types</p>
+                <p className="text-xs text-gray-500">{nl ? 'Verschillende types' : fr ? 'Différents types' : 'Different types'}</p>
               </>
             )}
           </CardContent>
@@ -464,7 +469,7 @@ export default function CampaignOrchestrator() {
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
             <Loader2 className="h-10 w-10 animate-spin text-purple-600 mx-auto mb-4" />
-            <p className="text-gray-500">Loading campaigns...</p>
+            <p className="text-gray-500">{nl ? 'Campagnes laden...' : fr ? 'Chargement des campagnes...' : 'Loading campaigns...'}</p>
           </div>
         </div>
       )}
@@ -474,16 +479,16 @@ export default function CampaignOrchestrator() {
         <Card className="border-2 border-dashed">
           <CardContent className="py-16 text-center">
             <Target className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">No campaigns yet</h3>
+            <h3 className="text-xl font-semibold mb-2">{nl ? 'Nog geen campagnes' : fr ? 'Pas encore de campagnes' : 'No campaigns yet'}</h3>
             <p className="text-gray-500 mb-6">
-              Create your first campaign to start engaging your audience.
+              {nl ? 'Maak je eerste campagne om je doelgroep te bereiken.' : fr ? 'Créez votre première campagne pour engager votre audience.' : 'Create your first campaign to start engaging your audience.'}
             </p>
             <Button
               onClick={() => setIsCreateDialogOpen(true)}
               className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
             >
               <Plus className="h-5 w-5 mr-2" />
-              Create Your First Campaign
+              {nl ? 'Maak Je Eerste Campagne' : fr ? 'Créez Votre Première Campagne' : 'Create Your First Campaign'}
             </Button>
           </CardContent>
         </Card>
@@ -495,8 +500,8 @@ export default function CampaignOrchestrator() {
           {/* Campaign List */}
           <Card className="lg:col-span-1 border-0 shadow-lg">
             <CardHeader>
-              <CardTitle>Campaigns</CardTitle>
-              <CardDescription>Click to view and manage</CardDescription>
+              <CardTitle>{nl ? 'Campagnes' : fr ? 'Campagnes' : 'Campaigns'}</CardTitle>
+              <CardDescription>{nl ? 'Klik om te bekijken en beheren' : fr ? 'Cliquez pour voir et gérer' : 'Click to view and manage'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {campaigns.map((campaign) => (
@@ -518,7 +523,12 @@ export default function CampaignOrchestrator() {
                         'outline'
                       }
                     >
-                      {campaign.status}
+                      {campaign.status === 'active' ? (nl ? 'Actief' : fr ? 'Actif' : 'Active') :
+                       campaign.status === 'draft' ? (nl ? 'Concept' : fr ? 'Brouillon' : 'Draft') :
+                       campaign.status === 'paused' ? (nl ? 'Gepauzeerd' : fr ? 'En Pause' : 'Paused') :
+                       campaign.status === 'completed' ? (nl ? 'Voltooid' : fr ? 'Terminé' : 'Completed') :
+                       campaign.status === 'scheduled' ? (nl ? 'Gepland' : fr ? 'Planifié' : 'Scheduled') :
+                       campaign.status}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between text-sm">
@@ -532,7 +542,7 @@ export default function CampaignOrchestrator() {
                   </div>
                   {campaign.budget_amount && campaign.budget_amount > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs text-gray-500">Budget: ${campaign.budget_amount.toLocaleString()}</p>
+                      <p className="text-xs text-gray-500">{nl ? 'Budget' : fr ? 'Budget' : 'Budget'}: ${campaign.budget_amount.toLocaleString()}</p>
                     </div>
                   )}
                 </div>
@@ -547,7 +557,7 @@ export default function CampaignOrchestrator() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-2xl">{selectedCampaign.name}</CardTitle>
-                    <CardDescription className="capitalize">{selectedCampaign.type} Campaign</CardDescription>
+                    <CardDescription className="capitalize">{selectedCampaign.type} {nl ? 'Campagne' : fr ? 'Campagne' : 'Campaign'}</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Button
@@ -584,12 +594,12 @@ export default function CampaignOrchestrator() {
                       ) : selectedCampaign.status === 'active' ? (
                         <>
                           <Pause className="h-4 w-4 mr-2" />
-                          Pause
+                          {nl ? 'Pauzeren' : fr ? 'Pause' : 'Pause'}
                         </>
                       ) : (
                         <>
                           <Play className="h-4 w-4 mr-2" />
-                          {selectedCampaign.status === 'draft' ? 'Launch' : 'Resume'}
+                          {selectedCampaign.status === 'draft' ? (nl ? 'Lanceren' : fr ? 'Lancer' : 'Launch') : (nl ? 'Hervatten' : fr ? 'Reprendre' : 'Resume')}
                         </>
                       )}
                     </Button>
@@ -600,16 +610,21 @@ export default function CampaignOrchestrator() {
                 {/* Campaign Info */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="text-sm font-medium mb-3">Campaign Info</h4>
+                    <h4 className="text-sm font-medium mb-3">{nl ? 'Campagne Info' : fr ? 'Info Campagne' : 'Campaign Info'}</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Status</span>
+                        <span className="text-gray-600 dark:text-gray-400">{nl ? 'Status' : fr ? 'Statut' : 'Status'}</span>
                         <Badge variant={
                           selectedCampaign.status === 'active' ? 'default' :
                           selectedCampaign.status === 'paused' ? 'secondary' :
                           'outline'
                         }>
-                          {selectedCampaign.status}
+                          {selectedCampaign.status === 'active' ? (nl ? 'Actief' : fr ? 'Actif' : 'Active') :
+                           selectedCampaign.status === 'draft' ? (nl ? 'Concept' : fr ? 'Brouillon' : 'Draft') :
+                           selectedCampaign.status === 'paused' ? (nl ? 'Gepauzeerd' : fr ? 'En Pause' : 'Paused') :
+                           selectedCampaign.status === 'completed' ? (nl ? 'Voltooid' : fr ? 'Terminé' : 'Completed') :
+                           selectedCampaign.status === 'scheduled' ? (nl ? 'Gepland' : fr ? 'Planifié' : 'Scheduled') :
+                           selectedCampaign.status}
                         </Badge>
                       </div>
                       <div className="flex justify-between">
@@ -618,18 +633,18 @@ export default function CampaignOrchestrator() {
                       </div>
                       {selectedCampaign.starts_at && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">Start Date</span>
+                          <span className="text-gray-600 dark:text-gray-400">{nl ? 'Startdatum' : fr ? 'Date de Début' : 'Start Date'}</span>
                           <span>{new Date(selectedCampaign.starts_at).toLocaleDateString()}</span>
                         </div>
                       )}
                       {selectedCampaign.ends_at && (
                         <div className="flex justify-between">
-                          <span className="text-gray-600 dark:text-gray-400">End Date</span>
+                          <span className="text-gray-600 dark:text-gray-400">{nl ? 'Einddatum' : fr ? 'Date de Fin' : 'End Date'}</span>
                           <span>{new Date(selectedCampaign.ends_at).toLocaleDateString()}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Created</span>
+                        <span className="text-gray-600 dark:text-gray-400">{nl ? 'Aangemaakt' : fr ? 'Créé' : 'Created'}</span>
                         <span>{new Date(selectedCampaign.created_at).toLocaleDateString()}</span>
                       </div>
                     </div>
@@ -638,11 +653,11 @@ export default function CampaignOrchestrator() {
                     <h4 className="text-sm font-medium mb-3">Budget</h4>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
-                        <span className="text-gray-600 dark:text-gray-400">Total Budget</span>
+                        <span className="text-gray-600 dark:text-gray-400">{nl ? 'Totaal Budget' : fr ? 'Budget Total' : 'Total Budget'}</span>
                         <span>
                           {selectedCampaign.budget_amount
                             ? `$${selectedCampaign.budget_amount.toLocaleString()}`
-                            : 'Not set'}
+                            : (nl ? 'Niet ingesteld' : fr ? 'Non défini' : 'Not set')}
                         </span>
                       </div>
                     </div>
@@ -652,7 +667,7 @@ export default function CampaignOrchestrator() {
                 {/* Description */}
                 {selectedCampaign.description && (
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Description</h4>
+                    <h4 className="text-sm font-medium mb-2">{nl ? 'Beschrijving' : fr ? 'Description' : 'Description'}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
                       {selectedCampaign.description}
                     </p>
@@ -662,17 +677,17 @@ export default function CampaignOrchestrator() {
                 {/* Content Preview */}
                 {selectedCampaign.content && Object.keys(selectedCampaign.content).length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Content</h4>
+                    <h4 className="text-sm font-medium mb-2">{nl ? 'Inhoud' : fr ? 'Contenu' : 'Content'}</h4>
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-2">
                       {selectedCampaign.content.subject && (
                         <div>
-                          <span className="text-xs font-medium text-gray-500 uppercase">Subject</span>
+                          <span className="text-xs font-medium text-gray-500 uppercase">{nl ? 'Onderwerp' : fr ? 'Objet' : 'Subject'}</span>
                           <p className="text-sm">{selectedCampaign.content.subject}</p>
                         </div>
                       )}
                       {selectedCampaign.content.body && (
                         <div>
-                          <span className="text-xs font-medium text-gray-500 uppercase">Body</span>
+                          <span className="text-xs font-medium text-gray-500 uppercase">{nl ? 'Inhoud' : fr ? 'Corps' : 'Body'}</span>
                           <p className="text-sm whitespace-pre-wrap">{selectedCampaign.content.body}</p>
                         </div>
                       )}
@@ -695,9 +710,9 @@ export default function CampaignOrchestrator() {
                           <Brain className="h-7 w-7 text-purple-600 dark:text-purple-300" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-purple-900 dark:text-purple-100">AI Optimization Enabled</h4>
+                          <h4 className="font-semibold text-purple-900 dark:text-purple-100">{nl ? 'AI-optimalisatie Ingeschakeld' : fr ? 'Optimisation IA Activée' : 'AI Optimization Enabled'}</h4>
                           <p className="text-sm text-purple-700 dark:text-purple-300">
-                            AI will optimize send times, content, and targeting for this campaign.
+                            {nl ? 'AI optimaliseert verzendtijden, inhoud en targeting voor deze campagne.' : fr ? 'L\'IA optimisera les heures d\'envoi, le contenu et le ciblage de cette campagne.' : 'AI will optimize send times, content, and targeting for this campaign.'}
                           </p>
                         </div>
                       </div>
@@ -708,9 +723,9 @@ export default function CampaignOrchestrator() {
                     <CardContent className="pt-6">
                       <div className="text-center">
                         <Brain className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-                        <h4 className="font-semibold mb-1">AI Optimization Available</h4>
+                        <h4 className="font-semibold mb-1">{nl ? 'AI-optimalisatie Beschikbaar' : fr ? 'Optimisation IA Disponible' : 'AI Optimization Available'}</h4>
                         <p className="text-sm text-gray-600 dark:text-gray-400">
-                          Enable AI optimization when creating or editing this campaign.
+                          {nl ? 'Schakel AI-optimalisatie in bij het aanmaken of bewerken van deze campagne.' : fr ? 'Activez l\'optimisation IA lors de la création ou la modification de cette campagne.' : 'Enable AI optimization when creating or editing this campaign.'}
                         </p>
                       </div>
                     </CardContent>

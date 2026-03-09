@@ -10,12 +10,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { 
-  Palette, 
-  Plus, 
-  Trash2, 
-  Edit2, 
-  Upload, 
+import {
+  Palette,
+  Plus,
+  Trash2,
+  Edit2,
+  Upload,
   Loader2,
   Star,
   Check,
@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface BrandKit {
   id: string;
@@ -50,13 +51,17 @@ const fontOptions = [
 ];
 
 const BrandKits = () => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [brandKits, setBrandKits] = useState<BrandKit[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<BrandKit | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
-  
+
   // Form state
   const [name, setName] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#db2777");
@@ -66,7 +71,7 @@ const BrandKits = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +87,7 @@ const BrandKits = () => {
       setBrandKits(data || []);
     } catch (error) {
       console.error("Error fetching brand kits:", error);
-      toast.error("Kon brand kits niet laden");
+      toast.error(nl ? "Kon merkpakketten niet laden" : fr ? "Impossible de charger les kits de marque" : "Could not load brand kits");
     } finally {
       setLoading(false);
     }
@@ -128,7 +133,7 @@ const BrandKits = () => {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      toast.error("Vul een naam in");
+      toast.error(nl ? "Vul een naam in" : fr ? "Veuillez entrer un nom" : "Please enter a name");
       return;
     }
 
@@ -162,14 +167,14 @@ const BrandKits = () => {
           .eq('id', editing.id);
 
         if (error) throw error;
-        toast.success("Brand kit bijgewerkt");
+        toast.success(nl ? "Merkpakket bijgewerkt" : fr ? "Kit de marque mis \u00e0 jour" : "Brand kit updated");
       } else {
         const { error } = await supabase
           .from('brand_kits')
           .insert(kitData);
 
         if (error) throw error;
-        toast.success("Brand kit aangemaakt");
+        toast.success(nl ? "Merkpakket aangemaakt" : fr ? "Kit de marque cr\u00e9\u00e9" : "Brand kit created");
       }
 
       setDialogOpen(false);
@@ -177,7 +182,7 @@ const BrandKits = () => {
       fetchBrandKits();
     } catch (error) {
       console.error("Error saving brand kit:", error);
-      toast.error("Kon brand kit niet opslaan");
+      toast.error(nl ? "Kon merkpakket niet opslaan" : fr ? "Impossible d\u2019enregistrer le kit de marque" : "Could not save brand kit");
     } finally {
       setSaving(false);
     }
@@ -192,12 +197,12 @@ const BrandKits = () => {
         .eq('id', id);
 
       if (error) throw error;
-      
+
       setBrandKits(brandKits.filter(k => k.id !== id));
-      toast.success("Brand kit verwijderd");
+      toast.success(nl ? "Merkpakket verwijderd" : fr ? "Kit de marque supprim\u00e9" : "Brand kit deleted");
     } catch (error) {
       console.error("Error deleting brand kit:", error);
-      toast.error("Kon brand kit niet verwijderen");
+      toast.error(nl ? "Kon merkpakket niet verwijderen" : fr ? "Impossible de supprimer le kit de marque" : "Could not delete brand kit");
     } finally {
       setDeleting(null);
     }
@@ -218,12 +223,12 @@ const BrandKits = () => {
         .eq('id', id);
 
       if (error) throw error;
-      
-      toast.success("Standaard brand kit ingesteld");
+
+      toast.success(nl ? "Standaard merkpakket ingesteld" : fr ? "Kit de marque par d\u00e9faut d\u00e9fini" : "Default brand kit set");
       fetchBrandKits();
     } catch (error) {
       console.error("Error setting default:", error);
-      toast.error("Kon standaard niet instellen");
+      toast.error(nl ? "Kon standaard niet instellen" : fr ? "Impossible de d\u00e9finir par d\u00e9faut" : "Could not set default");
     }
   };
 
@@ -247,7 +252,7 @@ const BrandKits = () => {
     link.download = `brand-kit-${kit.name.toLowerCase().replace(/\s+/g, '-')}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`Brand kit "${kit.name}" geëxporteerd`);
+    toast.success(nl ? `Merkpakket "${kit.name}" ge\u00ebxporteerd` : fr ? `Kit de marque \u00ab ${kit.name} \u00bb export\u00e9` : `Brand kit "${kit.name}" exported`);
   };
 
   // Export all brand kits
@@ -273,7 +278,7 @@ const BrandKits = () => {
     link.download = `brand-kits-export-${new Date().toISOString().split('T')[0]}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    toast.success(`${brandKits.length} brand kit(s) geëxporteerd`);
+    toast.success(nl ? `${brandKits.length} merkpakket(ten) ge\u00ebxporteerd` : fr ? `${brandKits.length} kit(s) de marque export\u00e9(s)` : `${brandKits.length} brand kit(s) exported`);
   };
 
   // Import brand kits from file
@@ -302,7 +307,7 @@ const BrandKits = () => {
       } else if (data.name && data.primary_color) {
         kitsToImport = [data];
       } else {
-        throw new Error("Ongeldig bestandsformaat");
+        throw new Error(nl ? "Ongeldig bestandsformaat" : fr ? "Format de fichier invalide" : "Invalid file format");
       }
 
       let imported = 0;
@@ -337,16 +342,22 @@ const BrandKits = () => {
       }
 
       if (imported > 0) {
-        toast.success(`${imported} brand kit(s) geïmporteerd${skipped > 0 ? `, ${skipped} overgeslagen (al aanwezig)` : ''}`);
+        toast.success(
+          nl
+            ? `${imported} merkpakket(ten) ge\u00efmporteerd${skipped > 0 ? `, ${skipped} overgeslagen (al aanwezig)` : ''}`
+            : fr
+              ? `${imported} kit(s) de marque import\u00e9(s)${skipped > 0 ? `, ${skipped} ignor\u00e9(s) (d\u00e9j\u00e0 pr\u00e9sent(s))` : ''}`
+              : `${imported} brand kit(s) imported${skipped > 0 ? `, ${skipped} skipped (already exist)` : ''}`
+        );
         fetchBrandKits();
       } else if (skipped > 0) {
-        toast.warning(`Alle ${skipped} brand kit(s) bestaan al`);
+        toast.warning(nl ? `Alle ${skipped} merkpakket(ten) bestaan al` : fr ? `Les ${skipped} kit(s) de marque existent d\u00e9j\u00e0` : `All ${skipped} brand kit(s) already exist`);
       } else {
-        toast.error("Geen brand kits gevonden in bestand");
+        toast.error(nl ? "Geen merkpakketten gevonden in bestand" : fr ? "Aucun kit de marque trouv\u00e9 dans le fichier" : "No brand kits found in file");
       }
     } catch (error) {
       console.error("Import error:", error);
-      toast.error("Kon bestand niet importeren. Controleer het formaat.");
+      toast.error(nl ? "Kon bestand niet importeren. Controleer het formaat." : fr ? "Impossible d\u2019importer le fichier. V\u00e9rifiez le format." : "Could not import file. Check the format.");
     } finally {
       setImporting(false);
       if (importInputRef.current) {
@@ -366,9 +377,9 @@ const BrandKits = () => {
                 <Palette className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Brand Kits</h1>
+                <h1 className="text-2xl font-bold text-foreground">{nl ? 'Merkpakketten' : fr ? 'Kits de Marque' : 'Brand Kits'}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Beheer je merken met kleuren, logo's en fonts
+                  {nl ? 'Beheer je merken met kleuren, logo\'s en fonts' : fr ? 'G\u00e9rez vos marques avec couleurs, logos et polices' : 'Manage your brands with colors, logos and fonts'}
                 </p>
               </div>
             </div>
@@ -384,7 +395,7 @@ const BrandKits = () => {
                 ) : (
                   <FileUp className="w-4 h-4 mr-2" />
                 )}
-                Importeren
+                {nl ? 'Importeren' : fr ? 'Importer' : 'Import'}
               </Button>
               <input
                 ref={importInputRef}
@@ -398,7 +409,7 @@ const BrandKits = () => {
               {brandKits.length > 0 && (
                 <Button variant="outline" onClick={exportAllBrandKits}>
                   <Download className="w-4 h-4 mr-2" />
-                  Alles Exporteren
+                  {nl ? 'Alles Exporteren' : fr ? 'Tout Exporter' : 'Export All'}
                 </Button>
               )}
 
@@ -407,34 +418,36 @@ const BrandKits = () => {
                 <DialogTrigger asChild>
                   <Button className="bg-gradient-to-r from-primary to-purple-600">
                     <Plus className="w-4 h-4 mr-2" />
-                    Nieuw Brand Kit
+                    {nl ? 'Nieuw Merkpakket' : fr ? 'Nouveau Kit de Marque' : 'New Brand Kit'}
                   </Button>
                 </DialogTrigger>
               <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>
-                    {editing ? "Brand Kit Bewerken" : "Nieuw Brand Kit"}
+                    {editing
+                      ? (nl ? 'Merkpakket Bewerken' : fr ? 'Modifier le Kit de Marque' : 'Edit Brand Kit')
+                      : (nl ? 'Nieuw Merkpakket' : fr ? 'Nouveau Kit de Marque' : 'New Brand Kit')}
                   </DialogTitle>
                   <DialogDescription>
-                    Configureer je merk met kleuren, logo en font
+                    {nl ? 'Configureer je merk met kleuren, logo en lettertype' : fr ? 'Configurez votre marque avec couleurs, logo et police' : 'Configure your brand with colors, logo and font'}
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="space-y-4 py-4">
                   {/* Name */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Naam *</label>
+                    <label className="text-sm font-medium">{nl ? 'Naam' : fr ? 'Nom' : 'Name'} *</label>
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="Bijv. Inclufy Solutions"
+                      placeholder={nl ? 'Bijv. Inclufy Solutions' : fr ? 'Ex. Inclufy Solutions' : 'E.g. Inclufy Solutions'}
                     />
                   </div>
 
                   {/* Colors */}
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Primaire kleur</label>
+                      <label className="text-sm font-medium">{nl ? 'Primaire Kleur' : fr ? 'Couleur Primaire' : 'Primary Color'}</label>
                       <div className="flex gap-2">
                         <input
                           type="color"
@@ -451,7 +464,7 @@ const BrandKits = () => {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium">Secundaire kleur</label>
+                      <label className="text-sm font-medium">{nl ? 'Secundaire Kleur' : fr ? 'Couleur Secondaire' : 'Secondary Color'}</label>
                       <div className="flex gap-2">
                         <input
                           type="color"
@@ -470,7 +483,7 @@ const BrandKits = () => {
                   </div>
 
                   {/* Preview gradient */}
-                  <div 
+                  <div
                     className="h-16 rounded-lg"
                     style={{
                       background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`
@@ -479,7 +492,7 @@ const BrandKits = () => {
 
                   {/* Font */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Font</label>
+                    <label className="text-sm font-medium">{nl ? 'Lettertype' : fr ? 'Police' : 'Font'}</label>
                     <select
                       value={fontFamily}
                       onChange={(e) => setFontFamily(e.target.value)}
@@ -495,11 +508,11 @@ const BrandKits = () => {
 
                   {/* Tagline */}
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Tagline</label>
+                    <label className="text-sm font-medium">{nl ? 'Tagline' : fr ? 'Slogan' : 'Tagline'}</label>
                     <Input
                       value={tagline}
                       onChange={(e) => setTagline(e.target.value)}
-                      placeholder="Bijv. Your inclusive partner"
+                      placeholder={nl ? 'Bijv. Your inclusive partner' : fr ? 'Ex. Your inclusive partner' : 'E.g. Your inclusive partner'}
                     />
                   </div>
 
@@ -511,7 +524,7 @@ const BrandKits = () => {
                         <div className="relative w-16 h-16 rounded-lg border border-border overflow-hidden bg-muted">
                           <img
                             src={logoPreview}
-                            alt="Logo preview"
+                            alt={nl ? 'Logo voorbeeld' : fr ? 'Aper\u00e7u du logo' : 'Logo preview'}
                             className="w-full h-full object-contain"
                           />
                           <button
@@ -522,7 +535,7 @@ const BrandKits = () => {
                           </button>
                         </div>
                       ) : (
-                        <div 
+                        <div
                           onClick={() => fileInputRef.current?.click()}
                           className="w-16 h-16 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary transition-colors"
                         >
@@ -536,7 +549,7 @@ const BrandKits = () => {
                         onClick={() => fileInputRef.current?.click()}
                       >
                         <Upload className="w-4 h-4 mr-2" />
-                        Upload Logo
+                        {nl ? 'Logo Uploaden' : fr ? 'T\u00e9l\u00e9charger le Logo' : 'Upload Logo'}
                       </Button>
                       <input
                         ref={fileInputRef}
@@ -551,7 +564,7 @@ const BrandKits = () => {
 
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => { setDialogOpen(false); resetForm(); }}>
-                    Annuleren
+                    {nl ? 'Annuleren' : fr ? 'Annuler' : 'Cancel'}
                   </Button>
                   <Button
                     onClick={handleSave}
@@ -561,12 +574,12 @@ const BrandKits = () => {
                     {saving ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Opslaan...
+                        {nl ? 'Opslaan...' : fr ? 'Enregistrement...' : 'Saving...'}
                       </>
                     ) : (
                       <>
                         <Check className="w-4 h-4 mr-2" />
-                        Opslaan
+                        {nl ? 'Opslaan' : fr ? 'Enregistrer' : 'Save'}
                       </>
                     )}
                   </Button>
@@ -586,10 +599,10 @@ const BrandKits = () => {
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Palette className="w-12 h-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Geen brand kits gevonden
+                  {nl ? 'Geen merkpakketten gevonden' : fr ? 'Aucun kit de marque trouv\u00e9' : 'No brand kits found'}
                 </h3>
                 <p className="text-sm text-muted-foreground text-center mb-4">
-                  Maak je eerste brand kit aan om te beginnen
+                  {nl ? 'Maak je eerste merkpakket aan om te beginnen' : fr ? 'Cr\u00e9ez votre premier kit de marque pour commencer' : 'Create your first brand kit to get started'}
                 </p>
               </CardContent>
             </Card>
@@ -598,7 +611,7 @@ const BrandKits = () => {
               {brandKits.map((kit) => (
                 <Card key={kit.id} className="overflow-hidden group">
                   {/* Gradient header */}
-                  <div 
+                  <div
                     className="h-24 relative"
                     style={{
                       background: `linear-gradient(135deg, ${kit.primary_color}, ${kit.secondary_color})`
@@ -607,7 +620,7 @@ const BrandKits = () => {
                     {kit.is_default && (
                       <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm rounded-full px-2 py-1 flex items-center gap-1">
                         <Star className="w-3 h-3 text-white fill-white" />
-                        <span className="text-xs text-white font-medium">Standaard</span>
+                        <span className="text-xs text-white font-medium">{nl ? 'Standaard' : fr ? 'Par D\u00e9faut' : 'Default'}</span>
                       </div>
                     )}
                     {kit.logo_url && (
@@ -622,22 +635,22 @@ const BrandKits = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <CardContent className={`pt-${kit.logo_url ? '10' : '4'} pb-4`}>
                     <div className={kit.logo_url ? 'mt-6' : ''}>
                       <h3 className="text-lg font-semibold text-foreground">{kit.name}</h3>
                       {kit.tagline && (
                         <p className="text-sm text-muted-foreground mt-1">{kit.tagline}</p>
                       )}
-                      
+
                       {/* Color swatches */}
                       <div className="flex items-center gap-2 mt-3">
-                        <div 
+                        <div
                           className="w-6 h-6 rounded-full border border-border"
                           style={{ backgroundColor: kit.primary_color }}
                           title={kit.primary_color}
                         />
-                        <div 
+                        <div
                           className="w-6 h-6 rounded-full border border-border"
                           style={{ backgroundColor: kit.secondary_color }}
                           title={kit.secondary_color}
@@ -656,14 +669,14 @@ const BrandKits = () => {
                           className="flex-1"
                         >
                           <Edit2 className="w-4 h-4 mr-1" />
-                          Bewerken
+                          {nl ? 'Bewerken' : fr ? 'Modifier' : 'Edit'}
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => exportBrandKit(kit)}
                           className="text-muted-foreground hover:text-primary"
-                          title="Exporteren"
+                          title={nl ? 'Exporteren' : fr ? 'Exporter' : 'Export'}
                         >
                           <Download className="w-4 h-4" />
                         </Button>
@@ -674,7 +687,7 @@ const BrandKits = () => {
                               size="sm"
                               onClick={() => setAsDefault(kit.id)}
                               className="text-muted-foreground hover:text-yellow-500"
-                              title="Standaard maken"
+                              title={nl ? 'Standaard maken' : fr ? 'D\u00e9finir par d\u00e9faut' : 'Set as default'}
                             >
                               <Star className="w-4 h-4" />
                             </Button>
@@ -684,7 +697,7 @@ const BrandKits = () => {
                               onClick={() => handleDelete(kit.id)}
                               disabled={deleting === kit.id}
                               className="text-muted-foreground hover:text-red-500"
-                              title="Verwijderen"
+                              title={nl ? 'Verwijderen' : fr ? 'Supprimer' : 'Delete'}
                             >
                               {deleting === kit.id ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />

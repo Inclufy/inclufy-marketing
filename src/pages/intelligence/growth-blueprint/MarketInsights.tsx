@@ -2,10 +2,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  TrendingUp, 
-  BarChart3, 
-  LineChart, 
+import {
+  TrendingUp,
+  BarChart3,
+  LineChart,
   PieChart,
   Activity,
   Target,
@@ -15,8 +15,12 @@ import {
   Download,
   Filter
 } from "lucide-react";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function MarketInsights() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   return (
     <div className="w-full py-2">
       {/* Header */}
@@ -24,20 +28,20 @@ export default function MarketInsights() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <TrendingUp className="h-8 w-8 text-primary" />
-            Market Insights
+            {nl ? 'Marktinzichten' : fr ? 'Apercu du marche' : 'Market Insights'}
           </h1>
           <p className="text-muted-foreground mt-2">
-            Real-time market intelligence and trend analysis powered by AI
+            {nl ? 'Realtime marktinformatie en trendanalyse aangedreven door AI' : fr ? 'Intelligence de marche en temps reel et analyse des tendances par IA' : 'Real-time market intelligence and trend analysis powered by AI'}
           </p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline">
             <Filter className="mr-2 h-4 w-4" />
-            Filters
+            {nl ? 'Filters' : fr ? 'Filtres' : 'Filters'}
           </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
-            Export
+            {nl ? 'Exporteren' : fr ? 'Exporter' : 'Export'}
           </Button>
         </div>
       </div>
@@ -48,12 +52,12 @@ export default function MarketInsights() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Market Growth
+              {nl ? 'Marktgroei' : fr ? 'Croissance du marche' : 'Market Growth'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">23.5%</div>
-            <p className="text-xs text-muted-foreground">+5.2% from last month</p>
+            <p className="text-xs text-muted-foreground">{nl ? '+5,2% t.o.v. vorige maand' : fr ? '+5,2% par rapport au mois dernier' : '+5.2% from last month'}</p>
           </CardContent>
         </Card>
 
@@ -61,12 +65,12 @@ export default function MarketInsights() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Market Size
+              {nl ? 'Marktomvang' : fr ? 'Taille du marche' : 'Market Size'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">€2.4B</div>
-            <p className="text-xs text-muted-foreground">Netherlands AI Market</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Nederlandse AI-markt' : fr ? 'Marche IA neerlandais' : 'Netherlands AI Market'}</p>
           </CardContent>
         </Card>
 
@@ -74,12 +78,12 @@ export default function MarketInsights() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Target className="h-4 w-4" />
-              Opportunities
+              {nl ? 'Kansen' : fr ? 'Opportunites' : 'Opportunities'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">47</div>
-            <p className="text-xs text-muted-foreground">New this week</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Nieuw deze week' : fr ? 'Nouveau cette semaine' : 'New this week'}</p>
           </CardContent>
         </Card>
 
@@ -87,12 +91,12 @@ export default function MarketInsights() {
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              Competitors
+              {nl ? 'Concurrenten' : fr ? 'Concurrents' : 'Competitors'}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">134</div>
-            <p className="text-xs text-muted-foreground">Active in market</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Actief in de markt' : fr ? 'Actifs sur le marche' : 'Active in market'}</p>
           </CardContent>
         </Card>
       </div>
@@ -102,8 +106,8 @@ export default function MarketInsights() {
         {/* Trending Topics */}
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Trending Topics</CardTitle>
-            <CardDescription>Hot topics in your market this week</CardDescription>
+            <CardTitle>{nl ? 'Trending Onderwerpen' : fr ? 'Sujets tendances' : 'Trending Topics'}</CardTitle>
+            <CardDescription>{nl ? 'Populaire onderwerpen in jouw markt deze week' : fr ? 'Sujets populaires dans votre marche cette semaine' : 'Hot topics in your market this week'}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -116,7 +120,7 @@ export default function MarketInsights() {
                 <div key={item.topic} className="flex items-center justify-between p-3 border rounded-lg">
                   <div>
                     <p className="font-medium">{item.topic}</p>
-                    <p className="text-sm text-muted-foreground">{item.posts.toLocaleString()} posts</p>
+                    <p className="text-sm text-muted-foreground">{item.posts.toLocaleString()} {nl ? 'berichten' : fr ? 'publications' : 'posts'}</p>
                   </div>
                   <Badge variant="secondary" className="text-green-600">
                     {item.growth}
@@ -130,8 +134,8 @@ export default function MarketInsights() {
         {/* Market Segments */}
         <Card>
           <CardHeader>
-            <CardTitle>Market Segments</CardTitle>
-            <CardDescription>Size by industry vertical</CardDescription>
+            <CardTitle>{nl ? 'Marktsegmenten' : fr ? 'Segments de marche' : 'Market Segments'}</CardTitle>
+            <CardDescription>{nl ? 'Omvang per branche' : fr ? 'Taille par secteur' : 'Size by industry vertical'}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
@@ -168,12 +172,12 @@ export default function MarketInsights() {
               <BarChart3 className="h-6 w-6 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold">Advanced Market Analytics Coming Soon</h3>
+              <h3 className="font-semibold">{nl ? 'Geavanceerde Marktanalyse Binnenkort Beschikbaar' : fr ? 'Analyses de marche avancees bientot disponibles' : 'Advanced Market Analytics Coming Soon'}</h3>
               <p className="text-sm text-muted-foreground">
-                Get deeper insights with predictive analytics, sentiment analysis, and competitor movement tracking.
+                {nl ? 'Diepere inzichten met voorspellende analyses, sentimentanalyse en concurrentiemonitoring.' : fr ? 'Des analyses plus profondes avec analyses predictives, analyse de sentiment et suivi des concurrents.' : 'Get deeper insights with predictive analytics, sentiment analysis, and competitor movement tracking.'}
               </p>
             </div>
-            <Badge>Coming Q2 2024</Badge>
+            <Badge>{nl ? 'Verwacht Q2 2024' : fr ? 'Prevu Q2 2024' : 'Coming Q2 2024'}</Badge>
           </div>
         </CardContent>
       </Card>

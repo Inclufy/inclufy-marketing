@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAI } from "@/hooks/use-ai";
 import { api } from "@/lib/api";
+import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Globe, 
   Sparkles, 
@@ -36,6 +37,7 @@ interface LandingPageSection {
 }
 
 const LandingPageGenerator = () => {
+  const { lang } = useLanguage(); const nl = lang === 'nl'; const fr = lang === 'fr';
   const { loading, generateLandingPage, improveContent, analyzeContent } = useAI();
   const [pageType, setPageType] = useState("product");
   const [product, setProduct] = useState("");
@@ -46,25 +48,25 @@ const LandingPageGenerator = () => {
   const [selectedSection, setSelectedSection] = useState("hero");
 
   const pageTypes = [
-    { value: "product", label: "Product Launch", description: "Showcase a new product" },
-    { value: "service", label: "Service Offering", description: "Promote your services" },
-    { value: "saas", label: "SaaS Platform", description: "Software subscription" },
-    { value: "webinar", label: "Webinar Registration", description: "Event sign-ups" },
-    { value: "ebook", label: "Lead Magnet", description: "eBook or whitepaper" },
-    { value: "consultation", label: "Free Consultation", description: "Book appointments" },
+    { value: "product", label: nl ? "Productlancering" : fr ? "Lancement de produit" : "Product Launch", description: nl ? "Presenteer een nieuw product" : fr ? "Présentez un nouveau produit" : "Showcase a new product" },
+    { value: "service", label: nl ? "Dienstaanbod" : fr ? "Offre de services" : "Service Offering", description: nl ? "Promoot je diensten" : fr ? "Promouvez vos services" : "Promote your services" },
+    { value: "saas", label: nl ? "SaaS Platform" : fr ? "Plateforme SaaS" : "SaaS Platform", description: nl ? "Software abonnement" : fr ? "Abonnement logiciel" : "Software subscription" },
+    { value: "webinar", label: nl ? "Webinar Registratie" : fr ? "Inscription au webinaire" : "Webinar Registration", description: nl ? "Evenement aanmeldingen" : fr ? "Inscriptions aux événements" : "Event sign-ups" },
+    { value: "ebook", label: nl ? "Leadmagneet" : fr ? "Aimant à prospects" : "Lead Magnet", description: nl ? "eBook of whitepaper" : fr ? "eBook ou livre blanc" : "eBook or whitepaper" },
+    { value: "consultation", label: nl ? "Gratis Consultatie" : fr ? "Consultation gratuite" : "Free Consultation", description: nl ? "Afspraken boeken" : fr ? "Prendre rendez-vous" : "Book appointments" },
   ];
 
   const sectionTypes = [
-    { id: "hero", label: "Hero Section", icon: Layout },
-    { id: "benefits", label: "Benefits", icon: CheckCircle },
-    { id: "features", label: "Features", icon: Zap },
-    { id: "social-proof", label: "Social Proof", icon: Target },
-    { id: "cta", label: "Call to Action", icon: ArrowRight },
+    { id: "hero", label: nl ? "Hero Sectie" : fr ? "Section Hero" : "Hero Section", icon: Layout },
+    { id: "benefits", label: nl ? "Voordelen" : fr ? "Avantages" : "Benefits", icon: CheckCircle },
+    { id: "features", label: nl ? "Functies" : fr ? "Fonctionnalités" : "Features", icon: Zap },
+    { id: "social-proof", label: nl ? "Sociaal Bewijs" : fr ? "Preuve sociale" : "Social Proof", icon: Target },
+    { id: "cta", label: nl ? "Oproep tot actie" : fr ? "Appel à l'action" : "Call to Action", icon: ArrowRight },
   ];
 
   const handleGenerate = async () => {
     if (!product || !targetAudience || !uniqueValue) {
-      toast.error("Please fill in all required fields");
+      toast.error(nl ? "Vul alle verplichte velden in" : fr ? "Veuillez remplir tous les champs obligatoires" : "Please fill in all required fields");
       return;
     }
 
@@ -85,9 +87,9 @@ const LandingPageGenerator = () => {
         { id: "cta", type: "cta", content: result.cta }
       ]);
 
-      toast.success("Landing page copy generated!");
+      toast.success(nl ? "Landingspagina tekst gegenereerd!" : fr ? "Texte de page d'atterrissage généré !" : "Landing page copy generated!");
     } catch (error) {
-      toast.error("Failed to generate landing page");
+      toast.error(nl ? "Kan landingspagina niet genereren" : fr ? "Échec de la génération de la page d'atterrissage" : "Failed to generate landing page");
     }
   };
 
@@ -107,9 +109,9 @@ const LandingPageGenerator = () => {
           : s
       ));
 
-      toast.success("Section improved for higher conversion!");
+      toast.success(nl ? "Sectie verbeterd voor hogere conversie!" : fr ? "Section améliorée pour une meilleure conversion !" : "Section improved for higher conversion!");
     } catch (error) {
-      toast.error("Failed to improve section");
+      toast.error(nl ? "Kan sectie niet verbeteren" : fr ? "Échec de l'amélioration de la section" : "Failed to improve section");
     }
   };
 
@@ -122,19 +124,19 @@ const LandingPageGenerator = () => {
       
       toast.success(
         <div>
-          <p className="font-semibold">Analysis Complete!</p>
-          <p className="text-sm">Score: {analysis.score}/10</p>
-          <p className="text-sm">Top strength: {analysis.strengths[0]}</p>
+          <p className="font-semibold">{nl ? "Analyse voltooid!" : fr ? "Analyse terminée !" : "Analysis Complete!"}</p>
+          <p className="text-sm">{nl ? "Score" : fr ? "Score" : "Score"}: {analysis.score}/10</p>
+          <p className="text-sm">{nl ? "Sterkste punt" : fr ? "Point fort" : "Top strength"}: {analysis.strengths[0]}</p>
         </div>
       );
     } catch (error) {
-      toast.error("Failed to analyze section");
+      toast.error(nl ? "Kan sectie niet analyseren" : fr ? "Échec de l'analyse de la section" : "Failed to analyze section");
     }
   };
 
   const copySection = (content: any) => {
     navigator.clipboard.writeText(JSON.stringify(content, null, 2));
-    toast.success("Section copied to clipboard!");
+    toast.success(nl ? "Sectie gekopieerd naar klembord!" : fr ? "Section copiée dans le presse-papiers !" : "Section copied to clipboard!");
   };
 
   const exportPage = () => {
@@ -155,7 +157,7 @@ const LandingPageGenerator = () => {
     a.download = `landing-page-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Landing page exported!");
+    toast.success(nl ? "Landingspagina geëxporteerd!" : fr ? "Page d'atterrissage exportée !" : "Landing page exported!");
   };
 
   const [saving, setSaving] = useState(false);
@@ -170,9 +172,9 @@ const LandingPageGenerator = () => {
         metadata: { page_type: pageType },
         tags: ["landing-page", pageType],
       });
-      toast.success("Saved to content library!");
+      toast.success(nl ? "Opgeslagen in contentbibliotheek!" : fr ? "Enregistré dans la bibliothèque de contenu !" : "Saved to content library!");
     } catch {
-      toast.error("Failed to save to library");
+      toast.error(nl ? "Kan niet opslaan in bibliotheek" : fr ? "Échec de l'enregistrement dans la bibliothèque" : "Failed to save to library");
     } finally {
       setSaving(false);
     }
@@ -184,7 +186,7 @@ const LandingPageGenerator = () => {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Headline</Label>
+              <Label>{nl ? "Koptekst" : fr ? "Titre" : "Headline"}</Label>
               <Card>
                 <CardContent className="pt-4">
                   <h1 className="text-2xl font-bold">{section.content.headline}</h1>
@@ -192,7 +194,7 @@ const LandingPageGenerator = () => {
               </Card>
             </div>
             <div className="space-y-2">
-              <Label>Subheadline</Label>
+              <Label>{nl ? "Subtitel" : fr ? "Sous-titre" : "Subheadline"}</Label>
               <Card>
                 <CardContent className="pt-4">
                   <p className="text-lg text-muted-foreground">{section.content.subheadline}</p>
@@ -200,7 +202,7 @@ const LandingPageGenerator = () => {
               </Card>
             </div>
             <div className="space-y-2">
-              <Label>Call to Action</Label>
+              <Label>{nl ? "Oproep tot actie" : fr ? "Appel à l'action" : "Call to Action"}</Label>
               <Card>
                 <CardContent className="pt-4">
                   <Button size="lg">{section.content.cta}</Button>
@@ -213,7 +215,7 @@ const LandingPageGenerator = () => {
       case "benefits":
         return (
           <div className="space-y-4">
-            <Label>Key Benefits</Label>
+            <Label>{nl ? "Belangrijkste voordelen" : fr ? "Avantages clés" : "Key Benefits"}</Label>
             <div className="grid gap-3">
               {section.content.items?.map((benefit: any, index: number) => (
                 <Card key={index}>
@@ -235,7 +237,7 @@ const LandingPageGenerator = () => {
       case "features":
         return (
           <div className="space-y-4">
-            <Label>Features</Label>
+            <Label>{nl ? "Functies" : fr ? "Fonctionnalités" : "Features"}</Label>
             <div className="grid gap-3">
               {section.content.items?.map((feature: any, index: number) => (
                 <Card key={index}>
@@ -259,11 +261,11 @@ const LandingPageGenerator = () => {
       case "social-proof":
         return (
           <div className="space-y-4">
-            <Label>Social Proof Elements</Label>
+            <Label>{nl ? "Sociaal bewijs elementen" : fr ? "Éléments de preuve sociale" : "Social Proof Elements"}</Label>
             {section.content.testimonials && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Testimonial</CardTitle>
+                  <CardTitle className="text-base">{nl ? "Getuigenis" : fr ? "Témoignage" : "Testimonial"}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <blockquote className="italic">
@@ -294,7 +296,7 @@ const LandingPageGenerator = () => {
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>CTA Headline</Label>
+              <Label>{nl ? "CTA Koptekst" : fr ? "Titre CTA" : "CTA Headline"}</Label>
               <Card>
                 <CardContent className="pt-4">
                   <h2 className="text-xl font-bold">{section.content.headline}</h2>
@@ -302,7 +304,7 @@ const LandingPageGenerator = () => {
               </Card>
             </div>
             <div className="space-y-2">
-              <Label>CTA Text</Label>
+              <Label>{nl ? "CTA Tekst" : fr ? "Texte CTA" : "CTA Text"}</Label>
               <Card>
                 <CardContent className="pt-4">
                   <p>{section.content.description}</p>
@@ -310,7 +312,7 @@ const LandingPageGenerator = () => {
               </Card>
             </div>
             <div className="space-y-2">
-              <Label>Button Text</Label>
+              <Label>{nl ? "Knoptekst" : fr ? "Texte du bouton" : "Button Text"}</Label>
               <Card>
                 <CardContent className="pt-4">
                   <Button size="lg" className="w-full">
@@ -323,7 +325,7 @@ const LandingPageGenerator = () => {
         );
 
       default:
-        return <div>Unknown section type</div>;
+        return <div>{nl ? "Onbekend sectietype" : fr ? "Type de section inconnu" : "Unknown section type"}</div>;
     }
   };
 
@@ -334,21 +336,21 @@ const LandingPageGenerator = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Globe className="h-8 w-8 text-primary" />
-            Landing Page Copy Generator
+            {nl ? "Landingspagina Tekst Generator" : fr ? "Générateur de texte de page d'atterrissage" : "Landing Page Copy Generator"}
           </h2>
           <p className="text-muted-foreground mt-2">
-            Create high-converting landing page copy tailored to your audience
+            {nl ? "Maak converterende landingspagina teksten op maat van je doelgroep" : fr ? "Créez des textes de page d'atterrissage à fort taux de conversion adaptés à votre audience" : "Create high-converting landing page copy tailored to your audience"}
           </p>
         </div>
         {sections.length > 0 && (
           <div className="flex items-center gap-2">
             <Button onClick={saveToLibrary} variant="outline" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save to Library
+              {nl ? "Opslaan in bibliotheek" : fr ? "Enregistrer dans la bibliothèque" : "Save to Library"}
             </Button>
             <Button onClick={exportPage} variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {nl ? "Exporteren" : fr ? "Exporter" : "Export"}
             </Button>
           </div>
         )}
@@ -359,15 +361,15 @@ const LandingPageGenerator = () => {
         <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Page Configuration</CardTitle>
+              <CardTitle>{nl ? "Pagina Configuratie" : fr ? "Configuration de la page" : "Page Configuration"}</CardTitle>
               <CardDescription>
-                Define your landing page objectives
+                {nl ? "Definieer je landingspagina doelstellingen" : fr ? "Définissez les objectifs de votre page d'atterrissage" : "Define your landing page objectives"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Page Type */}
               <div className="space-y-2">
-                <Label>Page Type</Label>
+                <Label>{nl ? "Paginatype" : fr ? "Type de page" : "Page Type"}</Label>
                 <Select value={pageType} onValueChange={setPageType}>
                   <SelectTrigger>
                     <SelectValue />
@@ -389,9 +391,9 @@ const LandingPageGenerator = () => {
 
               {/* Product/Service */}
               <div className="space-y-2">
-                <Label>Product/Service Name</Label>
+                <Label>{nl ? "Product-/Dienstnaam" : fr ? "Nom du produit/service" : "Product/Service Name"}</Label>
                 <Input
-                  placeholder="e.g., Inclufy Marketing Platform"
+                  placeholder={nl ? "bijv. Inclufy Marketing Platform" : fr ? "ex. Plateforme Inclufy Marketing" : "e.g., Inclufy Marketing Platform"}
                   value={product}
                   onChange={(e) => setProduct(e.target.value)}
                 />
@@ -399,9 +401,9 @@ const LandingPageGenerator = () => {
 
               {/* Target Audience */}
               <div className="space-y-2">
-                <Label>Target Audience</Label>
+                <Label>{nl ? "Doelgroep" : fr ? "Public cible" : "Target Audience"}</Label>
                 <Textarea
-                  placeholder="e.g., Small business owners who need affordable marketing automation"
+                  placeholder={nl ? "bijv. Kleine ondernemers die betaalbare marketingautomatisering nodig hebben" : fr ? "ex. Propriétaires de petites entreprises ayant besoin d'automatisation marketing abordable" : "e.g., Small business owners who need affordable marketing automation"}
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   rows={3}
@@ -410,9 +412,9 @@ const LandingPageGenerator = () => {
 
               {/* Unique Value Prop */}
               <div className="space-y-2">
-                <Label>Unique Value Proposition</Label>
+                <Label>{nl ? "Unieke Waardepropositie" : fr ? "Proposition de valeur unique" : "Unique Value Proposition"}</Label>
                 <Textarea
-                  placeholder="e.g., The only marketing platform that maintains your brand voice across all AI-generated content"
+                  placeholder={nl ? "bijv. Het enige marketingplatform dat je merkstem behoudt in alle AI-gegenereerde content" : fr ? "ex. La seule plateforme marketing qui maintient votre voix de marque dans tout le contenu généré par l'IA" : "e.g., The only marketing platform that maintains your brand voice across all AI-generated content"}
                   value={uniqueValue}
                   onChange={(e) => setUniqueValue(e.target.value)}
                   rows={3}
@@ -421,9 +423,9 @@ const LandingPageGenerator = () => {
 
               {/* Goals */}
               <div className="space-y-2">
-                <Label>Conversion Goals</Label>
+                <Label>{nl ? "Conversiedoelen" : fr ? "Objectifs de conversion" : "Conversion Goals"}</Label>
                 <Input
-                  placeholder="e.g., Sign up for free trial"
+                  placeholder={nl ? "bijv. Aanmelden voor gratis proefperiode" : fr ? "ex. Inscription à l'essai gratuit" : "e.g., Sign up for free trial"}
                   value={goals}
                   onChange={(e) => setGoals(e.target.value)}
                 />
@@ -437,12 +439,12 @@ const LandingPageGenerator = () => {
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {nl ? "Genereren..." : fr ? "Génération..." : "Generating..."}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Landing Page
+                    {nl ? "Genereer Landingspagina" : fr ? "Générer la page d'atterrissage" : "Generate Landing Page"}
                   </>
                 )}
               </Button>
@@ -452,25 +454,25 @@ const LandingPageGenerator = () => {
           {/* Conversion Tips */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Conversion Tips</CardTitle>
+              <CardTitle className="text-base">{nl ? "Conversietips" : fr ? "Conseils de conversion" : "Conversion Tips"}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Clear value proposition above fold</span>
+                  <span>{nl ? "Duidelijke waardepropositie boven de vouw" : fr ? "Proposition de valeur claire au-dessus de la ligne de flottaison" : "Clear value proposition above fold"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Benefits over features</span>
+                  <span>{nl ? "Voordelen boven functies" : fr ? "Avantages plutôt que fonctionnalités" : "Benefits over features"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Social proof builds trust</span>
+                  <span>{nl ? "Sociaal bewijs bouwt vertrouwen" : fr ? "La preuve sociale renforce la confiance" : "Social proof builds trust"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Single, clear CTA</span>
+                  <span>{nl ? "Enkele, duidelijke CTA" : fr ? "Un seul CTA clair" : "Single, clear CTA"}</span>
                 </li>
               </ul>
             </CardContent>
@@ -483,7 +485,7 @@ const LandingPageGenerator = () => {
             <Card className="h-full">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Page Sections</CardTitle>
+                  <CardTitle>{nl ? "Paginasecties" : fr ? "Sections de la page" : "Page Sections"}</CardTitle>
                   <Tabs value={selectedSection} onValueChange={setSelectedSection}>
                     <TabsList className="grid grid-cols-5 w-[400px]">
                       {sectionTypes.map((section) => (
@@ -513,7 +515,7 @@ const LandingPageGenerator = () => {
                           disabled={loading}
                         >
                           <Sparkles className="mr-2 h-4 w-4" />
-                          Improve
+                          {nl ? "Verbeteren" : fr ? "Améliorer" : "Improve"}
                         </Button>
                         <Button
                           variant="outline"
@@ -522,7 +524,7 @@ const LandingPageGenerator = () => {
                           disabled={loading}
                         >
                           <BarChart3 className="mr-2 h-4 w-4" />
-                          Analyze
+                          {nl ? "Analyseren" : fr ? "Analyser" : "Analyze"}
                         </Button>
                         <Button
                           variant="ghost"
@@ -544,9 +546,9 @@ const LandingPageGenerator = () => {
               <CardContent>
                 <div className="text-center space-y-4 py-12">
                   <Globe className="h-12 w-12 text-muted-foreground mx-auto" />
-                  <h3 className="text-lg font-medium">No Landing Page Yet</h3>
+                  <h3 className="text-lg font-medium">{nl ? "Nog geen landingspagina" : fr ? "Pas encore de page d'atterrissage" : "No Landing Page Yet"}</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Configure your landing page settings and click Generate to create your copy
+                    {nl ? "Configureer je landingspagina-instellingen en klik op Genereer om je tekst te maken" : fr ? "Configurez les paramètres de votre page d'atterrissage et cliquez sur Générer pour créer votre texte" : "Configure your landing page settings and click Generate to create your copy"}
                   </p>
                 </div>
               </CardContent>

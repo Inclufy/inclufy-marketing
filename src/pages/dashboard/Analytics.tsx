@@ -12,6 +12,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AnalyticsData {
   campaigns: {
@@ -46,6 +47,9 @@ interface AnalyticsData {
 const COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6'];
 
 export default function Analytics() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,10 +87,10 @@ export default function Analytics() {
             <div className="flex-1">
               <p className="font-medium text-red-800 dark:text-red-200">{error}</p>
               <p className="text-sm text-red-600 dark:text-red-400 mt-1">
-                Make sure the backend is running and you are logged in.
+                {nl ? 'Zorg ervoor dat de backend draait en je bent ingelogd.' : fr ? 'Assurez-vous que le backend fonctionne et que vous êtes connecté.' : 'Make sure the backend is running and you are logged in.'}
               </p>
             </div>
-            <Button variant="outline" onClick={fetchData}>Retry</Button>
+            <Button variant="outline" onClick={fetchData}>{nl ? 'Opnieuw' : fr ? 'Réessayer' : 'Retry'}</Button>
           </CardContent>
         </Card>
       </div>
@@ -113,15 +117,15 @@ export default function Analytics() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-            Analytics Dashboard
+            {nl ? 'Analytisch Dashboard' : fr ? 'Tableau de Bord Analytique' : 'Analytics Dashboard'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Real-time marketing performance metrics
+            {nl ? 'Realtime marketing prestatie-indicatoren' : fr ? 'Indicateurs de performance marketing en temps réel' : 'Real-time marketing performance metrics'}
           </p>
         </div>
         <Button variant="outline" onClick={fetchData}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
+          {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -133,9 +137,9 @@ export default function Analytics() {
               <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/20">
                 <BarChart3 className="w-6 h-6 text-purple-600" />
               </div>
-              <Badge variant="outline">{data.campaigns.by_status.active || 0} active</Badge>
+              <Badge variant="outline">{data.campaigns.by_status.active || 0} {nl ? 'actief' : fr ? 'actif' : 'active'}</Badge>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Campaigns</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{nl ? 'Totaal Campagnes' : fr ? 'Total Campagnes' : 'Total Campaigns'}</h3>
             <p className="text-2xl font-bold mt-1">{data.campaigns.total}</p>
           </CardContent>
         </Card>
@@ -147,7 +151,7 @@ export default function Analytics() {
                 <Users className="w-6 h-6 text-blue-600" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Contacts</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{nl ? 'Totaal Contacten' : fr ? 'Total Contacts' : 'Total Contacts'}</h3>
             <p className="text-2xl font-bold mt-1">{data.contacts.total.toLocaleString()}</p>
           </CardContent>
         </Card>
@@ -159,10 +163,10 @@ export default function Analytics() {
                 <Send className="w-6 h-6 text-green-600" />
               </div>
               {data.emails.sent > 0 && (
-                <Badge variant="outline" className="text-green-600">{data.emails.open_rate}% open</Badge>
+                <Badge variant="outline" className="text-green-600">{data.emails.open_rate}% {nl ? 'geopend' : fr ? 'ouvert' : 'open'}</Badge>
               )}
             </div>
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Emails Sent</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{nl ? 'E-mails Verzonden' : fr ? 'E-mails Envoyés' : 'Emails Sent'}</h3>
             <p className="text-2xl font-bold mt-1">{data.emails.sent.toLocaleString()}</p>
           </CardContent>
         </Card>
@@ -174,7 +178,7 @@ export default function Analytics() {
                 <FileText className="w-6 h-6 text-orange-600" />
               </div>
             </div>
-            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">Content Created</h3>
+            <h3 className="text-sm font-medium text-gray-600 dark:text-gray-400">{nl ? 'Content Aangemaakt' : fr ? 'Contenu Créé' : 'Content Created'}</h3>
             <p className="text-2xl font-bold mt-1">{data.content.total}</p>
           </CardContent>
         </Card>
@@ -185,9 +189,9 @@ export default function Analytics() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Growth Over Time
+            {nl ? 'Groei Over Tijd' : fr ? 'Croissance au Fil du Temps' : 'Growth Over Time'}
           </CardTitle>
-          <CardDescription>Campaigns, contacts, and content created per month</CardDescription>
+          <CardDescription>{nl ? 'Campagnes, contacten en content aangemaakt per maand' : fr ? 'Campagnes, contacts et contenu créés par mois' : 'Campaigns, contacts, and content created per month'}</CardDescription>
         </CardHeader>
         <CardContent>
           {growthData.some(d => d.campaigns > 0 || d.contacts > 0 || d.content > 0) ? (
@@ -198,16 +202,16 @@ export default function Analytics() {
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="campaigns" fill="#8b5cf6" name="Campaigns" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="contacts" fill="#3b82f6" name="Contacts" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="content" fill="#10b981" name="Content" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="campaigns" fill="#8b5cf6" name={nl ? 'Campagnes' : fr ? 'Campagnes' : 'Campaigns'} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="contacts" fill="#3b82f6" name={nl ? 'Contacten' : fr ? 'Contacts' : 'Contacts'} radius={[4, 4, 0, 0]} />
+                <Bar dataKey="content" fill="#10b981" name={nl ? 'Content' : fr ? 'Contenu' : 'Content'} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="h-[300px] flex items-center justify-center text-gray-500">
               <div className="text-center">
                 <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                <p>Create campaigns, import contacts, or generate content to see growth trends.</p>
+                <p>{nl ? 'Maak campagnes, importeer contacten of genereer content om groeitrends te zien.' : fr ? 'Créez des campagnes, importez des contacts ou générez du contenu pour voir les tendances de croissance.' : 'Create campaigns, import contacts, or generate content to see growth trends.'}</p>
               </div>
             </div>
           )}
@@ -220,7 +224,7 @@ export default function Analytics() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Mail className="h-5 w-5" />
-              Email Performance
+              {nl ? 'E-mailprestaties' : fr ? 'Performance E-mail' : 'Email Performance'}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -228,9 +232,9 @@ export default function Analytics() {
               <div className="space-y-6">
                 <ResponsiveContainer width="100%" height={200}>
                   <BarChart data={[
-                    { name: 'Sent', value: data.emails.sent, fill: '#8b5cf6' },
-                    { name: 'Opened', value: data.emails.opened, fill: '#3b82f6' },
-                    { name: 'Clicked', value: data.emails.clicked, fill: '#10b981' },
+                    { name: nl ? 'Verzonden' : fr ? 'Envoyés' : 'Sent', value: data.emails.sent, fill: '#8b5cf6' },
+                    { name: nl ? 'Geopend' : fr ? 'Ouverts' : 'Opened', value: data.emails.opened, fill: '#3b82f6' },
+                    { name: nl ? 'Geklikt' : fr ? 'Cliqués' : 'Clicked', value: data.emails.clicked, fill: '#10b981' },
                   ]}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                     <XAxis dataKey="name" />
@@ -251,21 +255,21 @@ export default function Analytics() {
                   <div>
                     <div className="flex items-center justify-center gap-1 text-purple-600 mb-1">
                       <Send className="h-4 w-4" />
-                      <span className="text-xs font-medium">Sent</span>
+                      <span className="text-xs font-medium">{nl ? 'Verzonden' : fr ? 'Envoyés' : 'Sent'}</span>
                     </div>
                     <p className="text-lg font-bold">{data.emails.sent}</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-center gap-1 text-blue-600 mb-1">
                       <Eye className="h-4 w-4" />
-                      <span className="text-xs font-medium">Open Rate</span>
+                      <span className="text-xs font-medium">{nl ? 'Open Ratio' : fr ? "Taux d'Ouverture" : 'Open Rate'}</span>
                     </div>
                     <p className="text-lg font-bold">{data.emails.open_rate}%</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-center gap-1 text-green-600 mb-1">
                       <MousePointerClick className="h-4 w-4" />
-                      <span className="text-xs font-medium">Click Rate</span>
+                      <span className="text-xs font-medium">{nl ? 'Klik Ratio' : fr ? 'Taux de Clics' : 'Click Rate'}</span>
                     </div>
                     <p className="text-lg font-bold">{data.emails.click_rate}%</p>
                   </div>
@@ -275,7 +279,7 @@ export default function Analytics() {
               <div className="h-[200px] flex items-center justify-center text-gray-500">
                 <div className="text-center">
                   <Mail className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p>Send emails to see performance metrics here.</p>
+                  <p>{nl ? 'Verstuur e-mails om hier prestatie-indicatoren te zien.' : fr ? 'Envoyez des e-mails pour voir les indicateurs de performance ici.' : 'Send emails to see performance metrics here.'}</p>
                 </div>
               </div>
             )}
@@ -287,9 +291,9 @@ export default function Analytics() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <BarChart3 className="h-5 w-5" />
-              Campaign Breakdown
+              {nl ? 'Campagne Overzicht' : fr ? 'Répartition des Campagnes' : 'Campaign Breakdown'}
             </CardTitle>
-            <CardDescription>By type and status</CardDescription>
+            <CardDescription>{nl ? 'Op type en status' : fr ? 'Par type et statut' : 'By type and status'}</CardDescription>
           </CardHeader>
           <CardContent>
             {campaignTypeData.length > 0 ? (
@@ -323,7 +327,7 @@ export default function Analytics() {
               <div className="h-[200px] flex items-center justify-center text-gray-500">
                 <div className="text-center">
                   <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p>Create campaigns to see breakdown charts.</p>
+                  <p>{nl ? 'Maak campagnes aan om overzichtsgrafieken te zien.' : fr ? 'Créez des campagnes pour voir les graphiques de répartition.' : 'Create campaigns to see breakdown charts.'}</p>
                 </div>
               </div>
             )}
@@ -337,9 +341,9 @@ export default function Analytics() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              Content Library
+              {nl ? 'Contentbibliotheek' : fr ? 'Bibliothèque de Contenu' : 'Content Library'}
             </CardTitle>
-            <CardDescription>{data.content.total} items in your library</CardDescription>
+            <CardDescription>{data.content.total} {nl ? 'items in je bibliotheek' : fr ? 'éléments dans votre bibliothèque' : 'items in your library'}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -1,10 +1,10 @@
 // src/pages/growth-blueprint/components/HistoryList.tsx
 import React, { useState, useEffect } from 'react';
-import { 
-  Clock, 
-  TrendingUp, 
-  Download, 
-  Trash2, 
+import {
+  Clock,
+  TrendingUp,
+  Download,
+  Trash2,
   ExternalLink,
   Loader2,
   Search
@@ -12,12 +12,16 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface HistoryListProps {
   onSelectBlueprint: (blueprint: any) => void;
 }
 
 export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [blueprints, setBlueprints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,21 +37,21 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
       setBlueprints(response.data);
     } catch (error) {
       console.error('Failed to load blueprints:', error);
-      toast.error('Failed to load history');
+      toast.error(nl ? 'Geschiedenis laden mislukt' : fr ? 'Echec du chargement de l\'historique' : 'Failed to load history');
     } finally {
       setLoading(false);
     }
   };
 
   const deleteBlueprint = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this blueprint?')) return;
+    if (!confirm(nl ? 'Weet je zeker dat je deze blauwdruk wilt verwijderen?' : fr ? 'Etes-vous sur de vouloir supprimer ce plan ?' : 'Are you sure you want to delete this blueprint?')) return;
 
     try {
       await axios.delete(`/api/growth-blueprint/${id}`);
-      toast.success('Blueprint deleted');
+      toast.success(nl ? 'Blauwdruk verwijderd' : fr ? 'Plan supprime' : 'Blueprint deleted');
       loadBlueprints();
     } catch (error) {
-      toast.error('Failed to delete blueprint');
+      toast.error(nl ? 'Verwijderen mislukt' : fr ? 'Echec de la suppression' : 'Failed to delete blueprint');
     }
   };
 
@@ -73,7 +77,7 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search by company name or website..."
+          placeholder={nl ? 'Zoeken op bedrijfsnaam of website...' : fr ? 'Rechercher par nom d\'entreprise ou site web...' : 'Search by company name or website...'}
           className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
         />
       </div>
@@ -81,11 +85,11 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-600 mb-1">Total Scans</p>
+          <p className="text-sm text-gray-600 mb-1">{nl ? 'Totaal Scans' : fr ? 'Total des scans' : 'Total Scans'}</p>
           <p className="text-2xl font-bold">{blueprints.length}</p>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-600 mb-1">Avg Score</p>
+          <p className="text-sm text-gray-600 mb-1">{nl ? 'Gem. Score' : fr ? 'Score moyen' : 'Avg Score'}</p>
           <p className="text-2xl font-bold">
             {Math.round(
               blueprints.reduce((sum, bp) => sum + (bp.overall_score || 0), 0) / 
@@ -94,7 +98,7 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
           </p>
         </div>
         <div className="bg-white border rounded-lg p-4">
-          <p className="text-sm text-gray-600 mb-1">This Month</p>
+          <p className="text-sm text-gray-600 mb-1">{nl ? 'Deze Maand' : fr ? 'Ce mois' : 'This Month'}</p>
           <p className="text-2xl font-bold">
             {blueprints.filter(bp => {
               const date = new Date(bp.created_at);
@@ -113,12 +117,12 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
             <Clock className="w-8 h-8 text-gray-400" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            {searchQuery ? 'No results found' : 'No scans yet'}
+            {searchQuery ? (nl ? 'Geen resultaten gevonden' : fr ? 'Aucun resultat trouve' : 'No results found') : (nl ? 'Nog geen scans' : fr ? 'Pas encore de scans' : 'No scans yet')}
           </h3>
           <p className="text-gray-600">
-            {searchQuery 
-              ? 'Try a different search term' 
-              : 'Run your first Growth Blueprint scan to get started'}
+            {searchQuery
+              ? (nl ? 'Probeer een andere zoekterm' : fr ? 'Essayez un autre terme de recherche' : 'Try a different search term')
+              : (nl ? 'Voer je eerste Growth Blueprint scan uit om te beginnen' : fr ? 'Lancez votre premier scan Growth Blueprint pour commencer' : 'Run your first Growth Blueprint scan to get started')}
           </p>
         </div>
       ) : (
@@ -145,6 +149,9 @@ interface BlueprintCardProps {
 }
 
 function BlueprintCard({ blueprint, onSelect, onDelete }: BlueprintCardProps) {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
     if (score >= 60) return 'text-blue-600';
@@ -186,7 +193,7 @@ function BlueprintCard({ blueprint, onSelect, onDelete }: BlueprintCardProps) {
           <div className={`text-3xl font-bold ${getScoreColor(blueprint.overall_score || 0)}`}>
             {blueprint.overall_score || 0}
           </div>
-          <p className="text-xs text-gray-600 mt-1">Overall</p>
+          <p className="text-xs text-gray-600 mt-1">{nl ? 'Totaal' : fr ? 'Global' : 'Overall'}</p>
         </div>
       </div>
 
@@ -212,7 +219,7 @@ function BlueprintCard({ blueprint, onSelect, onDelete }: BlueprintCardProps) {
             className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
           >
             <TrendingUp className="w-4 h-4" />
-            View Details
+            {nl ? 'Bekijk Details' : fr ? 'Voir les details' : 'View Details'}
           </button>
           
           <button
@@ -228,7 +235,7 @@ function BlueprintCard({ blueprint, onSelect, onDelete }: BlueprintCardProps) {
       {blueprint.setup_completed && (
         <div className="mt-4 flex items-center gap-2 text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg">
           <span className="w-2 h-2 bg-green-600 rounded-full" />
-          Marketing setup completed
+          {nl ? 'Marketing setup voltooid' : fr ? 'Configuration marketing terminee' : 'Marketing setup completed'}
         </div>
       )}
     </div>

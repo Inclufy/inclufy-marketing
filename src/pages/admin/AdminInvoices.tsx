@@ -16,6 +16,7 @@ import {
   Euro,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Invoice {
   id: string;
@@ -28,16 +29,19 @@ interface Invoice {
   created_at: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  paid: { label: 'Betaald', color: 'bg-emerald-100 text-emerald-700' },
-  pending: { label: 'Openstaand', color: 'bg-amber-100 text-amber-700' },
-  overdue: { label: 'Achterstallig', color: 'bg-red-100 text-red-700' },
-  draft: { label: 'Concept', color: 'bg-gray-100 text-gray-600' },
-};
-
 export default function AdminInvoices() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
+    paid: { label: nl ? 'Betaald' : fr ? 'Paye' : 'Paid', color: 'bg-emerald-100 text-emerald-700' },
+    pending: { label: nl ? 'Openstaand' : fr ? 'En attente' : 'Pending', color: 'bg-amber-100 text-amber-700' },
+    overdue: { label: nl ? 'Achterstallig' : fr ? 'En retard' : 'Overdue', color: 'bg-red-100 text-red-700' },
+    draft: { label: nl ? 'Concept' : fr ? 'Brouillon' : 'Draft', color: 'bg-gray-100 text-gray-600' },
+  };
 
   const fetchData = async () => {
     try {
@@ -60,11 +64,11 @@ export default function AdminInvoices() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Facturen</h1>
-          <p className="text-sm text-gray-500">{invoices.length} facturen</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Facturen' : fr ? 'Factures' : 'Invoices'}</h1>
+          <p className="text-sm text-gray-500">{invoices.length} {nl ? 'facturen' : fr ? 'factures' : 'invoices'}</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+          <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -75,7 +79,7 @@ export default function AdminInvoices() {
             <Euro className="h-5 w-5 text-emerald-500" />
             <div>
               <p className="text-2xl font-bold">&euro;{totalAmount.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Totaal gefactureerd</p>
+              <p className="text-xs text-gray-500">{nl ? 'Totaal gefactureerd' : fr ? 'Total facture' : 'Total invoiced'}</p>
             </div>
           </CardContent>
         </Card>
@@ -84,7 +88,7 @@ export default function AdminInvoices() {
             <CheckCircle className="h-5 w-5 text-emerald-500" />
             <div>
               <p className="text-2xl font-bold">&euro;{paidAmount.toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Betaald</p>
+              <p className="text-xs text-gray-500">{nl ? 'Betaald' : fr ? 'Paye' : 'Paid'}</p>
             </div>
           </CardContent>
         </Card>
@@ -93,7 +97,7 @@ export default function AdminInvoices() {
             <Clock className="h-5 w-5 text-amber-500" />
             <div>
               <p className="text-2xl font-bold">&euro;{(totalAmount - paidAmount).toFixed(2)}</p>
-              <p className="text-xs text-gray-500">Openstaand</p>
+              <p className="text-xs text-gray-500">{nl ? 'Openstaand' : fr ? 'En attente' : 'Outstanding'}</p>
             </div>
           </CardContent>
         </Card>
@@ -108,18 +112,18 @@ export default function AdminInvoices() {
           ) : invoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-500">
               <Receipt className="h-12 w-12 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Geen facturen</p>
-              <p className="text-sm">Er zijn nog geen facturen aangemaakt</p>
+              <p className="text-lg font-medium">{nl ? 'Geen facturen' : fr ? 'Aucune facture' : 'No invoices'}</p>
+              <p className="text-sm">{nl ? 'Er zijn nog geen facturen aangemaakt' : fr ? 'Aucune facture n\'a encore ete creee' : 'No invoices have been created yet'}</p>
             </div>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Nummer</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Bedrag</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Nummer' : fr ? 'Numero' : 'Number'}</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Bedrag' : fr ? 'Montant' : 'Amount'}</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Vervaldatum</th>
-                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase">Acties</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Vervaldatum' : fr ? 'Date d\'echeance' : 'Due Date'}</th>
+                  <th className="text-right py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Acties' : fr ? 'Actions' : 'Actions'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -133,7 +137,7 @@ export default function AdminInvoices() {
                         <Badge className={`${statusConfig.color} border-0 text-xs`}>{statusConfig.label}</Badge>
                       </td>
                       <td className="py-3 px-4 text-sm text-gray-500">
-                        {inv.due_date ? new Date(inv.due_date).toLocaleDateString('nl-NL') : '-'}
+                        {inv.due_date ? new Date(inv.due_date).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB') : '-'}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <Button variant="ghost" size="sm" className="h-7 w-7 p-0">

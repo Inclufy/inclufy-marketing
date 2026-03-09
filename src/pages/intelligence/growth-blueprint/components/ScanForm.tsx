@@ -3,12 +3,16 @@ import React, { useState } from 'react';
 import { Sparkles, Loader2, AlertCircle, Building2, Globe, Briefcase } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ScanFormProps {
   onScanComplete: (blueprint: any) => void;
 }
 
 export default function ScanForm({ onScanComplete }: ScanFormProps) {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [formData, setFormData] = useState({
     company_name: '',
     website_url: '',
@@ -22,14 +26,14 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
 
   const startScan = async () => {
     if (!formData.company_name || !formData.website_url) {
-      toast.error('Please fill in company name and website URL');
+      toast.error(nl ? 'Vul bedrijfsnaam en website URL in' : fr ? 'Veuillez remplir le nom de l\'entreprise et l\'URL du site web' : 'Please fill in company name and website URL');
       return;
     }
 
     try {
       setScanning(true);
       setProgress(25);
-      setStatus('Starting scan...');
+      setStatus(nl ? 'Scan starten...' : fr ? 'Demarrage du scan...' : 'Starting scan...');
 
       // Start scan
       const response = await axios.post('/api/growth-blueprint/', formData);
@@ -57,17 +61,17 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
         const blueprint = response.data.blueprint;
         
         setProgress(blueprint.scan_progress || 0);
-        setStatus(blueprint.status === 'scanning' ? 'Scanning website...' : 'Analyzing data...');
+        setStatus(blueprint.status === 'scanning' ? (nl ? 'Website scannen...' : fr ? 'Scan du site web...' : 'Scanning website...') : (nl ? 'Data analyseren...' : fr ? 'Analyse des donnees...' : 'Analyzing data...'));
 
         if (blueprint.status === 'completed') {
           clearInterval(interval);
           setScanning(false);
-          toast.success('Scan complete!');
+          toast.success(nl ? 'Scan voltooid!' : fr ? 'Scan termine !' : 'Scan complete!');
           onScanComplete(response.data);
         } else if (blueprint.status === 'failed') {
           clearInterval(interval);
           setScanning(false);
-          toast.error('Scan failed');
+          toast.error(nl ? 'Scan mislukt' : fr ? 'Scan echoue' : 'Scan failed');
         }
       } catch (error) {
         console.error('Poll error:', error);
@@ -88,15 +92,15 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
           </div>
           <div>
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              What We'll Analyze
+              {nl ? 'Wat we analyseren' : fr ? 'Ce que nous analysons' : 'What We\'ll Analyze'}
             </h3>
             <ul className="text-sm text-gray-600 space-y-1">
-              <li>✓ Website quality & user experience</li>
-              <li>✓ SEO performance & optimization</li>
-              <li>✓ Content quality & messaging</li>
-              <li>✓ Social media presence</li>
-              <li>✓ Brand consistency & positioning</li>
-              <li>✓ Growth opportunities & quick wins</li>
+              <li>{nl ? '✓ Websitekwaliteit & gebruikerservaring' : fr ? '✓ Qualite du site web & experience utilisateur' : '✓ Website quality & user experience'}</li>
+              <li>{nl ? '✓ SEO-prestaties & optimalisatie' : fr ? '✓ Performances SEO & optimisation' : '✓ SEO performance & optimization'}</li>
+              <li>{nl ? '✓ Contentkwaliteit & boodschap' : fr ? '✓ Qualite du contenu & message' : '✓ Content quality & messaging'}</li>
+              <li>{nl ? '✓ Social media aanwezigheid' : fr ? '✓ Presence sur les reseaux sociaux' : '✓ Social media presence'}</li>
+              <li>{nl ? '✓ Merkconsistentie & positionering' : fr ? '✓ Coherence de marque & positionnement' : '✓ Brand consistency & positioning'}</li>
+              <li>{nl ? '✓ Groeikansen & snelle winsten' : fr ? '✓ Opportunites de croissance & gains rapides' : '✓ Growth opportunities & quick wins'}</li>
             </ul>
           </div>
         </div>
@@ -104,14 +108,14 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
 
       {/* Scan Form */}
       <div className="bg-white rounded-xl shadow-sm border p-8">
-        <h2 className="text-2xl font-bold mb-6">Company Information</h2>
+        <h2 className="text-2xl font-bold mb-6">{nl ? 'Bedrijfsinformatie' : fr ? 'Informations sur l\'entreprise' : 'Company Information'}</h2>
         
         <div className="space-y-6">
           {/* Company Name */}
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Building2 className="w-4 h-4" />
-              Company Name *
+              {nl ? 'Bedrijfsnaam *' : fr ? 'Nom de l\'entreprise *' : 'Company Name *'}
             </label>
             <input
               type="text"
@@ -127,7 +131,7 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Globe className="w-4 h-4" />
-              Website URL *
+              {nl ? 'Website URL *' : fr ? 'URL du site web *' : 'Website URL *'}
             </label>
             <input
               type="url"
@@ -143,7 +147,7 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
               <Briefcase className="w-4 h-4" />
-              Industry (Optional)
+              {nl ? 'Branche (Optioneel)' : fr ? 'Secteur (Facultatif)' : 'Industry (Optional)'}
             </label>
             <input
               type="text"
@@ -154,7 +158,7 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:bg-gray-100"
             />
             <p className="text-sm text-gray-500 mt-1">
-              We'll detect this automatically if not provided
+              {nl ? 'We detecteren dit automatisch als je het niet invult' : fr ? 'Nous le detecterons automatiquement si non fourni' : 'We\'ll detect this automatically if not provided'}
             </p>
           </div>
 
@@ -167,12 +171,12 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
             {scanning ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Analyzing...
+                {nl ? 'Analyseren...' : fr ? 'Analyse en cours...' : 'Analyzing...'}
               </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                Generate Growth Blueprint
+                {nl ? 'Genereer Growth Blueprint' : fr ? 'Generer le Growth Blueprint' : 'Generate Growth Blueprint'}
               </>
             )}
           </button>
@@ -195,10 +199,9 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
             <div className="mt-4 flex items-start gap-3 p-4 bg-blue-50 rounded-lg">
               <AlertCircle className="w-5 h-5 text-blue-600 mt-0.5" />
               <div className="text-sm text-blue-900">
-                <p className="font-medium mb-1">Analysis in progress...</p>
+                <p className="font-medium mb-1">{nl ? 'Analyse bezig...' : fr ? 'Analyse en cours...' : 'Analysis in progress...'}</p>
                 <p className="text-blue-700">
-                  We're analyzing your website, checking SEO, scanning for social media links, 
-                  and generating personalized recommendations. This typically takes 30-60 seconds.
+                  {nl ? 'We analyseren je website, controleren SEO, scannen op social media links en genereren gepersonaliseerde aanbevelingen. Dit duurt doorgaans 30-60 seconden.' : fr ? 'Nous analysons votre site web, verifions le SEO, recherchons les liens de reseaux sociaux et generons des recommandations personnalisees. Cela prend generalement 30 a 60 secondes.' : 'We\'re analyzing your website, checking SEO, scanning for social media links, and generating personalized recommendations. This typically takes 30-60 seconds.'}
                 </p>
               </div>
             </div>
@@ -208,7 +211,7 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
 
       {/* Example Companies */}
       <div className="mt-8 text-center">
-        <p className="text-sm text-gray-600 mb-3">Try it with these examples:</p>
+        <p className="text-sm text-gray-600 mb-3">{nl ? 'Probeer het met deze voorbeelden:' : fr ? 'Essayez avec ces exemples :' : 'Try it with these examples:'}</p>
         <div className="flex items-center justify-center gap-3 flex-wrap">
           {[
             { name: 'Stripe', url: 'stripe.com' },

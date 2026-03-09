@@ -16,6 +16,7 @@ import {
   Clock,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ActivityItem {
   type: string;
@@ -39,6 +40,9 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export default function AdminActivity() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -60,11 +64,11 @@ export default function AdminActivity() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Activiteit</h1>
-          <p className="text-sm text-gray-500">Recente platform activiteit</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Activiteit' : fr ? 'Activite' : 'Activity'}</h1>
+          <p className="text-sm text-gray-500">{nl ? 'Recente platform activiteit' : fr ? 'Activite recente de la plateforme' : 'Recent platform activity'}</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+          <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -77,8 +81,8 @@ export default function AdminActivity() {
           ) : activities.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-500">
               <Activity className="h-12 w-12 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Geen activiteit</p>
-              <p className="text-sm">Er is nog geen activiteit geregistreerd</p>
+              <p className="text-lg font-medium">{nl ? 'Geen activiteit' : fr ? 'Aucune activite' : 'No activity'}</p>
+              <p className="text-sm">{nl ? 'Er is nog geen activiteit geregistreerd' : fr ? 'Aucune activite n\'a encore ete enregistree' : 'No activity has been recorded yet'}</p>
             </div>
           ) : (
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -98,7 +102,7 @@ export default function AdminActivity() {
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-400 flex-shrink-0">
                       <Clock className="h-3 w-3" />
-                      {item.timestamp ? new Date(item.timestamp).toLocaleString('nl-NL', {
+                      {item.timestamp ? new Date(item.timestamp).toLocaleString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB', {
                         day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'
                       }) : '-'}
                     </div>

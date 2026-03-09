@@ -1,6 +1,7 @@
 // src/pages/JourneyBuilder.tsx
 import { useState, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 import ReactFlow, {
   Node,
   Edge,
@@ -290,6 +291,10 @@ const initialWorkflowEdges: Edge[] = [
 ];
 
 const JourneyBuilder = () => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const location = useLocation();
   const mode = getMode(location.pathname);
   
@@ -352,7 +357,7 @@ const JourneyBuilder = () => {
       updatedAt: new Date().toISOString(),
     };
     localStorage.setItem(`${mode}-${selectedItem}`, JSON.stringify(data));
-    alert(`${mode === 'workflow' ? 'Workflow' : 'Journey'} saved successfully!`);
+    alert(nl ? `${mode === 'workflow' ? 'Workflow' : 'Klantreis'} succesvol opgeslagen!` : fr ? `${mode === 'workflow' ? 'Workflow' : 'Parcours'} sauvegarde avec succes !` : `${mode === 'workflow' ? 'Workflow' : 'Journey'} saved successfully!`);
   };
 
   const exportItem = () => {
@@ -396,20 +401,20 @@ const JourneyBuilder = () => {
   const journeyAnalytics = (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-muted-foreground">Total Enrolled</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Totaal ingeschreven' : fr ? 'Total inscrits' : 'Total Enrolled'}</p>
         <p className="text-2xl font-bold">1,247</p>
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">Completed</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Voltooid' : fr ? 'Termines' : 'Completed'}</p>
         <p className="text-2xl font-bold">892</p>
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">Conversion Rate</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Conversieratio' : fr ? 'Taux de conversion' : 'Conversion Rate'}</p>
         <p className="text-2xl font-bold text-green-600">71.5%</p>
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">Avg. Time</p>
-        <p className="text-2xl font-bold">4.3 days</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Gem. tijd' : fr ? 'Temps moy.' : 'Avg. Time'}</p>
+        <p className="text-2xl font-bold">{nl ? '4,3 dagen' : fr ? '4,3 jours' : '4.3 days'}</p>
       </div>
     </div>
   );
@@ -417,19 +422,19 @@ const JourneyBuilder = () => {
   const workflowAnalytics = (
     <div className="space-y-4">
       <div>
-        <p className="text-sm text-muted-foreground">Total Executions</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Totaal uitgevoerd' : fr ? "Total d'executions" : 'Total Executions'}</p>
         <p className="text-2xl font-bold">3,421</p>
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">Success Rate</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Slagingspercentage' : fr ? 'Taux de succes' : 'Success Rate'}</p>
         <p className="text-2xl font-bold text-green-600">98.7%</p>
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">Avg. Duration</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Gem. duur' : fr ? 'Duree moy.' : 'Avg. Duration'}</p>
         <p className="text-2xl font-bold">1.2s</p>
       </div>
       <div>
-        <p className="text-sm text-muted-foreground">Errors Today</p>
+        <p className="text-sm text-muted-foreground">{nl ? 'Fouten vandaag' : fr ? "Erreurs aujourd'hui" : 'Errors Today'}</p>
         <p className="text-2xl font-bold text-red-600">3</p>
       </div>
     </div>
@@ -448,32 +453,32 @@ const JourneyBuilder = () => {
               className="text-2xl font-bold bg-transparent border-b border-transparent hover:border-gray-300 focus:border-primary focus:outline-none px-1"
             />
             <p className="text-sm text-muted-foreground">
-              {mode === 'workflow' 
-                ? 'Build automated workflows with API integrations and data processing'
-                : 'Design customer journeys with multi-channel touchpoints'
+              {mode === 'workflow'
+                ? (nl ? 'Bouw geautomatiseerde workflows met API-integraties en dataverwerking' : fr ? 'Construisez des workflows automatises avec des integrations API et du traitement de donnees' : 'Build automated workflows with API integrations and data processing')
+                : (nl ? 'Ontwerp klantreizen met multi-channel contactpunten' : fr ? 'Concevez des parcours clients avec des points de contact multi-canal' : 'Design customer journeys with multi-channel touchpoints')
               }
             </p>
           </div>
           <div className="flex gap-2">
             <Badge variant={mode === 'workflow' ? 'secondary' : 'default'} className="mr-2">
               <Layers className="h-3 w-3 mr-1" />
-              {mode === 'workflow' ? 'Workflow' : 'Journey'}
+              {mode === 'workflow' ? 'Workflow' : (nl ? 'Klantreis' : fr ? 'Parcours' : 'Journey')}
             </Badge>
             <Button variant="outline" size="sm">
               <Upload className="h-4 w-4 mr-2" />
-              Import
+              {nl ? 'Importeren' : fr ? 'Importer' : 'Import'}
             </Button>
             <Button variant="outline" size="sm" onClick={exportItem}>
               <Download className="h-4 w-4 mr-2" />
-              Export
+              {nl ? 'Exporteren' : fr ? 'Exporter' : 'Export'}
             </Button>
             <Button variant="outline" size="sm" onClick={saveItem}>
               <Save className="h-4 w-4 mr-2" />
-              Save
+              {nl ? 'Opslaan' : fr ? 'Sauvegarder' : 'Save'}
             </Button>
             <Button size="sm" className={mode === 'workflow' ? 'bg-purple-600 hover:bg-purple-700' : ''}>
               <Play className="h-4 w-4 mr-2" />
-              {mode === 'workflow' ? 'Deploy' : 'Activate'}
+              {mode === 'workflow' ? (nl ? 'Implementeren' : fr ? 'Deployer' : 'Deploy') : (nl ? 'Activeren' : fr ? 'Activer' : 'Activate')}
             </Button>
           </div>
         </div>
@@ -484,43 +489,43 @@ const JourneyBuilder = () => {
         {/* Sidebar */}
         <div className="w-64 border-r bg-card p-4">
           <h3 className="font-semibold mb-4">
-            {mode === 'workflow' ? 'Workflow Analytics' : 'Journey Analytics'}
+            {mode === 'workflow' ? (nl ? 'Workflow analyse' : fr ? 'Analyse du workflow' : 'Workflow Analytics') : (nl ? 'Klantreis analyse' : fr ? 'Analyse du parcours' : 'Journey Analytics')}
           </h3>
           {mode === 'workflow' ? workflowAnalytics : journeyAnalytics}
           
           <div className="mt-8">
             <h3 className="font-semibold mb-4">
-              {mode === 'workflow' ? 'Workflow Templates' : 'Journey Templates'}
+              {mode === 'workflow' ? (nl ? 'Workflow sjablonen' : fr ? 'Modeles de workflow' : 'Workflow Templates') : (nl ? 'Klantreis sjablonen' : fr ? 'Modeles de parcours' : 'Journey Templates')}
             </h3>
             <div className="space-y-2">
               {mode === 'workflow' ? (
                 <>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <FileCheck className="h-4 w-4 mr-2" />
-                    Order Processing
+                    {nl ? 'Orderverwerking' : fr ? 'Traitement des commandes' : 'Order Processing'}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <UserCheck className="h-4 w-4 mr-2" />
-                    Employee Onboarding
+                    {nl ? 'Onboarding medewerkers' : fr ? 'Integration des employes' : 'Employee Onboarding'}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Shield className="h-4 w-4 mr-2" />
-                    Security Approval
+                    {nl ? 'Beveiligingsgoedkeuring' : fr ? 'Approbation de securite' : 'Security Approval'}
                   </Button>
                 </>
               ) : (
                 <>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Users className="h-4 w-4 mr-2" />
-                    Welcome Series
+                    {nl ? 'Welkomstserie' : fr ? "Serie d'accueil" : 'Welcome Series'}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <Target className="h-4 w-4 mr-2" />
-                    Win-Back Campaign
+                    {nl ? 'Win-back campagne' : fr ? 'Campagne de reconquete' : 'Win-Back Campaign'}
                   </Button>
                   <Button variant="outline" size="sm" className="w-full justify-start">
                     <MessageSquare className="h-4 w-4 mr-2" />
-                    Product Launch
+                    {nl ? 'Productlancering' : fr ? 'Lancement de produit' : 'Product Launch'}
                   </Button>
                 </>
               )}
@@ -528,10 +533,10 @@ const JourneyBuilder = () => {
           </div>
           
           <div className="mt-8">
-            <h3 className="font-semibold mb-4">Node Settings</h3>
+            <h3 className="font-semibold mb-4">{nl ? 'Node-instellingen' : fr ? 'Parametres du noeud' : 'Node Settings'}</h3>
             <Button variant="outline" size="sm" className="w-full">
               <Settings className="h-4 w-4 mr-2" />
-              Configure Selected
+              {nl ? 'Geselecteerde configureren' : fr ? 'Configurer la selection' : 'Configure Selected'}
             </Button>
           </div>
         </div>
@@ -557,7 +562,7 @@ const JourneyBuilder = () => {
       {/* Node Palette */}
       <div className="border-t bg-card p-4">
         <h3 className="text-sm font-semibold mb-3">
-          {mode === 'workflow' ? 'Workflow Steps' : 'Journey Steps'}
+          {mode === 'workflow' ? (nl ? 'Workflow stappen' : fr ? 'Etapes du workflow' : 'Workflow Steps') : (nl ? 'Klantreis stappen' : fr ? 'Etapes du parcours' : 'Journey Steps')}
         </h3>
         <div className="flex gap-3 flex-wrap">
           {nodeTemplates.map((template) => (

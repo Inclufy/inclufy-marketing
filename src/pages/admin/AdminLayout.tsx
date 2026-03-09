@@ -29,6 +29,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface NavItem {
   label: string;
@@ -37,38 +38,12 @@ interface NavItem {
   badge?: string;
 }
 
-const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
-  {
-    title: 'OVERZICHT',
-    items: [
-      { label: 'Dashboard', path: '/app/tenant-admin', icon: LayoutDashboard },
-      { label: 'Activiteit', path: '/app/tenant-admin/activity', icon: Activity },
-    ],
-  },
-  {
-    title: 'BEHEER',
-    items: [
-      { label: 'Gebruikers', path: '/app/tenant-admin/users', icon: Users },
-      { label: 'Organisaties', path: '/app/tenant-admin/organizations', icon: Building2 },
-      { label: 'Integraties', path: '/app/tenant-admin/integrations', icon: Puzzle },
-      { label: 'Abonnementen', path: '/app/tenant-admin/subscriptions', icon: CreditCard },
-      { label: 'Demo Verzoeken', path: '/app/tenant-admin/demo-requests', icon: MessageSquareText },
-      { label: 'Registraties', path: '/app/tenant-admin/registrations', icon: UserPlus },
-      { label: 'Trainingen', path: '/app/tenant-admin/trainings', icon: GraduationCap },
-      { label: 'Facturen', path: '/app/tenant-admin/invoices', icon: Receipt },
-    ],
-  },
-  {
-    title: 'SYSTEEM',
-    items: [
-      { label: 'Instellingen', path: '/app/tenant-admin/settings', icon: Settings },
-    ],
-  },
-];
-
 export default function AdminLayout() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [darkMode, setDarkMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -80,6 +55,35 @@ export default function AdminLayout() {
     setDarkMode(!darkMode);
     document.documentElement.classList.toggle('dark');
   };
+
+  const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
+    {
+      title: nl ? 'OVERZICHT' : fr ? 'APERCU' : 'OVERVIEW',
+      items: [
+        { label: 'Dashboard', path: '/app/tenant-admin', icon: LayoutDashboard },
+        { label: nl ? 'Activiteit' : fr ? 'Activite' : 'Activity', path: '/app/tenant-admin/activity', icon: Activity },
+      ],
+    },
+    {
+      title: nl ? 'BEHEER' : fr ? 'GESTION' : 'MANAGEMENT',
+      items: [
+        { label: nl ? 'Gebruikers' : fr ? 'Utilisateurs' : 'Users', path: '/app/tenant-admin/users', icon: Users },
+        { label: nl ? 'Organisaties' : fr ? 'Organisations' : 'Organizations', path: '/app/tenant-admin/organizations', icon: Building2 },
+        { label: nl ? 'Integraties' : fr ? 'Integrations' : 'Integrations', path: '/app/tenant-admin/integrations', icon: Puzzle },
+        { label: nl ? 'Abonnementen' : fr ? 'Abonnements' : 'Subscriptions', path: '/app/tenant-admin/subscriptions', icon: CreditCard },
+        { label: nl ? 'Demo Verzoeken' : fr ? 'Demandes de demo' : 'Demo Requests', path: '/app/tenant-admin/demo-requests', icon: MessageSquareText },
+        { label: nl ? 'Registraties' : fr ? 'Inscriptions' : 'Registrations', path: '/app/tenant-admin/registrations', icon: UserPlus },
+        { label: nl ? 'Trainingen' : fr ? 'Formations' : 'Trainings', path: '/app/tenant-admin/trainings', icon: GraduationCap },
+        { label: nl ? 'Facturen' : fr ? 'Factures' : 'Invoices', path: '/app/tenant-admin/invoices', icon: Receipt },
+      ],
+    },
+    {
+      title: nl ? 'SYSTEEM' : fr ? 'SYSTEME' : 'SYSTEM',
+      items: [
+        { label: nl ? 'Instellingen' : fr ? 'Parametres' : 'Settings', path: '/app/tenant-admin/settings', icon: Settings },
+      ],
+    },
+  ];
 
   return (
     <div className={cn("flex min-h-screen bg-gray-50 dark:bg-gray-950")}>
@@ -99,7 +103,7 @@ export default function AdminLayout() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-sm font-bold text-gray-900 dark:text-white truncate">Inclufy</h2>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400">Admin Portal</p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">{nl ? 'Admin Portaal' : fr ? 'Portail Admin' : 'Admin Portal'}</p>
               </div>
             </>
           )}
@@ -164,7 +168,7 @@ export default function AdminLayout() {
               onClick={() => navigate('/app/dashboard')}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Terug naar App
+              {nl ? 'Terug naar App' : fr ? 'Retour a l\'app' : 'Back to App'}
             </Button>
           </div>
         )}
@@ -181,7 +185,7 @@ export default function AdminLayout() {
           <div className="relative w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Zoeken..."
+              placeholder={nl ? 'Zoeken...' : fr ? 'Rechercher...' : 'Search...'}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-9 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
@@ -202,7 +206,7 @@ export default function AdminLayout() {
             </Button>
 
             {/* Language */}
-            <Badge variant="outline" className="text-xs">NL</Badge>
+            <Badge variant="outline" className="text-xs">{lang.toUpperCase()}</Badge>
 
             {/* User */}
             <div className="flex items-center gap-2 pl-3 border-l border-gray-200 dark:border-gray-700">

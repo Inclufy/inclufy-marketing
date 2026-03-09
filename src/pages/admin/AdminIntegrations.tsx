@@ -22,6 +22,7 @@ import {
   Users,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Integration {
   id: string;
@@ -43,19 +44,22 @@ const ICON_MAP: Record<string, React.ElementType> = {
   users: Users,
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  ai: 'Artificial Intelligence',
-  payment: 'Betalingen',
-  infrastructure: 'Infrastructuur',
-  communication: 'Communicatie',
-  analytics: 'Analytics',
-  marketing: 'Marketing',
-  crm: 'CRM',
-};
-
 export default function AdminIntegrations() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const CATEGORY_LABELS: Record<string, string> = {
+    ai: 'Artificial Intelligence',
+    payment: nl ? 'Betalingen' : fr ? 'Paiements' : 'Payments',
+    infrastructure: nl ? 'Infrastructuur' : fr ? 'Infrastructure' : 'Infrastructure',
+    communication: nl ? 'Communicatie' : fr ? 'Communication' : 'Communication',
+    analytics: 'Analytics',
+    marketing: 'Marketing',
+    crm: 'CRM',
+  };
 
   const fetchData = async () => {
     try {
@@ -85,11 +89,13 @@ export default function AdminIntegrations() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Integraties</h1>
-          <p className="text-sm text-gray-500">{activeCount} van {integrations.length} actief</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Integraties' : fr ? 'Integrations' : 'Integrations'}</h1>
+          <p className="text-sm text-gray-500">
+            {activeCount} {nl ? 'van' : fr ? 'sur' : 'of'} {integrations.length} {nl ? 'actief' : fr ? 'actives' : 'active'}
+          </p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+          <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -124,11 +130,11 @@ export default function AdminIntegrations() {
                             <h3 className="font-semibold text-gray-900 dark:text-white">{integration.name}</h3>
                             {integration.configured ? (
                               <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs gap-1">
-                                <CheckCircle className="h-3 w-3" /> Actief
+                                <CheckCircle className="h-3 w-3" /> {nl ? 'Actief' : fr ? 'Actif' : 'Active'}
                               </Badge>
                             ) : (
                               <Badge className="bg-gray-100 text-gray-500 border-0 text-xs gap-1">
-                                <XCircle className="h-3 w-3" /> Inactief
+                                <XCircle className="h-3 w-3" /> {nl ? 'Inactief' : fr ? 'Inactif' : 'Inactive'}
                               </Badge>
                             )}
                           </div>

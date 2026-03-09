@@ -23,6 +23,7 @@ import {
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ContentItem {
   id: string;
@@ -46,6 +47,10 @@ const TYPE_CONFIG: Record<string, { icon: typeof FileText; color: string; label:
 };
 
 const ContentLibrary = () => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const queryClient = useQueryClient();
@@ -76,16 +81,16 @@ const ContentLibrary = () => {
     try {
       await api.delete(`/content-library/${id}`);
       queryClient.invalidateQueries({ queryKey: ['content-library'] });
-      toast.success("Item deleted");
+      toast.success(nl ? "Item verwijderd" : fr ? "Élément supprimé" : "Item deleted");
     } catch {
-      toast.error("Failed to delete item");
+      toast.error(nl ? "Kon item niet verwijderen" : fr ? "Impossible de supprimer l'élément" : "Failed to delete item");
     }
   }
 
   function copyContent(item: ContentItem) {
     const text = item.content?.body || item.content?.text || JSON.stringify(item.content, null, 2);
     navigator.clipboard.writeText(text);
-    toast.success("Content copied to clipboard!");
+    toast.success(nl ? "Content gekopieerd naar klembord!" : fr ? "Contenu copié dans le presse-papiers !" : "Content copied to clipboard!");
   }
 
   function downloadItem(item: ContentItem) {
@@ -96,7 +101,7 @@ const ContentLibrary = () => {
     a.download = `${item.title.replace(/\s+/g, "-").toLowerCase()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Downloaded!");
+    toast.success(nl ? "Gedownload!" : fr ? "Téléchargé !" : "Downloaded!");
   }
 
   const getConfig = (type: string) => TYPE_CONFIG[type] || TYPE_CONFIG.other;
@@ -112,15 +117,15 @@ const ContentLibrary = () => {
             <FolderOpen className="w-6 h-6 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">Content Library</h1>
+            <h1 className="text-2xl font-bold">{nl ? "Content Bibliotheek" : fr ? "Bibliothèque de Contenu" : "Content Library"}</h1>
             <p className="text-sm text-muted-foreground">
-              All your generated content in one place
+              {nl ? "Al je gegenereerde content op één plek" : fr ? "Tout votre contenu généré en un seul endroit" : "All your generated content in one place"}
             </p>
           </div>
         </div>
         <Button variant="outline" onClick={() => refetch()}>
           <RefreshCw className="w-4 h-4 mr-2" />
-          Refresh
+          {nl ? "Vernieuwen" : fr ? "Actualiser" : "Refresh"}
         </Button>
       </div>
 
@@ -129,7 +134,7 @@ const ContentLibrary = () => {
         <Card>
           <CardContent className="pt-4 pb-4 text-center">
             <p className="text-3xl font-bold text-primary">{stats.total}</p>
-            <p className="text-xs text-muted-foreground">Total Items</p>
+            <p className="text-xs text-muted-foreground">{nl ? "Totaal Items" : fr ? "Total Éléments" : "Total Items"}</p>
           </CardContent>
         </Card>
         {Object.entries(stats.by_type).slice(0, 3).map(([type, count]) => {
@@ -153,7 +158,7 @@ const ContentLibrary = () => {
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <Plus className="w-5 h-5 text-primary" />
-            Create New Content
+            {nl ? "Nieuwe Content Maken" : fr ? "Créer Nouveau Contenu" : "Create New Content"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -161,25 +166,25 @@ const ContentLibrary = () => {
             <Link to="/app/campaigns/email">
               <Button variant="outline" className="w-full h-16 flex-col gap-1">
                 <Mail className="w-5 h-5 text-purple-500" />
-                <span className="text-xs">Email Campaign</span>
+                <span className="text-xs">{nl ? "E-mail Campagne" : fr ? "Campagne E-mail" : "Email Campaign"}</span>
               </Button>
             </Link>
             <Link to="/app/campaigns/social">
               <Button variant="outline" className="w-full h-16 flex-col gap-1">
                 <ImageIcon className="w-5 h-5 text-blue-500" />
-                <span className="text-xs">Social Post</span>
+                <span className="text-xs">{nl ? "Social Post" : fr ? "Publication Sociale" : "Social Post"}</span>
               </Button>
             </Link>
             <Link to="/app/campaigns/landing">
               <Button variant="outline" className="w-full h-16 flex-col gap-1">
                 <Globe className="w-5 h-5 text-emerald-500" />
-                <span className="text-xs">Landing Page</span>
+                <span className="text-xs">{nl ? "Landingspagina" : fr ? "Page d'Atterrissage" : "Landing Page"}</span>
               </Button>
             </Link>
             <Link to="/app/tutorial-creator">
               <Button variant="outline" className="w-full h-16 flex-col gap-1">
                 <FileText className="w-5 h-5 text-green-500" />
-                <span className="text-xs">Tutorial</span>
+                <span className="text-xs">{nl ? "Tutorial" : fr ? "Tutoriel" : "Tutorial"}</span>
               </Button>
             </Link>
           </div>
@@ -194,7 +199,7 @@ const ContentLibrary = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-            placeholder="Search content..."
+            placeholder={nl ? "Zoek content..." : fr ? "Rechercher du contenu..." : "Search content..."}
             className="pl-10"
           />
         </div>
@@ -206,7 +211,7 @@ const ContentLibrary = () => {
               size="sm"
               onClick={() => setFilterType(type)}
             >
-              {type === "all" ? "All" : getConfig(type).label}
+              {type === "all" ? (nl ? "Alles" : fr ? "Tout" : "All") : getConfig(type).label}
             </Button>
           ))}
         </div>
@@ -217,11 +222,13 @@ const ContentLibrary = () => {
         <LoadingSpinner />
       ) : items.length === 0 ? (
         <EmptyState
-          title={searchQuery ? "No results found" : "Your content library is empty"}
+          title={searchQuery
+            ? (nl ? "Geen resultaten gevonden" : fr ? "Aucun résultat trouvé" : "No results found")
+            : (nl ? "Je content bibliotheek is leeg" : fr ? "Votre bibliothèque de contenu est vide" : "Your content library is empty")}
           description={searchQuery
-            ? "Try a different search term"
-            : "Generated content from campaigns and tools will appear here"}
-          action={!searchQuery ? { label: "Create Email Campaign", onClick: () => window.location.href = "/app/campaigns/email" } : undefined}
+            ? (nl ? "Probeer een andere zoekterm" : fr ? "Essayez un autre terme de recherche" : "Try a different search term")
+            : (nl ? "Gegenereerde content van campagnes en tools verschijnt hier" : fr ? "Le contenu généré par les campagnes et outils apparaîtra ici" : "Generated content from campaigns and tools will appear here")}
+          action={!searchQuery ? { label: nl ? "Maak E-mail Campagne" : fr ? "Créer Campagne E-mail" : "Create Email Campaign", onClick: () => window.location.href = "/app/campaigns/email" } : undefined}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

@@ -1,11 +1,11 @@
 // src/components/intelligence/PostScanWizard.tsx
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Sparkles, 
-  Building2, 
-  Users, 
-  DollarSign, 
+import {
+  Sparkles,
+  Building2,
+  Users,
+  DollarSign,
   Target,
   ArrowRight,
   ArrowLeft,
@@ -13,6 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PostScanWizardProps {
   blueprintId: string;
@@ -55,6 +56,9 @@ export const PostScanWizard: React.FC<PostScanWizardProps> = ({
   onComplete,
   onSkip
 }) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -203,13 +207,13 @@ export const PostScanWizard: React.FC<PostScanWizardProps> = ({
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-600">
-            Step {currentStep} of {totalSteps}
+            {nl ? `Stap ${currentStep} van ${totalSteps}` : fr ? `Etape ${currentStep} sur ${totalSteps}` : `Step ${currentStep} of ${totalSteps}`}
           </span>
           <button
             onClick={onSkip}
             className="text-sm text-gray-500 hover:text-gray-700"
           >
-            Skip for now
+            {nl ? 'Later doen' : fr ? 'Passer pour le moment' : 'Skip for now'}
           </button>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -267,15 +271,15 @@ export const PostScanWizard: React.FC<PostScanWizardProps> = ({
           className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {nl ? 'Terug' : fr ? 'Retour' : 'Back'}
         </button>
-        
+
         {currentStep < totalSteps ? (
           <button
             onClick={nextStep}
             className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition-all"
           >
-            Next
+            {nl ? 'Volgende' : fr ? 'Suivant' : 'Next'}
             <ArrowRight className="w-4 h-4" />
           </button>
         ) : (
@@ -287,12 +291,12 @@ export const PostScanWizard: React.FC<PostScanWizardProps> = ({
             {saving ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Saving...
+                {nl ? 'Opslaan...' : fr ? 'Enregistrement...' : 'Saving...'}
               </>
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4" />
-                Complete Setup
+                {nl ? 'Setup Voltooien' : fr ? 'Terminer la configuration' : 'Complete Setup'}
               </>
             )}
           </button>
@@ -303,30 +307,34 @@ export const PostScanWizard: React.FC<PostScanWizardProps> = ({
 };
 
 // Step 1: Brand Information
-const BrandStep: React.FC<any> = ({ data, onChange }) => (
+const BrandStep: React.FC<any> = ({ data, onChange }) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3 mb-6">
       <div className="p-3 bg-purple-100 rounded-lg">
         <Building2 className="w-6 h-6 text-purple-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Brand Information</h2>
-        <p className="text-gray-600">Auto-filled from your website scan</p>
+        <h2 className="text-2xl font-bold">{nl ? 'Merkinformatie' : fr ? 'Informations de marque' : 'Brand Information'}</h2>
+        <p className="text-gray-600">{nl ? 'Automatisch ingevuld vanuit je website scan' : fr ? 'Rempli automatiquement depuis votre scan de site web' : 'Auto-filled from your website scan'}</p>
       </div>
     </div>
 
     <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3">
       <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
       <div>
-        <p className="font-medium text-green-900">Data imported from scan</p>
-        <p className="text-sm text-green-700">Review and edit if needed</p>
+        <p className="font-medium text-green-900">{nl ? 'Data geimporteerd vanuit scan' : fr ? 'Donnees importees depuis le scan' : 'Data imported from scan'}</p>
+        <p className="text-sm text-green-700">{nl ? 'Controleer en pas aan indien nodig' : fr ? 'Verifiez et modifiez si necessaire' : 'Review and edit if needed'}</p>
       </div>
     </div>
 
     <div className="space-y-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Company Name
+          {nl ? 'Bedrijfsnaam' : fr ? 'Nom de l\'entreprise' : 'Company Name'}
         </label>
         <input
           type="text"
@@ -338,7 +346,7 @@ const BrandStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Industry
+          {nl ? 'Branche' : fr ? 'Secteur' : 'Industry'}
         </label>
         <input
           type="text"
@@ -350,7 +358,7 @@ const BrandStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Website URL
+          {nl ? 'Website URL' : fr ? 'URL du site web' : 'Website URL'}
         </label>
         <input
           type="url"
@@ -362,7 +370,7 @@ const BrandStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Mission Statement
+          {nl ? 'Missie' : fr ? 'Declaration de mission' : 'Mission Statement'}
         </label>
         <textarea
           value={data.mission}
@@ -373,32 +381,37 @@ const BrandStep: React.FC<any> = ({ data, onChange }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Step 2: Target Audience
-const AudienceStep: React.FC<any> = ({ data, onChange }) => (
+const AudienceStep: React.FC<any> = ({ data, onChange }) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3 mb-6">
       <div className="p-3 bg-blue-100 rounded-lg">
         <Users className="w-6 h-6 text-blue-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Target Audience</h2>
-        <p className="text-gray-600">Define who you're marketing to</p>
+        <h2 className="text-2xl font-bold">{nl ? 'Doelgroep' : fr ? 'Public cible' : 'Target Audience'}</h2>
+        <p className="text-gray-600">{nl ? 'Definieer naar wie je marketing richt' : fr ? 'Definissez votre cible marketing' : 'Define who you\'re marketing to'}</p>
       </div>
     </div>
 
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Age Range
+          {nl ? 'Leeftijdsbereik' : fr ? 'Tranche d\'age' : 'Age Range'}
         </label>
         <select
           value={data.target_age_range}
           onChange={(e) => onChange('target_age_range', e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
         >
-          <option value="">Select range</option>
+          <option value="">{nl ? 'Selecteer bereik' : fr ? 'Selectionnez' : 'Select range'}</option>
           <option value="18-24">18-24</option>
           <option value="25-34">25-34</option>
           <option value="35-44">35-44</option>
@@ -409,38 +422,38 @@ const AudienceStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Job Title
+          {nl ? 'Functietitel' : fr ? 'Titre du poste' : 'Job Title'}
         </label>
         <input
           type="text"
           value={data.target_job_title}
           onChange={(e) => onChange('target_job_title', e.target.value)}
-          placeholder="e.g. Marketing Manager"
+          placeholder={nl ? 'bijv. Marketing Manager' : fr ? 'p.ex. Responsable Marketing' : 'e.g. Marketing Manager'}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
         />
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Company Size
+          {nl ? 'Bedrijfsgrootte' : fr ? 'Taille de l\'entreprise' : 'Company Size'}
         </label>
         <select
           value={data.target_company_size}
           onChange={(e) => onChange('target_company_size', e.target.value)}
           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
         >
-          <option value="">Select size</option>
-          <option value="1-10">1-10 employees</option>
-          <option value="11-50">11-50 employees</option>
-          <option value="51-200">51-200 employees</option>
-          <option value="201-500">201-500 employees</option>
-          <option value="500+">500+ employees</option>
+          <option value="">{nl ? 'Selecteer grootte' : fr ? 'Selectionnez la taille' : 'Select size'}</option>
+          <option value="1-10">{nl ? '1-10 medewerkers' : fr ? '1-10 employes' : '1-10 employees'}</option>
+          <option value="11-50">{nl ? '11-50 medewerkers' : fr ? '11-50 employes' : '11-50 employees'}</option>
+          <option value="51-200">{nl ? '51-200 medewerkers' : fr ? '51-200 employes' : '51-200 employees'}</option>
+          <option value="201-500">{nl ? '201-500 medewerkers' : fr ? '201-500 employes' : '201-500 employees'}</option>
+          <option value="500+">{nl ? '500+ medewerkers' : fr ? '500+ employes' : '500+ employees'}</option>
         </select>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Location
+          {nl ? 'Locatie' : fr ? 'Localisation' : 'Location'}
         </label>
         <input
           type="text"
@@ -453,7 +466,7 @@ const AudienceStep: React.FC<any> = ({ data, onChange }) => (
 
     <div>
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Pain Points (from scan)
+        {nl ? 'Pijnpunten (vanuit scan)' : fr ? 'Points de douleur (du scan)' : 'Pain Points (from scan)'}
       </label>
       <div className="space-y-2">
         {data.pain_points.map((pain: string, index: number) => (
@@ -465,25 +478,30 @@ const AudienceStep: React.FC<any> = ({ data, onChange }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Step 3: Budget & Resources
-const BudgetStep: React.FC<any> = ({ data, onChange }) => (
+const BudgetStep: React.FC<any> = ({ data, onChange }) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3 mb-6">
       <div className="p-3 bg-green-100 rounded-lg">
         <DollarSign className="w-6 h-6 text-green-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Budget & Resources</h2>
-        <p className="text-gray-600">Define your marketing capacity</p>
+        <h2 className="text-2xl font-bold">{nl ? 'Budget & Middelen' : fr ? 'Budget & Ressources' : 'Budget & Resources'}</h2>
+        <p className="text-gray-600">{nl ? 'Definieer je marketingcapaciteit' : fr ? 'Definissez votre capacite marketing' : 'Define your marketing capacity'}</p>
       </div>
     </div>
 
     <div className="grid grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Monthly Budget (€)
+          {nl ? 'Maandelijks Budget (€)' : fr ? 'Budget mensuel (€)' : 'Monthly Budget (€)'}
         </label>
         <input
           type="number"
@@ -495,7 +513,7 @@ const BudgetStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Annual Budget (€)
+          {nl ? 'Jaarlijks Budget (€)' : fr ? 'Budget annuel (€)' : 'Annual Budget (€)'}
         </label>
         <input
           type="number"
@@ -507,7 +525,7 @@ const BudgetStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Marketing Team Size
+          {nl ? 'Marketingteam Grootte' : fr ? 'Taille de l\'equipe marketing' : 'Marketing Team Size'}
         </label>
         <input
           type="number"
@@ -519,7 +537,7 @@ const BudgetStep: React.FC<any> = ({ data, onChange }) => (
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
-          Content Creators
+          {nl ? 'Content Creators' : fr ? 'Createurs de contenu' : 'Content Creators'}
         </label>
         <input
           type="number"
@@ -530,18 +548,23 @@ const BudgetStep: React.FC<any> = ({ data, onChange }) => (
       </div>
     </div>
   </div>
-);
+  );
+};
 
 // Step 4: Goals & KPIs
-const GoalsStep: React.FC<any> = ({ data, onChange }) => (
+const GoalsStep: React.FC<any> = ({ data, onChange }) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3 mb-6">
       <div className="p-3 bg-orange-100 rounded-lg">
         <Target className="w-6 h-6 text-orange-600" />
       </div>
       <div>
-        <h2 className="text-2xl font-bold">Goals & KPIs</h2>
-        <p className="text-gray-600">AI-suggested based on your scan</p>
+        <h2 className="text-2xl font-bold">{nl ? 'Doelen & KPI\'s' : fr ? 'Objectifs & KPI' : 'Goals & KPIs'}</h2>
+        <p className="text-gray-600">{nl ? 'AI-suggesties op basis van je scan' : fr ? 'Suggestions IA basees sur votre scan' : 'AI-suggested based on your scan'}</p>
       </div>
     </div>
 
@@ -557,11 +580,11 @@ const GoalsStep: React.FC<any> = ({ data, onChange }) => (
           
           <div className="grid grid-cols-2 gap-4 mb-3">
             <div>
-              <p className="text-sm text-gray-600">Current</p>
+              <p className="text-sm text-gray-600">{nl ? 'Huidig' : fr ? 'Actuel' : 'Current'}</p>
               <p className="text-2xl font-bold text-gray-900">{goal.current}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-600">Target</p>
+              <p className="text-sm text-gray-600">{nl ? 'Doel' : fr ? 'Objectif' : 'Target'}</p>
               <p className="text-2xl font-bold text-green-600">{goal.target}</p>
             </div>
           </div>
@@ -574,4 +597,5 @@ const GoalsStep: React.FC<any> = ({ data, onChange }) => (
       ))}
     </div>
   </div>
-);
+  );
+};

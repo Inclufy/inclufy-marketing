@@ -16,22 +16,24 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-const STYLES = [
-  { value: 'professional', label: 'Professional / Corporate' },
-  { value: 'creative', label: 'Creative / Artistic' },
-  { value: 'minimal', label: 'Minimal / Clean' },
-  { value: 'bold', label: 'Bold / Vibrant' },
-  { value: 'photographic', label: 'Photographic / Realistic' },
+const STYLES_DATA = [
+  { value: 'professional', en: 'Professional / Corporate', nl: 'Professioneel / Zakelijk', fr: 'Professionnel / Entreprise' },
+  { value: 'creative', en: 'Creative / Artistic', nl: 'Creatief / Artistiek', fr: 'Créatif / Artistique' },
+  { value: 'minimal', en: 'Minimal / Clean', nl: 'Minimaal / Strak', fr: 'Minimal / Épuré' },
+  { value: 'bold', en: 'Bold / Vibrant', nl: 'Vet / Levendig', fr: 'Audacieux / Vibrant' },
+  { value: 'photographic', en: 'Photographic / Realistic', nl: 'Fotografisch / Realistisch', fr: 'Photographique / Réaliste' },
 ];
 
-const SIZES = [
-  { value: '1024x1024', label: 'Square (1024x1024)' },
-  { value: '1792x1024', label: 'Landscape (1792x1024)' },
-  { value: '1024x1792', label: 'Portrait (1024x1792)' },
+const SIZES_DATA = [
+  { value: '1024x1024', en: 'Square (1024x1024)', nl: 'Vierkant (1024x1024)', fr: 'Carré (1024x1024)' },
+  { value: '1792x1024', en: 'Landscape (1792x1024)', nl: 'Liggend (1792x1024)', fr: 'Paysage (1792x1024)' },
+  { value: '1024x1792', en: 'Portrait (1024x1792)', nl: 'Staand (1024x1792)', fr: 'Portrait (1024x1792)' },
 ];
 
 export default function ImageGenerator() {
+  const { lang } = useLanguage(); const nl = lang === 'nl'; const fr = lang === 'fr';
   const { toast } = useToast();
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState('professional');
@@ -59,8 +61,8 @@ export default function ImageGenerator() {
       const placeholderUrl = `https://placehold.co/${size.replace('x', 'x')}/7c3aed/ffffff?text=${encodeURIComponent(prompt.slice(0, 30))}`;
       setImageUrl(placeholderUrl);
       toast({
-        title: 'Using preview placeholder',
-        description: 'Image generation API not configured. Showing a placeholder preview.',
+        title: nl ? 'Voorbeeldweergave wordt gebruikt' : fr ? 'Utilisation de l\'aperçu fictif' : 'Using preview placeholder',
+        description: nl ? 'Afbeeldingsgeneratie API niet geconfigureerd. Voorbeeldweergave wordt getoond.' : fr ? 'API de génération d\'images non configurée. Affichage d\'un aperçu fictif.' : 'Image generation API not configured. Showing a placeholder preview.',
       });
     } finally {
       setGenerating(false);
@@ -87,11 +89,11 @@ export default function ImageGenerator() {
         metadata: { style, size },
         tags: ['image', style],
       });
-      toast({ title: 'Saved to Content Library' });
+      toast({ title: nl ? 'Opgeslagen in contentbibliotheek' : fr ? 'Enregistré dans la bibliothèque de contenu' : 'Saved to Content Library' });
     } catch (err: any) {
       toast({
-        title: 'Save failed',
-        description: err.response?.data?.detail || 'Could not save',
+        title: nl ? 'Opslaan mislukt' : fr ? 'Échec de l\'enregistrement' : 'Save failed',
+        description: err.response?.data?.detail || (nl ? 'Kan niet opslaan' : fr ? 'Impossible d\'enregistrer' : 'Could not save'),
         variant: 'destructive',
       });
     } finally {
@@ -104,10 +106,10 @@ export default function ImageGenerator() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-          Image Generator
+          {nl ? "Afbeelding Generator" : fr ? "Générateur d'images" : "Image Generator"}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Create marketing visuals with AI
+          {nl ? "Maak marketingvisuals met AI" : fr ? "Créez des visuels marketing avec l'IA" : "Create marketing visuals with AI"}
         </p>
       </div>
 
@@ -117,14 +119,14 @@ export default function ImageGenerator() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Image className="h-5 w-5 text-purple-600" />
-              Configure
+              {nl ? "Configureren" : fr ? "Configurer" : "Configure"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Describe the image</label>
+              <label className="text-sm font-medium">{nl ? "Beschrijf de afbeelding" : fr ? "Décrivez l'image" : "Describe the image"}</label>
               <Textarea
-                placeholder="e.g., A modern, clean hero banner for a SaaS marketing platform with purple gradients..."
+                placeholder={nl ? "bijv. Een moderne, strakke hero banner voor een SaaS marketingplatform met paarse gradiënten..." : fr ? "ex. Une bannière hero moderne et épurée pour une plateforme marketing SaaS avec des dégradés violets..." : "e.g., A modern, clean hero banner for a SaaS marketing platform with purple gradients..."}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
@@ -132,28 +134,28 @@ export default function ImageGenerator() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Style</label>
+              <label className="text-sm font-medium">{nl ? "Stijl" : fr ? "Style" : "Style"}</label>
               <Select value={style} onValueChange={setStyle}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {STYLES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  {STYLES_DATA.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{nl ? s.nl : fr ? s.fr : s.en}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Size</label>
+              <label className="text-sm font-medium">{nl ? "Formaat" : fr ? "Taille" : "Size"}</label>
               <Select value={size} onValueChange={setSize}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {SIZES.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  {SIZES_DATA.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{nl ? s.nl : fr ? s.fr : s.en}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -167,12 +169,12 @@ export default function ImageGenerator() {
               {generating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
+                  {nl ? "Genereren..." : fr ? "Génération..." : "Generating..."}
                 </>
               ) : (
                 <>
                   <Image className="h-4 w-4 mr-2" />
-                  Generate Image
+                  {nl ? "Genereer afbeelding" : fr ? "Générer l'image" : "Generate Image"}
                 </>
               )}
             </Button>
@@ -184,24 +186,24 @@ export default function ImageGenerator() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Generated Image</CardTitle>
+                <CardTitle>{nl ? "Gegenereerde afbeelding" : fr ? "Image générée" : "Generated Image"}</CardTitle>
                 <CardDescription>
-                  {imageUrl ? 'Your AI-generated image' : 'Your image will appear here'}
+                  {imageUrl ? (nl ? 'Je AI-gegenereerde afbeelding' : fr ? 'Votre image générée par l\'IA' : 'Your AI-generated image') : (nl ? 'Je afbeelding verschijnt hier' : fr ? 'Votre image apparaîtra ici' : 'Your image will appear here')}
                 </CardDescription>
               </div>
               {imageUrl && (
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleDownload}>
                     <Download className="h-4 w-4 mr-1" />
-                    Download
+                    {nl ? "Downloaden" : fr ? "Télécharger" : "Download"}
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleSaveToLibrary} disabled={saving}>
                     {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-                    Save
+                    {nl ? "Opslaan" : fr ? "Enregistrer" : "Save"}
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
                     <RefreshCw className="h-4 w-4 mr-1" />
-                    Regenerate
+                    {nl ? "Opnieuw genereren" : fr ? "Régénérer" : "Regenerate"}
                   </Button>
                 </div>
               )}
@@ -212,7 +214,7 @@ export default function ImageGenerator() {
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <Loader2 className="h-10 w-10 animate-spin text-purple-600 mx-auto mb-4" />
-                  <p className="text-gray-500">Creating your image...</p>
+                  <p className="text-gray-500">{nl ? "Je afbeelding wordt gemaakt..." : fr ? "Création de votre image..." : "Creating your image..."}</p>
                 </div>
               </div>
             ) : imageUrl ? (
@@ -235,9 +237,9 @@ export default function ImageGenerator() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center mx-auto mb-4">
                     <Image className="h-8 w-8 text-purple-600" />
                   </div>
-                  <p className="text-gray-500 mb-1">Ready to create</p>
+                  <p className="text-gray-500 mb-1">{nl ? "Klaar om te maken" : fr ? "Prêt à créer" : "Ready to create"}</p>
                   <p className="text-sm text-gray-400">
-                    Describe the image you need and hit Generate
+                    {nl ? "Beschrijf de afbeelding die je nodig hebt en klik op Genereer" : fr ? "Décrivez l'image dont vous avez besoin et cliquez sur Générer" : "Describe the image you need and hit Generate"}
                   </p>
                 </div>
               </div>

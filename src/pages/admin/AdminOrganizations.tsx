@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Organization {
   id: string;
@@ -42,6 +43,9 @@ interface Organization {
 
 export default function AdminOrganizations() {
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -64,7 +68,7 @@ export default function AdminOrganizations() {
       const res = await api.get('/tenant-admin/organizations', { params });
       setOrganizations(res.data || []);
     } catch (err: any) {
-      toast({ title: 'Laden mislukt', variant: 'destructive' });
+      toast({ title: nl ? 'Laden mislukt' : fr ? 'Echec du chargement' : 'Loading failed', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -80,13 +84,13 @@ export default function AdminOrganizations() {
         name: newName.trim(),
         slug: newSlug.trim() || undefined,
       });
-      toast({ title: 'Organisatie aangemaakt!' });
+      toast({ title: nl ? 'Organisatie aangemaakt!' : fr ? 'Organisation creee !' : 'Organization created!' });
       setCreateOpen(false);
       setNewName('');
       setNewSlug('');
       fetchOrgs();
     } catch (err: any) {
-      toast({ title: 'Aanmaken mislukt', description: err.response?.data?.detail, variant: 'destructive' });
+      toast({ title: nl ? 'Aanmaken mislukt' : fr ? 'Echec de la creation' : 'Creation failed', description: err.response?.data?.detail, variant: 'destructive' });
     } finally {
       setCreateLoading(false);
     }
@@ -95,22 +99,27 @@ export default function AdminOrganizations() {
   const handleUpdate = async (orgId: string) => {
     try {
       await api.patch(`/tenant-admin/organizations/${orgId}`, { name: editName });
-      toast({ title: 'Bijgewerkt!' });
+      toast({ title: nl ? 'Bijgewerkt!' : fr ? 'Mis a jour !' : 'Updated!' });
       setEditingId(null);
       fetchOrgs();
     } catch (err: any) {
-      toast({ title: 'Bijwerken mislukt', variant: 'destructive' });
+      toast({ title: nl ? 'Bijwerken mislukt' : fr ? 'Echec de la mise a jour' : 'Update failed', variant: 'destructive' });
     }
   };
 
   const handleDelete = async (orgId: string, name: string) => {
-    if (!confirm(`Weet je zeker dat je "${name}" wilt verwijderen? Alle leden worden losgekoppeld.`)) return;
+    const confirmMsg = nl
+      ? `Weet je zeker dat je "${name}" wilt verwijderen? Alle leden worden losgekoppeld.`
+      : fr
+      ? `Etes-vous sur de vouloir supprimer "${name}" ? Tous les membres seront detaches.`
+      : `Are you sure you want to delete "${name}"? All members will be detached.`;
+    if (!confirm(confirmMsg)) return;
     try {
       await api.delete(`/tenant-admin/organizations/${orgId}`);
-      toast({ title: 'Organisatie verwijderd' });
+      toast({ title: nl ? 'Organisatie verwijderd' : fr ? 'Organisation supprimee' : 'Organization deleted' });
       fetchOrgs();
     } catch (err: any) {
-      toast({ title: 'Verwijderen mislukt', variant: 'destructive' });
+      toast({ title: nl ? 'Verwijderen mislukt' : fr ? 'Echec de la suppression' : 'Deletion failed', variant: 'destructive' });
     }
   };
 
@@ -119,40 +128,40 @@ export default function AdminOrganizations() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Organisaties</h1>
-          <p className="text-sm text-gray-500">{organizations.length} organisaties</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Organisaties' : fr ? 'Organisations' : 'Organizations'}</h1>
+          <p className="text-sm text-gray-500">{organizations.length} {nl ? 'organisaties' : fr ? 'organisations' : 'organizations'}</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" size="sm" onClick={fetchOrgs}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+            <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
           </Button>
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="h-4 w-4 mr-2" /> Organisatie Toevoegen
+                <Plus className="h-4 w-4 mr-2" /> {nl ? 'Organisatie Toevoegen' : fr ? 'Ajouter une organisation' : 'Add Organization'}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Nieuwe Organisatie</DialogTitle>
-                <DialogDescription>Maak een nieuwe tenant/organisatie aan</DialogDescription>
+                <DialogTitle>{nl ? 'Nieuwe Organisatie' : fr ? 'Nouvelle Organisation' : 'New Organization'}</DialogTitle>
+                <DialogDescription>{nl ? 'Maak een nieuwe tenant/organisatie aan' : fr ? 'Creer une nouvelle organisation/tenant' : 'Create a new tenant/organization'}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <Label>Organisatienaam *</Label>
-                  <Input placeholder="Bedrijfsnaam" value={newName} onChange={(e) => setNewName(e.target.value)} className="mt-1.5" />
+                  <Label>{nl ? 'Organisatienaam *' : fr ? 'Nom de l\'organisation *' : 'Organization name *'}</Label>
+                  <Input placeholder={nl ? 'Bedrijfsnaam' : fr ? 'Nom de l\'entreprise' : 'Company name'} value={newName} onChange={(e) => setNewName(e.target.value)} className="mt-1.5" />
                 </div>
                 <div>
-                  <Label>Slug (optioneel)</Label>
-                  <Input placeholder="bedrijfsnaam-slug" value={newSlug} onChange={(e) => setNewSlug(e.target.value)} className="mt-1.5" />
-                  <p className="text-xs text-gray-500 mt-1">Wordt automatisch gegenereerd als je dit leeg laat</p>
+                  <Label>{nl ? 'Slug (optioneel)' : fr ? 'Slug (optionnel)' : 'Slug (optional)'}</Label>
+                  <Input placeholder={nl ? 'bedrijfsnaam-slug' : fr ? 'nom-entreprise-slug' : 'company-name-slug'} value={newSlug} onChange={(e) => setNewSlug(e.target.value)} className="mt-1.5" />
+                  <p className="text-xs text-gray-500 mt-1">{nl ? 'Wordt automatisch gegenereerd als je dit leeg laat' : fr ? 'Sera genere automatiquement si laisse vide' : 'Will be auto-generated if left empty'}</p>
                 </div>
               </div>
               <DialogFooter>
-                <Button variant="outline" onClick={() => setCreateOpen(false)}>Annuleren</Button>
+                <Button variant="outline" onClick={() => setCreateOpen(false)}>{nl ? 'Annuleren' : fr ? 'Annuler' : 'Cancel'}</Button>
                 <Button onClick={handleCreate} disabled={createLoading || !newName.trim()} className="bg-purple-600 hover:bg-purple-700">
                   {createLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-                  Aanmaken
+                  {nl ? 'Aanmaken' : fr ? 'Creer' : 'Create'}
                 </Button>
               </DialogFooter>
             </DialogContent>
@@ -165,14 +174,14 @@ export default function AdminOrganizations() {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder="Zoek organisaties..."
+            placeholder={nl ? 'Zoek organisaties...' : fr ? 'Rechercher des organisations...' : 'Search organizations...'}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && fetchOrgs()}
             className="pl-10"
           />
         </div>
-        <Button variant="outline" onClick={fetchOrgs}>Zoeken</Button>
+        <Button variant="outline" onClick={fetchOrgs}>{nl ? 'Zoeken' : fr ? 'Rechercher' : 'Search'}</Button>
       </div>
 
       {/* Organizations Grid */}
@@ -184,8 +193,8 @@ export default function AdminOrganizations() {
         <Card className="border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-16 text-gray-500">
             <Building2 className="h-12 w-12 mb-4 text-gray-300" />
-            <p className="text-lg font-medium">Geen organisaties gevonden</p>
-            <p className="text-sm">Maak een nieuwe organisatie aan om te beginnen</p>
+            <p className="text-lg font-medium">{nl ? 'Geen organisaties gevonden' : fr ? 'Aucune organisation trouvee' : 'No organizations found'}</p>
+            <p className="text-sm">{nl ? 'Maak een nieuwe organisatie aan om te beginnen' : fr ? 'Creez une nouvelle organisation pour commencer' : 'Create a new organization to get started'}</p>
           </CardContent>
         </Card>
       ) : (
@@ -236,11 +245,11 @@ export default function AdminOrganizations() {
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <div className="flex items-center gap-1.5">
                     <Users className="h-3.5 w-3.5" />
-                    <span>{org.member_count} leden</span>
+                    <span>{org.member_count} {nl ? 'leden' : fr ? 'membres' : 'members'}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Calendar className="h-3.5 w-3.5" />
-                    <span>{org.created_at ? new Date(org.created_at).toLocaleDateString('nl-NL') : '-'}</span>
+                    <span>{org.created_at ? new Date(org.created_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB') : '-'}</span>
                   </div>
                 </div>
               </CardContent>

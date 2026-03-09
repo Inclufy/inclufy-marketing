@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Calendar, 
-  Clock, 
-  Trash2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Calendar,
+  Clock,
+  Trash2,
+  CheckCircle2,
+  XCircle,
   Loader2,
   Linkedin,
   Facebook,
@@ -17,7 +17,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { nl } from "date-fns/locale";
+import { nl as nlLocale } from "date-fns/locale";
+import { fr as frLocale } from "date-fns/locale";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ScheduledPost {
   id: string;
@@ -42,25 +44,29 @@ const platformColors: Record<string, string> = {
   instagram: "bg-gradient-to-br from-purple-500 to-pink-500",
 };
 
-const statusConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
-  pending: { 
-    icon: <Clock className="w-4 h-4" />, 
-    label: "Gepland", 
-    color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20" 
-  },
-  published: { 
-    icon: <CheckCircle2 className="w-4 h-4" />, 
-    label: "Gepubliceerd", 
-    color: "bg-green-500/10 text-green-600 border-green-500/20" 
-  },
-  failed: { 
-    icon: <XCircle className="w-4 h-4" />, 
-    label: "Mislukt", 
-    color: "bg-red-500/10 text-red-600 border-red-500/20" 
-  },
-};
-
 const ScheduledPosts = () => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
+  const statusConfig: Record<string, { icon: React.ReactNode; label: string; color: string }> = {
+    pending: {
+      icon: <Clock className="w-4 h-4" />,
+      label: nl ? "Gepland" : fr ? "Planifié" : "Scheduled",
+      color: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+    },
+    published: {
+      icon: <CheckCircle2 className="w-4 h-4" />,
+      label: nl ? "Gepubliceerd" : fr ? "Publié" : "Published",
+      color: "bg-green-500/10 text-green-600 border-green-500/20"
+    },
+    failed: {
+      icon: <XCircle className="w-4 h-4" />,
+      label: nl ? "Mislukt" : fr ? "Échoué" : "Failed",
+      color: "bg-red-500/10 text-red-600 border-red-500/20"
+    },
+  };
+
   const [posts, setPosts] = useState<ScheduledPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "pending" | "published" | "failed">("all");
@@ -84,7 +90,7 @@ const ScheduledPosts = () => {
       setPosts(data || []);
     } catch (error) {
       console.error("Error fetching posts:", error);
-      toast.error("Kon posts niet laden");
+      toast.error(nl ? "Kon posts niet laden" : fr ? "Impossible de charger les publications" : "Could not load posts");
     } finally {
       setLoading(false);
     }
@@ -127,10 +133,10 @@ const ScheduledPosts = () => {
       if (error) throw error;
       
       setPosts(posts.filter(p => p.id !== id));
-      toast.success("Post verwijderd");
+      toast.success(nl ? "Post verwijderd" : fr ? "Publication supprimée" : "Post deleted");
     } catch (error) {
       console.error("Error deleting post:", error);
-      toast.error("Kon post niet verwijderen");
+      toast.error(nl ? "Kon post niet verwijderen" : fr ? "Impossible de supprimer la publication" : "Could not delete post");
     } finally {
       setDeleting(null);
     }
@@ -138,14 +144,16 @@ const ScheduledPosts = () => {
 
   const formatDateTime = (dateString: string) => {
     const date = new Date(dateString);
-    return format(date, "d MMM yyyy 'om' HH:mm", { locale: nl });
+    if (nl) return format(date, "d MMM yyyy 'om' HH:mm", { locale: nlLocale });
+    if (fr) return format(date, "d MMM yyyy 'à' HH:mm", { locale: frLocale });
+    return format(date, "d MMM yyyy 'at' HH:mm");
   };
 
   const filterButtons = [
-    { id: "all", label: "Alle" },
-    { id: "pending", label: "Gepland" },
-    { id: "published", label: "Gepubliceerd" },
-    { id: "failed", label: "Mislukt" },
+    { id: "all", label: nl ? "Alle" : fr ? "Tous" : "All" },
+    { id: "pending", label: nl ? "Gepland" : fr ? "Planifié" : "Scheduled" },
+    { id: "published", label: nl ? "Gepubliceerd" : fr ? "Publié" : "Published" },
+    { id: "failed", label: nl ? "Mislukt" : fr ? "Échoué" : "Failed" },
   ] as const;
 
   return (
@@ -159,9 +167,9 @@ const ScheduledPosts = () => {
                 <Calendar className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Geplande Posts</h1>
+                <h1 className="text-2xl font-bold text-foreground">{nl ? "Geplande Posts" : fr ? "Publications Planifiées" : "Scheduled Posts"}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Beheer je geplande en gepubliceerde posts
+                  {nl ? "Beheer je geplande en gepubliceerde posts" : fr ? "Gérez vos publications planifiées et publiées" : "Manage your scheduled and published posts"}
                 </p>
               </div>
             </div>
@@ -171,7 +179,7 @@ const ScheduledPosts = () => {
               disabled={loading}
             >
               <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-              Vernieuwen
+              {nl ? "Vernieuwen" : fr ? "Actualiser" : "Refresh"}
             </Button>
           </div>
 
@@ -202,18 +210,18 @@ const ScheduledPosts = () => {
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <Calendar className="w-12 h-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  Geen posts gevonden
+                  {nl ? "Geen posts gevonden" : fr ? "Aucune publication trouvée" : "No posts found"}
                 </h3>
                 <p className="text-sm text-muted-foreground text-center mb-4">
-                  {filter === "all" 
-                    ? "Je hebt nog geen posts ingepland of gepubliceerd."
-                    : `Er zijn geen posts met status "${filterButtons.find(b => b.id === filter)?.label}".`
+                  {filter === "all"
+                    ? (nl ? "Je hebt nog geen posts ingepland of gepubliceerd." : fr ? "Vous n'avez pas encore planifié ou publié de publications." : "You haven't scheduled or published any posts yet.")
+                    : (nl ? `Er zijn geen posts met status "${filterButtons.find(b => b.id === filter)?.label}".` : fr ? `Aucune publication avec le statut "${filterButtons.find(b => b.id === filter)?.label}".` : `No posts with status "${filterButtons.find(b => b.id === filter)?.label}".`)
                   }
                 </p>
                 <Button asChild>
                   <a href="/social-post-generator">
                     <Send className="w-4 h-4 mr-2" />
-                    Maak een post
+                    {nl ? "Maak een post" : fr ? "Créer une publication" : "Create a post"}
                   </a>
                 </Button>
               </CardContent>
@@ -247,19 +255,19 @@ const ScheduledPosts = () => {
                               
                               {/* Caption */}
                               <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                                {post.caption || <em className="text-muted-foreground/50">Geen caption</em>}
+                                {post.caption || <em className="text-muted-foreground/50">{nl ? "Geen caption" : fr ? "Pas de légende" : "No caption"}</em>}
                               </p>
                               
                               {/* Dates */}
                               <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                                 <span className="flex items-center gap-1">
                                   <Calendar className="w-3 h-3" />
-                                  Gepland: {formatDateTime(post.scheduled_at)}
+                                  {nl ? "Gepland" : fr ? "Planifié" : "Scheduled"}: {formatDateTime(post.scheduled_at)}
                                 </span>
                                 {post.published_at && (
                                   <span className="flex items-center gap-1 text-green-600">
                                     <CheckCircle2 className="w-3 h-3" />
-                                    Gepubliceerd: {formatDateTime(post.published_at)}
+                                    {nl ? "Gepubliceerd" : fr ? "Publié" : "Published"}: {formatDateTime(post.published_at)}
                                   </span>
                                 )}
                               </div>

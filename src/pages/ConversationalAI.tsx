@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLanguage } from '@/contexts/LanguageContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,9 @@ interface BotPerformance {
 }
 
 const ConversationalAI = () => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [selectedConversation, setSelectedConversation] = useState<string>('1');
   const [botStatus, setBotStatus] = useState<'online' | 'paused'>('online');
   const [testMessage, setTestMessage] = useState("");
@@ -141,46 +145,58 @@ const ConversationalAI = () => {
 
   const botCapabilities = [
     {
-      title: "Lead Qualification",
-      description: "Identifies high-value prospects",
-      metrics: "31% better than forms",
+      title: nl ? "Leadkwalificatie" : fr ? "Qualification des leads" : "Lead Qualification",
+      description: nl ? "Identificeert waardevolle prospects" : fr ? "Identifie les prospects de grande valeur" : "Identifies high-value prospects",
+      metrics: nl ? "31% beter dan formulieren" : fr ? "31% mieux que les formulaires" : "31% better than forms",
       icon: Target
     },
     {
-      title: "Meeting Booking",
-      description: "Books demos directly in calendar",
-      metrics: "68% conversion rate",
+      title: nl ? "Vergaderingen Boeken" : fr ? "Prise de rendez-vous" : "Meeting Booking",
+      description: nl ? "Boekt demo's direct in agenda" : fr ? "Planifie les d\u00e9mos directement dans l'agenda" : "Books demos directly in calendar",
+      metrics: nl ? "68% conversieratio" : fr ? "68% taux de conversion" : "68% conversion rate",
       icon: Calendar
     },
     {
-      title: "24/7 Availability",
-      description: "Never miss a lead",
-      metrics: "3x more conversations",
+      title: nl ? "24/7 Beschikbaar" : fr ? "Disponibilit\u00e9 24/7" : "24/7 Availability",
+      description: nl ? "Mis nooit een lead" : fr ? "Ne manquez jamais un lead" : "Never miss a lead",
+      metrics: nl ? "3x meer gesprekken" : fr ? "3x plus de conversations" : "3x more conversations",
       icon: Clock
     },
     {
-      title: "Multi-language",
-      description: "Supports 12 languages",
-      metrics: "Global reach",
+      title: nl ? "Meertalig" : fr ? "Multilingue" : "Multi-language",
+      description: nl ? "Ondersteunt 12 talen" : fr ? "Prend en charge 12 langues" : "Supports 12 languages",
+      metrics: nl ? "Wereldwijd bereik" : fr ? "Port\u00e9e mondiale" : "Global reach",
       icon: MessageSquare
     }
   ];
 
   const conversationTemplates = [
     {
-      name: "Website Visitor",
-      description: "Qualify and book demos",
-      topics: ["Product interest", "Pain points", "Budget", "Timeline"]
+      name: nl ? "Websitebezoeker" : fr ? "Visiteur du site" : "Website Visitor",
+      description: nl ? "Kwalificeer en boek demo's" : fr ? "Qualifier et r\u00e9server des d\u00e9mos" : "Qualify and book demos",
+      topics: nl
+        ? ["Productinteresse", "Pijnpunten", "Budget", "Tijdlijn"]
+        : fr
+        ? ["Int\u00e9r\u00eat produit", "Points de douleur", "Budget", "Calendrier"]
+        : ["Product interest", "Pain points", "Budget", "Timeline"]
     },
     {
-      name: "Onboarding Assistant",
-      description: "Guide new users",
-      topics: ["Setup help", "Feature discovery", "Best practices", "Quick wins"]
+      name: nl ? "Onboarding Assistent" : fr ? "Assistant d'int\u00e9gration" : "Onboarding Assistant",
+      description: nl ? "Begeleid nieuwe gebruikers" : fr ? "Guider les nouveaux utilisateurs" : "Guide new users",
+      topics: nl
+        ? ["Installatiehulp", "Functies ontdekken", "Best practices", "Snelle winsten"]
+        : fr
+        ? ["Aide \u00e0 la configuration", "D\u00e9couverte des fonctionnalit\u00e9s", "Bonnes pratiques", "Gains rapides"]
+        : ["Setup help", "Feature discovery", "Best practices", "Quick wins"]
     },
     {
-      name: "Support Bot",
-      description: "Tier 1 support automation",
-      topics: ["FAQs", "Troubleshooting", "Feature requests", "Escalation"]
+      name: nl ? "Support Bot" : fr ? "Bot de support" : "Support Bot",
+      description: nl ? "Tier 1 support automatisering" : fr ? "Automatisation du support niveau 1" : "Tier 1 support automation",
+      topics: nl
+        ? ["Veelgestelde vragen", "Probleemoplossing", "Functieverzoeken", "Escalatie"]
+        : fr
+        ? ["FAQ", "D\u00e9pannage", "Demandes de fonctionnalit\u00e9s", "Escalade"]
+        : ["FAQs", "Troubleshooting", "Feature requests", "Escalation"]
     }
   ];
 
@@ -191,15 +207,15 @@ const ConversationalAI = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Bot className="h-8 w-8 text-primary" />
-            Conversational AI
+            {nl ? 'Conversationele AI' : fr ? 'IA Conversationnelle' : 'Conversational AI'}
           </h2>
           <p className="text-muted-foreground mt-2">
-            AI sales assistant that converts visitors into qualified pipeline
+            {nl ? 'AI-verkoopmedewerker die bezoekers omzet in gekwalificeerde pipeline' : fr ? 'Assistant commercial IA qui convertit les visiteurs en pipeline qualifi\u00e9' : 'AI sales assistant that converts visitors into qualified pipeline'}
           </p>
         </div>
         <div className="flex items-center gap-4">
           <Badge variant={botStatus === 'online' ? 'success' : 'secondary'}>
-            {botStatus === 'online' ? 'Bot Online' : 'Bot Paused'}
+            {botStatus === 'online' ? (nl ? 'Bot Online' : fr ? 'Bot en ligne' : 'Bot Online') : (nl ? 'Bot Gepauzeerd' : fr ? 'Bot en pause' : 'Bot Paused')}
           </Badge>
           <Switch
             checked={botStatus === 'online'}
@@ -212,66 +228,66 @@ const ConversationalAI = () => {
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversations</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? 'Gesprekken' : fr ? 'Conversations' : 'Conversations'}</CardTitle>
             <MessageSquare className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.conversations}</div>
-            <p className="text-xs text-muted-foreground">This month</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Deze maand' : fr ? 'Ce mois-ci' : 'This month'}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Qualified Leads</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? 'Gekwalificeerde Leads' : fr ? 'Leads qualifi\u00e9s' : 'Qualified Leads'}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.qualified}</div>
-            <p className="text-xs text-muted-foreground text-green-600">31% conversion</p>
+            <p className="text-xs text-muted-foreground text-green-600">{nl ? '31% conversie' : fr ? '31% conversion' : '31% conversion'}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Meetings Booked</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? 'Geboekte Vergaderingen' : fr ? 'R\u00e9unions planifi\u00e9es' : 'Meetings Booked'}</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.booked}</div>
-            <p className="text-xs text-muted-foreground">Direct to calendar</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Direct in agenda' : fr ? 'Directement dans l\'agenda' : 'Direct to calendar'}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Response Time</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? 'Reactietijd' : fr ? 'Temps de r\u00e9ponse' : 'Response Time'}</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.avgResponseTime}</div>
-            <p className="text-xs text-muted-foreground">Average</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Gemiddeld' : fr ? 'Moyenne' : 'Average'}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Satisfaction</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? 'Tevredenheid' : fr ? 'Satisfaction' : 'Satisfaction'}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.satisfactionScore}%</div>
-            <p className="text-xs text-muted-foreground text-green-600">Excellent</p>
+            <p className="text-xs text-muted-foreground text-green-600">{nl ? 'Uitstekend' : fr ? 'Excellent' : 'Excellent'}</p>
           </CardContent>
         </Card>
       </div>
 
       <Tabs defaultValue="conversations" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="conversations">Active Conversations</TabsTrigger>
-          <TabsTrigger value="configuration">Bot Configuration</TabsTrigger>
-          <TabsTrigger value="training">Training & Optimization</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="conversations">{nl ? 'Actieve Gesprekken' : fr ? 'Conversations actives' : 'Active Conversations'}</TabsTrigger>
+          <TabsTrigger value="configuration">{nl ? 'Bot Configuratie' : fr ? 'Configuration du bot' : 'Bot Configuration'}</TabsTrigger>
+          <TabsTrigger value="training">{nl ? 'Training & Optimalisatie' : fr ? 'Formation & Optimisation' : 'Training & Optimization'}</TabsTrigger>
+          <TabsTrigger value="analytics">{nl ? 'Analyse' : fr ? 'Analytique' : 'Analytics'}</TabsTrigger>
         </TabsList>
 
         {/* Active Conversations */}
@@ -280,7 +296,7 @@ const ConversationalAI = () => {
             {/* Conversation List */}
             <Card className="lg:col-span-1">
               <CardHeader>
-                <CardTitle>Live Conversations</CardTitle>
+                <CardTitle>{nl ? 'Live Gesprekken' : fr ? 'Conversations en direct' : 'Live Conversations'}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ScrollArea className="h-[500px]">
@@ -318,7 +334,7 @@ const ConversationalAI = () => {
                               {conv.status}
                             </Badge>
                             <p className="text-xs text-muted-foreground mt-1">
-                              Score: {conv.score}%
+                              {nl ? 'Score' : fr ? 'Score' : 'Score'}: {conv.score}%
                             </p>
                           </div>
                         </div>
@@ -333,21 +349,21 @@ const ConversationalAI = () => {
             <Card className="lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Conversation with John Smith</CardTitle>
-                  <CardDescription>TechCorp Inc. • Score: 85%</CardDescription>
+                  <CardTitle>{nl ? 'Gesprek met John Smith' : fr ? 'Conversation avec John Smith' : 'Conversation with John Smith'}</CardTitle>
+                  <CardDescription>TechCorp Inc. {nl ? '• Score: 85%' : fr ? '• Score : 85%' : '• Score: 85%'}</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline">
                     <Phone className="h-4 w-4 mr-1" />
-                    Call
+                    {nl ? 'Bellen' : fr ? 'Appeler' : 'Call'}
                   </Button>
                   <Button size="sm" variant="outline">
                     <Mail className="h-4 w-4 mr-1" />
-                    Email
+                    {nl ? 'E-mail' : fr ? 'E-mail' : 'Email'}
                   </Button>
                   <Button size="sm">
                     <Calendar className="h-4 w-4 mr-1" />
-                    Book Meeting
+                    {nl ? 'Vergadering Boeken' : fr ? 'R\u00e9server une r\u00e9union' : 'Book Meeting'}
                   </Button>
                 </div>
               </CardHeader>
@@ -384,7 +400,7 @@ const ConversationalAI = () => {
                 {/* Test Input */}
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                   <Input
-                    placeholder="Type a test message..."
+                    placeholder={nl ? "Typ een testbericht..." : fr ? "Tapez un message test..." : "Type a test message..."}
                     value={testMessage}
                     onChange={(e) => setTestMessage(e.target.value)}
                   />
@@ -403,9 +419,9 @@ const ConversationalAI = () => {
             {/* Capabilities */}
             <Card>
               <CardHeader>
-                <CardTitle>Bot Capabilities</CardTitle>
+                <CardTitle>{nl ? 'Bot Mogelijkheden' : fr ? 'Capacit\u00e9s du bot' : 'Bot Capabilities'}</CardTitle>
                 <CardDescription>
-                  What your AI assistant can do
+                  {nl ? 'Wat uw AI-assistent kan doen' : fr ? 'Ce que votre assistant IA peut faire' : 'What your AI assistant can do'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -433,9 +449,9 @@ const ConversationalAI = () => {
             {/* Templates */}
             <Card>
               <CardHeader>
-                <CardTitle>Conversation Templates</CardTitle>
+                <CardTitle>{nl ? 'Gesprekssjablonen' : fr ? 'Mod\u00e8les de conversation' : 'Conversation Templates'}</CardTitle>
                 <CardDescription>
-                  Pre-built conversation flows
+                  {nl ? 'Voorgebouwde gespreksflows' : fr ? 'Flux de conversation pr\u00e9construits' : 'Pre-built conversation flows'}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -444,7 +460,7 @@ const ConversationalAI = () => {
                     <div key={template.name} className="p-4 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="font-medium">{template.name}</h4>
-                        <Button size="sm" variant="outline">Configure</Button>
+                        <Button size="sm" variant="outline">{nl ? 'Configureren' : fr ? 'Configurer' : 'Configure'}</Button>
                       </div>
                       <p className="text-sm text-muted-foreground mb-2">
                         {template.description}
@@ -466,9 +482,9 @@ const ConversationalAI = () => {
           {/* Embed Code */}
           <Card>
             <CardHeader>
-              <CardTitle>Installation</CardTitle>
+              <CardTitle>{nl ? 'Installatie' : fr ? 'Installation' : 'Installation'}</CardTitle>
               <CardDescription>
-                Add the AI assistant to your website
+                {nl ? 'Voeg de AI-assistent toe aan uw website' : fr ? 'Ajoutez l\'assistant IA \u00e0 votre site web' : 'Add the AI assistant to your website'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -486,10 +502,10 @@ const ConversationalAI = () => {
                 <div className="flex gap-2">
                   <Button variant="outline">
                     <Code className="mr-2 h-4 w-4" />
-                    Copy Code
+                    {nl ? 'Code Kopi\u00ebren' : fr ? 'Copier le code' : 'Copy Code'}
                   </Button>
                   <Button variant="outline">
-                    Test Installation
+                    {nl ? 'Installatie Testen' : fr ? 'Tester l\'installation' : 'Test Installation'}
                   </Button>
                 </div>
               </div>
@@ -501,53 +517,53 @@ const ConversationalAI = () => {
         <TabsContent value="training">
           <Card>
             <CardHeader>
-              <CardTitle>AI Training Center</CardTitle>
+              <CardTitle>{nl ? 'AI Trainingscentrum' : fr ? 'Centre de formation IA' : 'AI Training Center'}</CardTitle>
               <CardDescription>
-                Train your bot with brand knowledge and conversation patterns
+                {nl ? 'Train uw bot met merkkennis en gesprekspatronen' : fr ? 'Entra\u00eenez votre bot avec les connaissances de marque et les mod\u00e8les de conversation' : 'Train your bot with brand knowledge and conversation patterns'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
                 {/* Knowledge Sources */}
                 <div>
-                  <h4 className="font-medium mb-3">Knowledge Sources</h4>
+                  <h4 className="font-medium mb-3">{nl ? 'Kennisbronnen' : fr ? 'Sources de connaissances' : 'Knowledge Sources'}</h4>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <Building className="h-5 w-5 text-muted-foreground" />
                         <div>
-                          <p className="font-medium">Brand Knowledge Base</p>
-                          <p className="text-sm text-muted-foreground">247 documents</p>
+                          <p className="font-medium">{nl ? 'Merk Kennisbank' : fr ? 'Base de connaissances de marque' : 'Brand Knowledge Base'}</p>
+                          <p className="text-sm text-muted-foreground">{nl ? '247 documenten' : fr ? '247 documents' : '247 documents'}</p>
                         </div>
                       </div>
-                      <Badge variant="success">Synced</Badge>
+                      <Badge variant="success">{nl ? 'Gesynchroniseerd' : fr ? 'Synchronis\u00e9' : 'Synced'}</Badge>
                     </div>
                     <div className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
                         <MessageSquare className="h-5 w-5 text-muted-foreground" />
                         <div>
-                          <p className="font-medium">Past Conversations</p>
-                          <p className="text-sm text-muted-foreground">2,847 examples</p>
+                          <p className="font-medium">{nl ? 'Eerdere Gesprekken' : fr ? 'Conversations pass\u00e9es' : 'Past Conversations'}</p>
+                          <p className="text-sm text-muted-foreground">{nl ? '2.847 voorbeelden' : fr ? '2 847 exemples' : '2,847 examples'}</p>
                         </div>
                       </div>
-                      <Badge variant="success">Training</Badge>
+                      <Badge variant="success">{nl ? 'Training' : fr ? 'Formation' : 'Training'}</Badge>
                     </div>
                   </div>
                 </div>
 
                 {/* Optimization Suggestions */}
                 <div>
-                  <h4 className="font-medium mb-3">AI Optimization Suggestions</h4>
+                  <h4 className="font-medium mb-3">{nl ? 'AI Optimalisatiesuggesties' : fr ? 'Suggestions d\'optimisation IA' : 'AI Optimization Suggestions'}</h4>
                   <div className="space-y-3">
                     <div className="p-4 bg-blue-50 rounded-lg">
                       <div className="flex items-start gap-3">
                         <Sparkles className="h-5 w-5 text-blue-600 mt-0.5" />
                         <div>
-                          <p className="font-medium">Add pricing information</p>
+                          <p className="font-medium">{nl ? 'Prijsinformatie toevoegen' : fr ? 'Ajouter des informations tarifaires' : 'Add pricing information'}</p>
                           <p className="text-sm text-gray-600 mt-1">
-                            34% of conversations ask about pricing but bot can't answer
+                            {nl ? '34% van de gesprekken vraagt naar prijzen maar de bot kan niet antwoorden' : fr ? '34% des conversations demandent les tarifs mais le bot ne peut pas r\u00e9pondre' : '34% of conversations ask about pricing but bot can\'t answer'}
                           </p>
-                          <Button size="sm" className="mt-2">Add Pricing</Button>
+                          <Button size="sm" className="mt-2">{nl ? 'Prijzen Toevoegen' : fr ? 'Ajouter les tarifs' : 'Add Pricing'}</Button>
                         </div>
                       </div>
                     </div>
@@ -562,34 +578,34 @@ const ConversationalAI = () => {
         <TabsContent value="analytics">
           <Card>
             <CardHeader>
-              <CardTitle>Conversation Analytics</CardTitle>
+              <CardTitle>{nl ? 'Gespreksanalyse' : fr ? 'Analytique des conversations' : 'Conversation Analytics'}</CardTitle>
               <CardDescription>
-                Deep insights into your AI assistant performance
+                {nl ? 'Diepgaande inzichten in de prestaties van uw AI-assistent' : fr ? 'Analyses approfondies des performances de votre assistant IA' : 'Deep insights into your AI assistant performance'}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="p-4 border rounded-lg text-center">
                   <p className="text-2xl font-bold text-purple-600">0</p>
-                  <p className="text-xs text-gray-500 mt-1">Conversations</p>
+                  <p className="text-xs text-gray-500 mt-1">{nl ? 'Gesprekken' : fr ? 'Conversations' : 'Conversations'}</p>
                 </div>
                 <div className="p-4 border rounded-lg text-center">
                   <p className="text-2xl font-bold text-blue-600">0</p>
-                  <p className="text-xs text-gray-500 mt-1">Messages</p>
+                  <p className="text-xs text-gray-500 mt-1">{nl ? 'Berichten' : fr ? 'Messages' : 'Messages'}</p>
                 </div>
                 <div className="p-4 border rounded-lg text-center">
                   <p className="text-2xl font-bold text-green-600">0%</p>
-                  <p className="text-xs text-gray-500 mt-1">Resolution Rate</p>
+                  <p className="text-xs text-gray-500 mt-1">{nl ? 'Oplossingspercentage' : fr ? 'Taux de r\u00e9solution' : 'Resolution Rate'}</p>
                 </div>
                 <div className="p-4 border rounded-lg text-center">
                   <p className="text-2xl font-bold text-amber-600">0s</p>
-                  <p className="text-xs text-gray-500 mt-1">Avg Response</p>
+                  <p className="text-xs text-gray-500 mt-1">{nl ? 'Gem. Reactie' : fr ? 'R\u00e9ponse moy.' : 'Avg Response'}</p>
                 </div>
               </div>
               <div className="h-[250px] flex items-center justify-center text-muted-foreground border rounded-lg">
                 <div className="text-center space-y-2">
                   <BarChart3 className="h-10 w-10 mx-auto text-gray-300" />
-                  <p className="text-sm">Start conversations to see analytics data</p>
+                  <p className="text-sm">{nl ? 'Start gesprekken om analysegegevens te zien' : fr ? 'D\u00e9marrez des conversations pour voir les donn\u00e9es analytiques' : 'Start conversations to see analytics data'}</p>
                 </div>
               </div>
             </CardContent>

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Sparkles, Building2, Users, DollarSign, Target,
   ArrowRight, ArrowLeft, CheckCircle2, Loader2, X, Calendar, MapPin
 } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface PostScanWizardProps {
   blueprintId: string;
@@ -46,6 +47,9 @@ interface WizardData {
 }
 
 export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWizardProps) {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -247,7 +251,7 @@ export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWiza
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold">Complete Your Setup</h2>
+        <h2 className="text-2xl font-bold">{nl ? 'Voltooi Je Setup' : fr ? 'Terminez votre configuration' : 'Complete Your Setup'}</h2>
         <button onClick={onSkip} className="p-2 hover:bg-gray-100 rounded-lg">
           <X className="w-5 h-5" />
         </button>
@@ -256,7 +260,7 @@ export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWiza
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-medium text-gray-600">
-            Step {currentStep} of {totalSteps}
+            {nl ? `Stap ${currentStep} van ${totalSteps}` : fr ? `Etape ${currentStep} sur ${totalSteps}` : `Step ${currentStep} of ${totalSteps}`}
           </span>
         </div>
         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -288,15 +292,15 @@ export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWiza
           className="flex items-center gap-2 px-4 py-2 text-gray-600 disabled:opacity-50"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back
+          {nl ? 'Terug' : fr ? 'Retour' : 'Back'}
         </button>
-        
+
         {currentStep < totalSteps ? (
           <button
             onClick={nextStep}
             className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg"
           >
-            Next
+            {nl ? 'Volgende' : fr ? 'Suivant' : 'Next'}
             <ArrowRight className="w-4 h-4" />
           </button>
         ) : (
@@ -306,7 +310,7 @@ export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWiza
             className="flex items-center gap-2 px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg disabled:opacity-50"
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {saving ? 'Saving...' : 'Complete Setup'}
+            {saving ? (nl ? 'Opslaan...' : fr ? 'Enregistrement...' : 'Saving...') : (nl ? 'Setup Voltooien' : fr ? 'Terminer la configuration' : 'Complete Setup')}
           </button>
         )}
       </div>
@@ -314,13 +318,17 @@ export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWiza
   );
 }
 
-const BrandStep = ({ data, onChange }: any) => (
+const BrandStep = ({ data, onChange }: any) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3">
       <Building2 className="w-6 h-6 text-purple-600" />
       <div>
-        <h3 className="text-xl font-bold">Brand Information</h3>
-        <p className="text-gray-600">Pre-filled from LinkedIn + AI analysis</p>
+        <h3 className="text-xl font-bold">{nl ? 'Merkinformatie' : fr ? 'Informations de marque' : 'Brand Information'}</h3>
+        <p className="text-gray-600">{nl ? 'Vooraf ingevuld vanuit LinkedIn + AI analyse' : fr ? 'Pre-rempli depuis LinkedIn + analyse IA' : 'Pre-filled from LinkedIn + AI analysis'}</p>
       </div>
     </div>
 
@@ -329,16 +337,16 @@ const BrandStep = ({ data, onChange }: any) => (
         <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
         <div>
           <p className="font-medium text-green-900">
-            {data.founders?.length || 0} founders • Founded {data.founding_year || 'unknown'} • {data.employee_count || '?'} employees
+            {nl ? `${data.founders?.length || 0} oprichters • Opgericht ${data.founding_year || 'onbekend'} • ${data.employee_count || '?'} medewerkers` : fr ? `${data.founders?.length || 0} fondateurs • Fonde en ${data.founding_year || 'inconnu'} • ${data.employee_count || '?'} employes` : `${data.founders?.length || 0} founders • Founded ${data.founding_year || 'unknown'} • ${data.employee_count || '?'} employees`}
           </p>
-          <p className="text-sm text-green-700">Review and edit if needed</p>
+          <p className="text-sm text-green-700">{nl ? 'Controleer en pas aan indien nodig' : fr ? 'Verifiez et modifiez si necessaire' : 'Review and edit if needed'}</p>
         </div>
       </div>
     </div>
 
     <div className="grid md:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Company Name</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Bedrijfsnaam' : fr ? 'Nom de l\'entreprise' : 'Company Name'}</label>
         <input
           type="text"
           value={data.company_name}
@@ -347,7 +355,7 @@ const BrandStep = ({ data, onChange }: any) => (
         />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Industry</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Branche' : fr ? 'Secteur' : 'Industry'}</label>
         <input
           type="text"
           value={data.industry}
@@ -356,7 +364,7 @@ const BrandStep = ({ data, onChange }: any) => (
         />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Founded</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Opgericht' : fr ? 'Fonde en' : 'Founded'}</label>
         <input
           type="number"
           value={data.founding_year || ''}
@@ -366,19 +374,19 @@ const BrandStep = ({ data, onChange }: any) => (
         />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">HQ Location</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Hoofdkantoor Locatie' : fr ? 'Siege social' : 'HQ Location'}</label>
         <input
           type="text"
           value={data.hq_location}
           onChange={(e) => onChange('hq_location', e.target.value)}
-          placeholder="e.g. Amsterdam"
+          placeholder={nl ? 'bijv. Amsterdam' : fr ? 'p.ex. Amsterdam' : 'e.g. Amsterdam'}
           className="w-full px-4 py-2 border rounded-lg"
         />
       </div>
     </div>
 
     <div>
-      <label className="block text-sm font-medium mb-2">Mission</label>
+      <label className="block text-sm font-medium mb-2">{nl ? 'Missie' : fr ? 'Mission' : 'Mission'}</label>
       <textarea
         value={data.mission}
         onChange={(e) => onChange('mission', e.target.value)}
@@ -389,7 +397,7 @@ const BrandStep = ({ data, onChange }: any) => (
 
     {data.founders?.length > 0 && (
       <div>
-        <label className="block text-sm font-medium mb-2">Founders (Detected)</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Oprichters (Gedetecteerd)' : fr ? 'Fondateurs (Detectes)' : 'Founders (Detected)'}</label>
         {data.founders.map((founder: any, i: number) => (
           <div key={i} className="p-3 bg-blue-50 rounded-lg mb-2">
             <p className="font-medium">{founder.name}</p>
@@ -399,21 +407,26 @@ const BrandStep = ({ data, onChange }: any) => (
       </div>
     )}
   </div>
-);
+  );
+};
 
-const AudienceStep = ({ data, onChange }: any) => (
+const AudienceStep = ({ data, onChange }: any) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3">
       <Users className="w-6 h-6 text-blue-600" />
       <div>
-        <h3 className="text-xl font-bold">Target Audience</h3>
-        <p className="text-gray-600">Define who you're marketing to</p>
+        <h3 className="text-xl font-bold">{nl ? 'Doelgroep' : fr ? 'Public cible' : 'Target Audience'}</h3>
+        <p className="text-gray-600">{nl ? 'Definieer naar wie je marketing richt' : fr ? 'Definissez votre cible marketing' : 'Define who you\'re marketing to'}</p>
       </div>
     </div>
 
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Age Range</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Leeftijdsbereik' : fr ? 'Tranche d\'age' : 'Age Range'}</label>
         <select value={data.target_age_range} onChange={(e) => onChange('target_age_range', e.target.value)} className="w-full px-4 py-2 border rounded-lg">
           <option value="18-24">18-24</option>
           <option value="25-44">25-44</option>
@@ -422,43 +435,53 @@ const AudienceStep = ({ data, onChange }: any) => (
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Job Title</label>
-        <input type="text" value={data.target_job_title} onChange={(e) => onChange('target_job_title', e.target.value)} placeholder="e.g. Marketing Manager" className="w-full px-4 py-2 border rounded-lg" />
+        <label className="block text-sm font-medium mb-2">{nl ? 'Functietitel' : fr ? 'Titre du poste' : 'Job Title'}</label>
+        <input type="text" value={data.target_job_title} onChange={(e) => onChange('target_job_title', e.target.value)} placeholder={nl ? 'bijv. Marketing Manager' : fr ? 'p.ex. Responsable Marketing' : 'e.g. Marketing Manager'} className="w-full px-4 py-2 border rounded-lg" />
       </div>
     </div>
   </div>
-);
+  );
+};
 
-const BudgetStep = ({ data, onChange }: any) => (
+const BudgetStep = ({ data, onChange }: any) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3">
       <DollarSign className="w-6 h-6 text-green-600" />
       <div>
-        <h3 className="text-xl font-bold">Budget & Resources</h3>
-        <p className="text-gray-600">Estimated based on company size</p>
+        <h3 className="text-xl font-bold">{nl ? 'Budget & Middelen' : fr ? 'Budget & Ressources' : 'Budget & Resources'}</h3>
+        <p className="text-gray-600">{nl ? 'Geschat op basis van bedrijfsgrootte' : fr ? 'Estime selon la taille de l\'entreprise' : 'Estimated based on company size'}</p>
       </div>
     </div>
 
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium mb-2">Monthly Budget (€)</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Maandelijks Budget (€)' : fr ? 'Budget mensuel (€)' : 'Monthly Budget (€)'}</label>
         <input type="number" value={data.monthly_budget} onChange={(e) => onChange('monthly_budget', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg" />
       </div>
       <div>
-        <label className="block text-sm font-medium mb-2">Team Size</label>
+        <label className="block text-sm font-medium mb-2">{nl ? 'Teamgrootte' : fr ? 'Taille de l\'equipe' : 'Team Size'}</label>
         <input type="number" value={data.team_size} onChange={(e) => onChange('team_size', Number(e.target.value))} className="w-full px-4 py-2 border rounded-lg" />
       </div>
     </div>
   </div>
-);
+  );
+};
 
-const GoalsStep = ({ data, onChange }: any) => (
+const GoalsStep = ({ data, onChange }: any) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  return (
   <div className="space-y-6">
     <div className="flex items-center gap-3">
       <Target className="w-6 h-6 text-orange-600" />
       <div>
-        <h3 className="text-xl font-bold">Goals & KPIs</h3>
-        <p className="text-gray-600">AI-generated from your scan</p>
+        <h3 className="text-xl font-bold">{nl ? 'Doelen & KPI\'s' : fr ? 'Objectifs & KPI' : 'Goals & KPIs'}</h3>
+        <p className="text-gray-600">{nl ? 'AI-gegenereerd vanuit je scan' : fr ? 'Genere par IA depuis votre scan' : 'AI-generated from your scan'}</p>
       </div>
     </div>
 
@@ -467,12 +490,13 @@ const GoalsStep = ({ data, onChange }: any) => (
         <div key={i} className="p-4 border rounded-lg">
           <h4 className="font-semibold mb-2">{goal.title}</h4>
           <div className="grid grid-cols-2 gap-4">
-            <div><p className="text-sm text-gray-600">Current</p><p className="text-2xl font-bold">{goal.current}</p></div>
-            <div><p className="text-sm text-gray-600">Target</p><p className="text-2xl font-bold text-green-600">{goal.target}</p></div>
+            <div><p className="text-sm text-gray-600">{nl ? 'Huidig' : fr ? 'Actuel' : 'Current'}</p><p className="text-2xl font-bold">{goal.current}</p></div>
+            <div><p className="text-sm text-gray-600">{nl ? 'Doel' : fr ? 'Objectif' : 'Target'}</p><p className="text-2xl font-bold text-green-600">{goal.target}</p></div>
           </div>
           <p className="text-sm text-gray-600 mt-2">KPI: {goal.kpi}</p>
         </div>
       ))}
     </div>
   </div>
-);
+  );
+};

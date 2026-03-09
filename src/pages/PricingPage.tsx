@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useLanguage } from '@/contexts/LanguageContext';
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +62,10 @@ const fadeUp = {
 };
 
 export default function PricingPage() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [plans, setPlans] = useState<Plan[]>([]);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
@@ -75,8 +80,8 @@ export default function PricingPage() {
   useEffect(() => {
     if (searchParams.get("checkout") === "cancelled") {
       toast({
-        title: "Checkout cancelled",
-        description: "You can try again whenever you're ready.",
+        title: nl ? "Afrekenen geannuleerd" : fr ? "Paiement annule" : "Checkout cancelled",
+        description: nl ? "Je kunt het opnieuw proberen wanneer je klaar bent." : fr ? "Vous pouvez reessayer quand vous le souhaitez." : "You can try again whenever you're ready.",
       });
     }
   }, [searchParams]);
@@ -89,46 +94,46 @@ export default function PricingPage() {
       setPlans([
         {
           id: "starter",
-          name: "Starter",
+          name: nl ? "Starter" : fr ? "Debutant" : "Starter",
           price_monthly: 29,
           price_yearly: 290,
           features: [
-            "Up to 1,000 contacts",
-            "5 campaigns per month",
-            "AI content generation",
-            "Email campaigns (SendGrid/Resend)",
-            "Analytics dashboard",
+            nl ? "Tot 1.000 contacten" : fr ? "Jusqu'a 1 000 contacts" : "Up to 1,000 contacts",
+            nl ? "5 campagnes per maand" : fr ? "5 campagnes par mois" : "5 campaigns per month",
+            nl ? "AI-contentgeneratie" : fr ? "Generation de contenu IA" : "AI content generation",
+            nl ? "E-mailcampagnes (SendGrid/Resend)" : fr ? "Campagnes e-mail (SendGrid/Resend)" : "Email campaigns (SendGrid/Resend)",
+            nl ? "Analytics dashboard" : fr ? "Tableau de bord analytique" : "Analytics dashboard",
           ],
         },
         {
           id: "professional",
-          name: "Professional",
+          name: nl ? "Professioneel" : fr ? "Professionnel" : "Professional",
           price_monthly: 79,
           price_yearly: 790,
           features: [
-            "Up to 10,000 contacts",
-            "Unlimited campaigns",
-            "Advanced AI content + images",
-            "Multi-channel campaigns",
-            "Brand Memory AI",
-            "CSV import/export",
-            "Priority support",
+            nl ? "Tot 10.000 contacten" : fr ? "Jusqu'a 10 000 contacts" : "Up to 10,000 contacts",
+            nl ? "Onbeperkte campagnes" : fr ? "Campagnes illimitees" : "Unlimited campaigns",
+            nl ? "Geavanceerde AI-content + afbeeldingen" : fr ? "Contenu IA avance + images" : "Advanced AI content + images",
+            nl ? "Multi-channel campagnes" : fr ? "Campagnes multi-canal" : "Multi-channel campaigns",
+            nl ? "Merkgeheugen AI" : fr ? "Memoire de Marque IA" : "Brand Memory AI",
+            nl ? "CSV import/export" : fr ? "Import/export CSV" : "CSV import/export",
+            nl ? "Prioritaire ondersteuning" : fr ? "Support prioritaire" : "Priority support",
           ],
         },
         {
           id: "enterprise",
-          name: "Enterprise",
+          name: nl ? "Enterprise" : fr ? "Entreprise" : "Enterprise",
           price_monthly: 199,
           price_yearly: 1990,
           features: [
-            "Unlimited contacts",
-            "Unlimited campaigns",
-            "Custom AI model training",
-            "White-label options",
-            "Dedicated account manager",
-            "SSO & advanced security",
-            "Full API access",
-            "Custom integrations",
+            nl ? "Onbeperkte contacten" : fr ? "Contacts illimites" : "Unlimited contacts",
+            nl ? "Onbeperkte campagnes" : fr ? "Campagnes illimitees" : "Unlimited campaigns",
+            nl ? "Aangepaste AI-modeltraining" : fr ? "Entrainement de modele IA personnalise" : "Custom AI model training",
+            nl ? "White-label opties" : fr ? "Options marque blanche" : "White-label options",
+            nl ? "Dedicated accountmanager" : fr ? "Gestionnaire de compte dedie" : "Dedicated account manager",
+            nl ? "SSO & geavanceerde beveiliging" : fr ? "SSO & securite avancee" : "SSO & advanced security",
+            nl ? "Volledige API-toegang" : fr ? "Acces API complet" : "Full API access",
+            nl ? "Aangepaste integraties" : fr ? "Integrations personnalisees" : "Custom integrations",
           ],
         },
       ]);
@@ -150,10 +155,10 @@ export default function PricingPage() {
         return;
       }
       toast({
-        title: "Error",
+        title: nl ? "Fout" : fr ? "Erreur" : "Error",
         description:
           err?.response?.data?.detail ||
-          "Failed to start checkout. Please try again.",
+          (nl ? "Afrekenen starten mislukt. Probeer het opnieuw." : fr ? "Echec du demarrage du paiement. Veuillez reessayer." : "Failed to start checkout. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -177,12 +182,12 @@ export default function PricingPage() {
           <div className="flex items-center gap-3">
             <Link to="/login">
               <Button variant="ghost" className="text-gray-300 hover:text-white hover:bg-white/5">
-                Sign In
+                {nl ? 'Inloggen' : fr ? 'Se connecter' : 'Sign In'}
               </Button>
             </Link>
             <Link to="/signup">
               <Button className="bg-purple-600 hover:bg-purple-500 text-white rounded-full px-5">
-                Get Started
+                {nl ? 'Aan de slag' : fr ? 'Commencer' : 'Get Started'}
                 <ArrowRight className="w-4 h-4 ml-1.5" />
               </Button>
             </Link>
@@ -200,7 +205,7 @@ export default function PricingPage() {
           <motion.div initial="hidden" animate="visible" variants={fadeUp} custom={0}>
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-purple-500/30 bg-purple-500/10 text-purple-300 text-sm mb-6">
               <Sparkles className="w-3.5 h-3.5" />
-              Simple, transparent pricing
+              {nl ? 'Eenvoudige, transparante prijzen' : fr ? 'Tarification simple et transparente' : 'Simple, transparent pricing'}
             </span>
           </motion.div>
 
@@ -211,9 +216,9 @@ export default function PricingPage() {
             custom={1}
             className="text-5xl md:text-6xl font-bold tracking-tight mb-4"
           >
-            Choose Your{" "}
+            {nl ? 'Kies je' : fr ? 'Choisissez votre' : 'Choose Your'}{" "}
             <span className="bg-gradient-to-r from-purple-400 via-rose-400 to-amber-300 text-transparent bg-clip-text">
-              Plan
+              {nl ? 'Abonnement' : fr ? 'Forfait' : 'Plan'}
             </span>
           </motion.h1>
 
@@ -224,7 +229,7 @@ export default function PricingPage() {
             custom={2}
             className="text-lg text-gray-400 max-w-xl mx-auto mb-10"
           >
-            Start free, upgrade when you're ready. All plans include a 14-day trial.
+            {nl ? 'Start gratis, upgrade wanneer je klaar bent. Alle abonnementen bevatten een proefperiode van 14 dagen.' : fr ? "Commencez gratuitement, mettez a niveau quand vous etes pret. Tous les forfaits incluent un essai de 14 jours." : "Start free, upgrade when you're ready. All plans include a 14-day trial."}
           </motion.p>
 
           {/* Billing toggle */}
@@ -238,7 +243,7 @@ export default function PricingPage() {
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
-                Monthly
+                {nl ? 'Maandelijks' : fr ? 'Mensuel' : 'Monthly'}
               </button>
               <button
                 onClick={() => setBillingCycle("yearly")}
@@ -248,9 +253,9 @@ export default function PricingPage() {
                     : "text-gray-500 hover:text-gray-300"
                 }`}
               >
-                Yearly
+                {nl ? 'Jaarlijks' : fr ? 'Annuel' : 'Yearly'}
                 <span className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-full px-2 py-0.5">
-                  Save 17%
+                  {nl ? 'Bespaar 17%' : fr ? 'Economisez 17%' : 'Save 17%'}
                 </span>
               </button>
             </div>
@@ -287,7 +292,7 @@ export default function PricingPage() {
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <Badge className="bg-gradient-to-r from-purple-600 to-rose-500 text-white border-0 px-4 py-1 text-xs">
-                      Most Popular
+                      {nl ? 'Meest populair' : fr ? 'Le plus populaire' : 'Most Popular'}
                     </Badge>
                   </div>
                 )}
@@ -300,15 +305,15 @@ export default function PricingPage() {
 
                 <div className="flex items-baseline gap-1 mb-1">
                   <span className="text-4xl font-bold">${price}</span>
-                  <span className="text-gray-500 text-sm">/mo</span>
+                  <span className="text-gray-500 text-sm">{nl ? '/mnd' : fr ? '/mois' : '/mo'}</span>
                 </div>
 
                 {billingCycle === "yearly" && discount > 0 ? (
                   <p className="text-xs text-emerald-400 mb-6">
-                    Save {discount}% &middot; ${plan.price_yearly}/year
+                    {nl ? `Bespaar ${discount}%` : fr ? `Economisez ${discount}%` : `Save ${discount}%`} &middot; ${plan.price_yearly}/{nl ? 'jaar' : fr ? 'an' : 'year'}
                   </p>
                 ) : (
-                  <p className="text-xs text-gray-600 mb-6">Billed monthly</p>
+                  <p className="text-xs text-gray-600 mb-6">{nl ? 'Maandelijks gefactureerd' : fr ? 'Facturation mensuelle' : 'Billed monthly'}</p>
                 )}
 
                 <Button
@@ -323,7 +328,7 @@ export default function PricingPage() {
                   {loadingPlan === plan.id ? (
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                   ) : null}
-                  {loadingPlan === plan.id ? "Redirecting..." : "Start Free Trial"}
+                  {loadingPlan === plan.id ? (nl ? "Doorsturen..." : fr ? "Redirection..." : "Redirecting...") : (nl ? "Start gratis proefperiode" : fr ? "Commencer l'essai gratuit" : "Start Free Trial")}
                   {loadingPlan !== plan.id && <ArrowRight className="w-4 h-4 ml-2" />}
                 </Button>
 
@@ -344,27 +349,26 @@ export default function PricingPage() {
       {/* ═══ BOTTOM CTA ═══ */}
       <section className="border-t border-white/5 bg-white/[0.01]">
         <div className="max-w-3xl mx-auto px-6 py-20 text-center">
-          <h2 className="text-3xl font-bold mb-3">Questions?</h2>
+          <h2 className="text-3xl font-bold mb-3">{nl ? 'Vragen?' : fr ? 'Questions ?' : 'Questions?'}</h2>
           <p className="text-gray-400 mb-8">
-            All plans include a 14-day free trial. No credit card required.
-            Cancel anytime from your account settings.
+            {nl ? 'Alle abonnementen bevatten een gratis proefperiode van 14 dagen. Geen creditcard vereist. Annuleer op elk moment via je accountinstellingen.' : fr ? "Tous les forfaits incluent un essai gratuit de 14 jours. Aucune carte de credit requise. Annulez a tout moment depuis les parametres de votre compte." : 'All plans include a 14-day free trial. No credit card required. Cancel anytime from your account settings.'}
           </p>
           <div className="flex items-center justify-center gap-4">
             <Link to="/signup">
               <Button size="lg" className="bg-purple-600 hover:bg-purple-500 text-white rounded-full px-8 h-12">
-                Start Free Trial
+                {nl ? 'Start gratis proefperiode' : fr ? "Commencer l'essai gratuit" : 'Start Free Trial'}
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
             </Link>
             <Link to="/">
               <Button size="lg" variant="outline" className="rounded-full px-8 h-12 border-white/20 text-gray-300 hover:bg-white/5 hover:text-white">
-                Back to Home
+                {nl ? 'Terug naar Home' : fr ? "Retour a l'accueil" : 'Back to Home'}
               </Button>
             </Link>
           </div>
           <div className="flex items-center justify-center gap-3 mt-8">
             <Shield className="w-4 h-4 text-gray-600" />
-            <span className="text-xs text-gray-600">SOC 2 Compliant &middot; GDPR Ready &middot; Stripe Secure Payments</span>
+            <span className="text-xs text-gray-600">{nl ? 'SOC 2 Conform · AVG-klaar · Veilige Stripe-betalingen' : fr ? 'Conforme SOC 2 · Pret pour le RGPD · Paiements securises Stripe' : 'SOC 2 Compliant · GDPR Ready · Stripe Secure Payments'}</span>
           </div>
         </div>
       </section>

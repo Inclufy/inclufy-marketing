@@ -24,6 +24,7 @@ import {
   UserPlus
 } from "lucide-react";
 import api from "@/lib/api";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Contact {
   id: string;
@@ -47,6 +48,10 @@ interface ImportResult {
 }
 
 export default function ContactManager() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +91,7 @@ export default function ContactManager() {
       setStats(statsRes.data);
     } catch (err: any) {
       console.error('Failed to fetch contacts:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to load contacts');
+      setError(err.response?.data?.detail || err.message || (nl ? 'Contacten laden mislukt' : fr ? 'Échec du chargement des contacts' : 'Failed to load contacts'));
     } finally {
       setLoading(false);
     }
@@ -122,7 +127,7 @@ export default function ContactManager() {
       setNewContact({ email: '', first_name: '', last_name: '', phone: '', city: '', country: '' });
       fetchContacts();
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to add contact');
+      setError(err.response?.data?.detail || (nl ? 'Contact toevoegen mislukt' : fr ? 'Échec de l\'ajout du contact' : 'Failed to add contact'));
     } finally {
       setSaving(false);
     }
@@ -130,14 +135,14 @@ export default function ContactManager() {
 
   // Delete contact
   const handleDeleteContact = async (id: string) => {
-    if (!confirm('Delete this contact?')) return;
+    if (!confirm(nl ? 'Dit contact verwijderen?' : fr ? 'Supprimer ce contact ?' : 'Delete this contact?')) return;
 
     try {
       await api.delete(`/contacts/${id}`);
       setContacts(prev => prev.filter(c => c.id !== id));
       setStats(prev => ({ ...prev, total: prev.total - 1 }));
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to delete contact');
+      setError(err.response?.data?.detail || (nl ? 'Contact verwijderen mislukt' : fr ? 'Échec de la suppression du contact' : 'Failed to delete contact'));
     }
   };
 
@@ -164,7 +169,7 @@ export default function ContactManager() {
       fetchContacts();
     } catch (err: any) {
       console.error('CSV import failed:', err);
-      setError(err.response?.data?.detail || 'CSV import failed');
+      setError(err.response?.data?.detail || (nl ? 'CSV-import mislukt' : fr ? 'Échec de l\'import CSV' : 'CSV import failed'));
     } finally {
       setImporting(false);
       // Reset file input
@@ -182,10 +187,10 @@ export default function ContactManager() {
           </div>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 text-transparent bg-clip-text">
-              Contact Manager
+              {nl ? 'Contactbeheer' : fr ? 'Gestionnaire de Contacts' : 'Contact Manager'}
             </h1>
             <p className="text-gray-600 dark:text-gray-400">
-              Manage your contacts and import from CSV
+              {nl ? 'Beheer je contacten en importeer vanuit CSV' : fr ? 'Gérez vos contacts et importez depuis un CSV' : 'Manage your contacts and import from CSV'}
             </p>
           </div>
         </div>
@@ -193,7 +198,7 @@ export default function ContactManager() {
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={fetchContacts} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
           </Button>
 
           {/* Import CSV Dialog */}
@@ -204,15 +209,18 @@ export default function ContactManager() {
             <DialogTrigger asChild>
               <Button variant="outline">
                 <Upload className="h-4 w-4 mr-2" />
-                Import CSV
+                {nl ? 'CSV Importeren' : fr ? 'Importer CSV' : 'Import CSV'}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
-                <DialogTitle>Import Contacts from CSV</DialogTitle>
+                <DialogTitle>{nl ? 'Contacten importeren vanuit CSV' : fr ? 'Importer des contacts depuis un CSV' : 'Import Contacts from CSV'}</DialogTitle>
                 <DialogDescription>
-                  Upload a CSV file with contact data. Required column: email.
-                  Supported columns: email, first_name, last_name, phone, city, country.
+                  {nl
+                    ? 'Upload een CSV-bestand met contactgegevens. Vereiste kolom: email. Ondersteunde kolommen: email, first_name, last_name, phone, city, country.'
+                    : fr
+                    ? 'Téléchargez un fichier CSV avec les données de contact. Colonne requise : email. Colonnes prises en charge : email, first_name, last_name, phone, city, country.'
+                    : 'Upload a CSV file with contact data. Required column: email. Supported columns: email, first_name, last_name, phone, city, country.'}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
@@ -231,13 +239,13 @@ export default function ContactManager() {
                   {importing ? (
                     <div className="flex flex-col items-center">
                       <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-3" />
-                      <p className="text-sm text-gray-600">Importing contacts...</p>
+                      <p className="text-sm text-gray-600">{nl ? 'Contacten importeren...' : fr ? 'Importation des contacts...' : 'Importing contacts...'}</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
                       <FileSpreadsheet className="h-10 w-10 text-gray-400 mb-3" />
-                      <p className="text-sm font-medium">Click to upload CSV file</p>
-                      <p className="text-xs text-gray-500 mt-1">or drag and drop</p>
+                      <p className="text-sm font-medium">{nl ? 'Klik om CSV-bestand te uploaden' : fr ? 'Cliquez pour télécharger un fichier CSV' : 'Click to upload CSV file'}</p>
+                      <p className="text-xs text-gray-500 mt-1">{nl ? 'of sleep en zet neer' : fr ? 'ou glisser-déposer' : 'or drag and drop'}</p>
                     </div>
                   )}
                 </div>
@@ -247,14 +255,20 @@ export default function ContactManager() {
                   <div className={`rounded-lg p-4 ${importResult.imported > 0 ? 'bg-green-50 dark:bg-green-900/20' : 'bg-amber-50 dark:bg-amber-900/20'}`}>
                     <div className="flex items-center gap-2 mb-2">
                       <CheckCircle2 className={`h-5 w-5 ${importResult.imported > 0 ? 'text-green-600' : 'text-amber-600'}`} />
-                      <p className="font-semibold text-sm">Import Complete</p>
+                      <p className="font-semibold text-sm">{nl ? 'Import Voltooid' : fr ? 'Import Terminé' : 'Import Complete'}</p>
                     </div>
                     <div className="text-sm space-y-1">
-                      <p className="text-green-700 dark:text-green-300">{importResult.imported} contacts imported</p>
+                      <p className="text-green-700 dark:text-green-300">
+                        {importResult.imported} {nl ? 'contacten geïmporteerd' : fr ? 'contacts importés' : 'contacts imported'}
+                      </p>
                       {importResult.skipped > 0 && (
-                        <p className="text-amber-700 dark:text-amber-300">{importResult.skipped} rows skipped</p>
+                        <p className="text-amber-700 dark:text-amber-300">
+                          {importResult.skipped} {nl ? 'rijen overgeslagen' : fr ? 'lignes ignorées' : 'rows skipped'}
+                        </p>
                       )}
-                      <p className="text-gray-500">{importResult.total_rows} total rows processed</p>
+                      <p className="text-gray-500">
+                        {importResult.total_rows} {nl ? 'rijen verwerkt' : fr ? 'lignes traitées' : 'total rows processed'}
+                      </p>
                     </div>
                     {importResult.errors.length > 0 && (
                       <div className="mt-2 text-xs text-red-600 space-y-1">
@@ -268,7 +282,7 @@ export default function ContactManager() {
 
                 {/* CSV Format Help */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-                  <h4 className="text-sm font-medium mb-2">CSV Format Example</h4>
+                  <h4 className="text-sm font-medium mb-2">{nl ? 'CSV-formaat Voorbeeld' : fr ? 'Exemple de Format CSV' : 'CSV Format Example'}</h4>
                   <code className="text-xs block bg-white dark:bg-gray-900 p-2 rounded border overflow-x-auto">
                     email,first_name,last_name,phone,city,country<br />
                     john@example.com,John,Doe,+31612345678,Amsterdam,Netherlands<br />
@@ -284,17 +298,17 @@ export default function ContactManager() {
             <DialogTrigger asChild>
               <Button className="bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700">
                 <UserPlus className="h-4 w-4 mr-2" />
-                Add Contact
+                {nl ? 'Contact Toevoegen' : fr ? 'Ajouter un Contact' : 'Add Contact'}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Add New Contact</DialogTitle>
-                <DialogDescription>Add a contact to your database manually.</DialogDescription>
+                <DialogTitle>{nl ? 'Nieuw Contact Toevoegen' : fr ? 'Ajouter un Nouveau Contact' : 'Add New Contact'}</DialogTitle>
+                <DialogDescription>{nl ? 'Voeg handmatig een contact toe aan je database.' : fr ? 'Ajoutez manuellement un contact à votre base de données.' : 'Add a contact to your database manually.'}</DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div>
-                  <Label htmlFor="email">Email *</Label>
+                  <Label htmlFor="email">{nl ? 'E-mail' : fr ? 'E-mail' : 'Email'} *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -305,7 +319,7 @@ export default function ContactManager() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="first_name">First Name</Label>
+                    <Label htmlFor="first_name">{nl ? 'Voornaam' : fr ? 'Prénom' : 'First Name'}</Label>
                     <Input
                       id="first_name"
                       value={newContact.first_name}
@@ -314,7 +328,7 @@ export default function ContactManager() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="last_name">Last Name</Label>
+                    <Label htmlFor="last_name">{nl ? 'Achternaam' : fr ? 'Nom de Famille' : 'Last Name'}</Label>
                     <Input
                       id="last_name"
                       value={newContact.last_name}
@@ -324,7 +338,7 @@ export default function ContactManager() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label htmlFor="phone">{nl ? 'Telefoon' : fr ? 'Téléphone' : 'Phone'}</Label>
                   <Input
                     id="phone"
                     value={newContact.phone}
@@ -334,7 +348,7 @@ export default function ContactManager() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="city">City</Label>
+                    <Label htmlFor="city">{nl ? 'Stad' : fr ? 'Ville' : 'City'}</Label>
                     <Input
                       id="city"
                       value={newContact.city}
@@ -343,24 +357,24 @@ export default function ContactManager() {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="country">Country</Label>
+                    <Label htmlFor="country">{nl ? 'Land' : fr ? 'Pays' : 'Country'}</Label>
                     <Input
                       id="country"
                       value={newContact.country}
                       onChange={(e) => setNewContact({ ...newContact, country: e.target.value })}
-                      placeholder="Netherlands"
+                      placeholder={nl ? 'Nederland' : fr ? 'Pays-Bas' : 'Netherlands'}
                     />
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                  <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>{nl ? 'Annuleren' : fr ? 'Annuler' : 'Cancel'}</Button>
                   <Button
                     onClick={handleAddContact}
                     disabled={saving || !newContact.email.trim()}
                     className="bg-gradient-to-r from-blue-600 to-cyan-600"
                   >
                     {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Add Contact
+                    {nl ? 'Contact Toevoegen' : fr ? 'Ajouter un Contact' : 'Add Contact'}
                   </Button>
                 </div>
               </div>
@@ -374,7 +388,7 @@ export default function ContactManager() {
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0" />
           <p className="text-sm text-red-800 dark:text-red-200 flex-1">{error}</p>
-          <Button variant="outline" size="sm" onClick={() => setError(null)}>Dismiss</Button>
+          <Button variant="outline" size="sm" onClick={() => setError(null)}>{nl ? 'Sluiten' : fr ? 'Fermer' : 'Dismiss'}</Button>
         </div>
       )}
 
@@ -382,7 +396,7 @@ export default function ContactManager() {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Total Contacts</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Totaal Contacten' : fr ? 'Total des Contacts' : 'Total Contacts'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
@@ -390,7 +404,7 @@ export default function ContactManager() {
         </Card>
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">With Email</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Met E-mail' : fr ? 'Avec E-mail' : 'With Email'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-blue-600">{stats.with_email}</div>
@@ -398,7 +412,7 @@ export default function ContactManager() {
         </Card>
         <Card className="border-0 shadow-lg">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">With Consent</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">{nl ? 'Met Toestemming' : fr ? 'Avec Consentement' : 'With Consent'}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.with_consent}</div>
@@ -410,7 +424,7 @@ export default function ContactManager() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="Search contacts by name or email..."
+          placeholder={nl ? 'Zoek contacten op naam of e-mail...' : fr ? 'Rechercher des contacts par nom ou e-mail...' : 'Search contacts by name or email...'}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
@@ -420,9 +434,9 @@ export default function ContactManager() {
       {/* Contacts List */}
       <Card className="border-0 shadow-lg">
         <CardHeader>
-          <CardTitle>Contacts</CardTitle>
+          <CardTitle>{nl ? 'Contacten' : fr ? 'Contacts' : 'Contacts'}</CardTitle>
           <CardDescription>
-            {contacts.length} contact{contacts.length !== 1 ? 's' : ''} found
+            {contacts.length} {nl ? (contacts.length !== 1 ? 'contacten' : 'contact') : fr ? (contacts.length !== 1 ? 'contacts' : 'contact') : (contacts.length !== 1 ? 'contacts' : 'contact')} {nl ? 'gevonden' : fr ? 'trouvé(s)' : 'found'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -433,18 +447,18 @@ export default function ContactManager() {
           ) : contacts.length === 0 ? (
             <div className="text-center py-12">
               <Users className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">No contacts yet</h3>
+              <h3 className="text-xl font-semibold mb-2">{nl ? 'Nog geen contacten' : fr ? 'Pas encore de contacts' : 'No contacts yet'}</h3>
               <p className="text-gray-500 mb-6">
-                Add contacts manually or import from a CSV file.
+                {nl ? 'Voeg handmatig contacten toe of importeer vanuit een CSV-bestand.' : fr ? 'Ajoutez des contacts manuellement ou importez depuis un fichier CSV.' : 'Add contacts manually or import from a CSV file.'}
               </p>
               <div className="flex gap-2 justify-center">
                 <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
                   <Upload className="h-4 w-4 mr-2" />
-                  Import CSV
+                  {nl ? 'CSV Importeren' : fr ? 'Importer CSV' : 'Import CSV'}
                 </Button>
                 <Button onClick={() => setIsAddDialogOpen(true)} className="bg-gradient-to-r from-blue-600 to-cyan-600">
                   <UserPlus className="h-4 w-4 mr-2" />
-                  Add Contact
+                  {nl ? 'Contact Toevoegen' : fr ? 'Ajouter un Contact' : 'Add Contact'}
                 </Button>
               </div>
             </div>
@@ -453,12 +467,12 @@ export default function ContactManager() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Name</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Email</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Phone</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Location</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Source</th>
-                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">Tags</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{nl ? 'Naam' : fr ? 'Nom' : 'Name'}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{nl ? 'E-mail' : fr ? 'E-mail' : 'Email'}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{nl ? 'Telefoon' : fr ? 'Téléphone' : 'Phone'}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{nl ? 'Locatie' : fr ? 'Localisation' : 'Location'}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{nl ? 'Bron' : fr ? 'Source' : 'Source'}</th>
+                    <th className="text-left py-3 px-4 text-sm font-medium text-gray-600">{nl ? 'Labels' : fr ? 'Étiquettes' : 'Tags'}</th>
                     <th className="py-3 px-4"></th>
                   </tr>
                 </thead>
@@ -492,7 +506,7 @@ export default function ContactManager() {
                       </td>
                       <td className="py-3 px-4">
                         <Badge variant="outline" className="text-xs">
-                          {contact.source || 'unknown'}
+                          {contact.source || (nl ? 'onbekend' : fr ? 'inconnu' : 'unknown')}
                         </Badge>
                       </td>
                       <td className="py-3 px-4">

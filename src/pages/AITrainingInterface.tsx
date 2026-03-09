@@ -3,20 +3,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { 
-  Brain, 
-  Upload, 
-  RefreshCw, 
-  BarChart3, 
-  FileText, 
+import {
+  Brain,
+  Upload,
+  RefreshCw,
+  BarChart3,
+  FileText,
   Database,
   Zap,
   CheckCircle,
   AlertCircle,
   Clock
 } from "lucide-react";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const AITrainingInterface = () => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [trainingProgress, setTrainingProgress] = useState(73);
   const [selectedModel, setSelectedModel] = useState("content-optimizer");
 
@@ -56,13 +61,13 @@ const AITrainingInterface = () => {
         <div className="flex items-center gap-3">
           <Brain className="h-8 w-8 text-primary" />
           <div>
-            <h1 className="text-3xl font-bold">AI Training Center</h1>
-            <p className="text-muted-foreground">Train and improve your AI models with real data</p>
+            <h1 className="text-3xl font-bold">{nl ? "AI Trainingscentrum" : fr ? "Centre d'Entraînement IA" : "AI Training Center"}</h1>
+            <p className="text-muted-foreground">{nl ? "Train en verbeter je AI-modellen met echte data" : fr ? "Entraînez et améliorez vos modèles IA avec des données réelles" : "Train and improve your AI models with real data"}</p>
           </div>
         </div>
         <Button size="lg" className="gap-2">
           <Upload className="h-5 w-5" />
-          Upload Training Data
+          {nl ? "Trainingsdata Uploaden" : fr ? "Télécharger Données d'Entraînement" : "Upload Training Data"}
         </Button>
       </div>
 
@@ -70,44 +75,44 @@ const AITrainingInterface = () => {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Model Accuracy</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? "Model Nauwkeurigheid" : fr ? "Précision du Modèle" : "Model Accuracy"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">89%</div>
             <p className="text-xs text-green-600 flex items-center gap-1">
               <TrendingUp className="h-3 w-3" />
-              +3% from last week
+              {nl ? "+3% sinds vorige week" : fr ? "+3% depuis la semaine dernière" : "+3% from last week"}
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Training Sessions</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? "Trainingssessies" : fr ? "Sessions d'Entraînement" : "Training Sessions"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">2,693</div>
-            <p className="text-xs text-muted-foreground">Across all models</p>
+            <p className="text-xs text-muted-foreground">{nl ? "Over alle modellen" : fr ? "Sur tous les modèles" : "Across all models"}</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Data Points</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? "Datapunten" : fr ? "Points de Données" : "Data Points"}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">1.2M</div>
-            <p className="text-xs text-muted-foreground">Training samples</p>
+            <p className="text-xs text-muted-foreground">{nl ? "Trainingsvoorbeelden" : fr ? "Échantillons d'entraînement" : "Training samples"}</p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Last Updated</CardTitle>
+            <CardTitle className="text-sm font-medium">{nl ? "Laatst Bijgewerkt" : fr ? "Dernière Mise à Jour" : "Last Updated"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2h ago</div>
-            <p className="text-xs text-muted-foreground">Auto-training enabled</p>
+            <div className="text-2xl font-bold">{nl ? "2u geleden" : fr ? "Il y a 2h" : "2h ago"}</div>
+            <p className="text-xs text-muted-foreground">{nl ? "Auto-training ingeschakeld" : fr ? "Entraînement automatique activé" : "Auto-training enabled"}</p>
           </CardContent>
         </Card>
       </div>
@@ -116,8 +121,8 @@ const AITrainingInterface = () => {
         {/* Model List */}
         <Card className="lg:col-span-1">
           <CardHeader>
-            <CardTitle>AI Models</CardTitle>
-            <CardDescription>Select a model to view details</CardDescription>
+            <CardTitle>{nl ? "AI Modellen" : fr ? "Modèles IA" : "AI Models"}</CardTitle>
+            <CardDescription>{nl ? "Selecteer een model om details te bekijken" : fr ? "Sélectionnez un modèle pour voir les détails" : "Select a model to view details"}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {models.map((model) => (
@@ -139,12 +144,12 @@ const AITrainingInterface = () => {
                     ) : (
                       <Clock className="h-3 w-3" />
                     )}
-                    {model.status}
+                    {model.status === 'active' ? (nl ? "actief" : fr ? "actif" : "active") : (nl ? "training" : fr ? "entraînement" : "training")}
                   </Badge>
                 </div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Accuracy</span>
+                    <span className="text-muted-foreground">{nl ? "Nauwkeurigheid" : fr ? "Précision" : "Accuracy"}</span>
                     <span className="font-medium">{model.accuracy}%</span>
                   </div>
                   <Progress value={model.accuracy} className="h-2" />
@@ -161,11 +166,11 @@ const AITrainingInterface = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>{selectedModelData.name}</CardTitle>
-                  <CardDescription>Model performance and training details</CardDescription>
+                  <CardDescription>{nl ? "Modelprestaties en trainingsdetails" : fr ? "Performances du modèle et détails d'entraînement" : "Model performance and training details"}</CardDescription>
                 </div>
                 <Button variant="outline" size="sm" className="gap-2">
                   <RefreshCw className="h-4 w-4" />
-                  Retrain
+                  {nl ? "Hertrain" : fr ? "Ré-entraîner" : "Retrain"}
                 </Button>
               </div>
             </CardHeader>
@@ -174,45 +179,45 @@ const AITrainingInterface = () => {
               {selectedModelData.status === 'training' && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-sm font-medium">Training Progress</h3>
+                    <h3 className="text-sm font-medium">{nl ? "Trainingsvoortgang" : fr ? "Progression de l'Entraînement" : "Training Progress"}</h3>
                     <span className="text-sm text-muted-foreground">{trainingProgress}%</span>
                   </div>
                   <Progress value={trainingProgress} className="h-3" />
                   <p className="text-xs text-muted-foreground mt-2">
-                    Estimated time remaining: 23 minutes
+                    {nl ? "Geschatte resterende tijd: 23 minuten" : fr ? "Temps restant estimé : 23 minutes" : "Estimated time remaining: 23 minutes"}
                   </p>
                 </div>
               )}
 
               {/* Performance Metrics */}
               <div>
-                <h3 className="text-sm font-medium mb-4">Performance Metrics</h3>
+                <h3 className="text-sm font-medium mb-4">{nl ? "Prestatiestatistieken" : fr ? "Métriques de Performance" : "Performance Metrics"}</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <BarChart3 className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm">Precision</span>
+                      <span className="text-sm">{nl ? "Precisie" : fr ? "Précision" : "Precision"}</span>
                     </div>
                     <div className="text-2xl font-bold">91.2%</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-green-600" />
-                      <span className="text-sm">Speed</span>
+                      <span className="text-sm">{nl ? "Snelheid" : fr ? "Vitesse" : "Speed"}</span>
                     </div>
                     <div className="text-2xl font-bold">124ms</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Database className="h-4 w-4 text-purple-600" />
-                      <span className="text-sm">Training Data</span>
+                      <span className="text-sm">{nl ? "Trainingsdata" : fr ? "Données d'Entraînement" : "Training Data"}</span>
                     </div>
                     <div className="text-2xl font-bold">423K</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-orange-600" />
-                      <span className="text-sm">Parameters</span>
+                      <span className="text-sm">{nl ? "Parameters" : fr ? "Paramètres" : "Parameters"}</span>
                     </div>
                     <div className="text-2xl font-bold">2.3M</div>
                   </div>
@@ -221,22 +226,22 @@ const AITrainingInterface = () => {
 
               {/* Recent Training Sessions */}
               <div>
-                <h3 className="text-sm font-medium mb-4">Recent Training Sessions</h3>
+                <h3 className="text-sm font-medium mb-4">{nl ? "Recente Trainingssessies" : fr ? "Sessions d'Entraînement Récentes" : "Recent Training Sessions"}</h3>
                 <div className="space-y-3">
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-muted-foreground">2 hours ago</span>
-                    <span>Successfully trained on 12K new samples</span>
+                    <span className="text-muted-foreground">{nl ? "2 uur geleden" : fr ? "Il y a 2 heures" : "2 hours ago"}</span>
+                    <span>{nl ? "Succesvol getraind op 12K nieuwe voorbeelden" : fr ? "Entraîné avec succès sur 12K nouveaux échantillons" : "Successfully trained on 12K new samples"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-muted-foreground">1 day ago</span>
-                    <span>Model optimization completed (+3% accuracy)</span>
+                    <span className="text-muted-foreground">{nl ? "1 dag geleden" : fr ? "Il y a 1 jour" : "1 day ago"}</span>
+                    <span>{nl ? "Modeloptimalisatie voltooid (+3% nauwkeurigheid)" : fr ? "Optimisation du modèle terminée (+3% précision)" : "Model optimization completed (+3% accuracy)"}</span>
                   </div>
                   <div className="flex items-center gap-3 text-sm">
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <span className="text-muted-foreground">2 days ago</span>
-                    <span>Training paused - insufficient data quality</span>
+                    <span className="text-muted-foreground">{nl ? "2 dagen geleden" : fr ? "Il y a 2 jours" : "2 days ago"}</span>
+                    <span>{nl ? "Training gepauzeerd - onvoldoende datakwaliteit" : fr ? "Entraînement en pause - qualité des données insuffisante" : "Training paused - insufficient data quality"}</span>
                   </div>
                 </div>
               </div>
@@ -248,17 +253,17 @@ const AITrainingInterface = () => {
       {/* Training Data Upload */}
       <Card>
         <CardHeader>
-          <CardTitle>Training Data</CardTitle>
-          <CardDescription>Upload new training data to improve model performance</CardDescription>
+          <CardTitle>{nl ? "Trainingsdata" : fr ? "Données d'Entraînement" : "Training Data"}</CardTitle>
+          <CardDescription>{nl ? "Upload nieuwe trainingsdata om modelprestaties te verbeteren" : fr ? "Téléchargez de nouvelles données d'entraînement pour améliorer les performances du modèle" : "Upload new training data to improve model performance"}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="border-2 border-dashed rounded-lg p-8 text-center hover:bg-accent/50 cursor-pointer transition-colors">
             <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">Drop training files here</h3>
+            <h3 className="text-lg font-medium mb-2">{nl ? "Sleep trainingsbestanden hierheen" : fr ? "Déposez les fichiers d'entraînement ici" : "Drop training files here"}</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Support for CSV, JSON, and TXT files up to 100MB
+              {nl ? "Ondersteuning voor CSV, JSON en TXT bestanden tot 100MB" : fr ? "Prise en charge des fichiers CSV, JSON et TXT jusqu'à 100 Mo" : "Support for CSV, JSON, and TXT files up to 100MB"}
             </p>
-            <Button variant="secondary">Browse Files</Button>
+            <Button variant="secondary">{nl ? "Bestanden Bladeren" : fr ? "Parcourir les Fichiers" : "Browse Files"}</Button>
           </div>
         </CardContent>
       </Card>

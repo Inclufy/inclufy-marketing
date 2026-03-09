@@ -26,6 +26,7 @@ import {
   Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,6 +103,10 @@ function ChipsEditor({
 }
 
 export default function BrandMemory() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [databaseError, setDatabaseError] = useState<string | null>(null);
@@ -220,10 +225,10 @@ export default function BrandMemory() {
       });
 
       setBm(updated);
-      toast.success("Brand Memory saved");
+      toast.success(nl ? "Merkgeheugen opgeslagen" : fr ? "Memoire de marque sauvegardee" : "Brand Memory saved");
     } catch (e: any) {
       console.error(e);
-      toast.error(e?.message ?? "Save failed");
+      toast.error(e?.message ?? (nl ? "Opslaan mislukt" : fr ? "Echec de la sauvegarde" : "Save failed"));
     } finally {
       setSaving(false);
     }
@@ -239,7 +244,7 @@ export default function BrandMemory() {
         if (prev >= 100) {
           clearInterval(interval);
           setIsProcessing(false);
-          toast.success("Brand knowledge processing finished (demo)");
+          toast.success(nl ? "Merkkennis verwerking voltooid (demo)" : fr ? "Traitement des connaissances de marque termine (demo)" : "Brand knowledge processing finished (demo)");
           return 100;
         }
         return prev + 10;
@@ -272,11 +277,11 @@ export default function BrandMemory() {
       for (const file of Array.from(files)) {
         await brandDocumentsService.uploadFile(file);
       }
-      toast.success("File(s) uploaded");
+      toast.success(nl ? "Bestand(en) geupload" : fr ? "Fichier(s) telecharge(s)" : "File(s) uploaded");
       setDocs(await brandDocumentsService.list());
     } catch (err: any) {
       console.error(err);
-      toast.error(err?.message ?? "Upload failed");
+      toast.error(err?.message ?? (nl ? "Upload mislukt" : fr ? "Echec du telechargement" : "Upload failed"));
     } finally {
       e.target.value = "";
     }
@@ -292,9 +297,9 @@ export default function BrandMemory() {
       setUrlTitle("");
       setUrlValue("");
       setDocs(await brandDocumentsService.list());
-      toast.success("URL added");
+      toast.success(nl ? "URL toegevoegd" : fr ? "URL ajoutee" : "URL added");
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to add URL");
+      toast.error(e?.message ?? (nl ? "URL toevoegen mislukt" : fr ? "Echec de l'ajout de l'URL" : "Failed to add URL"));
     }
   };
 
@@ -302,9 +307,9 @@ export default function BrandMemory() {
     try {
       await brandDocumentsService.deleteDoc(doc.id, doc.storage_path);
       setDocs(await brandDocumentsService.list());
-      toast.success("Document deleted");
+      toast.success(nl ? "Document verwijderd" : fr ? "Document supprime" : "Document deleted");
     } catch (e: any) {
-      toast.error(e?.message ?? "Delete failed");
+      toast.error(e?.message ?? (nl ? "Verwijderen mislukt" : fr ? "Echec de la suppression" : "Delete failed"));
     }
   };
 
@@ -318,9 +323,9 @@ export default function BrandMemory() {
         data: {},
       });
       setEntities([created, ...entities]);
-      toast.success(`${entity_type} added`);
+      toast.success(nl ? `${entity_type} toegevoegd` : fr ? `${entity_type} ajoute` : `${entity_type} added`);
     } catch (e: any) {
-      toast.error(e?.message ?? "Create failed");
+      toast.error(e?.message ?? (nl ? "Aanmaken mislukt" : fr ? "Echec de la creation" : "Create failed"));
     }
   };
 
@@ -346,7 +351,7 @@ export default function BrandMemory() {
       });
       setExamples([created, ...examples]);
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed to add example");
+      toast.error(e?.message ?? (nl ? "Voorbeeld toevoegen mislukt" : fr ? "Echec de l'ajout de l'exemple" : "Failed to add example"));
     }
   };
 
@@ -399,9 +404,9 @@ export default function BrandMemory() {
         ...aiHistory.slice(0, 9), // Keep last 10
       ]);
       
-      toast.success("Content generated!");
+      toast.success(nl ? "Content gegenereerd!" : fr ? "Contenu genere !" : "Content generated!");
     } catch (error: any) {
-      toast.error(error.message || "Failed to generate content");
+      toast.error(error.message || (nl ? "Content genereren mislukt" : fr ? "Echec de la generation de contenu" : "Failed to generate content"));
     } finally {
       setAiGenerating(false);
     }
@@ -409,7 +414,7 @@ export default function BrandMemory() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
+    toast.success(nl ? "Gekopieerd naar klembord!" : fr ? "Copie dans le presse-papiers !" : "Copied to clipboard!");
   };
 
   // AI Image Generator functions
@@ -434,9 +439,9 @@ export default function BrandMemory() {
       });
 
       setGeneratedImages([response.imageUrl, ...generatedImages.slice(0, 8)]);
-      toast.success("Image generated!");
+      toast.success(nl ? "Afbeelding gegenereerd!" : fr ? "Image generee !" : "Image generated!");
     } catch (error: any) {
-      toast.error(error.message || "Failed to generate image");
+      toast.error(error.message || (nl ? "Afbeelding genereren mislukt" : fr ? "Echec de la generation d'image" : "Failed to generate image"));
     } finally {
       setImageGenerating(false);
     }
@@ -456,7 +461,7 @@ export default function BrandMemory() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (error) {
-      toast.error("Failed to download image");
+      toast.error(nl ? "Afbeelding downloaden mislukt" : fr ? "Echec du telechargement de l'image" : "Failed to download image");
     }
   };
 
@@ -471,39 +476,39 @@ export default function BrandMemory() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
-            Brand Memory
+            {nl ? 'Merkgeheugen' : fr ? 'Memoire de Marque' : 'Brand Memory'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400">
-            AI training hub for consistent brand voice and identity
+            {nl ? 'AI-trainingshub voor consistente merkstem en identiteit' : fr ? "Hub d'entrainement IA pour une voix et identite de marque coherentes" : 'AI training hub for consistent brand voice and identity'}
           </p>
         </div>
 
         <Alert className="mb-6 border-amber-200 bg-amber-50 dark:bg-amber-950/20">
           <AlertCircle className="h-4 w-4 text-amber-600" />
           <AlertDescription className="text-amber-800 dark:text-amber-200">
-            <strong>Database Connection Issue:</strong> {databaseError}
+            <strong>{nl ? 'Databaseverbindingsprobleem:' : fr ? 'Probleme de connexion a la base de donnees :' : 'Database Connection Issue:'}</strong> {databaseError}
           </AlertDescription>
         </Alert>
 
         <Card>
           <CardHeader>
-            <CardTitle>Troubleshooting Steps</CardTitle>
-            <CardDescription>Try these solutions to resolve the connection issue</CardDescription>
+            <CardTitle>{nl ? 'Probleemoplossing' : fr ? 'Etapes de depannage' : 'Troubleshooting Steps'}</CardTitle>
+            <CardDescription>{nl ? 'Probeer deze oplossingen om het verbindingsprobleem op te lossen' : fr ? 'Essayez ces solutions pour resoudre le probleme de connexion' : 'Try these solutions to resolve the connection issue'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-4">
               <div>
-                <h4 className="font-semibold mb-2">1. Retry the connection</h4>
+                <h4 className="font-semibold mb-2">{nl ? '1. Verbinding opnieuw proberen' : fr ? '1. Reessayer la connexion' : '1. Retry the connection'}</h4>
                 <Button onClick={handleRetry} disabled={retrying}>
                   {retrying ? (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                      Retrying...
+                      {nl ? 'Opnieuw proberen...' : fr ? 'Nouvelle tentative...' : 'Retrying...'}
                     </>
                   ) : (
                     <>
                       <RefreshCw className="mr-2 h-4 w-4" />
-                      Retry Connection
+                      {nl ? 'Verbinding opnieuw proberen' : fr ? 'Reessayer la connexion' : 'Retry Connection'}
                     </>
                   )}
                 </Button>
@@ -512,7 +517,7 @@ export default function BrandMemory() {
               <Separator />
 
               <div>
-                <h4 className="font-semibold mb-2">2. Check Supabase Dashboard</h4>
+                <h4 className="font-semibold mb-2">{nl ? '2. Controleer Supabase Dashboard' : fr ? '2. Verifier le tableau de bord Supabase' : '2. Check Supabase Dashboard'}</h4>
                 <p className="text-sm text-muted-foreground mb-3">
                   The brand_memory table might need to be created or the schema cache needs refreshing.
                 </p>
@@ -527,22 +532,22 @@ export default function BrandMemory() {
               <Separator />
 
               <div>
-                <h4 className="font-semibold mb-2">3. Continue with other features</h4>
+                <h4 className="font-semibold mb-2">{nl ? '3. Ga verder met andere functies' : fr ? '3. Continuer avec les autres fonctionnalites' : '3. Continue with other features'}</h4>
                 <p className="text-sm text-muted-foreground mb-3">
-                  While we resolve this issue, you can use other parts of the application.
+                  {nl ? 'Terwijl we dit probleem oplossen, kunt u andere delen van de applicatie gebruiken.' : fr ? "Pendant que nous resolvons ce probleme, vous pouvez utiliser d'autres parties de l'application." : 'While we resolve this issue, you can use other parts of the application.'}
                 </p>
                 <div className="flex gap-2">
                   <Button 
                     variant="outline" 
                     onClick={() => window.location.href = '/app/setup/brand'}
                   >
-                    Go to Brand Setup
+                    {nl ? 'Naar Merk Setup' : fr ? 'Aller a la configuration de marque' : 'Go to Brand Setup'}
                   </Button>
                   <Button 
                     variant="outline" 
                     onClick={() => window.location.href = '/app/content-studio'}
                   >
-                    Visit Content Studio
+                    {nl ? 'Bezoek Content Studio' : fr ? 'Visiter le Studio de Contenu' : 'Visit Content Studio'}
                   </Button>
                 </div>
               </div>
@@ -559,7 +564,7 @@ export default function BrandMemory() {
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
-          <p className="text-muted-foreground mt-2">Loading Brand Memory...</p>
+          <p className="text-muted-foreground mt-2">{nl ? 'Merkgeheugen laden...' : fr ? 'Chargement de la memoire de marque...' : 'Loading Brand Memory...'}</p>
         </div>
       </div>
     );
@@ -573,21 +578,21 @@ export default function BrandMemory() {
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Brain className="h-8 w-8 text-primary" />
-            Brand Memory Engine
+            {nl ? 'Merkgeheugen Engine' : fr ? 'Moteur Memoire de Marque' : 'Brand Memory Engine'}
           </h2>
           <p className="text-muted-foreground mt-2">
-            Everything is saved in Supabase: Identity, Tone, ICPs, Products, Competitors, Examples, Documents/URLs.
+            {nl ? 'Alles wordt opgeslagen in Supabase: Identiteit, Toon, ICPs, Producten, Concurrenten, Voorbeelden, Documenten/URLs.' : fr ? "Tout est sauvegarde dans Supabase : Identite, Ton, ICPs, Produits, Concurrents, Exemples, Documents/URLs." : 'Everything is saved in Supabase: Identity, Tone, ICPs, Products, Competitors, Examples, Documents/URLs.'}
           </p>
         </div>
 
         <div className="flex gap-2">
           <Button variant="outline" onClick={saveBrandMemory} disabled={saving}>
             <Save className="mr-2 h-4 w-4" />
-            {saving ? "Saving..." : "Save"}
+            {saving ? (nl ? "Opslaan..." : fr ? "Sauvegarde..." : "Saving...") : (nl ? "Opslaan" : fr ? "Sauvegarder" : "Save")}
           </Button>
           <Button onClick={startRAGProcessing} disabled={isProcessing || docs.length === 0}>
-            {isProcessing ? <>Processing... {processingProgress}%</> : <>
-              <Sparkles className="mr-2 h-4 w-4" /> Update Memory
+            {isProcessing ? <>{nl ? 'Verwerken...' : fr ? 'Traitement...' : 'Processing...'} {processingProgress}%</> : <>
+              <Sparkles className="mr-2 h-4 w-4" /> {nl ? 'Geheugen bijwerken' : fr ? 'Mettre a jour la memoire' : 'Update Memory'}
             </>}
           </Button>
         </div>
@@ -598,7 +603,7 @@ export default function BrandMemory() {
           <CardContent className="pt-6">
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
-                <span>Processing brand knowledge...</span>
+                <span>{nl ? 'Merkkennis verwerken...' : fr ? 'Traitement des connaissances de marque...' : 'Processing brand knowledge...'}</span>
                 <span>{processingProgress}%</span>
               </div>
               <Progress value={processingProgress} />
@@ -609,13 +614,13 @@ export default function BrandMemory() {
 
       <Tabs defaultValue="brand" className="space-y-6">
         <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="brand">Brand Identity</TabsTrigger>
-          <TabsTrigger value="tone">Voice & Tone</TabsTrigger>
-          <TabsTrigger value="entities">ICP / Products</TabsTrigger>
-          <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
-          <TabsTrigger value="examples">Examples</TabsTrigger>
-          <TabsTrigger value="ai-writer">AI Writer</TabsTrigger>
-          <TabsTrigger value="ai-images">AI Images</TabsTrigger>
+          <TabsTrigger value="brand">{nl ? 'Merkidentiteit' : fr ? 'Identite de Marque' : 'Brand Identity'}</TabsTrigger>
+          <TabsTrigger value="tone">{nl ? 'Stem & Toon' : fr ? 'Voix & Ton' : 'Voice & Tone'}</TabsTrigger>
+          <TabsTrigger value="entities">{nl ? 'ICP / Producten' : fr ? 'ICP / Produits' : 'ICP / Products'}</TabsTrigger>
+          <TabsTrigger value="knowledge">{nl ? 'Kennisbank' : fr ? 'Base de Connaissances' : 'Knowledge Base'}</TabsTrigger>
+          <TabsTrigger value="examples">{nl ? 'Voorbeelden' : fr ? 'Exemples' : 'Examples'}</TabsTrigger>
+          <TabsTrigger value="ai-writer">{nl ? 'AI Schrijver' : fr ? 'Redacteur IA' : 'AI Writer'}</TabsTrigger>
+          <TabsTrigger value="ai-images">{nl ? 'AI Afbeeldingen' : fr ? 'Images IA' : 'AI Images'}</TabsTrigger>
         </TabsList>
 
         {/* Brand Identity */}
@@ -624,69 +629,69 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Building className="h-5 w-5" />
-                Basic Information
+                {nl ? 'Basisinformatie' : fr ? 'Informations de Base' : 'Basic Information'}
               </CardTitle>
-              <CardDescription>Core identity + positioning</CardDescription>
+              <CardDescription>{nl ? 'Kernidentiteit + positionering' : fr ? 'Identite de base + positionnement' : 'Core identity + positioning'}</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Brand Name</Label>
+                  <Label>{nl ? 'Merknaam' : fr ? 'Nom de Marque' : 'Brand Name'}</Label>
                   <Input value={bm.brand_name} onChange={(e) => setBm({ ...bm, brand_name: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Legal Name</Label>
+                  <Label>{nl ? 'Juridische Naam' : fr ? 'Raison Sociale' : 'Legal Name'}</Label>
                   <Input value={bm.legal_name} onChange={(e) => setBm({ ...bm, legal_name: e.target.value })} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Brand Description</Label>
+                <Label>{nl ? 'Merkbeschrijving' : fr ? 'Description de la Marque' : 'Brand Description'}</Label>
                 <Textarea value={bm.brand_description} onChange={(e) => setBm({ ...bm, brand_description: e.target.value })} rows={4} />
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Mission</Label>
+                  <Label>{nl ? 'Missie' : fr ? 'Mission' : 'Mission'}</Label>
                   <Textarea value={bm.mission} onChange={(e) => setBm({ ...bm, mission: e.target.value })} rows={3} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Vision</Label>
+                  <Label>{nl ? 'Visie' : fr ? 'Vision' : 'Vision'}</Label>
                   <Textarea value={bm.vision} onChange={(e) => setBm({ ...bm, vision: e.target.value })} rows={3} />
                 </div>
               </div>
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Tagline</Label>
+                  <Label>{nl ? 'Slogan' : fr ? 'Slogan' : 'Tagline'}</Label>
                   <Input value={bm.tagline} onChange={(e) => setBm({ ...bm, tagline: e.target.value })} />
                 </div>
                 <div className="space-y-2">
-                  <Label>Elevator pitch</Label>
+                  <Label>{nl ? 'Elevator pitch' : fr ? 'Argumentaire eclair' : 'Elevator pitch'}</Label>
                   <Input value={bm.elevator_pitch} onChange={(e) => setBm({ ...bm, elevator_pitch: e.target.value })} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label>Positioning statement</Label>
+                <Label>{nl ? 'Positioneringsverklaring' : fr ? 'Declaration de positionnement' : 'Positioning statement'}</Label>
                 <Textarea value={bm.positioning_statement} onChange={(e) => setBm({ ...bm, positioning_statement: e.target.value })} rows={3} />
               </div>
 
               <Separator />
 
               <div className="grid md:grid-cols-2 gap-6">
-                <ChipsEditor label="Industries" values={bm.industries} onChange={(v) => setBm({ ...bm, industries: v })} />
-                <ChipsEditor label="Audiences" values={bm.audiences} onChange={(v) => setBm({ ...bm, audiences: v })} />
-                <ChipsEditor label="Regions" values={bm.regions} onChange={(v) => setBm({ ...bm, regions: v })} />
-                <ChipsEditor label="Languages" values={bm.languages} onChange={(v) => setBm({ ...bm, languages: v })} placeholder="en, nl, de..." />
+                <ChipsEditor label={nl ? "Industrieen" : fr ? "Industries" : "Industries"} values={bm.industries} onChange={(v) => setBm({ ...bm, industries: v })} />
+                <ChipsEditor label={nl ? "Doelgroepen" : fr ? "Audiences" : "Audiences"} values={bm.audiences} onChange={(v) => setBm({ ...bm, audiences: v })} />
+                <ChipsEditor label={nl ? "Regio's" : fr ? "Regions" : "Regions"} values={bm.regions} onChange={(v) => setBm({ ...bm, regions: v })} />
+                <ChipsEditor label={nl ? "Talen" : fr ? "Langues" : "Languages"} values={bm.languages} onChange={(v) => setBm({ ...bm, languages: v })} placeholder="en, nl, de..." />
               </div>
 
               <Separator />
 
               <div className="grid md:grid-cols-2 gap-6">
-                <ChipsEditor label="USPs" values={bm.usps} onChange={(v) => setBm({ ...bm, usps: v })} />
-                <ChipsEditor label="Differentiators" values={bm.differentiators} onChange={(v) => setBm({ ...bm, differentiators: v })} />
+                <ChipsEditor label={nl ? "USP's" : fr ? "USP" : "USPs"} values={bm.usps} onChange={(v) => setBm({ ...bm, usps: v })} />
+                <ChipsEditor label={nl ? "Onderscheidende factoren" : fr ? "Differenciateurs" : "Differentiators"} values={bm.differentiators} onChange={(v) => setBm({ ...bm, differentiators: v })} />
               </div>
             </CardContent>
           </Card>
@@ -698,9 +703,9 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageSquare className="h-5 w-5" />
-                Brand Voice Attributes
+                {nl ? 'Merkstemeigenschappen' : fr ? 'Attributs de Voix de Marque' : 'Brand Voice Attributes'}
               </CardTitle>
-              <CardDescription>Tone + style rules</CardDescription>
+              <CardDescription>{nl ? 'Toon + stijlregels' : fr ? 'Regles de ton + style' : 'Tone + style rules'}</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
@@ -709,12 +714,12 @@ export default function BrandMemory() {
                   <div key={index} className="flex gap-2 items-start">
                     <div className="flex-1 grid grid-cols-2 gap-2">
                       <Input
-                        placeholder="Attribute"
+                        placeholder={nl ? "Eigenschap" : fr ? "Attribut" : "Attribute"}
                         value={attr.attribute}
                         onChange={(e) => updateToneAttribute(index, "attribute", e.target.value)}
                       />
                       <Input
-                        placeholder="Description"
+                        placeholder={nl ? "Beschrijving" : fr ? "Description" : "Description"}
                         value={attr.description}
                         onChange={(e) => updateToneAttribute(index, "description", e.target.value)}
                       />
@@ -726,7 +731,7 @@ export default function BrandMemory() {
                 ))}
                 <Button variant="outline" onClick={addToneAttribute}>
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Attribute
+                  {nl ? 'Eigenschap toevoegen' : fr ? 'Ajouter un attribut' : 'Add Attribute'}
                 </Button>
               </div>
 
@@ -734,7 +739,7 @@ export default function BrandMemory() {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-green-600">Do's</Label>
+                  <Label className="text-green-600">{nl ? "Wel doen" : fr ? "A faire" : "Do's"}</Label>
                   <Textarea
                     value={bm.messaging_dos}
                     onChange={(e) => setBm({ ...bm, messaging_dos: e.target.value })}
@@ -742,7 +747,7 @@ export default function BrandMemory() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-red-600">Don'ts</Label>
+                  <Label className="text-red-600">{nl ? "Niet doen" : fr ? "A eviter" : "Don'ts"}</Label>
                   <Textarea
                     value={bm.messaging_donts}
                     onChange={(e) => setBm({ ...bm, messaging_donts: e.target.value })}
@@ -755,19 +760,19 @@ export default function BrandMemory() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 <ChipsEditor
-                  label="Preferred vocabulary"
+                  label={nl ? "Voorkeurswoordenschat" : fr ? "Vocabulaire prefere" : "Preferred vocabulary"}
                   values={bm.preferred_vocabulary}
                   onChange={(v) => setBm({ ...bm, preferred_vocabulary: v })}
                 />
                 <ChipsEditor
-                  label="Banned phrases"
+                  label={nl ? "Verboden zinnen" : fr ? "Phrases interdites" : "Banned phrases"}
                   values={bm.banned_phrases}
                   onChange={(v) => setBm({ ...bm, banned_phrases: v })}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Compliance rules / claims policy</Label>
+                <Label>{nl ? 'Nalevingsregels / claimsbeleid' : fr ? 'Regles de conformite / politique de reclamation' : 'Compliance rules / claims policy'}</Label>
                 <Textarea
                   value={bm.compliance_rules}
                   onChange={(e) => setBm({ ...bm, compliance_rules: e.target.value })}
@@ -786,11 +791,11 @@ export default function BrandMemory() {
                 <Users className="h-5 w-5" />
                 ICPs
               </CardTitle>
-              <CardDescription>Saved as brand_entities(entity_type=icp)</CardDescription>
+              <CardDescription>{nl ? 'Opgeslagen als brand_entities(entity_type=icp)' : fr ? 'Sauvegarde en tant que brand_entities(entity_type=icp)' : 'Saved as brand_entities(entity_type=icp)'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button variant="outline" onClick={() => createEntityQuick("icp")}>
-                <Plus className="h-4 w-4 mr-2" /> Add ICP
+                <Plus className="h-4 w-4 mr-2" /> {nl ? 'ICP toevoegen' : fr ? 'Ajouter ICP' : 'Add ICP'}
               </Button>
 
               <div className="space-y-3">
@@ -809,13 +814,13 @@ export default function BrandMemory() {
                     <Textarea
                       value={icp.description}
                       onChange={(e) => updateEntity(icp.id, { description: e.target.value })}
-                      placeholder="ICP description"
+                      placeholder={nl ? "ICP-beschrijving" : fr ? "Description ICP" : "ICP description"}
                       rows={3}
                     />
                   </div>
                 ))}
                 {icps.length === 0 && (
-                  <p className="text-sm text-muted-foreground">No ICPs yet.</p>
+                  <p className="text-sm text-muted-foreground">{nl ? 'Nog geen ICPs.' : fr ? "Pas encore d'ICP." : 'No ICPs yet.'}</p>
                 )}
               </div>
             </CardContent>
@@ -825,13 +830,13 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Products / Services
+                {nl ? 'Producten / Diensten' : fr ? 'Produits / Services' : 'Products / Services'}
               </CardTitle>
-              <CardDescription>Saved as entity_type=product</CardDescription>
+              <CardDescription>{nl ? 'Opgeslagen als entity_type=product' : fr ? 'Sauvegarde en tant que entity_type=product' : 'Saved as entity_type=product'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button variant="outline" onClick={() => createEntityQuick("product")}>
-                <Plus className="h-4 w-4 mr-2" /> Add Product
+                <Plus className="h-4 w-4 mr-2" /> {nl ? 'Product toevoegen' : fr ? 'Ajouter un produit' : 'Add Product'}
               </Button>
 
               <div className="space-y-3">
@@ -846,12 +851,12 @@ export default function BrandMemory() {
                     <Textarea
                       value={p.description}
                       onChange={(e) => updateEntity(p.id, { description: e.target.value })}
-                      placeholder="Product description"
+                      placeholder={nl ? "Productbeschrijving" : fr ? "Description du produit" : "Product description"}
                       rows={3}
                     />
                   </div>
                 ))}
-                {products.length === 0 && <p className="text-sm text-muted-foreground">No products yet.</p>}
+                {products.length === 0 && <p className="text-sm text-muted-foreground">{nl ? 'Nog geen producten.' : fr ? 'Pas encore de produits.' : 'No products yet.'}</p>}
               </div>
             </CardContent>
           </Card>
@@ -860,13 +865,13 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Shield className="h-5 w-5" />
-                Competitors
+                {nl ? 'Concurrenten' : fr ? 'Concurrents' : 'Competitors'}
               </CardTitle>
-              <CardDescription>Saved as entity_type=competitor</CardDescription>
+              <CardDescription>{nl ? 'Opgeslagen als entity_type=competitor' : fr ? 'Sauvegarde en tant que entity_type=competitor' : 'Saved as entity_type=competitor'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
               <Button variant="outline" onClick={() => createEntityQuick("competitor")}>
-                <Plus className="h-4 w-4 mr-2" /> Add Competitor
+                <Plus className="h-4 w-4 mr-2" /> {nl ? 'Concurrent toevoegen' : fr ? 'Ajouter un concurrent' : 'Add Competitor'}
               </Button>
 
               <div className="space-y-3">
@@ -881,12 +886,12 @@ export default function BrandMemory() {
                     <Textarea
                       value={c.description}
                       onChange={(e) => updateEntity(c.id, { description: e.target.value })}
-                      placeholder="Competitor notes"
+                      placeholder={nl ? "Concurrent notities" : fr ? "Notes sur le concurrent" : "Competitor notes"}
                       rows={3}
                     />
                   </div>
                 ))}
-                {competitors.length === 0 && <p className="text-sm text-muted-foreground">No competitors yet.</p>}
+                {competitors.length === 0 && <p className="text-sm text-muted-foreground">{nl ? 'Nog geen concurrenten.' : fr ? 'Pas encore de concurrents.' : 'No competitors yet.'}</p>}
               </div>
             </CardContent>
           </Card>
@@ -898,23 +903,23 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BookOpen className="h-5 w-5" />
-                Document Library (Supabase Storage)
+                {nl ? 'Documentbibliotheek (Supabase Storage)' : fr ? 'Bibliotheque de Documents (Supabase Storage)' : 'Document Library (Supabase Storage)'}
               </CardTitle>
-              <CardDescription>Files + URLs saved in brand_documents</CardDescription>
+              <CardDescription>{nl ? 'Bestanden + URLs opgeslagen in brand_documents' : fr ? 'Fichiers + URLs sauvegardes dans brand_documents' : 'Files + URLs saved in brand_documents'}</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-4">
               {/* Upload */}
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium mb-2">Upload Documents</h3>
+                <h3 className="text-lg font-medium mb-2">{nl ? 'Documenten uploaden' : fr ? 'Telecharger des documents' : 'Upload Documents'}</h3>
                 <p className="text-sm text-muted-foreground mb-4">PDF, DOC, DOCX, TXT</p>
 
                 <Label htmlFor="file-upload">
                   <Button asChild>
                     <span>
                       <Upload className="h-4 w-4 mr-2" />
-                      Choose Files
+                      {nl ? 'Bestanden kiezen' : fr ? 'Choisir des fichiers' : 'Choose Files'}
                     </span>
                   </Button>
                 </Label>
@@ -932,7 +937,7 @@ export default function BrandMemory() {
               {/* List */}
               {docs.length > 0 && (
                 <div className="space-y-2">
-                  <h4 className="font-medium">Sources</h4>
+                  <h4 className="font-medium">{nl ? 'Bronnen' : fr ? 'Sources' : 'Sources'}</h4>
                   {docs.map((doc) => (
                     <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
                       <div className="flex items-center gap-3">
@@ -964,10 +969,10 @@ export default function BrandMemory() {
 
               {/* URL doc */}
               <div className="space-y-2">
-                <Label>Add Website URL source</Label>
+                <Label>{nl ? 'Website URL-bron toevoegen' : fr ? 'Ajouter une source URL de site web' : 'Add Website URL source'}</Label>
                 <div className="grid md:grid-cols-3 gap-2">
                   <Input
-                    placeholder="Title (optional)"
+                    placeholder={nl ? "Titel (optioneel)" : fr ? "Titre (optionnel)" : "Title (optional)"}
                     value={urlTitle}
                     onChange={(e) => setUrlTitle(e.target.value)}
                   />
@@ -978,7 +983,7 @@ export default function BrandMemory() {
                   />
                   <Button onClick={addUrlDoc}>
                     <LinkIcon className="h-4 w-4 mr-2" />
-                    Add URL
+                    {nl ? 'URL toevoegen' : fr ? 'Ajouter URL' : 'Add URL'}
                   </Button>
                 </div>
               </div>
@@ -987,7 +992,7 @@ export default function BrandMemory() {
 
               {/* Quick URLs in main brand_memory (optional) */}
               <ChipsEditor
-                label="Quick URLs (stored also in brand_memory.urls)"
+                label={nl ? "Snelle URLs (ook opgeslagen in brand_memory.urls)" : fr ? "URLs rapides (aussi sauvegardees dans brand_memory.urls)" : "Quick URLs (stored also in brand_memory.urls)"}
                 values={bm.urls}
                 onChange={(v) => setBm({ ...bm, urls: v })}
               />
@@ -999,17 +1004,17 @@ export default function BrandMemory() {
         <TabsContent value="examples" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Messaging Examples (stored in brand_messaging_examples)</CardTitle>
-              <CardDescription>Good / bad examples per channel</CardDescription>
+              <CardTitle>{nl ? 'Berichtvoorbeelden (opgeslagen in brand_messaging_examples)' : fr ? 'Exemples de messages (sauvegardes dans brand_messaging_examples)' : 'Messaging Examples (stored in brand_messaging_examples)'}</CardTitle>
+              <CardDescription>{nl ? 'Goede / slechte voorbeelden per kanaal' : fr ? 'Bons / mauvais exemples par canal' : 'Good / bad examples per channel'}</CardDescription>
             </CardHeader>
 
             <CardContent className="space-y-3">
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => addExample("good")}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Good Example
+                  <Plus className="h-4 w-4 mr-2" /> {nl ? 'Goed voorbeeld toevoegen' : fr ? 'Ajouter un bon exemple' : 'Add Good Example'}
                 </Button>
                 <Button variant="outline" onClick={() => addExample("bad")}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Bad Example
+                  <Plus className="h-4 w-4 mr-2" /> {nl ? 'Slecht voorbeeld toevoegen' : fr ? 'Ajouter un mauvais exemple' : 'Add Bad Example'}
                 </Button>
               </div>
 
@@ -1036,25 +1041,25 @@ export default function BrandMemory() {
                     <Input
                       value={ex.title}
                       onChange={(e) => updateExample(ex.id, { title: e.target.value })}
-                      placeholder="Title"
+                      placeholder={nl ? "Titel" : fr ? "Titre" : "Title"}
                     />
 
                     <Textarea
                       value={ex.content}
                       onChange={(e) => updateExample(ex.id, { content: e.target.value })}
-                      placeholder="Paste example content..."
+                      placeholder={nl ? "Plak voorbeeldcontent..." : fr ? "Collez le contenu d'exemple..." : "Paste example content..."}
                       rows={4}
                     />
 
                     <Textarea
                       value={ex.notes}
                       onChange={(e) => updateExample(ex.id, { notes: e.target.value })}
-                      placeholder="Notes (why good/bad)"
+                      placeholder={nl ? "Notities (waarom goed/slecht)" : fr ? "Notes (pourquoi bon/mauvais)" : "Notes (why good/bad)"}
                       rows={2}
                     />
                   </div>
                 ))}
-                {examples.length === 0 && <p className="text-sm text-muted-foreground">No examples yet.</p>}
+                {examples.length === 0 && <p className="text-sm text-muted-foreground">{nl ? 'Nog geen voorbeelden.' : fr ? "Pas encore d'exemples." : 'No examples yet.'}</p>}
               </div>
 
               <Separator />
@@ -1062,7 +1067,7 @@ export default function BrandMemory() {
               {/* Quick examples stored in brand_memory (optional, but you asked "alles") */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Quick Good Example (brand_memory.examples_good)</Label>
+                  <Label>{nl ? 'Snel goed voorbeeld (brand_memory.examples_good)' : fr ? 'Exemple rapide bon (brand_memory.examples_good)' : 'Quick Good Example (brand_memory.examples_good)'}</Label>
                   <Textarea
                     value={bm.examples_good}
                     onChange={(e) => setBm({ ...bm, examples_good: e.target.value })}
@@ -1070,12 +1075,12 @@ export default function BrandMemory() {
                   />
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <CheckCircle className="h-4 w-4 text-green-600" />
-                    Helps style learning
+                    {nl ? 'Helpt bij stijlanalyse' : fr ? "Aide a l'apprentissage du style" : 'Helps style learning'}
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Quick Poor Example (brand_memory.examples_poor)</Label>
+                  <Label>{nl ? 'Snel slecht voorbeeld (brand_memory.examples_poor)' : fr ? 'Exemple rapide mauvais (brand_memory.examples_poor)' : 'Quick Poor Example (brand_memory.examples_poor)'}</Label>
                   <Textarea
                     value={bm.examples_poor}
                     onChange={(e) => setBm({ ...bm, examples_poor: e.target.value })}
@@ -1083,7 +1088,7 @@ export default function BrandMemory() {
                   />
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    Helps avoid unwanted patterns
+                    {nl ? 'Helpt ongewenste patronen te vermijden' : fr ? "Aide a eviter les schemas indesirables" : 'Helps avoid unwanted patterns'}
                   </div>
                 </div>
               </div>
@@ -1091,7 +1096,7 @@ export default function BrandMemory() {
               <Separator />
 
               <div className="space-y-2">
-                <Label>Test prompt (stored in brand_memory.test_prompt)</Label>
+                <Label>{nl ? 'Testprompt (opgeslagen in brand_memory.test_prompt)' : fr ? 'Prompt de test (sauvegarde dans brand_memory.test_prompt)' : 'Test prompt (stored in brand_memory.test_prompt)'}</Label>
                 <Textarea
                   value={bm.test_prompt}
                   onChange={(e) => setBm({ ...bm, test_prompt: e.target.value })}
@@ -1099,7 +1104,7 @@ export default function BrandMemory() {
                 />
                 <Button className="w-full" onClick={() => toast("Hook your generator here")}>
                   <Sparkles className="mr-2 h-4 w-4" />
-                  Generate Sample Content (hook later)
+                  {nl ? 'Voorbeeldcontent genereren (later koppelen)' : fr ? 'Generer du contenu exemple (connecter plus tard)' : 'Generate Sample Content (hook later)'}
                 </Button>
               </div>
             </CardContent>
@@ -1112,46 +1117,46 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Wand2 className="h-5 w-5" />
-                AI Content Writer
+                {nl ? 'AI Contentschrijver' : fr ? 'Redacteur de Contenu IA' : 'AI Content Writer'}
               </CardTitle>
-              <CardDescription>Generate on-brand content using your brand guidelines</CardDescription>
+              <CardDescription>{nl ? 'Genereer merkconforme content met jouw merkrichtlijnen' : fr ? 'Generez du contenu conforme a la marque en utilisant vos directives de marque' : 'Generate on-brand content using your brand guidelines'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Content Type Selection */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Content Type</Label>
+                  <Label>{nl ? 'Contenttype' : fr ? 'Type de contenu' : 'Content Type'}</Label>
                   <Select value={aiContentType} onValueChange={setAiContentType}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="email">Email</SelectItem>
-                      <SelectItem value="blog">Blog Post</SelectItem>
-                      <SelectItem value="social-linkedin">LinkedIn Post</SelectItem>
-                      <SelectItem value="social-twitter">Twitter/X Post</SelectItem>
-                      <SelectItem value="ad-copy">Ad Copy</SelectItem>
-                      <SelectItem value="product-description">Product Description</SelectItem>
-                      <SelectItem value="press-release">Press Release</SelectItem>
-                      <SelectItem value="newsletter">Newsletter</SelectItem>
+                      <SelectItem value="email">{nl ? 'E-mail' : fr ? 'E-mail' : 'Email'}</SelectItem>
+                      <SelectItem value="blog">{nl ? 'Blogbericht' : fr ? 'Article de blog' : 'Blog Post'}</SelectItem>
+                      <SelectItem value="social-linkedin">{nl ? 'LinkedIn-bericht' : fr ? 'Publication LinkedIn' : 'LinkedIn Post'}</SelectItem>
+                      <SelectItem value="social-twitter">{nl ? 'Twitter/X-bericht' : fr ? 'Publication Twitter/X' : 'Twitter/X Post'}</SelectItem>
+                      <SelectItem value="ad-copy">{nl ? 'Advertentietekst' : fr ? 'Texte publicitaire' : 'Ad Copy'}</SelectItem>
+                      <SelectItem value="product-description">{nl ? 'Productbeschrijving' : fr ? 'Description de produit' : 'Product Description'}</SelectItem>
+                      <SelectItem value="press-release">{nl ? 'Persbericht' : fr ? 'Communique de presse' : 'Press Release'}</SelectItem>
+                      <SelectItem value="newsletter">{nl ? 'Nieuwsbrief' : fr ? 'Lettre d\'information' : 'Newsletter'}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Tone Override</Label>
+                  <Label>{nl ? 'Toon overschrijven' : fr ? 'Remplacer le ton' : 'Tone Override'}</Label>
                   <Select value={aiTone} onValueChange={setAiTone}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="default">Use Brand Voice</SelectItem>
-                      <SelectItem value="professional">Professional</SelectItem>
-                      <SelectItem value="casual">Casual</SelectItem>
-                      <SelectItem value="friendly">Friendly</SelectItem>
-                      <SelectItem value="authoritative">Authoritative</SelectItem>
-                      <SelectItem value="playful">Playful</SelectItem>
-                      <SelectItem value="urgent">Urgent</SelectItem>
+                      <SelectItem value="default">{nl ? 'Gebruik merkstem' : fr ? 'Utiliser la voix de marque' : 'Use Brand Voice'}</SelectItem>
+                      <SelectItem value="professional">{nl ? 'Professioneel' : fr ? 'Professionnel' : 'Professional'}</SelectItem>
+                      <SelectItem value="casual">{nl ? 'Informeel' : fr ? 'Decontracte' : 'Casual'}</SelectItem>
+                      <SelectItem value="friendly">{nl ? 'Vriendelijk' : fr ? 'Amical' : 'Friendly'}</SelectItem>
+                      <SelectItem value="authoritative">{nl ? 'Gezaghebbend' : fr ? 'Autoritaire' : 'Authoritative'}</SelectItem>
+                      <SelectItem value="playful">{nl ? 'Speels' : fr ? 'Enjoue' : 'Playful'}</SelectItem>
+                      <SelectItem value="urgent">{nl ? 'Urgent' : fr ? 'Urgent' : 'Urgent'}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -1159,7 +1164,7 @@ export default function BrandMemory() {
 
               {/* Prompt Input */}
               <div className="space-y-2">
-                <Label>What would you like to write about?</Label>
+                <Label>{nl ? 'Waarover wil je schrijven?' : fr ? 'Sur quoi aimeriez-vous ecrire ?' : 'What would you like to write about?'}</Label>
                 <Textarea
                   value={aiPrompt}
                   onChange={(e) => setAiPrompt(e.target.value)}
@@ -1176,7 +1181,7 @@ export default function BrandMemory() {
               {/* Target Audience Selection */}
               {icps.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Target Audience</Label>
+                  <Label>{nl ? 'Doelgroep' : fr ? 'Public cible' : 'Target Audience'}</Label>
                   <div className="flex flex-wrap gap-2">
                     {icps.map((icp) => (
                       <Badge
@@ -1200,12 +1205,12 @@ export default function BrandMemory() {
                 {aiGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {nl ? 'Genereren...' : fr ? 'Generation...' : 'Generating...'}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Content
+                    {nl ? 'Content genereren' : fr ? 'Generer du contenu' : 'Generate Content'}
                   </>
                 )}
               </Button>
@@ -1216,7 +1221,7 @@ export default function BrandMemory() {
                   <Separator />
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label>Generated Content</Label>
+                      <Label>{nl ? 'Gegenereerde content' : fr ? 'Contenu genere' : 'Generated Content'}</Label>
                       <div className="flex gap-2">
                         <Button 
                           variant="outline" 
@@ -1224,14 +1229,14 @@ export default function BrandMemory() {
                           onClick={() => copyToClipboard(aiOutput)}
                         >
                           <Copy className="h-4 w-4 mr-2" />
-                          Copy
+                          {nl ? 'Kopieer' : fr ? 'Copier' : 'Copy'}
                         </Button>
-                        <Button 
-                          variant="outline" 
+                        <Button
+                          variant="outline"
                           size="sm"
                           onClick={() => setAiOutput("")}
                         >
-                          Clear
+                          {nl ? 'Wissen' : fr ? 'Effacer' : 'Clear'}
                         </Button>
                       </div>
                     </div>
@@ -1247,20 +1252,20 @@ export default function BrandMemory() {
                   <div className="p-4 bg-muted rounded-lg space-y-2">
                     <h4 className="font-medium flex items-center gap-2">
                       <Shield className="h-4 w-4" />
-                      Brand Compliance Check
+                      {nl ? 'Merkcompliance controle' : fr ? 'Verification de conformite de marque' : 'Brand Compliance Check'}
                     </h4>
                     <div className="space-y-1 text-sm">
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>Matches brand voice and tone</span>
+                        <span>{nl ? 'Past bij merkstem en toon' : fr ? 'Correspond a la voix et au ton de la marque' : 'Matches brand voice and tone'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>No banned phrases detected</span>
+                        <span>{nl ? 'Geen verboden zinnen gedetecteerd' : fr ? 'Aucune phrase interdite detectee' : 'No banned phrases detected'}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span>Aligns with brand mission</span>
+                        <span>{nl ? 'Sluit aan bij merkmissie' : fr ? 'Conforme a la mission de la marque' : 'Aligns with brand mission'}</span>
                       </div>
                     </div>
                   </div>
@@ -1272,7 +1277,7 @@ export default function BrandMemory() {
                 <>
                   <Separator />
                   <div className="space-y-2">
-                    <Label>Recent Generations</Label>
+                    <Label>{nl ? 'Recente generaties' : fr ? 'Generations recentes' : 'Recent Generations'}</Label>
                     <div className="space-y-2 max-h-60 overflow-y-auto">
                       {aiHistory.map((item) => (
                         <div
@@ -1307,14 +1312,14 @@ export default function BrandMemory() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <ImageIcon className="h-5 w-5" />
-                AI Image Generator
+                {nl ? 'AI Afbeeldingsgenerator' : fr ? "Generateur d'Images IA" : 'AI Image Generator'}
               </CardTitle>
-              <CardDescription>Generate on-brand visuals using AI</CardDescription>
+              <CardDescription>{nl ? 'Genereer merkconforme visuele content met AI' : fr ? "Generez des visuels conformes a la marque avec l'IA" : 'Generate on-brand visuals using AI'}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Image Prompt */}
               <div className="space-y-2">
-                <Label>Describe the image you want</Label>
+                <Label>{nl ? 'Beschrijf de afbeelding die je wilt' : fr ? "Decrivez l'image que vous souhaitez" : 'Describe the image you want'}</Label>
                 <Textarea
                   value={imagePrompt}
                   onChange={(e) => setImagePrompt(e.target.value)}
@@ -1325,51 +1330,51 @@ export default function BrandMemory() {
 
               {/* Style Selection */}
               <div className="space-y-2">
-                <Label>Image Style</Label>
+                <Label>{nl ? 'Afbeeldingsstijl' : fr ? "Style d'image" : 'Image Style'}</Label>
                 <Select value={imageStyle} onValueChange={setImageStyle}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="professional">Professional Photography</SelectItem>
-                    <SelectItem value="illustration">Modern Illustration</SelectItem>
-                    <SelectItem value="3d-render">3D Render</SelectItem>
-                    <SelectItem value="minimalist">Minimalist Design</SelectItem>
-                    <SelectItem value="abstract">Abstract Art</SelectItem>
-                    <SelectItem value="infographic">Infographic Style</SelectItem>
-                    <SelectItem value="watercolor">Watercolor</SelectItem>
-                    <SelectItem value="line-art">Line Art</SelectItem>
+                    <SelectItem value="professional">{nl ? 'Professionele fotografie' : fr ? 'Photographie professionnelle' : 'Professional Photography'}</SelectItem>
+                    <SelectItem value="illustration">{nl ? 'Moderne illustratie' : fr ? 'Illustration moderne' : 'Modern Illustration'}</SelectItem>
+                    <SelectItem value="3d-render">{nl ? '3D Render' : fr ? 'Rendu 3D' : '3D Render'}</SelectItem>
+                    <SelectItem value="minimalist">{nl ? 'Minimalistisch ontwerp' : fr ? 'Design minimaliste' : 'Minimalist Design'}</SelectItem>
+                    <SelectItem value="abstract">{nl ? 'Abstracte kunst' : fr ? 'Art abstrait' : 'Abstract Art'}</SelectItem>
+                    <SelectItem value="infographic">{nl ? 'Infographic stijl' : fr ? 'Style infographique' : 'Infographic Style'}</SelectItem>
+                    <SelectItem value="watercolor">{nl ? 'Aquarel' : fr ? 'Aquarelle' : 'Watercolor'}</SelectItem>
+                    <SelectItem value="line-art">{nl ? 'Lijntekening' : fr ? 'Dessin au trait' : 'Line Art'}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               {/* Brand Elements to Include */}
               <div className="space-y-2">
-                <Label>Brand Elements</Label>
+                <Label>{nl ? 'Merkelementen' : fr ? 'Elements de marque' : 'Brand Elements'}</Label>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" defaultChecked />
-                    <span className="text-sm">Brand Colors</span>
+                    <span className="text-sm">{nl ? 'Merkkleuren' : fr ? 'Couleurs de marque' : 'Brand Colors'}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" />
-                    <span className="text-sm">Logo Placement</span>
+                    <span className="text-sm">{nl ? 'Logo plaatsing' : fr ? 'Placement du logo' : 'Logo Placement'}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" />
-                    <span className="text-sm">Brand Fonts</span>
+                    <span className="text-sm">{nl ? 'Merklettertypen' : fr ? 'Polices de marque' : 'Brand Fonts'}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" defaultChecked />
-                    <span className="text-sm">Professional Look</span>
+                    <span className="text-sm">{nl ? 'Professionele uitstraling' : fr ? 'Apparence professionnelle' : 'Professional Look'}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" />
-                    <span className="text-sm">Include People</span>
+                    <span className="text-sm">{nl ? 'Mensen toevoegen' : fr ? 'Inclure des personnes' : 'Include People'}</span>
                   </label>
                   <label className="flex items-center gap-2">
                     <input type="checkbox" className="rounded" />
-                    <span className="text-sm">Product Focus</span>
+                    <span className="text-sm">{nl ? 'Productfocus' : fr ? 'Focus produit' : 'Product Focus'}</span>
                   </label>
                 </div>
               </div>
@@ -1383,12 +1388,12 @@ export default function BrandMemory() {
                 {imageGenerating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating Image...
+                    {nl ? 'Afbeelding genereren...' : fr ? "Generation d'image..." : 'Generating Image...'}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Image
+                    {nl ? 'Afbeelding genereren' : fr ? 'Generer une image' : 'Generate Image'}
                   </>
                 )}
               </Button>
@@ -1398,7 +1403,7 @@ export default function BrandMemory() {
                 <>
                   <Separator />
                   <div className="space-y-2">
-                    <Label>Generated Images</Label>
+                    <Label>{nl ? 'Gegenereerde afbeeldingen' : fr ? 'Images generees' : 'Generated Images'}</Label>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                       {generatedImages.map((imageUrl, index) => (
                         <div key={index} className="relative group">
@@ -1434,13 +1439,13 @@ export default function BrandMemory() {
               <div className="p-4 bg-muted rounded-lg space-y-2">
                 <h4 className="font-medium flex items-center gap-2">
                   <Settings className="h-4 w-4" />
-                  Image Generation Tips
+                  {nl ? 'Tips voor afbeeldingsgeneratie' : fr ? "Conseils pour la generation d'images" : 'Image Generation Tips'}
                 </h4>
                 <ul className="space-y-1 text-sm text-muted-foreground">
-                  <li>• Be specific about colors, composition, and mood</li>
-                  <li>• Include "{bm.brand_name}" in the prompt for brand consistency</li>
-                  <li>• Specify image dimensions if needed (square, portrait, landscape)</li>
-                  <li>• Mention lighting preferences (bright, soft, dramatic)</li>
+                  <li>{nl ? '• Wees specifiek over kleuren, compositie en sfeer' : fr ? '• Soyez precis sur les couleurs, la composition et l\'ambiance' : '• Be specific about colors, composition, and mood'}</li>
+                  <li>{nl ? `• Voeg "${bm.brand_name}" toe aan de prompt voor merkconsistentie` : fr ? `• Incluez "${bm.brand_name}" dans le prompt pour la coherence de marque` : `• Include "${bm.brand_name}" in the prompt for brand consistency`}</li>
+                  <li>{nl ? '• Specificeer afbeeldingsformaat indien nodig (vierkant, portret, landschap)' : fr ? "• Specifiez les dimensions de l'image si necessaire (carre, portrait, paysage)" : '• Specify image dimensions if needed (square, portrait, landscape)'}</li>
+                  <li>{nl ? '• Vermeld lichtvoorkeuren (helder, zacht, dramatisch)' : fr ? "• Mentionnez les preferences d'eclairage (vif, doux, dramatique)" : '• Mention lighting preferences (bright, soft, dramatic)'}</li>
                 </ul>
               </div>
             </CardContent>

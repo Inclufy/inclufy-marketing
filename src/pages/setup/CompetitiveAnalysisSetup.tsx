@@ -8,8 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Globe, 
+import {
+  Globe,
   Target,
   TrendingUp,
   Shield,
@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Competitor {
   id: string;
@@ -49,6 +50,9 @@ interface Competitor {
 export default function CompetitiveAnalysisSetup() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [activeTab, setActiveTab] = useState('competitors');
   const [competitors, setCompetitors] = useState<Competitor[]>([
     {
@@ -103,8 +107,8 @@ export default function CompetitiveAnalysisSetup() {
 
   const handleSave = () => {
     toast({
-      title: "Competitive analysis saved!",
-      description: "Your competitive landscape has been updated.",
+      title: nl ? 'Concurrentieanalyse opgeslagen!' : fr ? 'Analyse concurrentielle enregistrée !' : 'Competitive analysis saved!',
+      description: nl ? 'Je concurrentielandschap is bijgewerkt.' : fr ? 'Votre paysage concurrentiel a été mis à jour.' : 'Your competitive landscape has been updated.',
     });
   };
 
@@ -113,7 +117,7 @@ export default function CompetitiveAnalysisSetup() {
     navigate('/app/context-marketing');
   };
 
-  const completionPercentage = competitors.filter(c => 
+  const completionPercentage = competitors.filter(c =>
     c.name && c.website && c.strengths.length > 0 && c.weaknesses.length > 0
   ).length / competitors.length * 100;
 
@@ -123,11 +127,11 @@ export default function CompetitiveAnalysisSetup() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Competitive Analysis</h1>
-            <p className="text-gray-600 mt-2">Understand your competitive landscape</p>
+            <h1 className="text-3xl font-bold">{nl ? 'Concurrentieanalyse' : fr ? 'Analyse Concurrentielle' : 'Competitive Analysis'}</h1>
+            <p className="text-gray-600 mt-2">{nl ? 'Begrijp je concurrentielandschap' : fr ? 'Comprenez votre paysage concurrentiel' : 'Understand your competitive landscape'}</p>
           </div>
           <Badge variant="outline" className="text-lg px-4 py-2">
-            {Math.round(completionPercentage)}% Complete
+            {Math.round(completionPercentage)}% {nl ? 'Voltooid' : fr ? 'Terminé' : 'Complete'}
           </Badge>
         </div>
         <Progress value={completionPercentage} className="h-2" />
@@ -136,10 +140,10 @@ export default function CompetitiveAnalysisSetup() {
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="competitors">Competitors ({competitors.length})</TabsTrigger>
-          <TabsTrigger value="positioning">Market Positioning</TabsTrigger>
-          <TabsTrigger value="analysis">SWOT Analysis</TabsTrigger>
-          <TabsTrigger value="strategy">Strategy</TabsTrigger>
+          <TabsTrigger value="competitors">{nl ? 'Concurrenten' : fr ? 'Concurrents' : 'Competitors'} ({competitors.length})</TabsTrigger>
+          <TabsTrigger value="positioning">{nl ? 'Marktpositionering' : fr ? 'Positionnement de Marché' : 'Market Positioning'}</TabsTrigger>
+          <TabsTrigger value="analysis">{nl ? 'SWOT Analyse' : fr ? 'Analyse SWOT' : 'SWOT Analysis'}</TabsTrigger>
+          <TabsTrigger value="strategy">{nl ? 'Strategie' : fr ? 'Stratégie' : 'Strategy'}</TabsTrigger>
         </TabsList>
 
         {/* Competitors Tab */}
@@ -155,13 +159,13 @@ export default function CompetitiveAnalysisSetup() {
                   onClick={() => setCurrentCompetitor(index)}
                   className="mb-2"
                 >
-                  {competitor.name || `Competitor ${index + 1}`}
+                  {competitor.name || `${nl ? 'Concurrent' : fr ? 'Concurrent' : 'Competitor'} ${index + 1}`}
                   {competitor.category === 'direct' && <Target className="w-3 h-3 ml-2" />}
                 </Button>
               ))}
             </div>
             <Button variant="outline" size="sm" onClick={handleCompetitorAdd}>
-              <Plus className="w-4 h-4 mr-2" /> Add Competitor
+              <Plus className="w-4 h-4 mr-2" /> {nl ? 'Concurrent Toevoegen' : fr ? 'Ajouter un Concurrent' : 'Add Competitor'}
             </Button>
           </div>
 
@@ -171,8 +175,8 @@ export default function CompetitiveAnalysisSetup() {
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <div>
-                    <CardTitle>Competitor Information</CardTitle>
-                    <CardDescription>Basic details about this competitor</CardDescription>
+                    <CardTitle>{nl ? 'Concurrent Informatie' : fr ? 'Informations sur le Concurrent' : 'Competitor Information'}</CardTitle>
+                    <CardDescription>{nl ? 'Basisgegevens over deze concurrent' : fr ? 'Détails de base sur ce concurrent' : 'Basic details about this competitor'}</CardDescription>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={
@@ -180,7 +184,11 @@ export default function CompetitiveAnalysisSetup() {
                       competitors[currentCompetitor].category === 'indirect' ? 'secondary' :
                       'outline'
                     }>
-                      {competitors[currentCompetitor].category}
+                      {competitors[currentCompetitor].category === 'direct'
+                        ? (nl ? 'direct' : fr ? 'direct' : 'direct')
+                        : competitors[currentCompetitor].category === 'indirect'
+                        ? (nl ? 'indirect' : fr ? 'indirect' : 'indirect')
+                        : (nl ? 'aspirationeel' : fr ? 'aspirationnel' : 'aspirational')}
                     </Badge>
                     <Button
                       variant="ghost"
@@ -195,11 +203,11 @@ export default function CompetitiveAnalysisSetup() {
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Company Name</Label>
+                      <Label>{nl ? 'Bedrijfsnaam' : fr ? 'Nom de l\'Entreprise' : 'Company Name'}</Label>
                       <Input
                         value={competitors[currentCompetitor].name}
                         onChange={(e) => handleCompetitorUpdate('name', e.target.value)}
-                        placeholder="e.g., Competitor Inc."
+                        placeholder={nl ? 'bijv. Concurrent B.V.' : fr ? 'ex. Concurrent SA' : 'e.g., Competitor Inc.'}
                       />
                     </div>
                     <div className="space-y-2">
@@ -216,14 +224,14 @@ export default function CompetitiveAnalysisSetup() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-2">
-                    <Label>Competitor Type</Label>
+                    <Label>{nl ? 'Type Concurrent' : fr ? 'Type de Concurrent' : 'Competitor Type'}</Label>
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        { value: 'direct', label: 'Direct', description: 'Same products/services' },
-                        { value: 'indirect', label: 'Indirect', description: 'Different solution, same problem' },
-                        { value: 'aspirational', label: 'Aspirational', description: 'Where we want to be' }
+                        { value: 'direct', label: nl ? 'Direct' : fr ? 'Direct' : 'Direct', description: nl ? 'Dezelfde producten/diensten' : fr ? 'Mêmes produits/services' : 'Same products/services' },
+                        { value: 'indirect', label: nl ? 'Indirect' : fr ? 'Indirect' : 'Indirect', description: nl ? 'Andere oplossing, zelfde probleem' : fr ? 'Solution différente, même problème' : 'Different solution, same problem' },
+                        { value: 'aspirational', label: nl ? 'Aspirationeel' : fr ? 'Aspirationnel' : 'Aspirational', description: nl ? 'Waar we willen zijn' : fr ? 'Où nous voulons être' : 'Where we want to be' }
                       ].map(type => (
                         <label
                           key={type.value}
@@ -250,19 +258,19 @@ export default function CompetitiveAnalysisSetup() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label>Target Market</Label>
+                      <Label>{nl ? 'Doelmarkt' : fr ? 'Marché Cible' : 'Target Market'}</Label>
                       <Input
                         value={competitors[currentCompetitor].targetMarket}
                         onChange={(e) => handleCompetitorUpdate('targetMarket', e.target.value)}
-                        placeholder="e.g., SMBs, Enterprise, Startups"
+                        placeholder={nl ? 'bijv. MKB, Enterprise, Startups' : fr ? 'ex. PME, Enterprise, Startups' : 'e.g., SMBs, Enterprise, Startups'}
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Pricing Model</Label>
+                      <Label>{nl ? 'Prijsmodel' : fr ? 'Modèle de Tarification' : 'Pricing Model'}</Label>
                       <Input
                         value={competitors[currentCompetitor].pricing}
                         onChange={(e) => handleCompetitorUpdate('pricing', e.target.value)}
-                        placeholder="e.g., $99-499/month"
+                        placeholder={nl ? 'bijv. €99-499/maand' : fr ? 'ex. 99-499€/mois' : 'e.g., $99-499/month'}
                       />
                     </div>
                   </div>
@@ -274,12 +282,12 @@ export default function CompetitiveAnalysisSetup() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Shield className="w-5 h-5 text-green-600" />
-                      Strengths
+                      {nl ? 'Sterktes' : fr ? 'Forces' : 'Strengths'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Textarea
-                      placeholder="List their key strengths (one per line)..."
+                      placeholder={nl ? 'Lijst hun belangrijkste sterktes (één per regel)...' : fr ? 'Listez leurs forces clés (une par ligne)...' : 'List their key strengths (one per line)...'}
                       rows={6}
                       value={competitors[currentCompetitor].strengths.join('\n')}
                       onChange={(e) => handleCompetitorUpdate('strengths', e.target.value.split('\n').filter(s => s))}
@@ -291,12 +299,12 @@ export default function CompetitiveAnalysisSetup() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <AlertTriangle className="w-5 h-5 text-red-600" />
-                      Weaknesses
+                      {nl ? 'Zwaktes' : fr ? 'Faiblesses' : 'Weaknesses'}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <Textarea
-                      placeholder="List their weaknesses or gaps (one per line)..."
+                      placeholder={nl ? 'Lijst hun zwaktes of hiaten (één per regel)...' : fr ? 'Listez leurs faiblesses ou lacunes (une par ligne)...' : 'List their weaknesses or gaps (one per line)...'}
                       rows={6}
                       value={competitors[currentCompetitor].weaknesses.join('\n')}
                       onChange={(e) => handleCompetitorUpdate('weaknesses', e.target.value.split('\n').filter(w => w))}
@@ -307,20 +315,20 @@ export default function CompetitiveAnalysisSetup() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>Products & Services</CardTitle>
-                  <CardDescription>What they offer to the market</CardDescription>
+                  <CardTitle>{nl ? 'Producten & Diensten' : fr ? 'Produits & Services' : 'Products & Services'}</CardTitle>
+                  <CardDescription>{nl ? 'Wat ze op de markt aanbieden' : fr ? 'Ce qu\'ils offrent sur le marché' : 'What they offer to the market'}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <Textarea
-                    placeholder="List their main products/services (one per line)..."
+                    placeholder={nl ? 'Lijst hun belangrijkste producten/diensten (één per regel)...' : fr ? 'Listez leurs principaux produits/services (un par ligne)...' : 'List their main products/services (one per line)...'}
                     rows={4}
                     value={competitors[currentCompetitor].products.join('\n')}
                     onChange={(e) => handleCompetitorUpdate('products', e.target.value.split('\n').filter(p => p))}
                   />
                   <div className="space-y-2">
-                    <Label>Unique Value Proposition</Label>
+                    <Label>{nl ? 'Unieke Waardepropositie' : fr ? 'Proposition de Valeur Unique' : 'Unique Value Proposition'}</Label>
                     <Textarea
-                      placeholder="What makes them unique in the market..."
+                      placeholder={nl ? 'Wat maakt hen uniek op de markt...' : fr ? 'Ce qui les rend uniques sur le marché...' : 'What makes them unique in the market...'}
                       rows={2}
                       value={competitors[currentCompetitor].uniqueValue}
                       onChange={(e) => handleCompetitorUpdate('uniqueValue', e.target.value)}
@@ -336,16 +344,16 @@ export default function CompetitiveAnalysisSetup() {
         <TabsContent value="positioning" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Your Market Position</CardTitle>
-              <CardDescription>How you position yourself in the competitive landscape</CardDescription>
+              <CardTitle>{nl ? 'Jouw Marktpositie' : fr ? 'Votre Position sur le Marché' : 'Your Market Position'}</CardTitle>
+              <CardDescription>{nl ? 'Hoe je jezelf positioneert in het concurrentielandschap' : fr ? 'Comment vous vous positionnez dans le paysage concurrentiel' : 'How you position yourself in the competitive landscape'}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
-                  { value: 'leader', label: 'Market Leader', icon: Award, description: 'Dominant player setting standards' },
-                  { value: 'challenger', label: 'Challenger', icon: Target, description: 'Aggressively competing for share' },
-                  { value: 'follower', label: 'Follower', icon: Users, description: 'Following established patterns' },
-                  { value: 'nicher', label: 'Nicher', icon: Zap, description: 'Specialized in specific segment' }
+                  { value: 'leader', label: nl ? 'Marktleider' : fr ? 'Leader du Marché' : 'Market Leader', icon: Award, description: nl ? 'Dominante speler die standaarden zet' : fr ? 'Acteur dominant qui établit les normes' : 'Dominant player setting standards' },
+                  { value: 'challenger', label: nl ? 'Uitdager' : fr ? 'Challenger' : 'Challenger', icon: Target, description: nl ? 'Agressief concurrerend om marktaandeel' : fr ? 'En concurrence agressive pour des parts de marché' : 'Aggressively competing for share' },
+                  { value: 'follower', label: nl ? 'Volger' : fr ? 'Suiveur' : 'Follower', icon: Users, description: nl ? 'Volgt gevestigde patronen' : fr ? 'Suit les modèles établis' : 'Following established patterns' },
+                  { value: 'nicher', label: nl ? 'Nichespeler' : fr ? 'Spécialiste de Niche' : 'Nicher', icon: Zap, description: nl ? 'Gespecialiseerd in specifiek segment' : fr ? 'Spécialisé dans un segment spécifique' : 'Specialized in specific segment' }
                 ].map(position => (
                   <label
                     key={position.value}
@@ -374,25 +382,25 @@ export default function CompetitiveAnalysisSetup() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Competitive Advantages</CardTitle>
-              <CardDescription>What sets you apart from competitors</CardDescription>
+              <CardTitle>{nl ? 'Concurrentievoordelen' : fr ? 'Avantages Concurrentiels' : 'Competitive Advantages'}</CardTitle>
+              <CardDescription>{nl ? 'Wat jou onderscheidt van concurrenten' : fr ? 'Ce qui vous distingue de la concurrence' : 'What sets you apart from competitors'}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 {[
-                  { category: 'Price', icon: DollarSign, color: 'bg-green-100 text-green-600' },
-                  { category: 'Features', icon: Package, color: 'bg-blue-100 text-blue-600' },
-                  { category: 'Service', icon: Users, color: 'bg-purple-100 text-purple-600' },
-                  { category: 'Technology', icon: Zap, color: 'bg-yellow-100 text-yellow-600' }
+                  { category: nl ? 'Prijs' : fr ? 'Prix' : 'Price', categoryKey: 'price', icon: DollarSign, color: 'bg-green-100 text-green-600' },
+                  { category: nl ? 'Functies' : fr ? 'Fonctionnalités' : 'Features', categoryKey: 'features', icon: Package, color: 'bg-blue-100 text-blue-600' },
+                  { category: nl ? 'Service' : fr ? 'Service' : 'Service', categoryKey: 'service', icon: Users, color: 'bg-purple-100 text-purple-600' },
+                  { category: nl ? 'Technologie' : fr ? 'Technologie' : 'Technology', categoryKey: 'technology', icon: Zap, color: 'bg-yellow-100 text-yellow-600' }
                 ].map(advantage => (
-                  <div key={advantage.category} className="flex items-start gap-4">
+                  <div key={advantage.categoryKey} className="flex items-start gap-4">
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${advantage.color}`}>
                       <advantage.icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1">
-                      <Label>{advantage.category} Advantage</Label>
+                      <Label>{advantage.category} {nl ? 'Voordeel' : fr ? 'Avantage' : 'Advantage'}</Label>
                       <Textarea
-                        placeholder={`How you excel in ${advantage.category.toLowerCase()}...`}
+                        placeholder={nl ? `Hoe je excelleert in ${advantage.category.toLowerCase()}...` : fr ? `Comment vous excellez en ${advantage.category.toLowerCase()}...` : `How you excel in ${advantage.category.toLowerCase()}...`}
                         rows={2}
                         className="mt-1"
                       />
@@ -405,13 +413,13 @@ export default function CompetitiveAnalysisSetup() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Market Share Estimation</CardTitle>
-              <CardDescription>Approximate market share distribution</CardDescription>
+              <CardTitle>{nl ? 'Marktaandeel Schatting' : fr ? 'Estimation de Part de Marché' : 'Market Share Estimation'}</CardTitle>
+              <CardDescription>{nl ? 'Geschatte verdeling van marktaandeel' : fr ? 'Distribution approximative des parts de marché' : 'Approximate market share distribution'}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Your Company</span>
+                  <span className="font-medium">{nl ? 'Jouw Bedrijf' : fr ? 'Votre Entreprise' : 'Your Company'}</span>
                   <div className="flex items-center gap-4">
                     <div className="w-48 h-3 bg-gray-200 rounded-full">
                       <div className="w-1/5 h-full bg-purple-600 rounded-full" />
@@ -421,11 +429,11 @@ export default function CompetitiveAnalysisSetup() {
                 </div>
                 {competitors.slice(0, 3).map((competitor, index) => (
                   <div key={competitor.id} className="flex items-center justify-between">
-                    <span className="text-sm">{competitor.name || `Competitor ${index + 1}`}</span>
+                    <span className="text-sm">{competitor.name || `${nl ? 'Concurrent' : fr ? 'Concurrent' : 'Competitor'} ${index + 1}`}</span>
                     <div className="flex items-center gap-4">
                       <div className="w-48 h-3 bg-gray-200 rounded-full">
-                        <div 
-                          className="h-full bg-gray-600 rounded-full" 
+                        <div
+                          className="h-full bg-gray-600 rounded-full"
                           style={{ width: `${competitor.marketShare || 15}%` }}
                         />
                       </div>
@@ -434,7 +442,7 @@ export default function CompetitiveAnalysisSetup() {
                   </div>
                 ))}
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Others</span>
+                  <span className="text-sm text-gray-600">{nl ? 'Overige' : fr ? 'Autres' : 'Others'}</span>
                   <div className="flex items-center gap-4">
                     <div className="w-48 h-3 bg-gray-200 rounded-full">
                       <div className="w-1/4 h-full bg-gray-400 rounded-full" />
@@ -452,12 +460,12 @@ export default function CompetitiveAnalysisSetup() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-green-600">Strengths</CardTitle>
-                <CardDescription>Internal advantages</CardDescription>
+                <CardTitle className="text-green-600">{nl ? 'Sterktes' : fr ? 'Forces' : 'Strengths'}</CardTitle>
+                <CardDescription>{nl ? 'Interne voordelen' : fr ? 'Avantages internes' : 'Internal advantages'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="List your company's key strengths..."
+                  placeholder={nl ? 'Lijst de belangrijkste sterktes van je bedrijf...' : fr ? 'Listez les forces clés de votre entreprise...' : "List your company's key strengths..."}
                   rows={8}
                 />
               </CardContent>
@@ -465,12 +473,12 @@ export default function CompetitiveAnalysisSetup() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-red-600">Weaknesses</CardTitle>
-                <CardDescription>Internal limitations</CardDescription>
+                <CardTitle className="text-red-600">{nl ? 'Zwaktes' : fr ? 'Faiblesses' : 'Weaknesses'}</CardTitle>
+                <CardDescription>{nl ? 'Interne beperkingen' : fr ? 'Limitations internes' : 'Internal limitations'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="List areas that need improvement..."
+                  placeholder={nl ? 'Lijst gebieden die verbetering nodig hebben...' : fr ? 'Listez les domaines nécessitant des améliorations...' : 'List areas that need improvement...'}
                   rows={8}
                 />
               </CardContent>
@@ -478,12 +486,12 @@ export default function CompetitiveAnalysisSetup() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-blue-600">Opportunities</CardTitle>
-                <CardDescription>External possibilities</CardDescription>
+                <CardTitle className="text-blue-600">{nl ? 'Kansen' : fr ? 'Opportunités' : 'Opportunities'}</CardTitle>
+                <CardDescription>{nl ? 'Externe mogelijkheden' : fr ? 'Possibilités externes' : 'External possibilities'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="List market opportunities you can leverage..."
+                  placeholder={nl ? 'Lijst marktkansen die je kunt benutten...' : fr ? 'Listez les opportunités de marché que vous pouvez exploiter...' : 'List market opportunities you can leverage...'}
                   rows={8}
                 />
               </CardContent>
@@ -491,12 +499,12 @@ export default function CompetitiveAnalysisSetup() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-yellow-600">Threats</CardTitle>
-                <CardDescription>External challenges</CardDescription>
+                <CardTitle className="text-yellow-600">{nl ? 'Bedreigingen' : fr ? 'Menaces' : 'Threats'}</CardTitle>
+                <CardDescription>{nl ? 'Externe uitdagingen' : fr ? 'Défis externes' : 'External challenges'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="List potential threats to your business..."
+                  placeholder={nl ? 'Lijst potentiële bedreigingen voor je bedrijf...' : fr ? 'Listez les menaces potentielles pour votre entreprise...' : 'List potential threats to your business...'}
                   rows={8}
                 />
               </CardContent>
@@ -508,32 +516,32 @@ export default function CompetitiveAnalysisSetup() {
         <TabsContent value="strategy" className="space-y-6 mt-6">
           <Card>
             <CardHeader>
-              <CardTitle>Competitive Strategy</CardTitle>
-              <CardDescription>How you'll win in the market</CardDescription>
+              <CardTitle>{nl ? 'Concurrentiestrategie' : fr ? 'Stratégie Concurrentielle' : 'Competitive Strategy'}</CardTitle>
+              <CardDescription>{nl ? 'Hoe je gaat winnen op de markt' : fr ? 'Comment vous allez gagner sur le marché' : "How you'll win in the market"}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Primary Strategy</Label>
+                <Label>{nl ? 'Primaire Strategie' : fr ? 'Stratégie Principale' : 'Primary Strategy'}</Label>
                 <select className="w-full px-3 py-2 border rounded-lg">
-                  <option>Differentiation - Unique features and value</option>
-                  <option>Cost Leadership - Best price in market</option>
-                  <option>Focus - Serve specific niche exceptionally</option>
-                  <option>Blue Ocean - Create new market space</option>
+                  <option>{nl ? 'Differentiatie - Unieke functies en waarde' : fr ? 'Différenciation - Fonctionnalités et valeur uniques' : 'Differentiation - Unique features and value'}</option>
+                  <option>{nl ? 'Kostenleiderschap - Beste prijs op de markt' : fr ? 'Leadership par les coûts - Meilleur prix du marché' : 'Cost Leadership - Best price in market'}</option>
+                  <option>{nl ? 'Focus - Specifieke niche uitzonderlijk bedienen' : fr ? 'Focus - Servir un créneau spécifique exceptionnellement' : 'Focus - Serve specific niche exceptionally'}</option>
+                  <option>{nl ? 'Blauwe Oceaan - Nieuwe marktruimte creëren' : fr ? 'Océan Bleu - Créer un nouvel espace de marché' : 'Blue Ocean - Create new market space'}</option>
                 </select>
               </div>
 
               <div className="space-y-2">
-                <Label>Key Differentiators</Label>
+                <Label>{nl ? 'Belangrijkste Onderscheidende Factoren' : fr ? 'Différenciateurs Clés' : 'Key Differentiators'}</Label>
                 <Textarea
-                  placeholder="What makes you uniquely valuable to customers..."
+                  placeholder={nl ? 'Wat maakt je uniek waardevol voor klanten...' : fr ? 'Ce qui vous rend uniquement précieux pour les clients...' : 'What makes you uniquely valuable to customers...'}
                   rows={4}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label>Competitive Moat</Label>
+                <Label>{nl ? 'Concurrentievoordeel (Moat)' : fr ? 'Avantage Concurrentiel (Moat)' : 'Competitive Moat'}</Label>
                 <Textarea
-                  placeholder="What protects you from competition (network effects, switching costs, brand, etc.)..."
+                  placeholder={nl ? 'Wat beschermt je tegen concurrentie (netwerkeffecten, overstapkosten, merk, etc.)...' : fr ? 'Ce qui vous protège de la concurrence (effets de réseau, coûts de transfert, marque, etc.)...' : 'What protects you from competition (network effects, switching costs, brand, etc.)...'}
                   rows={3}
                 />
               </div>
@@ -544,40 +552,37 @@ export default function CompetitiveAnalysisSetup() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-600" />
-                AI-Generated Recommendations
+                {nl ? 'AI-Gegenereerde Aanbevelingen' : fr ? 'Recommandations Générées par l\'IA' : 'AI-Generated Recommendations'}
               </CardTitle>
-              <CardDescription>Strategic insights based on your analysis</CardDescription>
+              <CardDescription>{nl ? 'Strategische inzichten op basis van je analyse' : fr ? 'Insights stratégiques basés sur votre analyse' : 'Strategic insights based on your analysis'}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div className="p-4 bg-purple-50 rounded-lg">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
-                    Growth Opportunity
+                    {nl ? 'Groeikans' : fr ? 'Opportunité de Croissance' : 'Growth Opportunity'}
                   </h4>
                   <p className="text-sm">
-                    Based on competitor weaknesses in customer support, investing in exceptional
-                    customer service could be a strong differentiator.
+                    {nl ? 'Op basis van de zwaktes van concurrenten in klantenservice, kan investeren in uitzonderlijke klantenservice een sterke onderscheidende factor zijn.' : fr ? 'En se basant sur les faiblesses des concurrents en matière de support client, investir dans un service client exceptionnel pourrait être un fort différenciateur.' : 'Based on competitor weaknesses in customer support, investing in exceptional customer service could be a strong differentiator.'}
                   </p>
                 </div>
                 <div className="p-4 bg-blue-50 rounded-lg">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <Target className="w-4 h-4" />
-                    Positioning Advice
+                    {nl ? 'Positioneringsadvies' : fr ? 'Conseil de Positionnement' : 'Positioning Advice'}
                   </h4>
                   <p className="text-sm">
-                    As a challenger, focus on agility and innovation. Your smaller size allows
-                    faster adaptation to market needs than larger competitors.
+                    {nl ? 'Als uitdager, focus op wendbaarheid en innovatie. Je kleinere omvang maakt snellere aanpassing aan marktbehoeften mogelijk dan grotere concurrenten.' : fr ? 'En tant que challenger, concentrez-vous sur l\'agilité et l\'innovation. Votre petite taille permet une adaptation plus rapide aux besoins du marché que les concurrents plus grands.' : 'As a challenger, focus on agility and innovation. Your smaller size allows faster adaptation to market needs than larger competitors.'}
                   </p>
                 </div>
                 <div className="p-4 bg-green-50 rounded-lg">
                   <h4 className="font-semibold mb-2 flex items-center gap-2">
                     <Shield className="w-4 h-4" />
-                    Defensive Strategy
+                    {nl ? 'Defensieve Strategie' : fr ? 'Stratégie Défensive' : 'Defensive Strategy'}
                   </h4>
                   <p className="text-sm">
-                    Build strong relationships with key customers to increase switching costs
-                    and protect against competitor poaching.
+                    {nl ? 'Bouw sterke relaties op met belangrijke klanten om overstapkosten te verhogen en te beschermen tegen het afpakken door concurrenten.' : fr ? 'Construisez des relations solides avec les clients clés pour augmenter les coûts de transfert et vous protéger contre le braconnage des concurrents.' : 'Build strong relationships with key customers to increase switching costs and protect against competitor poaching.'}
                   </p>
                 </div>
               </div>
@@ -589,15 +594,15 @@ export default function CompetitiveAnalysisSetup() {
       {/* Actions */}
       <div className="flex items-center justify-between mt-8">
         <Button variant="outline">
-          Save Draft
+          {nl ? 'Concept Opslaan' : fr ? 'Enregistrer le Brouillon' : 'Save Draft'}
         </Button>
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => navigate('/app/setup/goals')}>
             <ChevronLeft className="w-4 h-4 mr-2" />
-            Back
+            {nl ? 'Terug' : fr ? 'Retour' : 'Back'}
           </Button>
           <Button onClick={handleNext}>
-            Complete Setup
+            {nl ? 'Setup Voltooien' : fr ? 'Terminer la Configuration' : 'Complete Setup'}
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         </div>

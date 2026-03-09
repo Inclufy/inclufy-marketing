@@ -30,6 +30,7 @@ import {
   Save
 } from "lucide-react";
 import { toast } from "sonner";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface EmailVariant {
   id: string;
@@ -43,6 +44,9 @@ interface EmailVariant {
 
 const EmailCampaignGenerator = () => {
   const { loading, generateEmailCampaign, analyzeContent } = useAI();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [campaignType, setCampaignType] = useState("promotional");
   const [targetAudience, setTargetAudience] = useState("");
   const [product, setProduct] = useState("");
@@ -59,16 +63,16 @@ const EmailCampaignGenerator = () => {
   }, []);
 
   const campaignTypes = [
-    { value: "promotional", label: "Promotional", icon: Target },
-    { value: "newsletter", label: "Newsletter", icon: Mail },
-    { value: "welcome", label: "Welcome Series", icon: Users },
-    { value: "abandoned", label: "Abandoned Cart", icon: RefreshCw },
-    { value: "reengagement", label: "Re-engagement", icon: Zap },
+    { value: "promotional", label: nl ? "Promotioneel" : fr ? "Promotionnel" : "Promotional", icon: Target },
+    { value: "newsletter", label: nl ? "Nieuwsbrief" : fr ? "Bulletin" : "Newsletter", icon: Mail },
+    { value: "welcome", label: nl ? "Welkomstserie" : fr ? "Série de bienvenue" : "Welcome Series", icon: Users },
+    { value: "abandoned", label: nl ? "Verlaten winkelwagen" : fr ? "Panier abandonné" : "Abandoned Cart", icon: RefreshCw },
+    { value: "reengagement", label: nl ? "Heractivering" : fr ? "Réengagement" : "Re-engagement", icon: Zap },
   ];
 
   const handleGenerate = async () => {
     if (!product || !targetAudience || !goal) {
-      toast.error("Please fill in all required fields");
+      toast.error(nl ? "Vul alle verplichte velden in" : fr ? "Veuillez remplir tous les champs obligatoires" : "Please fill in all required fields");
       return;
     }
 
@@ -87,7 +91,7 @@ const EmailCampaignGenerator = () => {
       } else {
         setVariants([{
           id: "single",
-          name: "Main Version",
+          name: nl ? "Hoofdversie" : fr ? "Version principale" : "Main Version",
           subject: result.subject,
           preheader: result.preheader,
           body: result.body,
@@ -97,9 +101,15 @@ const EmailCampaignGenerator = () => {
         setSelectedVariant("single");
       }
 
-      toast.success(`Email campaign generated${enableAB ? ' with A/B variants!' : '!'}`);
+      toast.success(
+        nl
+          ? `E-mailcampagne gegenereerd${enableAB ? ' met A/B-varianten!' : '!'}`
+          : fr
+            ? `Campagne e-mail générée${enableAB ? ' avec variantes A/B !' : ' !'}`
+            : `Email campaign generated${enableAB ? ' with A/B variants!' : '!'}`
+      );
     } catch (error) {
-      toast.error("Failed to generate email campaign");
+      toast.error(nl ? "Kan e-mailcampagne niet genereren" : fr ? "Échec de la génération de la campagne e-mail" : "Failed to generate email campaign");
     }
   };
 
@@ -108,22 +118,22 @@ const EmailCampaignGenerator = () => {
       const analysis = await analyzeContent(
         `Subject: ${variant.subject}\n\nPreheader: ${variant.preheader}\n\nBody: ${variant.body}\n\nCTA: ${variant.cta}`
       );
-      
+
       toast.success(
         <div>
-          <p className="font-semibold">Analysis Complete!</p>
-          <p className="text-sm">Score: {analysis.score}/10</p>
-          <p className="text-sm">Strengths: {analysis.strengths[0]}</p>
+          <p className="font-semibold">{nl ? "Analyse voltooid!" : fr ? "Analyse terminée !" : "Analysis Complete!"}</p>
+          <p className="text-sm">{nl ? "Score" : fr ? "Score" : "Score"}: {analysis.score}/10</p>
+          <p className="text-sm">{nl ? "Sterke punten" : fr ? "Points forts" : "Strengths"}: {analysis.strengths[0]}</p>
         </div>
       );
     } catch (error) {
-      toast.error("Failed to analyze variant");
+      toast.error(nl ? "Kan variant niet analyseren" : fr ? "Échec de l'analyse de la variante" : "Failed to analyze variant");
     }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success("Copied to clipboard!");
+    toast.success(nl ? "Gekopieerd naar klembord!" : fr ? "Copié dans le presse-papiers !" : "Copied to clipboard!");
   };
 
   const exportCampaign = () => {
@@ -145,7 +155,7 @@ const EmailCampaignGenerator = () => {
     a.download = `email-campaign-${Date.now()}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Campaign exported!");
+    toast.success(nl ? "Campagne geëxporteerd!" : fr ? "Campagne exportée !" : "Campaign exported!");
   };
 
   const saveCampaignAndSend = async () => {
@@ -174,9 +184,9 @@ const EmailCampaignGenerator = () => {
         text_body: variant.body,
       });
 
-      toast.success("Campaign saved and emails sent to all contacts!");
+      toast.success(nl ? "Campagne opgeslagen en e-mails verzonden naar alle contacten!" : fr ? "Campagne enregistrée et e-mails envoyés à tous les contacts !" : "Campaign saved and emails sent to all contacts!");
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to send campaign");
+      toast.error(err?.response?.data?.detail || (nl ? "Kan campagne niet verzenden" : fr ? "Échec de l'envoi de la campagne" : "Failed to send campaign"));
     } finally {
       setSending(false);
     }
@@ -196,9 +206,9 @@ const EmailCampaignGenerator = () => {
         content: { subject: variant.subject, preheader: variant.preheader, body: variant.body, cta: variant.cta },
         settings: { ab_testing: enableAB, audience: targetAudience, goal },
       });
-      toast.success("Campaign saved as draft!");
+      toast.success(nl ? "Campagne opgeslagen als concept!" : fr ? "Campagne enregistrée comme brouillon !" : "Campaign saved as draft!");
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || "Failed to save campaign");
+      toast.error(err?.response?.data?.detail || (nl ? "Kan campagne niet opslaan" : fr ? "Échec de l'enregistrement de la campagne" : "Failed to save campaign"));
     } finally {
       setSaving(false);
     }
@@ -211,26 +221,29 @@ const EmailCampaignGenerator = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Mail className="h-8 w-8 text-primary" />
-            Email Campaign Generator
+            {nl ? "E-mailcampagne Generator" : fr ? "Générateur de campagne e-mail" : "Email Campaign Generator"}
           </h2>
           <p className="text-muted-foreground mt-2">
-            Create high-converting email campaigns with optional A/B testing
+            {nl ? "Maak goed converterende e-mailcampagnes met optionele A/B-tests" : fr ? "Créez des campagnes e-mail à fort taux de conversion avec tests A/B optionnels" : "Create high-converting email campaigns with optional A/B testing"}
           </p>
         </div>
         {variants.length > 0 && (
           <div className="flex items-center gap-2">
             <Button onClick={saveCampaignDraft} variant="outline" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-              Save Draft
+              {nl ? "Concept opslaan" : fr ? "Enregistrer le brouillon" : "Save Draft"}
             </Button>
             <Button onClick={exportCampaign} variant="outline">
               <Download className="mr-2 h-4 w-4" />
-              Export
+              {nl ? "Exporteren" : fr ? "Exporter" : "Export"}
             </Button>
             {emailProvider.configured && (
               <Button onClick={saveCampaignAndSend} disabled={sending} className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
                 {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                {sending ? "Sending..." : "Send to Contacts"}
+                {sending
+                  ? (nl ? "Verzenden..." : fr ? "Envoi en cours..." : "Sending...")
+                  : (nl ? "Verzenden naar contacten" : fr ? "Envoyer aux contacts" : "Send to Contacts")
+                }
               </Button>
             )}
           </div>
@@ -242,15 +255,15 @@ const EmailCampaignGenerator = () => {
         <div className="lg:col-span-1 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Campaign Setup</CardTitle>
+              <CardTitle>{nl ? "Campagne-instellingen" : fr ? "Configuration de la campagne" : "Campaign Setup"}</CardTitle>
               <CardDescription>
-                Define your email campaign parameters
+                {nl ? "Definieer de parameters van je e-mailcampagne" : fr ? "Définissez les paramètres de votre campagne e-mail" : "Define your email campaign parameters"}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Campaign Type */}
               <div className="space-y-2">
-                <Label>Campaign Type</Label>
+                <Label>{nl ? "Campagnetype" : fr ? "Type de campagne" : "Campaign Type"}</Label>
                 <Select value={campaignType} onValueChange={setCampaignType}>
                   <SelectTrigger>
                     <SelectValue />
@@ -270,9 +283,9 @@ const EmailCampaignGenerator = () => {
 
               {/* Product/Service */}
               <div className="space-y-2">
-                <Label>Product/Service</Label>
+                <Label>{nl ? "Product/Dienst" : fr ? "Produit/Service" : "Product/Service"}</Label>
                 <Input
-                  placeholder="e.g., AI Marketing Platform"
+                  placeholder={nl ? "bijv. AI-marketingplatform" : fr ? "ex. Plateforme de marketing IA" : "e.g., AI Marketing Platform"}
                   value={product}
                   onChange={(e) => setProduct(e.target.value)}
                 />
@@ -280,9 +293,9 @@ const EmailCampaignGenerator = () => {
 
               {/* Target Audience */}
               <div className="space-y-2">
-                <Label>Target Audience</Label>
+                <Label>{nl ? "Doelgroep" : fr ? "Public cible" : "Target Audience"}</Label>
                 <Textarea
-                  placeholder="e.g., Marketing managers at B2B SaaS companies"
+                  placeholder={nl ? "bijv. Marketingmanagers bij B2B SaaS-bedrijven" : fr ? "ex. Responsables marketing dans les entreprises B2B SaaS" : "e.g., Marketing managers at B2B SaaS companies"}
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   rows={3}
@@ -291,9 +304,9 @@ const EmailCampaignGenerator = () => {
 
               {/* Campaign Goal */}
               <div className="space-y-2">
-                <Label>Campaign Goal</Label>
+                <Label>{nl ? "Campagnedoel" : fr ? "Objectif de la campagne" : "Campaign Goal"}</Label>
                 <Textarea
-                  placeholder="e.g., Drive sign-ups for free trial"
+                  placeholder={nl ? "bijv. Aanmeldingen voor gratis proefperiode stimuleren" : fr ? "ex. Générer des inscriptions à l'essai gratuit" : "e.g., Drive sign-ups for free trial"}
                   value={goal}
                   onChange={(e) => setGoal(e.target.value)}
                   rows={2}
@@ -307,10 +320,10 @@ const EmailCampaignGenerator = () => {
                 <div className="space-y-1">
                   <p className="text-sm font-medium flex items-center gap-2">
                     <TestTube className="h-4 w-4" />
-                    A/B Testing
+                    {nl ? "A/B-testen" : fr ? "Tests A/B" : "A/B Testing"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Generate two variants to test
+                    {nl ? "Genereer twee varianten om te testen" : fr ? "Générez deux variantes à tester" : "Generate two variants to test"}
                   </p>
                 </div>
                 <Switch
@@ -319,20 +332,20 @@ const EmailCampaignGenerator = () => {
                 />
               </div>
 
-              <Button 
-                onClick={handleGenerate} 
+              <Button
+                onClick={handleGenerate}
                 disabled={loading}
                 className="w-full"
               >
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating...
+                    {nl ? "Genereren..." : fr ? "Génération en cours..." : "Generating..."}
                   </>
                 ) : (
                   <>
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Generate Campaign
+                    {nl ? "Campagne genereren" : fr ? "Générer la campagne" : "Generate Campaign"}
                   </>
                 )}
               </Button>
@@ -342,25 +355,25 @@ const EmailCampaignGenerator = () => {
           {/* Quick Tips */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Best Practices</CardTitle>
+              <CardTitle className="text-base">{nl ? "Best practices" : fr ? "Bonnes pratiques" : "Best Practices"}</CardTitle>
             </CardHeader>
             <CardContent>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Keep subject lines under 50 characters</span>
+                  <span>{nl ? "Houd onderwerpregels onder de 50 tekens" : fr ? "Gardez les lignes d'objet sous 50 caractères" : "Keep subject lines under 50 characters"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Use personalization tokens</span>
+                  <span>{nl ? "Gebruik personalisatietokens" : fr ? "Utilisez des jetons de personnalisation" : "Use personalization tokens"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>One clear CTA per email</span>
+                  <span>{nl ? "Eén duidelijke CTA per e-mail" : fr ? "Un seul CTA clair par e-mail" : "One clear CTA per email"}</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-                  <span>Mobile-optimized design</span>
+                  <span>{nl ? "Mobiel geoptimaliseerd ontwerp" : fr ? "Design optimisé pour mobile" : "Mobile-optimized design"}</span>
                 </li>
               </ul>
             </CardContent>
@@ -373,14 +386,14 @@ const EmailCampaignGenerator = () => {
             <Card className="h-full">
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Email Preview</CardTitle>
+                  <CardTitle>{nl ? "E-mailvoorbeeld" : fr ? "Aperçu de l'e-mail" : "Email Preview"}</CardTitle>
                   <div className="flex items-center gap-2">
                     {enableAB && variants.length > 1 && (
                       <Tabs value={selectedVariant} onValueChange={setSelectedVariant}>
                         <TabsList>
                           {variants.map((variant, index) => (
                             <TabsTrigger key={variant.id} value={variant.id}>
-                              Variant {String.fromCharCode(65 + index)}
+                              {nl ? "Variant" : fr ? "Variante" : "Variant"} {String.fromCharCode(65 + index)}
                             </TabsTrigger>
                           ))}
                         </TabsList>
@@ -398,7 +411,7 @@ const EmailCampaignGenerator = () => {
                     {/* Subject Line */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Subject Line</Label>
+                        <Label>{nl ? "Onderwerpregel" : fr ? "Ligne d'objet" : "Subject Line"}</Label>
                         <div className="flex items-center gap-2">
                           <Badge variant="secondary">{variant.tone}</Badge>
                           <Button
@@ -420,7 +433,7 @@ const EmailCampaignGenerator = () => {
                     {/* Preheader */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Preheader Text</Label>
+                        <Label>{nl ? "Preheadertekst" : fr ? "Texte de pré-en-tête" : "Preheader Text"}</Label>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -439,7 +452,7 @@ const EmailCampaignGenerator = () => {
                     {/* Email Body */}
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
-                        <Label>Email Body</Label>
+                        <Label>{nl ? "E-mailtekst" : fr ? "Corps de l'e-mail" : "Email Body"}</Label>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -451,8 +464,8 @@ const EmailCampaignGenerator = () => {
                       <Card className="bg-white">
                         <CardContent className="pt-6">
                           <div className="prose max-w-none">
-                            <div dangerouslySetInnerHTML={{ 
-                              __html: variant.body.replace(/\n/g, '<br/>') 
+                            <div dangerouslySetInnerHTML={{
+                              __html: variant.body.replace(/\n/g, '<br/>')
                             }} />
                           </div>
                         </CardContent>
@@ -461,7 +474,7 @@ const EmailCampaignGenerator = () => {
 
                     {/* CTA Button */}
                     <div className="space-y-2">
-                      <Label>Call-to-Action</Label>
+                      <Label>{nl ? "Call-to-action" : fr ? "Appel à l'action" : "Call-to-Action"}</Label>
                       <Card>
                         <CardContent className="pt-4">
                           <Button className="w-full sm:w-auto">
@@ -479,7 +492,7 @@ const EmailCampaignGenerator = () => {
                         disabled={loading}
                       >
                         <BarChart3 className="mr-2 h-4 w-4" />
-                        Analyze Performance
+                        {nl ? "Prestaties analyseren" : fr ? "Analyser les performances" : "Analyze Performance"}
                       </Button>
                     </div>
                   </div>
@@ -491,9 +504,9 @@ const EmailCampaignGenerator = () => {
               <CardContent>
                 <div className="text-center space-y-4 py-12">
                   <Mail className="h-12 w-12 text-muted-foreground mx-auto" />
-                  <h3 className="text-lg font-medium">No Campaign Yet</h3>
+                  <h3 className="text-lg font-medium">{nl ? "Nog geen campagne" : fr ? "Pas encore de campagne" : "No Campaign Yet"}</h3>
                   <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                    Configure your campaign settings and click Generate to create your email
+                    {nl ? "Configureer je campagne-instellingen en klik op Genereren om je e-mail te maken" : fr ? "Configurez les paramètres de votre campagne et cliquez sur Générer pour créer votre e-mail" : "Configure your campaign settings and click Generate to create your email"}
                   </p>
                 </div>
               </CardContent>

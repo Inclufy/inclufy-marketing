@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { BrandSelector, BrandKit, getBrandColors, getBrandLabel, getBrandLogo } from "@/components/BrandSelector";
 import mascotDefault from "@/assets/projextpal-mascot.png";
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // AI Hook Import - Zorg dat dit pad klopt!
 import { useAI } from "../hooks/use-ai";
@@ -65,9 +66,9 @@ const actorOptions = [
 
 type VoiceType = "female" | "male";
 
-const voiceOptions: { id: VoiceType; label: string; icon: string }[] = [
-  { id: "female", label: "Vrouwelijk", icon: "👩" },
-  { id: "male", label: "Mannelijk", icon: "👨" },
+const voiceOptions: { id: VoiceType; nl: string; fr: string; en: string; icon: string }[] = [
+  { id: "female", nl: "Vrouwelijk", fr: "Féminin", en: "Female", icon: "👩" },
+  { id: "male", nl: "Mannelijk", fr: "Masculin", en: "Male", icon: "👨" },
 ];
 
 interface TutorialStep {
@@ -82,14 +83,15 @@ interface TutorialStep {
 }
 
 const TutorialCreator = () => {
+  const { lang } = useLanguage(); const nl = lang === 'nl'; const fr = lang === 'fr';
   const [selectedBrandKit, setSelectedBrandKit] = useState<BrandKit | null>(null);
   const [tutorialTitle, setTutorialTitle] = useState("");
   const [steps, setSteps] = useState<TutorialStep[]>([
     {
       id: crypto.randomUUID(),
-      title: "Stap 1",
+      title: nl ? "Stap 1" : fr ? "Étape 1" : "Step 1",
       content: "",
-      mascotMessage: "Welkom bij de tutorial!",
+      mascotMessage: nl ? "Welkom bij de tutorial!" : fr ? "Bienvenue dans le tutoriel !" : "Welcome to the tutorial!",
       actorId: "pax",
       voice: "female",
     },
@@ -109,23 +111,23 @@ const TutorialCreator = () => {
   const addStep = () => {
     const newStep: TutorialStep = {
       id: crypto.randomUUID(),
-      title: `Stap ${steps.length + 1}`,
+      title: nl ? `Stap ${steps.length + 1}` : fr ? `Étape ${steps.length + 1}` : `Step ${steps.length + 1}`,
       content: "",
       mascotMessage: "",
       actorId: "pax",
       voice: "female",
     };
     setSteps([...steps, newStep]);
-    toast.success("Nieuwe stap toegevoegd");
+    toast.success(nl ? "Nieuwe stap toegevoegd" : fr ? "Nouvelle étape ajoutée" : "New step added");
   };
 
   const removeStep = (id: string) => {
     if (steps.length <= 1) {
-      toast.error("Je hebt minimaal 1 stap nodig");
+      toast.error(nl ? "Je hebt minimaal 1 stap nodig" : fr ? "Vous avez besoin d'au moins 1 étape" : "You need at least 1 step");
       return;
     }
     setSteps(steps.filter((s) => s.id !== id));
-    toast.success("Stap verwijderd");
+    toast.success(nl ? "Stap verwijderd" : fr ? "Étape supprimée" : "Step removed");
   };
 
   const updateStep = (id: string, field: keyof TutorialStep, value: string) => {
@@ -149,7 +151,7 @@ const TutorialCreator = () => {
           ? { ...s, actorId: "custom", customActorImage: imageUrl } 
           : s
       ));
-      toast.success("Afbeelding geüpload");
+      toast.success(nl ? "Afbeelding geüpload" : fr ? "Image téléchargée" : "Image uploaded");
     };
     reader.readAsDataURL(file);
   };
@@ -157,7 +159,7 @@ const TutorialCreator = () => {
   const generateTTS = async (stepId: string) => {
     const step = steps.find((s) => s.id === stepId);
     if (!step?.mascotMessage.trim()) {
-      toast.error("Voer eerst een mascot-bericht in");
+      toast.error(nl ? "Voer eerst een mascot-bericht in" : fr ? "Entrez d'abord un message du mascotte" : "Enter a mascot message first");
       return;
     }
 
@@ -194,10 +196,10 @@ const TutorialCreator = () => {
       setSteps(steps.map((s) => 
         s.id === stepId ? { ...s, audioUrl } : s
       ));
-      toast.success("Spraak gegenereerd!");
+      toast.success(nl ? "Spraak gegenereerd!" : fr ? "Voix générée !" : "Speech generated!");
     } catch (err) {
       console.error("TTS error:", err);
-      toast.error("Kon spraak niet genereren");
+      toast.error(nl ? "Kon spraak niet genereren" : fr ? "Impossible de générer la voix" : "Could not generate speech");
     } finally {
       setGeneratingTTS(null);
     }
@@ -230,7 +232,7 @@ const TutorialCreator = () => {
 
   const exportTutorial = () => {
     const tutorial = {
-      title: tutorialTitle || "Mijn Tutorial",
+      title: tutorialTitle || (nl ? "Mijn Tutorial" : fr ? "Mon Tutoriel" : "My Tutorial"),
       steps: steps.map((s, i) => ({
         order: i + 1,
         title: s.title,
@@ -249,19 +251,19 @@ const TutorialCreator = () => {
     a.download = `${tutorialTitle || "tutorial"}.json`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("Tutorial geëxporteerd!");
+    toast.success(nl ? "Tutorial geëxporteerd!" : fr ? "Tutoriel exporté !" : "Tutorial exported!");
   };
 
   // Export video with audio
   const exportVideo = async () => {
     const stepsWithAudio = steps.filter((s) => s.audioUrl);
     if (stepsWithAudio.length === 0) {
-      toast.error("Genereer eerst spraak voor minimaal 1 stap");
+      toast.error(nl ? "Genereer eerst spraak voor minimaal 1 stap" : fr ? "Générez d'abord la voix pour au moins 1 étape" : "Generate speech for at least 1 step first");
       return;
     }
 
     setExportingVideo(true);
-    toast.info("Video wordt gegenereerd...");
+    toast.info(nl ? "Video wordt gegenereerd..." : fr ? "Vidéo en cours de génération..." : "Video is being generated...");
 
     try {
       // Create offscreen canvas
@@ -497,10 +499,10 @@ const TutorialCreator = () => {
       URL.revokeObjectURL(url);
 
       await audioContext.close();
-      toast.success("Video geëxporteerd!");
+      toast.success(nl ? "Video geëxporteerd!" : fr ? "Vidéo exportée !" : "Video exported!");
     } catch (error) {
       console.error("Video export error:", error);
-      toast.error("Kon video niet exporteren");
+      toast.error(nl ? "Kon video niet exporteren" : fr ? "Impossible d'exporter la vidéo" : "Could not export video");
     } finally {
       setExportingVideo(false);
     }
@@ -508,7 +510,7 @@ const TutorialCreator = () => {
 
   const togglePreview = () => {
     if (!previewMode && steps.some((s) => !s.content.trim())) {
-      toast.error("Vul eerst alle stappen in");
+      toast.error(nl ? "Vul eerst alle stappen in" : fr ? "Remplissez d'abord toutes les étapes" : "Fill in all steps first");
       return;
     }
     setPreviewMode(!previewMode);
@@ -526,10 +528,10 @@ const TutorialCreator = () => {
           <div className="w-full">
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-2xl font-bold text-foreground">
-                {tutorialTitle || "Tutorial Preview"}
+                {tutorialTitle || (nl ? "Tutorial Voorbeeld" : fr ? "Aperçu du tutoriel" : "Tutorial Preview")}
               </h1>
               <Button variant="outline" onClick={() => setPreviewMode(false)}>
-                Terug naar bewerken
+                {nl ? "Terug naar bewerken" : fr ? "Retour à l'édition" : "Back to editing"}
               </Button>
             </div>
 
@@ -600,16 +602,16 @@ const TutorialCreator = () => {
                 disabled={currentPreviewStep === 0}
                 onClick={() => setCurrentPreviewStep((p) => p - 1)}
               >
-                Vorige
+                {nl ? "Vorige" : fr ? "Précédent" : "Previous"}
               </Button>
               <span className="text-muted-foreground">
-                Stap {currentPreviewStep + 1} van {steps.length}
+                {nl ? `Stap ${currentPreviewStep + 1} van ${steps.length}` : fr ? `Étape ${currentPreviewStep + 1} sur ${steps.length}` : `Step ${currentPreviewStep + 1} of ${steps.length}`}
               </span>
               <Button
                 disabled={currentPreviewStep === steps.length - 1}
                 onClick={() => setCurrentPreviewStep((p) => p + 1)}
               >
-                Volgende
+                {nl ? "Volgende" : fr ? "Suivant" : "Next"}
               </Button>
             </div>
           </div>
@@ -630,9 +632,9 @@ const TutorialCreator = () => {
                 <BookOpen className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Tutorial Creator</h1>
+                <h1 className="text-2xl font-bold text-foreground">{nl ? "Tutorial Creator" : fr ? "Créateur de tutoriels" : "Tutorial Creator"}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Maak stap-voor-stap tutorials met spraak
+                  {nl ? "Maak stap-voor-stap tutorials met spraak" : fr ? "Créez des tutoriels étape par étape avec la voix" : "Create step-by-step tutorials with speech"}
                 </p>
               </div>
             </div>
@@ -655,7 +657,7 @@ const TutorialCreator = () => {
                 ) : (
                   <Video className="w-4 h-4 mr-2" />
                 )}
-                {exportingVideo ? "Exporteren..." : "Video"}
+                {exportingVideo ? (nl ? "Exporteren..." : fr ? "Exportation..." : "Exporting...") : "Video"}
               </Button>
             </div>
           </div>
@@ -665,7 +667,7 @@ const TutorialCreator = () => {
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
                 <Tag className="w-5 h-5 text-primary" />
-                Kies Merk
+                {nl ? "Kies Merk" : fr ? "Choisir la marque" : "Choose Brand"}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -680,13 +682,13 @@ const TutorialCreator = () => {
           <Card className="mb-6">
             <CardContent className="pt-6">
               <label className="text-sm font-medium text-foreground mb-2 block">
-                Tutorial Titel
+                {nl ? "Tutorial Titel" : fr ? "Titre du tutoriel" : "Tutorial Title"}
               </label>
               <div className="flex gap-2">
                 <Input
                   value={tutorialTitle}
                   onChange={(e) => setTutorialTitle(e.target.value)}
-                  placeholder="Bijv. Onboarding nieuwe medewerker"
+                  placeholder={nl ? "Bijv. Onboarding nieuwe medewerker" : fr ? "Ex. Intégration d'un nouvel employé" : "E.g., Onboarding new employee"}
                   className="text-lg flex-1"
                 />
                 <Button
@@ -700,13 +702,13 @@ const TutorialCreator = () => {
                           id: crypto.randomUUID(),
                           title: step.title,
                           content: step.content,
-                          mascotMessage: `Hier is stap ${i + 1}!`,
+                          mascotMessage: nl ? `Hier is stap ${i + 1}!` : fr ? `Voici l'étape ${i + 1} !` : `Here is step ${i + 1}!`,
                           actorId: "pax",
                           voice: "female",
                         })));
-                        toast.success("Tutorial gegenereerd met AI!");
+                        toast.success(nl ? "Tutorial gegenereerd met AI!" : fr ? "Tutoriel généré avec l'IA !" : "Tutorial generated with AI!");
                       } catch (error) {
-                        toast.error("AI generatie mislukt. Check je API key.");
+                        toast.error(nl ? "AI generatie mislukt. Check je API key." : fr ? "Échec de la génération IA. Vérifiez votre clé API." : "AI generation failed. Check your API key.");
                         console.error(error);
                       }
                     }
@@ -719,7 +721,7 @@ const TutorialCreator = () => {
                   ) : (
                     <Wand2 className="w-4 h-4 mr-2" />
                   )}
-                  AI Genereer
+                  {nl ? "AI Genereer" : fr ? "Générer IA" : "AI Generate"}
                 </Button>
               </div>
             </CardContent>
@@ -758,7 +760,7 @@ const TutorialCreator = () => {
                       <Input
                         value={step.title}
                         onChange={(e) => updateStep(step.id, "title", e.target.value)}
-                        placeholder="Stap titel"
+                        placeholder={nl ? "Stap titel" : fr ? "Titre de l'étape" : "Step title"}
                         className="font-medium"
                       />
 
@@ -766,7 +768,7 @@ const TutorialCreator = () => {
                       <div>
                         <label className="text-xs text-muted-foreground mb-2 block flex items-center gap-1">
                           <User className="w-3 h-3" />
-                          Kies acteur:
+                          {nl ? "Kies acteur:" : fr ? "Choisir l'acteur :" : "Choose actor:"}
                         </label>
                         <div className="flex flex-wrap gap-2">
                           {actorOptions.slice(0, 8).map((actor) => (
@@ -822,7 +824,7 @@ const TutorialCreator = () => {
                       <div>
                         <label className="text-xs text-muted-foreground mb-2 block flex items-center gap-1">
                           <Volume2 className="w-3 h-3" />
-                          Kies stem:
+                          {nl ? "Kies stem:" : fr ? "Choisir la voix :" : "Choose voice:"}
                         </label>
                         <div className="flex gap-2">
                           {voiceOptions.map((voice) => (
@@ -836,7 +838,7 @@ const TutorialCreator = () => {
                               }`}
                             >
                               <span>{voice.icon}</span>
-                              {voice.label}
+                              {nl ? voice.nl : fr ? voice.fr : voice.en}
                             </button>
                           ))}
                         </div>
@@ -846,7 +848,7 @@ const TutorialCreator = () => {
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block flex items-center gap-1">
                           <Wand2 className="w-3 h-3" />
-                          Acteur zegt:
+                          {nl ? "Acteur zegt:" : fr ? "L'acteur dit :" : "Actor says:"}
                         </label>
                         <div className="flex gap-2">
                           <Input
@@ -854,7 +856,7 @@ const TutorialCreator = () => {
                             onChange={(e) =>
                               updateStep(step.id, "mascotMessage", e.target.value)
                             }
-                            placeholder="Wat zegt de acteur bij deze stap?"
+                            placeholder={nl ? "Wat zegt de acteur bij deze stap?" : fr ? "Que dit l'acteur à cette étape ?" : "What does the actor say at this step?"}
                             className="flex-1"
                           />
                           <Button
@@ -862,7 +864,7 @@ const TutorialCreator = () => {
                             size="icon"
                             onClick={() => generateTTS(step.id)}
                             disabled={generatingTTS === step.id || !step.mascotMessage.trim()}
-                            title="Genereer spraak"
+                            title={nl ? "Genereer spraak" : fr ? "Générer la voix" : "Generate speech"}
                           >
                             {generatingTTS === step.id ? (
                               <Loader2 className="w-4 h-4 animate-spin" />
@@ -875,7 +877,7 @@ const TutorialCreator = () => {
                               variant={playingAudio === step.id ? "default" : "outline"}
                               size="icon"
                               onClick={() => playAudio(step.id, step.audioUrl!)}
-                              title="Speel audio af"
+                              title={nl ? "Speel audio af" : fr ? "Lire l'audio" : "Play audio"}
                             >
                               {playingAudio === step.id ? (
                                 <Pause className="w-4 h-4" />
@@ -887,19 +889,19 @@ const TutorialCreator = () => {
                         </div>
                         {step.audioUrl && (
                           <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
-                            ✓ Spraak gegenereerd
+                            {nl ? "✓ Spraak gegenereerd" : fr ? "✓ Voix générée" : "✓ Speech generated"}
                           </p>
                         )}
                       </div>
 
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">
-                          Inhoud
+                          {nl ? "Inhoud" : fr ? "Contenu" : "Content"}
                         </label>
                         <Textarea
                           value={step.content}
                           onChange={(e) => updateStep(step.id, "content", e.target.value)}
-                          placeholder="Beschrijf wat de gebruiker moet doen in deze stap..."
+                          placeholder={nl ? "Beschrijf wat de gebruiker moet doen in deze stap..." : fr ? "Décrivez ce que l'utilisateur doit faire à cette étape..." : "Describe what the user should do in this step..."}
                           rows={3}
                         />
                       </div>
@@ -927,7 +929,7 @@ const TutorialCreator = () => {
             className="w-full mt-6 border-dashed"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Stap Toevoegen
+            {nl ? "Stap Toevoegen" : fr ? "Ajouter une étape" : "Add Step"}
           </Button>
         </div>
       </main>

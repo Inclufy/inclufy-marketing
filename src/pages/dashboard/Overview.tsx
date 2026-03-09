@@ -53,8 +53,9 @@ import {
 } from 'recharts';
 import { useAnalyticsDashboard } from '@/hooks/queries/useAnalytics';
 import { LoadingSkeleton, ErrorState } from '@/components/DataState';
+import { useLanguage } from '@/contexts/LanguageContext';
 
-// ─── Fallback data ─────────────────────────────────────────────────
+// ─── Fallback data (language-independent) ────────────────────────────
 
 const FALLBACK_PERFORMANCE = [
   { month: 'Jan', revenue: 45000, campaigns: 12, engagement: 78 },
@@ -65,27 +66,6 @@ const FALLBACK_PERFORMANCE = [
   { month: 'Jun', revenue: 88000, campaigns: 24, engagement: 95 },
 ];
 
-const FALLBACK_CAMPAIGN_STATUS = [
-  { name: 'Actief', value: 12, color: '#7c3aed' },
-  { name: 'Gepland', value: 5, color: '#f59e0b' },
-  { name: 'Voltooid', value: 18, color: '#10b981' },
-  { name: 'Concept', value: 3, color: '#94a3b8' },
-];
-
-const FALLBACK_ENGAGEMENT = [
-  { name: 'Zeer Actief', value: 28, color: '#10b981' },
-  { name: 'Actief', value: 45, color: '#3b82f6' },
-  { name: 'Matig', value: 20, color: '#f59e0b' },
-  { name: 'Inactief', value: 7, color: '#ef4444' },
-];
-
-const FALLBACK_ACTIVITIES = [
-  { id: 1, user: 'Sarah Chen', action: 'lanceerde campagne', target: 'Zomer Uitverkoop 2024', time: '2 uur geleden', type: 'campaign' },
-  { id: 2, user: 'Mike Johnson', action: 'genereerde content', target: '5 social media posts', time: '3 uur geleden', type: 'ai' },
-  { id: 3, user: 'Emily Davis', action: 'maakte klantreis aan', target: 'Onboarding Flow v2', time: '5 uur geleden', type: 'journey' },
-  { id: 4, user: 'Alex Rivera', action: 'updated segment', target: 'High-Value Customers', time: '1 day ago', type: 'segment' },
-];
-
 const FALLBACK_TOP_PERFORMERS = [
   { name: 'Sarah Chen', score: 98, campaigns: 24, revenue: '$125K' },
   { name: 'Mike Johnson', score: 92, campaigns: 21, revenue: '$108K' },
@@ -94,14 +74,67 @@ const FALLBACK_TOP_PERFORMERS = [
 
 export default function DashboardOverview() {
   const [dateRange, setDateRange] = useState('month');
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
 
   // Fetch real dashboard stats
   const { data: dashboardStats, isLoading, isError, refetch } = useAnalyticsDashboard();
 
+  // ─── Translated fallback data ────────────────────────────────────
+  const campaignStatusData = [
+    { name: nl ? 'Actief' : fr ? 'Actives' : 'Active', value: 12, color: '#7c3aed' },
+    { name: nl ? 'Gepland' : fr ? 'Planifiées' : 'Planned', value: 5, color: '#f59e0b' },
+    { name: nl ? 'Voltooid' : fr ? 'Terminées' : 'Completed', value: 18, color: '#10b981' },
+    { name: nl ? 'Concept' : fr ? 'Brouillon' : 'Draft', value: 3, color: '#94a3b8' },
+  ];
+
+  const engagementData = [
+    { name: nl ? 'Zeer Actief' : fr ? 'Très Actif' : 'Very Active', value: 28, color: '#10b981' },
+    { name: nl ? 'Actief' : fr ? 'Actif' : 'Active', value: 45, color: '#3b82f6' },
+    { name: nl ? 'Matig' : fr ? 'Modéré' : 'Moderate', value: 20, color: '#f59e0b' },
+    { name: nl ? 'Inactief' : fr ? 'Inactif' : 'Inactive', value: 7, color: '#ef4444' },
+  ];
+
+  const recentActivities = [
+    {
+      id: 1,
+      user: 'Sarah Chen',
+      action: nl ? 'lanceerde campagne' : fr ? 'a lancé la campagne' : 'launched campaign',
+      target: nl ? 'Zomer Uitverkoop 2024' : fr ? 'Soldes d\'Été 2024' : 'Summer Sale 2024',
+      time: nl ? '2 uur geleden' : fr ? 'il y a 2 heures' : '2 hours ago',
+      type: 'campaign',
+    },
+    {
+      id: 2,
+      user: 'Mike Johnson',
+      action: nl ? 'genereerde content' : fr ? 'a généré du contenu' : 'generated content',
+      target: nl ? '5 social media posts' : fr ? '5 publications réseaux sociaux' : '5 social media posts',
+      time: nl ? '3 uur geleden' : fr ? 'il y a 3 heures' : '3 hours ago',
+      type: 'ai',
+    },
+    {
+      id: 3,
+      user: 'Emily Davis',
+      action: nl ? 'maakte klantreis aan' : fr ? 'a créé un parcours client' : 'created customer journey',
+      target: 'Onboarding Flow v2',
+      time: nl ? '5 uur geleden' : fr ? 'il y a 5 heures' : '5 hours ago',
+      type: 'journey',
+    },
+    {
+      id: 4,
+      user: 'Alex Rivera',
+      action: nl ? 'heeft segment bijgewerkt' : fr ? 'a mis à jour le segment' : 'updated segment',
+      target: nl ? 'Hoog-waarde Klanten' : fr ? 'Clients à Haute Valeur' : 'High-Value Customers',
+      time: nl ? '1 dag geleden' : fr ? 'il y a 1 jour' : '1 day ago',
+      type: 'segment',
+    },
+  ];
+
   // Build stats cards from API data or fallback
   const stats = [
     {
-      title: 'Total Revenue',
+      title: nl ? 'Totale Omzet' : fr ? 'Revenu Total' : 'Total Revenue',
       value: dashboardStats?.revenue
         ? `$${(dashboardStats.revenue / 1000).toFixed(1)}K`
         : '$877.9K',
@@ -112,7 +145,7 @@ export default function DashboardOverview() {
       bgGradient: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20'
     },
     {
-      title: 'Active Campaigns',
+      title: nl ? 'Actieve Campagnes' : fr ? 'Campagnes Actives' : 'Active Campaigns',
       value: dashboardStats?.active_campaigns?.toString() ?? '38',
       change: '+12%',
       trend: 'up' as const,
@@ -121,7 +154,7 @@ export default function DashboardOverview() {
       bgGradient: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20'
     },
     {
-      title: 'Total Contacts',
+      title: nl ? 'Totaal Contacten' : fr ? 'Total Contacts' : 'Total Contacts',
       value: dashboardStats?.total_contacts
         ? dashboardStats.total_contacts.toLocaleString()
         : '24,583',
@@ -132,7 +165,7 @@ export default function DashboardOverview() {
       bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'
     },
     {
-      title: 'Avg. Engagement',
+      title: nl ? 'Gem. Engagement' : fr ? 'Engagement Moyen' : 'Avg. Engagement',
       value: '68.5%',
       change: '-2.3%',
       trend: 'down' as const,
@@ -143,9 +176,6 @@ export default function DashboardOverview() {
   ];
 
   const performanceData = FALLBACK_PERFORMANCE;
-  const campaignStatusData = FALLBACK_CAMPAIGN_STATUS;
-  const engagementData = FALLBACK_ENGAGEMENT;
-  const recentActivities = FALLBACK_ACTIVITIES;
   const topPerformers = FALLBACK_TOP_PERFORMERS;
 
   const containerVariants = {
@@ -172,10 +202,15 @@ export default function DashboardOverview() {
       <motion.div variants={itemVariants} className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
-            Welcome back, Sami!
+            {nl ? 'Welkom terug, Sami!' : fr ? 'Bienvenue, Sami !' : 'Welcome back, Sami!'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Your campaigns are performing <span className="text-green-600 font-semibold">23% better</span> than last month
+            {nl
+              ? <>Je campagnes presteren <span className="text-green-600 font-semibold">23% beter</span> dan vorige maand</>
+              : fr
+                ? <>Vos campagnes performent <span className="text-green-600 font-semibold">23% mieux</span> que le mois dernier</>
+                : <>Your campaigns are performing <span className="text-green-600 font-semibold">23% better</span> than last month</>
+            }
           </p>
         </div>
         <div className="flex gap-3">
@@ -185,20 +220,20 @@ export default function DashboardOverview() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="quarter">This Quarter</SelectItem>
-              <SelectItem value="year">This Year</SelectItem>
+              <SelectItem value="today">{nl ? 'Vandaag' : fr ? 'Aujourd\'hui' : 'Today'}</SelectItem>
+              <SelectItem value="week">{nl ? 'Deze Week' : fr ? 'Cette Semaine' : 'This Week'}</SelectItem>
+              <SelectItem value="month">{nl ? 'Deze Maand' : fr ? 'Ce Mois' : 'This Month'}</SelectItem>
+              <SelectItem value="quarter">{nl ? 'Dit Kwartaal' : fr ? 'Ce Trimestre' : 'This Quarter'}</SelectItem>
+              <SelectItem value="year">{nl ? 'Dit Jaar' : fr ? 'Cette Année' : 'This Year'}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline">
             <Download className="w-4 h-4 mr-2" />
-            Export
+            {nl ? 'Exporteren' : fr ? 'Exporter' : 'Export'}
           </Button>
           <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
             <Sparkles className="w-4 h-4 mr-2" />
-            AI Summary
+            {nl ? 'AI Samenvatting' : fr ? 'Résumé IA' : 'AI Summary'}
           </Button>
         </div>
       </motion.div>
@@ -244,8 +279,8 @@ export default function DashboardOverview() {
           <Card className="h-full shadow-lg border-0">
             <CardHeader className="flex flex-row items-center justify-between">
               <div>
-                <CardTitle>Revenue & Performance</CardTitle>
-                <p className="text-sm text-gray-500">Monthly overview</p>
+                <CardTitle>{nl ? 'Omzet & Prestaties' : fr ? 'Revenus & Performance' : 'Revenue & Performance'}</CardTitle>
+                <p className="text-sm text-gray-500">{nl ? 'Maandoverzicht' : fr ? 'Aperçu Mensuel' : 'Monthly overview'}</p>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -254,9 +289,9 @@ export default function DashboardOverview() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem>View Details</DropdownMenuItem>
-                  <DropdownMenuItem>Export Data</DropdownMenuItem>
-                  <DropdownMenuItem>Print Report</DropdownMenuItem>
+                  <DropdownMenuItem>{nl ? 'Details Bekijken' : fr ? 'Voir les Détails' : 'View Details'}</DropdownMenuItem>
+                  <DropdownMenuItem>{nl ? 'Data Exporteren' : fr ? 'Exporter les Données' : 'Export Data'}</DropdownMenuItem>
+                  <DropdownMenuItem>{nl ? 'Rapport Afdrukken' : fr ? 'Imprimer le Rapport' : 'Print Report'}</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </CardHeader>
@@ -301,9 +336,9 @@ export default function DashboardOverview() {
         <motion.div variants={itemVariants}>
           <Card className="h-full shadow-lg border-0">
             <CardHeader>
-              <CardTitle>Campaign Status</CardTitle>
+              <CardTitle>{nl ? 'Campagnestatus' : fr ? 'Statut des Campagnes' : 'Campaign Status'}</CardTitle>
               <p className="text-sm text-gray-500">
-                Total: {dashboardStats?.total_campaigns ?? 38} campaigns
+                {nl ? 'Totaal' : fr ? 'Total' : 'Total'}: {dashboardStats?.total_campaigns ?? 38} {nl ? 'campagnes' : fr ? 'campagnes' : 'campaigns'}
               </p>
             </CardHeader>
             <CardContent>
@@ -348,8 +383,8 @@ export default function DashboardOverview() {
         <motion.div variants={itemVariants}>
           <Card className="shadow-lg border-0">
             <CardHeader>
-              <CardTitle>User Engagement</CardTitle>
-              <p className="text-sm text-gray-500">Active users distribution</p>
+              <CardTitle>{nl ? 'Gebruikersbetrokkenheid' : fr ? 'Engagement Utilisateurs' : 'User Engagement'}</CardTitle>
+              <p className="text-sm text-gray-500">{nl ? 'Verdeling actieve gebruikers' : fr ? 'Distribution des utilisateurs actifs' : 'Active users distribution'}</p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
@@ -380,8 +415,8 @@ export default function DashboardOverview() {
         <motion.div variants={itemVariants}>
           <Card className="shadow-lg border-0">
             <CardHeader>
-              <CardTitle>Recent Activity</CardTitle>
-              <p className="text-sm text-gray-500">Team actions</p>
+              <CardTitle>{nl ? 'Recente Activiteit' : fr ? 'Activité Récente' : 'Recent Activity'}</CardTitle>
+              <p className="text-sm text-gray-500">{nl ? 'Team acties' : fr ? 'Actions d\'Équipe' : 'Team actions'}</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {recentActivities.map((activity) => (
@@ -408,14 +443,14 @@ export default function DashboardOverview() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>
                         <Eye className="w-4 h-4 mr-2" />
-                        View Details
+                        {nl ? 'Details Bekijken' : fr ? 'Voir les Détails' : 'View Details'}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               ))}
               <Button variant="outline" className="w-full">
-                View All Activity
+                {nl ? 'Alle Activiteit Bekijken' : fr ? 'Voir Toute l\'Activité' : 'View All Activity'}
                 <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>
@@ -428,9 +463,9 @@ export default function DashboardOverview() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-purple-600" />
-                Top Performers
+                {nl ? 'Toppresteerders' : fr ? 'Meilleurs Performeurs' : 'Top Performers'}
               </CardTitle>
-              <p className="text-sm text-gray-500">This month's leaders</p>
+              <p className="text-sm text-gray-500">{nl ? 'Leiders deze maand' : fr ? 'Leaders du mois' : 'This month\'s leaders'}</p>
             </CardHeader>
             <CardContent className="space-y-4">
               {topPerformers.map((performer, index) => (
@@ -450,7 +485,7 @@ export default function DashboardOverview() {
                   <div className="flex-1">
                     <p className="font-medium">{performer.name}</p>
                     <p className="text-sm text-gray-500">
-                      {performer.campaigns} campaigns &bull; {performer.revenue}
+                      {performer.campaigns} {nl ? 'campagnes' : fr ? 'campagnes' : 'campaigns'} &bull; {performer.revenue}
                     </p>
                   </div>
                   <Badge variant="secondary" className="font-bold">
@@ -459,7 +494,7 @@ export default function DashboardOverview() {
                 </div>
               ))}
               <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-                View Full Leaderboard
+                {nl ? 'Volledig Klassement Bekijken' : fr ? 'Voir le Classement Complet' : 'View Full Leaderboard'}
                 <ChevronRight className="w-4 h-4 ml-2" />
               </Button>
             </CardContent>

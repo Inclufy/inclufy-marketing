@@ -16,6 +16,7 @@ import {
   Clock,
 } from 'lucide-react';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Registration {
   id: string;
@@ -28,6 +29,9 @@ interface Registration {
 }
 
 export default function AdminRegistrations() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -52,11 +56,11 @@ export default function AdminRegistrations() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Registraties</h1>
-          <p className="text-sm text-gray-500">{registrations.length} registraties | {trialCount} trials</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Registraties' : fr ? 'Inscriptions' : 'Registrations'}</h1>
+          <p className="text-sm text-gray-500">{registrations.length} {nl ? 'registraties' : fr ? 'inscriptions' : 'registrations'} | {trialCount} trials</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+          <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -67,7 +71,7 @@ export default function AdminRegistrations() {
             <UserPlus className="h-5 w-5 text-purple-500" />
             <div>
               <p className="text-2xl font-bold">{registrations.length}</p>
-              <p className="text-xs text-gray-500">Totaal</p>
+              <p className="text-xs text-gray-500">{nl ? 'Totaal' : fr ? 'Total' : 'Total'}</p>
             </div>
           </CardContent>
         </Card>
@@ -101,18 +105,18 @@ export default function AdminRegistrations() {
           ) : registrations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-gray-500">
               <UserPlus className="h-12 w-12 mb-4 text-gray-300" />
-              <p className="text-lg font-medium">Geen registraties</p>
-              <p className="text-sm">Er zijn nog geen registraties ontvangen</p>
+              <p className="text-lg font-medium">{nl ? 'Geen registraties' : fr ? 'Aucune inscription' : 'No registrations'}</p>
+              <p className="text-sm">{nl ? 'Er zijn nog geen registraties ontvangen' : fr ? 'Aucune inscription n\'a encore ete recue' : 'No registrations have been received yet'}</p>
             </div>
           ) : (
             <table className="w-full">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Gebruiker</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Gebruiker' : fr ? 'Utilisateur' : 'User'}</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Type</th>
                   <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Bron</th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">Datum</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Bron' : fr ? 'Source' : 'Source'}</th>
+                  <th className="text-left py-3 px-4 text-xs font-medium text-gray-500 uppercase">{nl ? 'Datum' : fr ? 'Date' : 'Date'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -139,7 +143,7 @@ export default function AdminRegistrations() {
                     </td>
                     <td className="py-3 px-4 text-sm text-gray-500">{reg.source || 'direct'}</td>
                     <td className="py-3 px-4 text-sm text-gray-500">
-                      {reg.created_at ? new Date(reg.created_at).toLocaleDateString('nl-NL') : '-'}
+                      {reg.created_at ? new Date(reg.created_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB') : '-'}
                     </td>
                   </tr>
                 ))}

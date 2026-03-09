@@ -16,34 +16,38 @@ import {
   Sparkles, Loader2, Copy, Save, FileText, RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import api from '@/lib/api';
-
-const CONTENT_TYPES = [
-  { value: 'blog', label: 'Blog Post' },
-  { value: 'article', label: 'Article' },
-  { value: 'ad_copy', label: 'Ad Copy' },
-  { value: 'product_description', label: 'Product Description' },
-  { value: 'press_release', label: 'Press Release' },
-  { value: 'script', label: 'Video/Audio Script' },
-];
-
-const TONES = [
-  { value: 'professional', label: 'Professional' },
-  { value: 'casual', label: 'Casual' },
-  { value: 'persuasive', label: 'Persuasive' },
-  { value: 'informative', label: 'Informative' },
-  { value: 'enthusiastic', label: 'Enthusiastic' },
-  { value: 'authoritative', label: 'Authoritative' },
-];
-
-const LENGTHS = [
-  { value: 'short', label: 'Short (200-300 words)' },
-  { value: 'medium', label: 'Medium (500-700 words)' },
-  { value: 'long', label: 'Long (1000-1500 words)' },
-];
 
 export default function AIWriter() {
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
+  const CONTENT_TYPES = [
+    { value: 'blog', label: nl ? 'Blogpost' : fr ? 'Article de blog' : 'Blog Post' },
+    { value: 'article', label: nl ? 'Artikel' : fr ? 'Article' : 'Article' },
+    { value: 'ad_copy', label: nl ? 'Advertentietekst' : fr ? 'Texte publicitaire' : 'Ad Copy' },
+    { value: 'product_description', label: nl ? 'Productbeschrijving' : fr ? 'Description de produit' : 'Product Description' },
+    { value: 'press_release', label: nl ? 'Persbericht' : fr ? 'Communiqué de presse' : 'Press Release' },
+    { value: 'script', label: nl ? 'Video-/Audioscript' : fr ? 'Script vidéo/audio' : 'Video/Audio Script' },
+  ];
+
+  const TONES = [
+    { value: 'professional', label: nl ? 'Professioneel' : fr ? 'Professionnel' : 'Professional' },
+    { value: 'casual', label: nl ? 'Informeel' : fr ? 'Décontracté' : 'Casual' },
+    { value: 'persuasive', label: nl ? 'Overtuigend' : fr ? 'Persuasif' : 'Persuasive' },
+    { value: 'informative', label: nl ? 'Informatief' : fr ? 'Informatif' : 'Informative' },
+    { value: 'enthusiastic', label: nl ? 'Enthousiast' : fr ? 'Enthousiaste' : 'Enthusiastic' },
+    { value: 'authoritative', label: nl ? 'Gezaghebbend' : fr ? 'Autoritaire' : 'Authoritative' },
+  ];
+
+  const LENGTHS = [
+    { value: 'short', label: nl ? 'Kort (200-300 woorden)' : fr ? 'Court (200-300 mots)' : 'Short (200-300 words)' },
+    { value: 'medium', label: nl ? 'Gemiddeld (500-700 woorden)' : fr ? 'Moyen (500-700 mots)' : 'Medium (500-700 words)' },
+    { value: 'long', label: nl ? 'Lang (1000-1500 woorden)' : fr ? 'Long (1000-1500 mots)' : 'Long (1000-1500 words)' },
+  ];
   const [prompt, setPrompt] = useState('');
   const [contentType, setContentType] = useState('blog');
   const [tone, setTone] = useState('professional');
@@ -74,8 +78,8 @@ export default function AIWriter() {
       setResult(parsed);
     } catch (err: any) {
       toast({
-        title: 'Generation failed',
-        description: err.response?.data?.detail || err.message || 'Could not generate content',
+        title: nl ? 'Genereren mislukt' : fr ? 'Échec de la génération' : 'Generation failed',
+        description: err.response?.data?.detail || err.message || (nl ? 'Kon content niet genereren' : fr ? 'Impossible de générer le contenu' : 'Could not generate content'),
         variant: 'destructive',
       });
     } finally {
@@ -86,7 +90,7 @@ export default function AIWriter() {
   const handleCopy = () => {
     if (!result) return;
     navigator.clipboard.writeText(result.content);
-    toast({ title: 'Copied to clipboard' });
+    toast({ title: nl ? 'Gekopieerd naar klembord' : fr ? 'Copié dans le presse-papiers' : 'Copied to clipboard' });
   };
 
   const handleSaveToLibrary = async () => {
@@ -100,11 +104,11 @@ export default function AIWriter() {
         metadata: { tone, length, word_count: result.word_count, prompt },
         tags: [contentType, tone],
       });
-      toast({ title: 'Saved to Content Library' });
+      toast({ title: nl ? 'Opgeslagen in Contentbibliotheek' : fr ? 'Enregistré dans la bibliothèque de contenu' : 'Saved to Content Library' });
     } catch (err: any) {
       toast({
-        title: 'Save failed',
-        description: err.response?.data?.detail || 'Could not save',
+        title: nl ? 'Opslaan mislukt' : fr ? 'Échec de l\'enregistrement' : 'Save failed',
+        description: err.response?.data?.detail || (nl ? 'Kon niet opslaan' : fr ? 'Impossible d\'enregistrer' : 'Could not save'),
         variant: 'destructive',
       });
     } finally {
@@ -117,10 +121,10 @@ export default function AIWriter() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-          AI Writer
+          {nl ? 'AI Schrijver' : fr ? 'Rédacteur IA' : 'AI Writer'}
         </h1>
         <p className="text-gray-600 dark:text-gray-400 mt-2">
-          Generate compelling marketing content with AI
+          {nl ? 'Genereer overtuigende marketingcontent met AI' : fr ? 'Générez du contenu marketing percutant avec l\'IA' : 'Generate compelling marketing content with AI'}
         </p>
       </div>
 
@@ -130,14 +134,14 @@ export default function AIWriter() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />
-              Configure
+              {nl ? 'Configureer' : fr ? 'Configurer' : 'Configure'}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">What do you want to write about?</label>
+              <label className="text-sm font-medium">{nl ? 'Waarover wil je schrijven?' : fr ? 'Sur quoi voulez-vous écrire ?' : 'What do you want to write about?'}</label>
               <Textarea
-                placeholder="e.g., The benefits of AI-powered marketing automation for small businesses..."
+                placeholder={nl ? 'bijv. De voordelen van AI-gestuurde marketingautomatisering voor kleine bedrijven...' : fr ? 'p. ex. Les avantages de l\'automatisation marketing par IA pour les petites entreprises...' : 'e.g., The benefits of AI-powered marketing automation for small businesses...'}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 rows={4}
@@ -145,7 +149,7 @@ export default function AIWriter() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Content Type</label>
+              <label className="text-sm font-medium">{nl ? 'Contenttype' : fr ? 'Type de contenu' : 'Content Type'}</label>
               <Select value={contentType} onValueChange={setContentType}>
                 <SelectTrigger>
                   <SelectValue />
@@ -161,7 +165,7 @@ export default function AIWriter() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Tone</label>
+              <label className="text-sm font-medium">{nl ? 'Toon' : fr ? 'Ton' : 'Tone'}</label>
               <Select value={tone} onValueChange={setTone}>
                 <SelectTrigger>
                   <SelectValue />
@@ -177,7 +181,7 @@ export default function AIWriter() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Length</label>
+              <label className="text-sm font-medium">{nl ? 'Lengte' : fr ? 'Longueur' : 'Length'}</label>
               <Select value={length} onValueChange={setLength}>
                 <SelectTrigger>
                   <SelectValue />
@@ -200,12 +204,12 @@ export default function AIWriter() {
               {generating ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Generating...
+                  {nl ? 'Genereren...' : fr ? 'Génération...' : 'Generating...'}
                 </>
               ) : (
                 <>
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Generate Content
+                  {nl ? 'Content genereren' : fr ? 'Générer du contenu' : 'Generate Content'}
                 </>
               )}
             </Button>
@@ -217,26 +221,26 @@ export default function AIWriter() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Generated Content</CardTitle>
+                <CardTitle>{nl ? 'Gegenereerde content' : fr ? 'Contenu généré' : 'Generated Content'}</CardTitle>
                 <CardDescription>
                   {result
-                    ? `${result.word_count || '~'} words`
-                    : 'Your AI-generated content will appear here'}
+                    ? `${result.word_count || '~'} ${nl ? 'woorden' : fr ? 'mots' : 'words'}`
+                    : nl ? 'Je AI-gegenereerde content verschijnt hier' : fr ? 'Votre contenu généré par IA apparaîtra ici' : 'Your AI-generated content will appear here'}
                 </CardDescription>
               </div>
               {result && (
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="sm" onClick={handleCopy}>
                     <Copy className="h-4 w-4 mr-1" />
-                    Copy
+                    {nl ? 'Kopiëren' : fr ? 'Copier' : 'Copy'}
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleSaveToLibrary} disabled={saving}>
                     {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-                    Save
+                    {nl ? 'Opslaan' : fr ? 'Enregistrer' : 'Save'}
                   </Button>
                   <Button variant="outline" size="sm" onClick={handleGenerate} disabled={generating}>
                     <RefreshCw className="h-4 w-4 mr-1" />
-                    Regenerate
+                    {nl ? 'Opnieuw genereren' : fr ? 'Régénérer' : 'Regenerate'}
                   </Button>
                 </div>
               )}
@@ -247,7 +251,7 @@ export default function AIWriter() {
               <div className="flex items-center justify-center py-20">
                 <div className="text-center">
                   <Loader2 className="h-10 w-10 animate-spin text-purple-600 mx-auto mb-4" />
-                  <p className="text-gray-500">Generating your content...</p>
+                  <p className="text-gray-500">{nl ? 'Je content wordt gegenereerd...' : fr ? 'Génération de votre contenu...' : 'Generating your content...'}</p>
                 </div>
               </div>
             ) : result ? (
@@ -258,7 +262,7 @@ export default function AIWriter() {
                     <Badge variant="outline" className="capitalize">{contentType.replace('_', ' ')}</Badge>
                     <Badge variant="outline" className="capitalize">{tone}</Badge>
                     {result.word_count && (
-                      <Badge variant="secondary">{result.word_count} words</Badge>
+                      <Badge variant="secondary">{result.word_count} {nl ? 'woorden' : fr ? 'mots' : 'words'}</Badge>
                     )}
                   </div>
                 </div>
@@ -277,9 +281,9 @@ export default function AIWriter() {
                   <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 flex items-center justify-center mx-auto mb-4">
                     <FileText className="h-8 w-8 text-purple-600" />
                   </div>
-                  <p className="text-gray-500 mb-1">Ready to create</p>
+                  <p className="text-gray-500 mb-1">{nl ? 'Klaar om te creëren' : fr ? 'Prêt à créer' : 'Ready to create'}</p>
                   <p className="text-sm text-gray-400">
-                    Describe what you want to write and hit Generate
+                    {nl ? 'Beschrijf wat je wilt schrijven en klik op Genereren' : fr ? 'Décrivez ce que vous voulez écrire et cliquez sur Générer' : 'Describe what you want to write and hit Generate'}
                   </p>
                 </div>
               </div>

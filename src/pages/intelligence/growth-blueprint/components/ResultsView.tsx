@@ -1,9 +1,9 @@
 // src/pages/growth-blueprint/components/ResultsView.tsx
 import React, { useState } from 'react';
-import { 
-  Award, 
-  TrendingUp, 
-  AlertTriangle, 
+import {
+  Award,
+  TrendingUp,
+  AlertTriangle,
   Target,
   Sparkles,
   ArrowRight,
@@ -14,12 +14,16 @@ import {
 } from 'lucide-react';
 import { PostScanWizard } from '../PostScanWizard';
 import { toast } from 'sonner';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ResultsViewProps {
   blueprint: any;
 }
 
 export default function ResultsView({ blueprint }: ResultsViewProps) {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [showWizard, setShowWizard] = useState(false);
 
   if (!blueprint) {
@@ -28,9 +32,9 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
           <Award className="w-8 h-8 text-gray-400" />
         </div>
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Results Yet</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">{nl ? 'Nog geen resultaten' : fr ? 'Pas encore de resultats' : 'No Results Yet'}</h3>
         <p className="text-gray-600 mb-4">
-          Run a new scan to see your Growth Blueprint results
+          {nl ? 'Voer een nieuwe scan uit om je Growth Blueprint resultaten te zien' : fr ? 'Lancez un nouveau scan pour voir vos resultats Growth Blueprint' : 'Run a new scan to see your Growth Blueprint results'}
         </p>
       </div>
     );
@@ -59,7 +63,7 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
             <div className="text-6xl font-bold mb-2">
               {blueprint.blueprint?.overall_score || 0}
             </div>
-            <p className="text-purple-100">Overall Score</p>
+            <p className="text-purple-100">{nl ? 'Totaalscore' : fr ? 'Score global' : 'Overall Score'}</p>
           </div>
         </div>
       </div>
@@ -67,7 +71,7 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
       {/* Score Breakdown */}
       <div className="grid md:grid-cols-5 gap-4">
         <ScoreCard
-          label="Website"
+          label={nl ? 'Website' : fr ? 'Site web' : 'Website'}
           score={statusQuo?.website_score || 0}
           icon={<TrendingUp className="w-5 h-5" />}
         />
@@ -77,12 +81,12 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
           icon={<Target className="w-5 h-5" />}
         />
         <ScoreCard
-          label="Content"
+          label={nl ? 'Content' : fr ? 'Contenu' : 'Content'}
           score={statusQuo?.content_score || 0}
           icon={<Award className="w-5 h-5" />}
         />
         <ScoreCard
-          label="Social"
+          label={nl ? 'Sociaal' : fr ? 'Social' : 'Social'}
           score={statusQuo?.social_score || 0}
           icon={<Users className="w-5 h-5" />}
         />
@@ -102,28 +106,28 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
             </div>
             <div className="flex-1">
               <h3 className="text-xl font-bold text-gray-900 mb-2">
-                🚀 Complete Your Marketing Setup
+                {nl ? 'Voltooi Je Marketing Setup' : fr ? 'Terminez votre configuration marketing' : 'Complete Your Marketing Setup'}
               </h3>
               <p className="text-gray-600 mb-4">
-                Your analysis is complete! Now set up your complete marketing strategy in just 5 minutes.
+                {nl ? 'Je analyse is compleet! Stel nu je volledige marketingstrategie in, in slechts 5 minuten.' : fr ? 'Votre analyse est terminee ! Configurez maintenant votre strategie marketing complete en seulement 5 minutes.' : 'Your analysis is complete! Now set up your complete marketing strategy in just 5 minutes.'}
               </p>
               
               <div className="grid md:grid-cols-2 gap-4 mb-6">
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-2">✅ What we found:</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">{nl ? 'Wat we gevonden hebben:' : fr ? 'Ce que nous avons trouve :' : 'What we found:'}</p>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Company & industry information</li>
-                    <li>• Website quality analysis</li>
-                    <li>• {statusQuo?.weaknesses?.length || 0} improvement areas</li>
-                    <li>• Content & SEO scores</li>
+                    <li>{nl ? '• Bedrijfs- & branche-informatie' : fr ? '• Informations entreprise & secteur' : '• Company & industry information'}</li>
+                    <li>{nl ? '• Website kwaliteitsanalyse' : fr ? '• Analyse qualite du site web' : '• Website quality analysis'}</li>
+                    <li>• {statusQuo?.weaknesses?.length || 0} {nl ? 'verbeterpunten' : fr ? 'axes d\'amelioration' : 'improvement areas'}</li>
+                    <li>{nl ? '• Content- & SEO-scores' : fr ? '• Scores contenu & SEO' : '• Content & SEO scores'}</li>
                   </ul>
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-gray-700 mb-2">❓ We need from you:</p>
+                  <p className="text-sm font-semibold text-gray-700 mb-2">{nl ? 'We hebben van jou nodig:' : fr ? 'Nous avons besoin de vous :' : 'We need from you:'}</p>
                   <ul className="text-sm text-gray-600 space-y-1">
-                    <li>• Target audience details (~2 min)</li>
-                    <li>• Budget & team size (~1 min)</li>
-                    <li>• Review AI-suggested goals (~2 min)</li>
+                    <li>{nl ? '• Doelgroepdetails (~2 min)' : fr ? '• Details du public cible (~2 min)' : '• Target audience details (~2 min)'}</li>
+                    <li>{nl ? '• Budget & teamgrootte (~1 min)' : fr ? '• Budget & taille de l\'equipe (~1 min)' : '• Budget & team size (~1 min)'}</li>
+                    <li>{nl ? '• AI-voorgestelde doelen bekijken (~2 min)' : fr ? '• Revoir les objectifs suggeres par IA (~2 min)' : '• Review AI-suggested goals (~2 min)'}</li>
                   </ul>
                 </div>
               </div>
@@ -134,12 +138,12 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
                   className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
                 >
                   <Sparkles className="w-5 h-5" />
-                  Complete Setup (5 min)
+                  {nl ? 'Setup Voltooien (5 min)' : fr ? 'Terminer la configuration (5 min)' : 'Complete Setup (5 min)'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
-                
+
                 <button className="px-6 py-3 text-gray-600 hover:text-gray-900">
-                  Maybe later
+                  {nl ? 'Misschien later' : fr ? 'Peut-etre plus tard' : 'Maybe later'}
                 </button>
               </div>
             </div>
@@ -155,7 +159,7 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
             <div className="p-2 bg-green-100 rounded-lg">
               <CheckCircle2 className="w-5 h-5 text-green-600" />
             </div>
-            <h3 className="font-bold text-lg">Strengths</h3>
+            <h3 className="font-bold text-lg">{nl ? 'Sterke Punten' : fr ? 'Points forts' : 'Strengths'}</h3>
           </div>
           <ul className="space-y-2">
             {statusQuo?.strengths?.map((strength: string, idx: number) => (
@@ -173,7 +177,7 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
             <div className="p-2 bg-orange-100 rounded-lg">
               <AlertTriangle className="w-5 h-5 text-orange-600" />
             </div>
-            <h3 className="font-bold text-lg">Areas to Improve</h3>
+            <h3 className="font-bold text-lg">{nl ? 'Verbeterpunten' : fr ? 'Points a ameliorer' : 'Areas to Improve'}</h3>
           </div>
           <ul className="space-y-2">
             {statusQuo?.weaknesses?.map((weakness: string, idx: number) => (
@@ -189,7 +193,7 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
       {/* Recommendations */}
       {recommendations.length > 0 && (
         <div className="bg-white border rounded-xl p-6">
-          <h3 className="font-bold text-lg mb-4">Recommendations</h3>
+          <h3 className="font-bold text-lg mb-4">{nl ? 'Aanbevelingen' : fr ? 'Recommandations' : 'Recommendations'}</h3>
           <div className="space-y-3">
             {recommendations.map((rec: any, idx: number) => (
               <div 
@@ -229,20 +233,20 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
       {/* Company Profile */}
       {statusQuo?.founders && statusQuo.founders.length > 0 && (
         <div className="bg-white border rounded-xl p-6">
-          <h3 className="font-bold text-lg mb-4">Company Profile</h3>
+          <h3 className="font-bold text-lg mb-4">{nl ? 'Bedrijfsprofiel' : fr ? 'Profil de l\'entreprise' : 'Company Profile'}</h3>
           <div className="space-y-4">
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-1">Industry</p>
+              <p className="text-sm font-medium text-gray-600 mb-1">{nl ? 'Branche' : fr ? 'Secteur' : 'Industry'}</p>
               <p className="text-gray-900">{statusQuo.industry}</p>
             </div>
             {statusQuo.founding_year && (
               <div>
-                <p className="text-sm font-medium text-gray-600 mb-1">Founded</p>
+                <p className="text-sm font-medium text-gray-600 mb-1">{nl ? 'Opgericht' : fr ? 'Fonde en' : 'Founded'}</p>
                 <p className="text-gray-900">{statusQuo.founding_year}</p>
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-gray-600 mb-2">Founders</p>
+              <p className="text-sm font-medium text-gray-600 mb-2">{nl ? 'Oprichters' : fr ? 'Fondateurs' : 'Founders'}</p>
               {statusQuo.founders.map((founder: any, idx: number) => (
                 <div key={idx} className="mb-2">
                   <p className="font-medium text-gray-900">{founder.name}</p>
@@ -264,7 +268,7 @@ export default function ResultsView({ blueprint }: ResultsViewProps) {
           className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
         >
           <Download className="w-4 h-4" />
-          Export PDF
+          {nl ? 'Exporteer PDF' : fr ? 'Exporter PDF' : 'Export PDF'}
         </button>
       </div>
 

@@ -2,24 +2,29 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
-  FileText, 
-  Download, 
-  Calendar, 
-  TrendingUp, 
-  Users, 
+import {
+  FileText,
+  Download,
+  Calendar,
+  TrendingUp,
+  Users,
   Mail,
   Eye,
-  MoreVertical 
+  MoreVertical
 } from 'lucide-react';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function Reports() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const reports = [
     {
       id: 1,
-      title: 'Monthly Marketing Performance',
-      type: 'Performance Report',
-      status: 'Ready',
+      title: nl ? 'Maandelijkse Marketingprestaties' : fr ? 'Performance Marketing Mensuelle' : 'Monthly Marketing Performance',
+      type: nl ? 'Prestatierapport' : fr ? 'Rapport de Performance' : 'Performance Report',
+      status: nl ? 'Gereed' : fr ? 'Prêt' : 'Ready',
       date: 'Dec 20, 2024',
       size: '2.4 MB',
       icon: TrendingUp,
@@ -28,9 +33,9 @@ export default function Reports() {
     },
     {
       id: 2,
-      title: 'Campaign ROI Analysis Q4',
-      type: 'Financial Report',
-      status: 'Ready',
+      title: nl ? 'Campagne ROI-analyse Q4' : fr ? 'Analyse ROI des Campagnes Q4' : 'Campaign ROI Analysis Q4',
+      type: nl ? 'Financieel Rapport' : fr ? 'Rapport Financier' : 'Financial Report',
+      status: nl ? 'Gereed' : fr ? 'Prêt' : 'Ready',
       date: 'Dec 18, 2024',
       size: '1.8 MB',
       icon: FileText,
@@ -39,9 +44,9 @@ export default function Reports() {
     },
     {
       id: 3,
-      title: 'Email Marketing Summary',
-      type: 'Campaign Report',
-      status: 'Processing',
+      title: nl ? 'E-mailmarketing Samenvatting' : fr ? 'Résumé du Marketing par E-mail' : 'Email Marketing Summary',
+      type: nl ? 'Campagnerapport' : fr ? 'Rapport de Campagne' : 'Campaign Report',
+      status: nl ? 'Verwerken' : fr ? 'En cours' : 'Processing',
       date: 'Dec 15, 2024',
       size: '3.1 MB',
       icon: Mail,
@@ -50,9 +55,9 @@ export default function Reports() {
     },
     {
       id: 4,
-      title: 'Audience Insights Report',
-      type: 'Analytics Report',
-      status: 'Ready',
+      title: nl ? 'Doelgroep Inzichten Rapport' : fr ? "Rapport d'Aperçu de l'Audience" : 'Audience Insights Report',
+      type: nl ? 'Analyserapport' : fr ? "Rapport d'Analyse" : 'Analytics Report',
+      status: nl ? 'Gereed' : fr ? 'Prêt' : 'Ready',
       date: 'Dec 10, 2024',
       size: '1.2 MB',
       icon: Users,
@@ -62,10 +67,16 @@ export default function Reports() {
   ];
 
   const quickStats = [
-    { label: 'Reports Generated', value: '156', change: '+12 this month' },
-    { label: 'Scheduled Reports', value: '24', change: '8 upcoming' },
-    { label: 'Total Downloads', value: '1,234', change: '+345 this month' },
-    { label: 'Active Subscriptions', value: '18', change: '6 team members' },
+    { label: nl ? 'Rapporten Gegenereerd' : fr ? 'Rapports Générés' : 'Reports Generated', value: '156', change: nl ? '+12 deze maand' : fr ? '+12 ce mois' : '+12 this month' },
+    { label: nl ? 'Geplande Rapporten' : fr ? 'Rapports Planifiés' : 'Scheduled Reports', value: '24', change: nl ? '8 aankomend' : fr ? '8 à venir' : '8 upcoming' },
+    { label: nl ? 'Totaal Downloads' : fr ? 'Total Téléchargements' : 'Total Downloads', value: '1,234', change: nl ? '+345 deze maand' : fr ? '+345 ce mois' : '+345 this month' },
+    { label: nl ? 'Actieve Abonnementen' : fr ? 'Abonnements Actifs' : 'Active Subscriptions', value: '18', change: nl ? '6 teamleden' : fr ? "6 membres d'équipe" : '6 team members' },
+  ];
+
+  const scheduledReports = [
+    { name: nl ? 'Wekelijkse Prestatie Samenvatting' : fr ? 'Résumé Hebdomadaire des Performances' : 'Weekly Performance Summary', schedule: nl ? 'Elke maandag, 9:00' : fr ? 'Chaque lundi, 9h00' : 'Every Monday, 9:00 AM' },
+    { name: nl ? 'Maandelijks ROI Rapport' : fr ? 'Rapport ROI Mensuel' : 'Monthly ROI Report', schedule: nl ? 'Eerste dag van de maand, 8:00' : fr ? 'Premier jour du mois, 8h00' : 'First day of month, 8:00 AM' },
+    { name: nl ? 'Campagne Analyse' : fr ? 'Analyse des Campagnes' : 'Campaign Analytics', schedule: nl ? 'Elke vrijdag, 17:00' : fr ? 'Chaque vendredi, 17h00' : 'Every Friday, 5:00 PM' },
   ];
 
   return (
@@ -74,15 +85,15 @@ export default function Reports() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 text-transparent bg-clip-text">
-            Reports Center
+            {nl ? 'Rapportencentrum' : fr ? 'Centre de Rapports' : 'Reports Center'}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
-            Generate, view, and download your marketing reports
+            {nl ? 'Genereer, bekijk en download je marketingrapporten' : fr ? 'Générez, consultez et téléchargez vos rapports marketing' : 'Generate, view, and download your marketing reports'}
           </p>
         </div>
         <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
           <FileText className="w-4 h-4 mr-2" />
-          Create Report
+          {nl ? 'Rapport Aanmaken' : fr ? 'Créer un Rapport' : 'Create Report'}
         </Button>
       </div>
 
@@ -102,9 +113,9 @@ export default function Reports() {
       {/* Recent Reports */}
       <Card className="border-0 shadow-lg">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Reports</CardTitle>
+          <CardTitle>{nl ? 'Recente Rapporten' : fr ? 'Rapports Récents' : 'Recent Reports'}</CardTitle>
           <Button variant="ghost" size="sm">
-            View All
+            {nl ? 'Alles Bekijken' : fr ? 'Voir Tout' : 'View All'}
           </Button>
         </CardHeader>
         <CardContent>
@@ -130,7 +141,7 @@ export default function Reports() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={report.status === 'Ready' ? 'success' : 'secondary'}>
+                  <Badge variant={report.status === (nl ? 'Gereed' : fr ? 'Prêt' : 'Ready') ? 'success' : 'secondary'}>
                     {report.status}
                   </Badge>
                   <Button variant="ghost" size="icon">
@@ -154,23 +165,19 @@ export default function Reports() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Calendar className="w-5 h-5" />
-            Scheduled Reports
+            {nl ? 'Geplande Rapporten' : fr ? 'Rapports Planifiés' : 'Scheduled Reports'}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {[
-              { name: 'Weekly Performance Summary', schedule: 'Every Monday, 9:00 AM' },
-              { name: 'Monthly ROI Report', schedule: 'First day of month, 8:00 AM' },
-              { name: 'Campaign Analytics', schedule: 'Every Friday, 5:00 PM' },
-            ].map((item, index) => (
+            {scheduledReports.map((item, index) => (
               <div key={index} className="flex justify-between items-center">
                 <div>
                   <p className="font-medium">{item.name}</p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">{item.schedule}</p>
                 </div>
                 <Button variant="outline" size="sm">
-                  Edit
+                  {nl ? 'Bewerken' : fr ? 'Modifier' : 'Edit'}
                 </Button>
               </div>
             ))}

@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { 
-  Download, 
+import {
+  Download,
   Share2,
   Image as ImageIcon,
   Type,
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { BrandSelector, BrandKit, getBrandColors, getBrandLabel, getBrandLogo } from "@/components/BrandSelector";
 import { PublishDialog } from "@/components/PublishDialog";
 import { useAI } from '@/hooks/use-ai';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 // Actor images
 import mascotDefault from "@/assets/projextpal-mascot.png";
@@ -73,6 +74,16 @@ const SocialPostGenerator = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
   const { loading: aiLoading, generateSocialPost } = useAI();
+
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
+  const formatLabels: Record<FormatType, string> = {
+    square: nl ? 'Vierkant' : fr ? 'Carré' : 'Square',
+    story: 'Story',
+    landscape: nl ? 'Landschap' : fr ? 'Paysage' : 'Landscape',
+  };
 
   const getActorImage = () => {
     return actorOptions.find((a) => a.id === actorId)?.image || mascotDefault;
@@ -292,7 +303,7 @@ const SocialPostGenerator = () => {
       link.download = `${selectedBrandKit?.name || 'brand'}-${format.id}-${Date.now()}.png`;
       link.href = fullCanvas.toDataURL("image/png");
       link.click();
-      toast.success("Afbeelding gedownload!");
+      toast.success(nl ? "Afbeelding gedownload!" : fr ? "Image téléchargée !" : "Image downloaded!");
       return fullCanvas.toDataURL("image/png");
     }
   };
@@ -419,9 +430,9 @@ const SocialPostGenerator = () => {
                 <Share2 className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-foreground">Social Post Generator</h1>
+                <h1 className="text-2xl font-bold text-foreground">{nl ? 'Social Post Generator' : fr ? 'Générateur de Posts Sociaux' : 'Social Post Generator'}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Maak afbeeldingen voor social media
+                  {nl ? 'Maak afbeeldingen voor social media' : fr ? 'Créez des images pour les réseaux sociaux' : 'Create images for social media'}
                 </p>
               </div>
             </div>
@@ -429,7 +440,7 @@ const SocialPostGenerator = () => {
               <PublishDialog getImageBase64={getImageBase64}>
                 <Button variant="outline">
                   <Send className="w-4 h-4 mr-2" />
-                  Publiceren
+                  {nl ? 'Publiceren' : fr ? 'Publier' : 'Publish'}
                 </Button>
               </PublishDialog>
               <Button
@@ -437,7 +448,7 @@ const SocialPostGenerator = () => {
                 className="bg-gradient-to-r from-primary to-purple-600"
               >
                 <Download className="w-4 h-4 mr-2" />
-                Download
+                {nl ? 'Download' : fr ? 'Télécharger' : 'Download'}
               </Button>
             </div>
           </div>
@@ -450,7 +461,7 @@ const SocialPostGenerator = () => {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Tag className="w-5 h-5 text-primary" />
-                    Merk
+                    {nl ? 'Merk' : fr ? 'Marque' : 'Brand'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -469,7 +480,7 @@ const SocialPostGenerator = () => {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <ImageIcon className="w-5 h-5 text-primary" />
-                    Formaat
+                    {nl ? 'Formaat' : fr ? 'Format' : 'Format'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -488,13 +499,13 @@ const SocialPostGenerator = () => {
                         }`}
                       >
                         <div className="flex justify-center mb-2">{f.icon}</div>
-                        <div className="font-medium text-sm">{f.label}</div>
+                        <div className="font-medium text-sm">{formatLabels[f.id]}</div>
                         <div className="text-xs text-muted-foreground">{f.width}x{f.height}</div>
                       </button>
                     ))}
                   </div>
                   <p className="text-xs text-muted-foreground mt-3">
-                    Geschikt voor: {format.platforms.join(", ")}
+                    {nl ? 'Geschikt voor' : fr ? 'Compatible avec' : 'Suitable for'}: {format.platforms.join(", ")}
                   </p>
                 </CardContent>
               </Card>
@@ -504,12 +515,12 @@ const SocialPostGenerator = () => {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Type className="w-5 h-5 text-primary" />
-                    Tekst
+                    {nl ? 'Tekst' : fr ? 'Texte' : 'Text'}
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={async () => {
-                        const topic = prompt("Waarover gaat je social post?");
+                        const topic = prompt(nl ? "Waarover gaat je social post?" : fr ? "Quel est le sujet de votre publication ?" : "What is your social post about?");
                         if (topic) {
                           const platform = format.platforms[0].toLowerCase().includes('instagram') ? 'instagram' : 
                                           format.platforms[0].toLowerCase().includes('linkedin') ? 'linkedin' : 'twitter';
@@ -523,7 +534,7 @@ const SocialPostGenerator = () => {
                           setHeadline(result.content.split('\n')[0] || result.content.substring(0, 50));
                           setSubtext(result.hashtags.join(' '));
                           setTimeout(() => generatePreview(), 100);
-                          toast.success("Social post gegenereerd met AI!");
+                          toast.success(nl ? "Social post gegenereerd met AI!" : fr ? "Publication sociale générée par IA !" : "Social post generated with AI!");
                         }
                       }}
                       disabled={aiLoading}
@@ -540,26 +551,26 @@ const SocialPostGenerator = () => {
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Headline</label>
+                    <label className="text-sm font-medium mb-1 block">{nl ? 'Headline' : fr ? 'Titre' : 'Headline'}</label>
                     <Input
                       value={headline}
                       onChange={(e) => {
                         setHeadline(e.target.value);
                         setTimeout(() => generatePreview(), 100);
                       }}
-                      placeholder="Jouw pakkende tekst"
+                      placeholder={nl ? "Jouw pakkende tekst" : fr ? "Votre texte accrocheur" : "Your catchy text"}
                       className="text-lg"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium mb-1 block">Subtekst</label>
+                    <label className="text-sm font-medium mb-1 block">{nl ? 'Subtekst' : fr ? 'Sous-texte' : 'Subtext'}</label>
                     <Textarea
                       value={subtext}
                       onChange={(e) => {
                         setSubtext(e.target.value);
                         setTimeout(() => generatePreview(), 100);
                       }}
-                      placeholder="Extra informatie of call-to-action"
+                      placeholder={nl ? "Extra informatie of call-to-action" : fr ? "Informations supplémentaires ou appel à l'action" : "Additional information or call-to-action"}
                       rows={2}
                     />
                   </div>
@@ -571,7 +582,7 @@ const SocialPostGenerator = () => {
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Palette className="w-5 h-5 text-primary" />
-                    Kleurenschema
+                    {nl ? 'Kleurenschema' : fr ? 'Palette de couleurs' : 'Color Scheme'}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -601,7 +612,7 @@ const SocialPostGenerator = () => {
               {/* Actor */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Mascot</CardTitle>
+                  <CardTitle className="text-lg">{nl ? 'Mascotte' : fr ? 'Mascotte' : 'Mascot'}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <label className="flex items-center gap-2">
@@ -614,7 +625,7 @@ const SocialPostGenerator = () => {
                       }}
                       className="rounded border-border"
                     />
-                    <span className="text-sm">Toon mascot</span>
+                    <span className="text-sm">{nl ? 'Toon mascotte' : fr ? 'Afficher la mascotte' : 'Show mascot'}</span>
                   </label>
 
                   {showActor && (
@@ -645,7 +656,7 @@ const SocialPostGenerator = () => {
             <div className="lg:sticky lg:top-24">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-lg">Preview</CardTitle>
+                  <CardTitle className="text-lg">{nl ? 'Voorbeeld' : fr ? 'Aperçu' : 'Preview'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex justify-center bg-muted/50 rounded-xl p-4">
@@ -660,7 +671,7 @@ const SocialPostGenerator = () => {
                     variant="outline"
                     className="w-full mt-4"
                   >
-                    Vernieuw Preview
+                    {nl ? 'Vernieuw voorbeeld' : fr ? 'Actualiser l\'aperçu' : 'Refresh Preview'}
                   </Button>
                 </CardContent>
               </Card>

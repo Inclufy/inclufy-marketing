@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface DemoRequest {
   id: string;
@@ -40,18 +41,21 @@ interface DemoRequest {
   created_at: string;
 }
 
-const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  pending: { label: 'In afwachting', color: 'bg-amber-100 text-amber-700', icon: Clock },
-  scheduled: { label: 'Ingepland', color: 'bg-blue-100 text-blue-700', icon: CalendarCheck },
-  completed: { label: 'Voltooid', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
-  cancelled: { label: 'Geannuleerd', color: 'bg-red-100 text-red-700', icon: XCircle },
-};
-
 export default function AdminDemoRequests() {
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [requests, setRequests] = useState<DemoRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
+
+  const STATUS_CONFIG: Record<string, { label: string; color: string; icon: React.ElementType }> = {
+    pending: { label: nl ? 'In afwachting' : fr ? 'En attente' : 'Pending', color: 'bg-amber-100 text-amber-700', icon: Clock },
+    scheduled: { label: nl ? 'Ingepland' : fr ? 'Planifie' : 'Scheduled', color: 'bg-blue-100 text-blue-700', icon: CalendarCheck },
+    completed: { label: nl ? 'Voltooid' : fr ? 'Termine' : 'Completed', color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
+    cancelled: { label: nl ? 'Geannuleerd' : fr ? 'Annule' : 'Cancelled', color: 'bg-red-100 text-red-700', icon: XCircle },
+  };
 
   const fetchData = async () => {
     try {
@@ -72,10 +76,10 @@ export default function AdminDemoRequests() {
   const handleStatusChange = async (requestId: string, newStatus: string) => {
     try {
       await api.patch(`/tenant-admin/demo-requests/${requestId}`, { status: newStatus });
-      toast({ title: 'Status bijgewerkt' });
+      toast({ title: nl ? 'Status bijgewerkt' : fr ? 'Statut mis a jour' : 'Status updated' });
       fetchData();
     } catch (err: any) {
-      toast({ title: 'Bijwerken mislukt', variant: 'destructive' });
+      toast({ title: nl ? 'Bijwerken mislukt' : fr ? 'Echec de la mise a jour' : 'Update failed', variant: 'destructive' });
     }
   };
 
@@ -83,8 +87,8 @@ export default function AdminDemoRequests() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Demo Verzoeken</h1>
-          <p className="text-sm text-gray-500">{requests.length} verzoeken</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{nl ? 'Demo Verzoeken' : fr ? 'Demandes de demo' : 'Demo Requests'}</h1>
+          <p className="text-sm text-gray-500">{requests.length} {nl ? 'verzoeken' : fr ? 'demandes' : 'requests'}</p>
         </div>
         <div className="flex gap-3">
           <Select value={filter} onValueChange={setFilter}>
@@ -92,15 +96,15 @@ export default function AdminDemoRequests() {
               <SelectValue placeholder="Filter" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Alle</SelectItem>
-              <SelectItem value="pending">In afwachting</SelectItem>
-              <SelectItem value="scheduled">Ingepland</SelectItem>
-              <SelectItem value="completed">Voltooid</SelectItem>
-              <SelectItem value="cancelled">Geannuleerd</SelectItem>
+              <SelectItem value="all">{nl ? 'Alle' : fr ? 'Tous' : 'All'}</SelectItem>
+              <SelectItem value="pending">{nl ? 'In afwachting' : fr ? 'En attente' : 'Pending'}</SelectItem>
+              <SelectItem value="scheduled">{nl ? 'Ingepland' : fr ? 'Planifie' : 'Scheduled'}</SelectItem>
+              <SelectItem value="completed">{nl ? 'Voltooid' : fr ? 'Termine' : 'Completed'}</SelectItem>
+              <SelectItem value="cancelled">{nl ? 'Geannuleerd' : fr ? 'Annule' : 'Cancelled'}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" size="sm" onClick={fetchData}>
-            <RefreshCw className="h-4 w-4 mr-2" /> Vernieuwen
+            <RefreshCw className="h-4 w-4 mr-2" /> {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
           </Button>
         </div>
       </div>
@@ -132,8 +136,8 @@ export default function AdminDemoRequests() {
         <Card className="border-0 shadow-sm">
           <CardContent className="flex flex-col items-center justify-center py-16 text-gray-500">
             <MessageSquareText className="h-12 w-12 mb-4 text-gray-300" />
-            <p className="text-lg font-medium">Geen demo verzoeken</p>
-            <p className="text-sm">Er zijn nog geen demo verzoeken ontvangen</p>
+            <p className="text-lg font-medium">{nl ? 'Geen demo verzoeken' : fr ? 'Aucune demande de demo' : 'No demo requests'}</p>
+            <p className="text-sm">{nl ? 'Er zijn nog geen demo verzoeken ontvangen' : fr ? 'Aucune demande de demo n\'a encore ete recue' : 'No demo requests have been received yet'}</p>
           </CardContent>
         </Card>
       ) : (
@@ -147,7 +151,7 @@ export default function AdminDemoRequests() {
                     <div className="space-y-2">
                       <div className="flex items-center gap-3">
                         <h3 className="font-semibold text-gray-900 dark:text-white">
-                          {req.name || 'Onbekend'}
+                          {req.name || (nl ? 'Onbekend' : fr ? 'Inconnu' : 'Unknown')}
                         </h3>
                         <Badge className={`${statusConfig.color} border-0 text-xs`}>{statusConfig.label}</Badge>
                       </div>
@@ -163,7 +167,7 @@ export default function AdminDemoRequests() {
                         )}
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3.5 w-3.5" />
-                          {req.created_at ? new Date(req.created_at).toLocaleDateString('nl-NL') : '-'}
+                          {req.created_at ? new Date(req.created_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-GB') : '-'}
                         </span>
                       </div>
                       {req.message && (
@@ -175,10 +179,10 @@ export default function AdminDemoRequests() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="pending">In afwachting</SelectItem>
-                        <SelectItem value="scheduled">Ingepland</SelectItem>
-                        <SelectItem value="completed">Voltooid</SelectItem>
-                        <SelectItem value="cancelled">Geannuleerd</SelectItem>
+                        <SelectItem value="pending">{nl ? 'In afwachting' : fr ? 'En attente' : 'Pending'}</SelectItem>
+                        <SelectItem value="scheduled">{nl ? 'Ingepland' : fr ? 'Planifie' : 'Scheduled'}</SelectItem>
+                        <SelectItem value="completed">{nl ? 'Voltooid' : fr ? 'Termine' : 'Completed'}</SelectItem>
+                        <SelectItem value="cancelled">{nl ? 'Geannuleerd' : fr ? 'Annule' : 'Cancelled'}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
