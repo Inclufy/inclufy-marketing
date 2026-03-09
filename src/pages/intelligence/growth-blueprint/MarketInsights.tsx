@@ -56,8 +56,8 @@ export default function MarketInsights() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">23.5%</div>
-            <p className="text-xs text-muted-foreground">{nl ? '+5,2% t.o.v. vorige maand' : fr ? '+5,2% par rapport au mois dernier' : '+5.2% from last month'}</p>
+            <div className="text-2xl font-bold">0%</div>
+            <p className="text-xs text-muted-foreground">{nl ? 'Nog geen data' : fr ? 'Pas encore de données' : 'No data yet'}</p>
           </CardContent>
         </Card>
 
@@ -69,7 +69,7 @@ export default function MarketInsights() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">€2.4B</div>
+            <div className="text-2xl font-bold">–</div>
             <p className="text-xs text-muted-foreground">{nl ? 'Nederlandse AI-markt' : fr ? 'Marche IA neerlandais' : 'Netherlands AI Market'}</p>
           </CardContent>
         </Card>
@@ -82,7 +82,7 @@ export default function MarketInsights() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">47</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">{nl ? 'Nieuw deze week' : fr ? 'Nouveau cette semaine' : 'New this week'}</p>
           </CardContent>
         </Card>
@@ -95,7 +95,7 @@ export default function MarketInsights() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">134</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">{nl ? 'Actief in de markt' : fr ? 'Actifs sur le marche' : 'Active in market'}</p>
           </CardContent>
         </Card>
@@ -110,23 +110,13 @@ export default function MarketInsights() {
             <CardDescription>{nl ? 'Populaire onderwerpen in jouw markt deze week' : fr ? 'Sujets populaires dans votre marche cette semaine' : 'Hot topics in your market this week'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { topic: "AI-Powered Marketing Automation", growth: "+127%", posts: 2340 },
-                { topic: "GDPR Compliance for AI", growth: "+89%", posts: 1876 },
-                { topic: "Dutch Language Models", growth: "+76%", posts: 1543 },
-                { topic: "No-Code AI Tools", growth: "+62%", posts: 987 },
-              ].map((item) => (
-                <div key={item.topic} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">{item.topic}</p>
-                    <p className="text-sm text-muted-foreground">{item.posts.toLocaleString()} {nl ? 'berichten' : fr ? 'publications' : 'posts'}</p>
-                  </div>
-                  <Badge variant="secondary" className="text-green-600">
-                    {item.growth}
-                  </Badge>
-                </div>
-              ))}
+            <div className="flex items-center justify-center py-12 text-center">
+              <div className="space-y-2">
+                <TrendingUp className="h-10 w-10 mx-auto text-gray-300" />
+                <p className="text-sm text-muted-foreground">
+                  {nl ? 'Nog geen trending onderwerpen beschikbaar. Configureer uw markt om inzichten te ontvangen.' : fr ? 'Pas encore de sujets tendances. Configurez votre marché pour recevoir des insights.' : 'No trending topics yet. Configure your market to receive insights.'}
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -138,27 +128,10 @@ export default function MarketInsights() {
             <CardDescription>{nl ? 'Omvang per branche' : fr ? 'Taille par secteur' : 'Size by industry vertical'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { segment: "E-commerce", percentage: 34 },
-                { segment: "SaaS", percentage: 28 },
-                { segment: "Financial Services", percentage: 18 },
-                { segment: "Healthcare", percentage: 12 },
-                { segment: "Manufacturing", percentage: 8 },
-              ].map((item) => (
-                <div key={item.segment} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>{item.segment}</span>
-                    <span className="font-medium">{item.percentage}%</span>
-                  </div>
-                  <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
-                      style={{ width: `${item.percentage}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-center py-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                {nl ? 'Nog geen segmentdata beschikbaar' : fr ? 'Pas encore de données de segment' : 'No segment data available yet'}
+              </p>
             </div>
           </CardContent>
         </Card>

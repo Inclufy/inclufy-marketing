@@ -18,6 +18,11 @@ const mockFetchWebsiteContent = vi.fn();
 const mockAnalyzeWebsiteAndGeneratePresentation = vi.fn();
 const mockResearchProspect = vi.fn();
 
+vi.mock('@/hooks/queries/useBrandMemory', () => ({
+  useBrandMemory: () => ({ data: null, isLoading: false }),
+  toBrandContext: () => undefined,
+}));
+
 vi.mock('@/services/ai.service', () => ({
   getAIService: () => ({
     generateTutorial: mockGenerateTutorial,
@@ -34,6 +39,7 @@ vi.mock('@/services/ai.service', () => ({
     fetchWebsiteContent: mockFetchWebsiteContent,
     analyzeWebsiteAndGeneratePresentation: mockAnalyzeWebsiteAndGeneratePresentation,
     researchProspect: mockResearchProspect,
+    setBrandContext: vi.fn(),
   }),
 }));
 

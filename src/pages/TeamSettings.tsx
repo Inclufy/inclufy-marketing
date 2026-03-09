@@ -55,36 +55,12 @@ const TeamSettings = () => {
       role: 'owner',
       status: 'active',
       lastActive: 'Online now'
-    },
-    {
-      id: '2',
-      name: 'John Doe',
-      email: 'john@inclufy.com',
-      role: 'admin',
-      status: 'active',
-      lastActive: '2 hours ago'
-    },
-    {
-      id: '3',
-      name: 'Jane Smith',
-      email: 'jane@inclufy.com',
-      role: 'member',
-      status: 'active',
-      lastActive: '1 day ago'
-    },
-    {
-      id: '4',
-      name: 'Mike Wilson',
-      email: 'mike@inclufy.com',
-      role: 'member',
-      status: 'invited',
-      lastActive: 'Pending'
     }
   ]);
 
   const handleInvite = () => {
     if (!inviteEmail) return;
-    toast.success(`Invitation sent to ${inviteEmail}`);
+    toast.info("Coming soon — team invites are not yet available.");
     setInviteEmail("");
   };
 
@@ -127,7 +103,7 @@ const TeamSettings = () => {
         <div className="flex items-center gap-4">
           <Badge variant="outline" className="text-sm">
             <Users className="mr-1 h-3 w-3" />
-            4 / 10 seats
+            {teamMembers.length} / 10 seats
           </Badge>
         </div>
       </div>
@@ -356,11 +332,11 @@ const TeamSettings = () => {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Active seats</span>
-                  <span className="font-medium">4 / 10</span>
+                  <span className="font-medium">{teamMembers.length} / 10</span>
                 </div>
-                <Progress value={40} />
+                <Progress value={teamMembers.length * 10} />
                 <p className="text-xs text-muted-foreground">
-                  6 seats available • €49.90/month per additional seat
+                  {10 - teamMembers.length} seats available
                 </p>
               </div>
 
@@ -386,15 +362,15 @@ const TeamSettings = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between text-sm">
                   <span>AI Credits Used</span>
-                  <span className="font-medium">8,450 / 20,000</span>
+                  <span className="font-medium">0 / 20,000</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span>Storage Used</span>
-                  <span className="font-medium">12.4 GB / 50 GB</span>
+                  <span className="font-medium">0 GB / 50 GB</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span>API Calls</span>
-                  <span className="font-medium">45,230 / 100,000</span>
+                  <span className="font-medium">0 / 100,000</span>
                 </div>
               </div>
             </CardContent>
@@ -414,54 +390,10 @@ const TeamSettings = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-start gap-4 pb-4 border-b">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-medium">John Doe</span> created a new presentation
-                      <span className="text-muted-foreground"> "Q4 Sales Strategy"</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">2 hours ago</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 pb-4 border-b">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>JS</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-medium">Jane Smith</span> published 3 social posts
-                    </p>
-                    <p className="text-xs text-muted-foreground">5 hours ago</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4 pb-4 border-b">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>SI</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-medium">Sami Inclufy</span> updated brand settings
-                    </p>
-                    <p className="text-xs text-muted-foreground">1 day ago</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback>MW</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-medium">Mike Wilson</span> joined the team
-                    </p>
-                    <p className="text-xs text-muted-foreground">2 days ago</p>
-                  </div>
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center space-y-2">
+                  <Activity className="h-10 w-10 mx-auto text-gray-300" />
+                  <p className="text-sm text-muted-foreground">No team activity yet</p>
                 </div>
               </div>
             </CardContent>

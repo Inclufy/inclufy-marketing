@@ -119,70 +119,9 @@ const WebsiteAnalyzer = () => {
   const [recentAnalyses, setRecentAnalyses] = useState<AnalysisResult[]>([]);
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([""]);
 
-  const mockAnalysisData: AnalysisResult = {
-    url: "",
-    status: "completed",
-    data: {
-      productFeatures: [
-        "AI-powered content generation",
-        "Brand voice consistency",
-        "Multi-channel publishing",
-        "Real-time analytics",
-        "Team collaboration tools",
-      ],
-      uniqueSellingPoints: [
-        "10x faster than traditional agencies",
-        "Maintains brand voice across all content",
-        "No-code workflow automation",
-        "Enterprise-grade security",
-      ],
-      targetAudience:
-        "Marketing managers at mid-size B2B companies (50-500 employees) who need to scale content production while maintaining quality and brand consistency",
-      competitors: ["contentful.com", "jasper.ai", "copy.ai"],
-      pricing: "Subscription-based, starting at $299/month for small teams",
-      messaging: {
-        headline: "Scale Your Marketing with AI That Understands Your Brand",
-        subheadline: "Create consistent, on-brand content 10x faster",
-        valueProps: [
-          "Save 20+ hours per week on content creation",
-          "Maintain perfect brand consistency",
-          "Scale without hiring more writers",
-        ],
-      },
-      opportunities: [
-        "Emphasize ROI and time savings more prominently",
-        "Add more social proof and case studies",
-        "Create comparison pages vs competitors",
-        "Strengthen mobile experience",
-      ],
-    },
-    timestamp: new Date(),
-  };
-
   const startAnalysis = () => {
     if (!url) return;
-
-    setIsAnalyzing(true);
-    setAnalysisProgress(0);
-
-    // Simulate analysis progress
-    const interval = setInterval(() => {
-      setAnalysisProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsAnalyzing(false);
-
-          // Set mock data
-          const result = { ...mockAnalysisData, url };
-          setCurrentAnalysis(result);
-          setRecentAnalyses([result, ...recentAnalyses]);
-          toast.success(nl ? "Website-analyse voltooid!" : fr ? "Analyse du site web termin\u00e9e !" : "Website analysis completed!");
-
-          return 100;
-        }
-        return prev + 20;
-      });
-    }, 800);
+    toast.info(nl ? "Binnenkort beschikbaar \u2014 website-analyse is nog in ontwikkeling." : fr ? "Bient\u00f4t disponible \u2014 l'analyse de site web est en cours de d\u00e9veloppement." : "Coming soon \u2014 website analysis is still in development.");
   };
 
   const addCompetitorField = () => {

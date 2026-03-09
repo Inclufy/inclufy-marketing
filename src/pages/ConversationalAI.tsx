@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { EmptyState } from '@/components/DataState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -71,77 +72,14 @@ const ConversationalAI = () => {
   const [testMessage, setTestMessage] = useState("");
 
   const performance: BotPerformance = {
-    conversations: 2847,
-    qualified: 892,
-    booked: 234,
-    avgResponseTime: "1.2s",
-    satisfactionScore: 94
+    conversations: 0,
+    qualified: 0,
+    booked: 0,
+    avgResponseTime: "–",
+    satisfactionScore: 0
   };
 
-  const activeConversations: Conversation[] = [
-    {
-      id: '1',
-      visitor: {
-        name: 'John Smith',
-        email: 'john@techcorp.com',
-        company: 'TechCorp Inc.'
-      },
-      status: 'active',
-      score: 85,
-      startedAt: new Date(Date.now() - 5 * 60 * 1000),
-      lastActivity: new Date(),
-      messages: [
-        {
-          id: 'm1',
-          sender: 'bot',
-          content: "Hi there! 👋 I'm Ava from Inclufy Marketing. I see you're exploring our AI-powered marketing platform. What brings you here today?",
-          timestamp: new Date(Date.now() - 5 * 60 * 1000)
-        },
-        {
-          id: 'm2',
-          sender: 'visitor',
-          content: "Hi! We're looking for a solution to help us create marketing content faster. We're spending too much time on repetitive tasks.",
-          timestamp: new Date(Date.now() - 4 * 60 * 1000)
-        },
-        {
-          id: 'm3',
-          sender: 'bot',
-          content: "I completely understand! Many of our customers came to us with the same challenge. Can you tell me what type of content you create most often? Email campaigns, social posts, or something else?",
-          timestamp: new Date(Date.now() - 3 * 60 * 1000)
-        },
-        {
-          id: 'm4',
-          sender: 'visitor',
-          content: "Mostly email campaigns and landing pages. We run about 10-15 campaigns per month.",
-          timestamp: new Date(Date.now() - 2 * 60 * 1000)
-        },
-        {
-          id: 'm5',
-          sender: 'bot',
-          content: "Perfect! With that volume, Inclufy could save your team about 20-30 hours per month. Our AI can generate complete email campaigns with A/B variants in minutes. Would you like to see how it works with a quick demo?",
-          timestamp: new Date(Date.now() - 1 * 60 * 1000)
-        },
-        {
-          id: 'm6',
-          sender: 'visitor',
-          content: "Yes, that would be great!",
-          timestamp: new Date()
-        }
-      ]
-    },
-    {
-      id: '2',
-      visitor: {
-        name: 'Sarah Johnson',
-        company: 'StartupXYZ'
-      },
-      status: 'qualified',
-      score: 92,
-      startedAt: new Date(Date.now() - 15 * 60 * 1000),
-      lastActivity: new Date(Date.now() - 3 * 60 * 1000),
-      messages: []
-    }
-  ];
+  const activeConversations: Conversation[] = [];
 
   const botCapabilities = [
     {
@@ -244,7 +182,7 @@ const ConversationalAI = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.qualified}</div>
-            <p className="text-xs text-muted-foreground text-green-600">{nl ? '31% conversie' : fr ? '31% conversion' : '31% conversion'}</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Deze maand' : fr ? 'Ce mois-ci' : 'This month'}</p>
           </CardContent>
         </Card>
 
@@ -277,7 +215,7 @@ const ConversationalAI = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{performance.satisfactionScore}%</div>
-            <p className="text-xs text-muted-foreground text-green-600">{nl ? 'Uitstekend' : fr ? 'Excellent' : 'Excellent'}</p>
+            <p className="text-xs text-muted-foreground">{nl ? 'Nog geen data' : fr ? 'Pas encore de données' : 'No data yet'}</p>
           </CardContent>
         </Card>
       </div>
@@ -292,6 +230,16 @@ const ConversationalAI = () => {
 
         {/* Active Conversations */}
         <TabsContent value="conversations">
+          {activeConversations.length === 0 ? (
+            <Card>
+              <CardContent className="pt-6">
+                <EmptyState
+                  title={nl ? 'Nog geen gesprekken' : fr ? 'Pas encore de conversations' : 'No conversations yet'}
+                  description={nl ? 'Wanneer bezoekers met uw AI-assistent praten, verschijnen gesprekken hier.' : fr ? 'Lorsque les visiteurs discuteront avec votre assistant IA, les conversations apparaîtront ici.' : 'When visitors chat with your AI assistant, conversations will appear here.'}
+                />
+              </CardContent>
+            </Card>
+          ) : (
           <div className="grid gap-6 lg:grid-cols-3">
             {/* Conversation List */}
             <Card className="lg:col-span-1">
@@ -306,8 +254,8 @@ const ConversationalAI = () => {
                         key={conv.id}
                         onClick={() => setSelectedConversation(conv.id)}
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                          selectedConversation === conv.id 
-                            ? 'bg-primary/10 border border-primary' 
+                          selectedConversation === conv.id
+                            ? 'bg-primary/10 border border-primary'
                             : 'hover:bg-muted'
                         }`}
                       >
@@ -349,8 +297,8 @@ const ConversationalAI = () => {
             <Card className="lg:col-span-2">
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>{nl ? 'Gesprek met John Smith' : fr ? 'Conversation avec John Smith' : 'Conversation with John Smith'}</CardTitle>
-                  <CardDescription>TechCorp Inc. {nl ? '• Score: 85%' : fr ? '• Score : 85%' : '• Score: 85%'}</CardDescription>
+                  <CardTitle>{nl ? 'Gesprek' : fr ? 'Conversation' : 'Conversation'}</CardTitle>
+                  <CardDescription>{nl ? 'Selecteer een gesprek' : fr ? 'Sélectionnez une conversation' : 'Select a conversation'}</CardDescription>
                 </div>
                 <div className="flex gap-2">
                   <Button size="sm" variant="outline">
@@ -370,7 +318,7 @@ const ConversationalAI = () => {
               <CardContent>
                 <ScrollArea className="h-[400px] pr-4">
                   <div className="space-y-4">
-                    {activeConversations[0].messages.map(msg => (
+                    {(activeConversations.find(c => c.id === selectedConversation)?.messages || []).map(msg => (
                       <div
                         key={msg.id}
                         className={`flex ${msg.sender === 'bot' ? 'justify-start' : 'justify-end'}`}
@@ -411,6 +359,7 @@ const ConversationalAI = () => {
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         {/* Bot Configuration */}
@@ -533,7 +482,7 @@ const ConversationalAI = () => {
                         <Building className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="font-medium">{nl ? 'Merk Kennisbank' : fr ? 'Base de connaissances de marque' : 'Brand Knowledge Base'}</p>
-                          <p className="text-sm text-muted-foreground">{nl ? '247 documenten' : fr ? '247 documents' : '247 documents'}</p>
+                          <p className="text-sm text-muted-foreground">{nl ? '0 documenten' : fr ? '0 documents' : '0 documents'}</p>
                         </div>
                       </div>
                       <Badge variant="success">{nl ? 'Gesynchroniseerd' : fr ? 'Synchronis\u00e9' : 'Synced'}</Badge>
@@ -543,7 +492,7 @@ const ConversationalAI = () => {
                         <MessageSquare className="h-5 w-5 text-muted-foreground" />
                         <div>
                           <p className="font-medium">{nl ? 'Eerdere Gesprekken' : fr ? 'Conversations pass\u00e9es' : 'Past Conversations'}</p>
-                          <p className="text-sm text-muted-foreground">{nl ? '2.847 voorbeelden' : fr ? '2 847 exemples' : '2,847 examples'}</p>
+                          <p className="text-sm text-muted-foreground">{nl ? '0 voorbeelden' : fr ? '0 exemples' : '0 examples'}</p>
                         </div>
                       </div>
                       <Badge variant="success">{nl ? 'Training' : fr ? 'Formation' : 'Training'}</Badge>

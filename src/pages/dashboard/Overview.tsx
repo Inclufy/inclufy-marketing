@@ -55,23 +55,6 @@ import { useAnalyticsDashboard } from '@/hooks/queries/useAnalytics';
 import { LoadingSkeleton, ErrorState } from '@/components/DataState';
 import { useLanguage } from '@/contexts/LanguageContext';
 
-// ─── Fallback data (language-independent) ────────────────────────────
-
-const FALLBACK_PERFORMANCE = [
-  { month: 'Jan', revenue: 45000, campaigns: 12, engagement: 78 },
-  { month: 'Feb', revenue: 52000, campaigns: 15, engagement: 82 },
-  { month: 'Mar', revenue: 48000, campaigns: 14, engagement: 75 },
-  { month: 'Apr', revenue: 61000, campaigns: 18, engagement: 88 },
-  { month: 'May', revenue: 75000, campaigns: 22, engagement: 92 },
-  { month: 'Jun', revenue: 88000, campaigns: 24, engagement: 95 },
-];
-
-const FALLBACK_TOP_PERFORMERS = [
-  { name: 'Sarah Chen', score: 98, campaigns: 24, revenue: '$125K' },
-  { name: 'Mike Johnson', score: 92, campaigns: 21, revenue: '$108K' },
-  { name: 'Emily Davis', score: 87, campaigns: 18, revenue: '$95K' },
-];
-
 export default function DashboardOverview() {
   const [dateRange, setDateRange] = useState('month');
   const { lang } = useLanguage();
@@ -81,74 +64,44 @@ export default function DashboardOverview() {
   // Fetch real dashboard stats
   const { data: dashboardStats, isLoading, isError, refetch } = useAnalyticsDashboard();
 
-  // ─── Translated fallback data ────────────────────────────────────
+  // Campaign status data from API
   const campaignStatusData = [
-    { name: nl ? 'Actief' : fr ? 'Actives' : 'Active', value: 12, color: '#7c3aed' },
-    { name: nl ? 'Gepland' : fr ? 'Planifiées' : 'Planned', value: 5, color: '#f59e0b' },
-    { name: nl ? 'Voltooid' : fr ? 'Terminées' : 'Completed', value: 18, color: '#10b981' },
-    { name: nl ? 'Concept' : fr ? 'Brouillon' : 'Draft', value: 3, color: '#94a3b8' },
+    { name: nl ? 'Actief' : fr ? 'Actives' : 'Active', value: dashboardStats?.active_campaigns ?? 0, color: '#7c3aed' },
+    { name: nl ? 'Gepland' : fr ? 'Planifiées' : 'Planned', value: dashboardStats?.planned_campaigns ?? 0, color: '#f59e0b' },
+    { name: nl ? 'Voltooid' : fr ? 'Terminées' : 'Completed', value: dashboardStats?.completed_campaigns ?? 0, color: '#10b981' },
+    { name: nl ? 'Concept' : fr ? 'Brouillon' : 'Draft', value: dashboardStats?.draft_campaigns ?? 0, color: '#94a3b8' },
   ];
 
+  // Engagement data from API
   const engagementData = [
-    { name: nl ? 'Zeer Actief' : fr ? 'Très Actif' : 'Very Active', value: 28, color: '#10b981' },
-    { name: nl ? 'Actief' : fr ? 'Actif' : 'Active', value: 45, color: '#3b82f6' },
-    { name: nl ? 'Matig' : fr ? 'Modéré' : 'Moderate', value: 20, color: '#f59e0b' },
-    { name: nl ? 'Inactief' : fr ? 'Inactif' : 'Inactive', value: 7, color: '#ef4444' },
+    { name: nl ? 'Zeer Actief' : fr ? 'Très Actif' : 'Very Active', value: dashboardStats?.engagement_very_active ?? 0, color: '#10b981' },
+    { name: nl ? 'Actief' : fr ? 'Actif' : 'Active', value: dashboardStats?.engagement_active ?? 0, color: '#3b82f6' },
+    { name: nl ? 'Matig' : fr ? 'Modéré' : 'Moderate', value: dashboardStats?.engagement_moderate ?? 0, color: '#f59e0b' },
+    { name: nl ? 'Inactief' : fr ? 'Inactif' : 'Inactive', value: dashboardStats?.engagement_inactive ?? 0, color: '#ef4444' },
   ];
 
-  const recentActivities = [
-    {
-      id: 1,
-      user: 'Sarah Chen',
-      action: nl ? 'lanceerde campagne' : fr ? 'a lancé la campagne' : 'launched campaign',
-      target: nl ? 'Zomer Uitverkoop 2024' : fr ? 'Soldes d\'Été 2024' : 'Summer Sale 2024',
-      time: nl ? '2 uur geleden' : fr ? 'il y a 2 heures' : '2 hours ago',
-      type: 'campaign',
-    },
-    {
-      id: 2,
-      user: 'Mike Johnson',
-      action: nl ? 'genereerde content' : fr ? 'a généré du contenu' : 'generated content',
-      target: nl ? '5 social media posts' : fr ? '5 publications réseaux sociaux' : '5 social media posts',
-      time: nl ? '3 uur geleden' : fr ? 'il y a 3 heures' : '3 hours ago',
-      type: 'ai',
-    },
-    {
-      id: 3,
-      user: 'Emily Davis',
-      action: nl ? 'maakte klantreis aan' : fr ? 'a créé un parcours client' : 'created customer journey',
-      target: 'Onboarding Flow v2',
-      time: nl ? '5 uur geleden' : fr ? 'il y a 5 heures' : '5 hours ago',
-      type: 'journey',
-    },
-    {
-      id: 4,
-      user: 'Alex Rivera',
-      action: nl ? 'heeft segment bijgewerkt' : fr ? 'a mis à jour le segment' : 'updated segment',
-      target: nl ? 'Hoog-waarde Klanten' : fr ? 'Clients à Haute Valeur' : 'High-Value Customers',
-      time: nl ? '1 dag geleden' : fr ? 'il y a 1 jour' : '1 day ago',
-      type: 'segment',
-    },
-  ];
+  // Recent activities from API (empty when no data)
+  const recentActivities: { id: number; user: string; action: string; target: string; time: string; type: string }[] =
+    dashboardStats?.recent_activities ?? [];
 
-  // Build stats cards from API data or fallback
+  // Build stats cards from API data
   const stats = [
     {
       title: nl ? 'Totale Omzet' : fr ? 'Revenu Total' : 'Total Revenue',
       value: dashboardStats?.revenue
         ? `$${(dashboardStats.revenue / 1000).toFixed(1)}K`
-        : '$877.9K',
-      change: '+23%',
-      trend: 'up' as const,
+        : '$0',
+      change: dashboardStats?.revenue_change ? `${dashboardStats.revenue_change > 0 ? '+' : ''}${dashboardStats.revenue_change}%` : '--',
+      trend: (dashboardStats?.revenue_change ?? 0) >= 0 ? 'up' as const : 'down' as const,
       icon: DollarSign,
       gradient: 'from-emerald-500 to-teal-600',
       bgGradient: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20'
     },
     {
       title: nl ? 'Actieve Campagnes' : fr ? 'Campagnes Actives' : 'Active Campaigns',
-      value: dashboardStats?.active_campaigns?.toString() ?? '38',
-      change: '+12%',
-      trend: 'up' as const,
+      value: dashboardStats?.active_campaigns?.toString() ?? '0',
+      change: dashboardStats?.campaigns_change ? `${dashboardStats.campaigns_change > 0 ? '+' : ''}${dashboardStats.campaigns_change}%` : '--',
+      trend: (dashboardStats?.campaigns_change ?? 0) >= 0 ? 'up' as const : 'down' as const,
       icon: Activity,
       gradient: 'from-purple-500 to-pink-600',
       bgGradient: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20'
@@ -157,26 +110,28 @@ export default function DashboardOverview() {
       title: nl ? 'Totaal Contacten' : fr ? 'Total Contacts' : 'Total Contacts',
       value: dashboardStats?.total_contacts
         ? dashboardStats.total_contacts.toLocaleString()
-        : '24,583',
-      change: '+18%',
-      trend: 'up' as const,
+        : '0',
+      change: dashboardStats?.contacts_change ? `${dashboardStats.contacts_change > 0 ? '+' : ''}${dashboardStats.contacts_change}%` : '--',
+      trend: (dashboardStats?.contacts_change ?? 0) >= 0 ? 'up' as const : 'down' as const,
       icon: Users,
       gradient: 'from-blue-500 to-indigo-600',
       bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'
     },
     {
       title: nl ? 'Gem. Engagement' : fr ? 'Engagement Moyen' : 'Avg. Engagement',
-      value: '68.5%',
-      change: '-2.3%',
-      trend: 'down' as const,
+      value: dashboardStats?.avg_engagement ? `${dashboardStats.avg_engagement}%` : '0%',
+      change: dashboardStats?.engagement_change ? `${dashboardStats.engagement_change > 0 ? '+' : ''}${dashboardStats.engagement_change}%` : '--',
+      trend: (dashboardStats?.engagement_change ?? 0) >= 0 ? 'up' as const : 'down' as const,
       icon: Target,
       gradient: 'from-orange-500 to-red-600',
       bgGradient: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20'
     },
   ];
 
-  const performanceData = FALLBACK_PERFORMANCE;
-  const topPerformers = FALLBACK_TOP_PERFORMERS;
+  const performanceData: { month: string; revenue: number; campaigns: number; engagement: number }[] =
+    dashboardStats?.performance_data ?? [];
+  const topPerformers: { name: string; score: number; campaigns: number; revenue: string }[] =
+    dashboardStats?.top_performers ?? [];
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -206,11 +161,10 @@ export default function DashboardOverview() {
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             {nl
-              ? <>Je campagnes presteren <span className="text-green-600 font-semibold">23% beter</span> dan vorige maand</>
+              ? 'Hier is je overzicht van vandaag.'
               : fr
-                ? <>Vos campagnes performent <span className="text-green-600 font-semibold">23% mieux</span> que le mois dernier</>
-                : <>Your campaigns are performing <span className="text-green-600 font-semibold">23% better</span> than last month</>
-            }
+                ? 'Voici votre aperçu du jour.'
+                : 'Here is your overview for today.'}
           </p>
         </div>
         <div className="flex gap-3">
@@ -296,38 +250,44 @@ export default function DashboardOverview() {
               </DropdownMenu>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <AreaChart data={performanceData}>
-                  <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorEngagement" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis className="text-xs" />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke="#7c3aed"
-                    fillOpacity={1}
-                    fill="url(#colorRevenue)"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="engagement"
-                    stroke="#10b981"
-                    fillOpacity={1}
-                    fill="url(#colorEngagement)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {performanceData.length === 0 ? (
+                <div className="flex items-center justify-center h-[300px] text-sm text-gray-500">
+                  {nl ? 'Nog geen prestatiedata beschikbaar' : fr ? 'Pas encore de données de performance' : 'No performance data available yet'}
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={performanceData}>
+                    <defs>
+                      <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#7c3aed" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#7c3aed" stopOpacity={0}/>
+                      </linearGradient>
+                      <linearGradient id="colorEngagement" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis className="text-xs" />
+                    <Tooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="revenue"
+                      stroke="#7c3aed"
+                      fillOpacity={1}
+                      fill="url(#colorRevenue)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="engagement"
+                      stroke="#10b981"
+                      fillOpacity={1}
+                      fill="url(#colorEngagement)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -338,7 +298,7 @@ export default function DashboardOverview() {
             <CardHeader>
               <CardTitle>{nl ? 'Campagnestatus' : fr ? 'Statut des Campagnes' : 'Campaign Status'}</CardTitle>
               <p className="text-sm text-gray-500">
-                {nl ? 'Totaal' : fr ? 'Total' : 'Total'}: {dashboardStats?.total_campaigns ?? 38} {nl ? 'campagnes' : fr ? 'campagnes' : 'campaigns'}
+                {nl ? 'Totaal' : fr ? 'Total' : 'Total'}: {dashboardStats?.total_campaigns ?? 0} {nl ? 'campagnes' : fr ? 'campagnes' : 'campaigns'}
               </p>
             </CardHeader>
             <CardContent>
@@ -419,40 +379,48 @@ export default function DashboardOverview() {
               <p className="text-sm text-gray-500">{nl ? 'Team acties' : fr ? 'Actions d\'Équipe' : 'Team actions'}</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {recentActivities.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-3">
-                  <Avatar className="w-8 h-8">
-                    <AvatarFallback className="text-xs">
-                      {activity.user.split(' ').map(n => n[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm">
-                      <span className="font-medium">{activity.user}</span>
-                      {' '}{activity.action}{' '}
-                      <span className="font-medium">{activity.target}</span>
-                    </p>
-                    <p className="text-xs text-gray-500">{activity.time}</p>
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreVertical className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>
-                        <Eye className="w-4 h-4 mr-2" />
-                        {nl ? 'Details Bekijken' : fr ? 'Voir les Détails' : 'View Details'}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-              <Button variant="outline" className="w-full">
-                {nl ? 'Alle Activiteit Bekijken' : fr ? 'Voir Toute l\'Activité' : 'View All Activity'}
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
+              {recentActivities.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">
+                  {nl ? 'Nog geen recente activiteit' : fr ? 'Pas encore d\'activité récente' : 'No recent activity yet'}
+                </p>
+              ) : (
+                <>
+                  {recentActivities.map((activity) => (
+                    <div key={activity.id} className="flex items-start gap-3">
+                      <Avatar className="w-8 h-8">
+                        <AvatarFallback className="text-xs">
+                          {activity.user.split(' ').map(n => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 space-y-1">
+                        <p className="text-sm">
+                          <span className="font-medium">{activity.user}</span>
+                          {' '}{activity.action}{' '}
+                          <span className="font-medium">{activity.target}</span>
+                        </p>
+                        <p className="text-xs text-gray-500">{activity.time}</p>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="w-4 h-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Eye className="w-4 h-4 mr-2" />
+                            {nl ? 'Details Bekijken' : fr ? 'Voir les Détails' : 'View Details'}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  ))}
+                  <Button variant="outline" className="w-full">
+                    {nl ? 'Alle Activiteit Bekijken' : fr ? 'Voir Toute l\'Activité' : 'View All Activity'}
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>
@@ -468,35 +436,43 @@ export default function DashboardOverview() {
               <p className="text-sm text-gray-500">{nl ? 'Leiders deze maand' : fr ? 'Leaders du mois' : 'This month\'s leaders'}</p>
             </CardHeader>
             <CardContent className="space-y-4">
-              {topPerformers.map((performer, index) => (
-                <div key={performer.name} className="flex items-center gap-3">
-                  <div className="relative">
-                    <Avatar className="w-10 h-10">
-                      <AvatarFallback className="bg-white dark:bg-gray-800">
-                        {performer.name.split(' ').map(n => n[0]).join('')}
-                      </AvatarFallback>
-                    </Avatar>
-                    {index === 0 && (
-                      <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <span className="text-xs">&#x1F451;</span>
+              {topPerformers.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">
+                  {nl ? 'Nog geen presteerders beschikbaar' : fr ? 'Aucun performeur disponible' : 'No performers available yet'}
+                </p>
+              ) : (
+                <>
+                  {topPerformers.map((performer, index) => (
+                    <div key={performer.name} className="flex items-center gap-3">
+                      <div className="relative">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback className="bg-white dark:bg-gray-800">
+                            {performer.name.split(' ').map(n => n[0]).join('')}
+                          </AvatarFallback>
+                        </Avatar>
+                        {index === 0 && (
+                          <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
+                            <span className="text-xs">&#x1F451;</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{performer.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {performer.campaigns} {nl ? 'campagnes' : fr ? 'campagnes' : 'campaigns'} &bull; {performer.revenue}
-                    </p>
-                  </div>
-                  <Badge variant="secondary" className="font-bold">
-                    {performer.score}%
-                  </Badge>
-                </div>
-              ))}
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-                {nl ? 'Volledig Klassement Bekijken' : fr ? 'Voir le Classement Complet' : 'View Full Leaderboard'}
-                <ChevronRight className="w-4 h-4 ml-2" />
-              </Button>
+                      <div className="flex-1">
+                        <p className="font-medium">{performer.name}</p>
+                        <p className="text-sm text-gray-500">
+                          {performer.campaigns} {nl ? 'campagnes' : fr ? 'campagnes' : 'campaigns'} &bull; {performer.revenue}
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="font-bold">
+                        {performer.score}%
+                      </Badge>
+                    </div>
+                  ))}
+                  <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
+                    {nl ? 'Volledig Klassement Bekijken' : fr ? 'Voir le Classement Complet' : 'View Full Leaderboard'}
+                    <ChevronRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         </motion.div>

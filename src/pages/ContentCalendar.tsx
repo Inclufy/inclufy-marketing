@@ -64,18 +64,6 @@ function getFirstDayOfMonth(year: number, month: number) {
   return new Date(year, month, 1).getDay();
 }
 
-// ─── Seed data (when API returns empty) ─────────────────────────────
-
-const SEED_EVENTS: CalendarEvent[] = [
-  { id: 's1', title: 'Instagram Reels - Product Launch', date: new Date(new Date().getFullYear(), new Date().getMonth(), 5).toISOString(), type: 'social', platform: 'instagram', status: 'scheduled' },
-  { id: 's2', title: 'LinkedIn Thought Leadership Post', date: new Date(new Date().getFullYear(), new Date().getMonth(), 8).toISOString(), type: 'social', platform: 'linkedin', status: 'draft' },
-  { id: 's3', title: 'Weekly Newsletter', date: new Date(new Date().getFullYear(), new Date().getMonth(), 10).toISOString(), type: 'email', platform: 'email', status: 'scheduled' },
-  { id: 's4', title: 'Blog: AI Marketing Trends', date: new Date(new Date().getFullYear(), new Date().getMonth(), 14).toISOString(), type: 'blog', platform: 'blog', status: 'draft' },
-  { id: 's5', title: 'Spring Campaign Launch', date: new Date(new Date().getFullYear(), new Date().getMonth(), 18).toISOString(), type: 'campaign', status: 'scheduled' },
-  { id: 's6', title: 'Customer Success Story', date: new Date(new Date().getFullYear(), new Date().getMonth(), 22).toISOString(), type: 'social', platform: 'linkedin', status: 'approved' },
-  { id: 's7', title: 'Product Update Email', date: new Date(new Date().getFullYear(), new Date().getMonth(), 25).toISOString(), type: 'email', platform: 'email', status: 'draft' },
-];
-
 // ─── Component ──────────────────────────────────────────────────────
 
 export default function ContentCalendar() {
@@ -95,7 +83,7 @@ export default function ContentCalendar() {
 
   const isLoading = loadingCampaigns && loadingContent;
 
-  // Build events from API data + seed data
+  // Build events from API data
   const apiEvents: CalendarEvent[] = [
     ...(campaigns || [])
       .filter(c => c.starts_at)
@@ -118,7 +106,7 @@ export default function ContentCalendar() {
       })),
   ];
 
-  const events = apiEvents.length > 0 ? apiEvents : SEED_EVENTS;
+  const events = apiEvents;
 
   // Filter events for current month
   const monthEvents = events.filter(e => {

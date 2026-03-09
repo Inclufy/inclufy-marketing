@@ -7,6 +7,7 @@ import {
 import axios from 'axios';
 import { toast } from 'sonner';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { brandMemoryService } from '@/services/brand/brand-memory.service';
 
 interface PostScanWizardProps {
   blueprintId: string;
@@ -64,50 +65,58 @@ export function PostScanWizard({ blueprintId, onComplete, onSkip }: PostScanWiza
   const loadBlueprintData = async () => {
     try {
       setLoading(true);
-      
+
+      // Fetch brand memory as fallback data source
+      let brandMemory: any = null;
+      try {
+        brandMemory = await brandMemoryService.getOrCreateActive();
+      } catch (e) {
+        console.debug('Could not load brand memory for PostScanWizard fallback:', e);
+      }
+
       const response = await axios.get(`/api/growth-blueprint/${blueprintId}`);
       const data = response.data;
       const blueprint = data.blueprint;
       const statusQuo = data.status_quo;
       const aiAnalysis = statusQuo?.ai_analysis || {};
       const linkedinData = statusQuo?.linkedin_data || {};
-      
-      console.log('📊 Loaded data:', { aiAnalysis, linkedinData });
-      
+
+      console.log('📊 Loaded data:', { aiAnalysis, linkedinData, brandMemory: brandMemory ? 'loaded' : 'none' });
+
       // Extract ALL available data with fallbacks
-      const foundingYear = linkedinData.founded_year || 
-                          aiAnalysis.founding_year || 
-                          statusQuo?.founding_year || 
+      const foundingYear = linkedinData.founded_year ||
+                          aiAnalysis.founding_year ||
+                          statusQuo?.founding_year ||
                           null;
-      
-      const companySize = linkedinData.company_size || 
-                         aiAnalysis.company_size || 
+
+      const companySize = linkedinData.company_size ||
+                         aiAnalysis.company_size ||
                          'Unknown';
-      
-      const hqLocation = linkedinData.hq_location || 
-                        aiAnalysis.hq_location || 
+
+      const hqLocation = linkedinData.hq_location ||
+                        aiAnalysis.hq_location ||
                         '';
-      
-      const employeeCount = linkedinData.employee_count || 
-                           aiAnalysis.employee_count || 
+
+      const employeeCount = linkedinData.employee_count ||
+                           aiAnalysis.employee_count ||
                            null;
-      
+
       // Merge founders from all sources
       const foundersFromLinkedIn = linkedinData.founders || [];
       const foundersFromAI = aiAnalysis.founders || [];
       const allFounders = [...foundersFromLinkedIn, ...foundersFromAI];
-      
+
       // Deduplicate by name
       const uniqueFounders = allFounders.filter((founder, index, self) =>
         index === self.findIndex(f => f.name === founder.name)
       );
-      
+
       setWizardData({
-        // Pre-filled from ALL sources (LinkedIn + AI + Google)
-        company_name: blueprint.company_name,
-        industry: linkedinData.industry || statusQuo?.industry || aiAnalysis.industry || 'Unknown',
-        website_url: statusQuo?.website_url || blueprint.website_url || '',
-        mission: aiAnalysis.value_proposition || linkedinData.description || '',
+        // Pre-filled from ALL sources (LinkedIn + AI + Google + Brand Memory fallback)
+        company_name: blueprint.company_name || brandMemory?.brand_name || '',
+        industry: linkedinData.industry || statusQuo?.industry || aiAnalysis.industry || (brandMemory?.industries?.length ? brandMemory.industries[0] : '') || 'Unknown',
+        website_url: statusQuo?.website_url || blueprint.website_url || (brandMemory?.urls?.length ? brandMemory.urls[0] : '') || '',
+        mission: aiAnalysis.value_proposition || linkedinData.description || brandMemory?.mission || '',
         founding_year: foundingYear,
         company_size: companySize,
         hq_location: hqLocation,

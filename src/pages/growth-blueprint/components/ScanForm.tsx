@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Loader2, AlertCircle, Building2, Globe, Briefcase } from 'lucide-react';
 import axios from 'axios';
 import { toast } from 'sonner';
+import { brandMemoryService } from '@/services/brand/brand-memory.service';
 
 interface ScanFormProps {
   onScanComplete: (blueprint: any) => void;
@@ -17,6 +18,24 @@ export default function ScanForm({ onScanComplete }: ScanFormProps) {
   const [scanning, setScanning] = useState(false);
   const [progress, setProgress] = useState(0);
   const [status, setStatus] = useState('');
+
+  // Pre-fill form fields from Brand Memory (populated during onboarding)
+  useEffect(() => {
+    const prefillFromBrandMemory = async () => {
+      try {
+        const brandMemory = await brandMemoryService.getOrCreateActive();
+        setFormData(prev => ({
+          company_name: prev.company_name || brandMemory.brand_name || '',
+          website_url: prev.website_url || (brandMemory.urls?.length ? brandMemory.urls[0] : ''),
+          industry: prev.industry || (brandMemory.industries?.length ? brandMemory.industries[0] : ''),
+        }));
+      } catch (error) {
+        // Silently fail — user can still fill in manually
+        console.debug('Could not pre-fill from brand memory:', error);
+      }
+    };
+    prefillFromBrandMemory();
+  }, []);
 
   const startScan = async () => {
     if (!formData.company_name || !formData.website_url) {

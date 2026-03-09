@@ -2,6 +2,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { EmptyState } from '@/components/DataState';
 import {
   FileText,
   Download,
@@ -19,65 +20,16 @@ export default function Reports() {
   const nl = lang === 'nl';
   const fr = lang === 'fr';
 
-  const reports = [
-    {
-      id: 1,
-      title: nl ? 'Maandelijkse Marketingprestaties' : fr ? 'Performance Marketing Mensuelle' : 'Monthly Marketing Performance',
-      type: nl ? 'Prestatierapport' : fr ? 'Rapport de Performance' : 'Performance Report',
-      status: nl ? 'Gereed' : fr ? 'Prêt' : 'Ready',
-      date: 'Dec 20, 2024',
-      size: '2.4 MB',
-      icon: TrendingUp,
-      color: 'text-green-600',
-      bgColor: 'bg-green-100 dark:bg-green-900/20',
-    },
-    {
-      id: 2,
-      title: nl ? 'Campagne ROI-analyse Q4' : fr ? 'Analyse ROI des Campagnes Q4' : 'Campaign ROI Analysis Q4',
-      type: nl ? 'Financieel Rapport' : fr ? 'Rapport Financier' : 'Financial Report',
-      status: nl ? 'Gereed' : fr ? 'Prêt' : 'Ready',
-      date: 'Dec 18, 2024',
-      size: '1.8 MB',
-      icon: FileText,
-      color: 'text-blue-600',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/20',
-    },
-    {
-      id: 3,
-      title: nl ? 'E-mailmarketing Samenvatting' : fr ? 'Résumé du Marketing par E-mail' : 'Email Marketing Summary',
-      type: nl ? 'Campagnerapport' : fr ? 'Rapport de Campagne' : 'Campaign Report',
-      status: nl ? 'Verwerken' : fr ? 'En cours' : 'Processing',
-      date: 'Dec 15, 2024',
-      size: '3.1 MB',
-      icon: Mail,
-      color: 'text-purple-600',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/20',
-    },
-    {
-      id: 4,
-      title: nl ? 'Doelgroep Inzichten Rapport' : fr ? "Rapport d'Aperçu de l'Audience" : 'Audience Insights Report',
-      type: nl ? 'Analyserapport' : fr ? "Rapport d'Analyse" : 'Analytics Report',
-      status: nl ? 'Gereed' : fr ? 'Prêt' : 'Ready',
-      date: 'Dec 10, 2024',
-      size: '1.2 MB',
-      icon: Users,
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-100 dark:bg-orange-900/20',
-    },
-  ];
+  const reports: { id: number; title: string; type: string; status: string; date: string; size: string; icon: any; color: string; bgColor: string }[] = [];
 
   const quickStats = [
-    { label: nl ? 'Rapporten Gegenereerd' : fr ? 'Rapports Générés' : 'Reports Generated', value: '156', change: nl ? '+12 deze maand' : fr ? '+12 ce mois' : '+12 this month' },
-    { label: nl ? 'Geplande Rapporten' : fr ? 'Rapports Planifiés' : 'Scheduled Reports', value: '24', change: nl ? '8 aankomend' : fr ? '8 à venir' : '8 upcoming' },
-    { label: nl ? 'Totaal Downloads' : fr ? 'Total Téléchargements' : 'Total Downloads', value: '1,234', change: nl ? '+345 deze maand' : fr ? '+345 ce mois' : '+345 this month' },
-    { label: nl ? 'Actieve Abonnementen' : fr ? 'Abonnements Actifs' : 'Active Subscriptions', value: '18', change: nl ? '6 teamleden' : fr ? "6 membres d'équipe" : '6 team members' },
+    { label: nl ? 'Rapporten Gegenereerd' : fr ? 'Rapports Générés' : 'Reports Generated', value: '0', change: nl ? 'Nog geen rapporten' : fr ? 'Pas encore de rapports' : 'No reports yet' },
+    { label: nl ? 'Geplande Rapporten' : fr ? 'Rapports Planifiés' : 'Scheduled Reports', value: '0', change: nl ? 'Geen gepland' : fr ? 'Aucun planifié' : 'None scheduled' },
+    { label: nl ? 'Totaal Downloads' : fr ? 'Total Téléchargements' : 'Total Downloads', value: '0', change: nl ? '–' : fr ? '–' : '–' },
+    { label: nl ? 'Actieve Abonnementen' : fr ? 'Abonnements Actifs' : 'Active Subscriptions', value: '0', change: nl ? '–' : fr ? "6 membres d'équipe" : '6 team members' },
   ];
 
-  const scheduledReports = [
-    { name: nl ? 'Wekelijkse Prestatie Samenvatting' : fr ? 'Résumé Hebdomadaire des Performances' : 'Weekly Performance Summary', schedule: nl ? 'Elke maandag, 9:00' : fr ? 'Chaque lundi, 9h00' : 'Every Monday, 9:00 AM' },
-    { name: nl ? 'Maandelijks ROI Rapport' : fr ? 'Rapport ROI Mensuel' : 'Monthly ROI Report', schedule: nl ? 'Eerste dag van de maand, 8:00' : fr ? 'Premier jour du mois, 8h00' : 'First day of month, 8:00 AM' },
-    { name: nl ? 'Campagne Analyse' : fr ? 'Analyse des Campagnes' : 'Campaign Analytics', schedule: nl ? 'Elke vrijdag, 17:00' : fr ? 'Chaque vendredi, 17h00' : 'Every Friday, 5:00 PM' },
-  ];
+  const scheduledReports: { name: string; schedule: string }[] = [];
 
   return (
     <div className="space-y-6">
@@ -119,6 +71,12 @@ export default function Reports() {
           </Button>
         </CardHeader>
         <CardContent>
+          {reports.length === 0 ? (
+            <EmptyState
+              title={nl ? 'Nog geen rapporten' : fr ? 'Pas encore de rapports' : 'No reports yet'}
+              description={nl ? 'Maak uw eerste rapport aan om marketingprestaties bij te houden.' : fr ? 'Créez votre premier rapport pour suivre les performances marketing.' : 'Create your first report to track marketing performance.'}
+            />
+          ) : (
           <div className="space-y-4">
             {reports.map((report) => (
               <div
@@ -157,6 +115,7 @@ export default function Reports() {
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
 
@@ -169,6 +128,11 @@ export default function Reports() {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {scheduledReports.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              {nl ? 'Nog geen geplande rapporten' : fr ? 'Pas encore de rapports planifiés' : 'No scheduled reports yet'}
+            </p>
+          ) : (
           <div className="space-y-3">
             {scheduledReports.map((item, index) => (
               <div key={index} className="flex justify-between items-center">
@@ -182,6 +146,7 @@ export default function Reports() {
               </div>
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
     </div>

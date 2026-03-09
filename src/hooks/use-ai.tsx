@@ -1,6 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { getAIService } from '@/services/ai.service';
+import { useBrandMemory, toBrandContext } from '@/hooks/queries/useBrandMemory';
 
 interface UseAIOptions {
   provider?: 'openai' | 'anthropic';
@@ -11,8 +12,18 @@ interface UseAIOptions {
 export const useAI = (options?: UseAIOptions) => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  
+
   const aiService = getAIService(options?.provider);
+
+  // Bridge Brand Memory into AI service so all generation uses brand voice
+  const { data: brandMemory } = useBrandMemory();
+
+  useEffect(() => {
+    const ctx = toBrandContext(brandMemory);
+    if (ctx) {
+      aiService.setBrandContext(ctx);
+    }
+  }, [brandMemory, aiService]);
 
   const generateTutorial = useCallback(async (topic: string, steps?: number) => {
     setLoading(true);

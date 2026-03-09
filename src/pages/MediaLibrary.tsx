@@ -15,10 +15,10 @@ const MediaLibrary = () => {
 
   // Stats could be calculated from actual data in a real implementation
   const stats = [
-    { label: nl ? "Totaal bestanden" : fr ? "Fichiers totaux" : "Total Files", value: "124", icon: FileText },
-    { label: nl ? "Opslag gebruikt" : fr ? "Stockage utilisé" : "Storage Used", value: "2.4 GB", icon: FolderOpen },
-    { label: nl ? "Afbeeldingen" : fr ? "Images" : "Images", value: "89", icon: ImageIcon },
-    { label: nl ? "Video's" : fr ? "Vidéos" : "Videos", value: "12", icon: Video },
+    { label: nl ? "Totaal bestanden" : fr ? "Fichiers totaux" : "Total Files", value: "0", icon: FileText },
+    { label: nl ? "Opslag gebruikt" : fr ? "Stockage utilisé" : "Storage Used", value: "0 GB", icon: FolderOpen },
+    { label: nl ? "Afbeeldingen" : fr ? "Images" : "Images", value: "0", icon: ImageIcon },
+    { label: nl ? "Video's" : fr ? "Vidéos" : "Videos", value: "0", icon: Video },
   ];
 
   return (

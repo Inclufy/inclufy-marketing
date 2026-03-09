@@ -32,17 +32,6 @@ interface ApprovalItem {
   content?: string;
 }
 
-// ─── Seed data when API returns empty ───────────────────────────────
-
-const SEED_ITEMS: ApprovalItem[] = [
-  { id: 'a1', title: 'Q1 Email Newsletter Draft', type: 'email', status: 'review', created_at: new Date(Date.now() - 2 * 86400000).toISOString() },
-  { id: 'a2', title: 'Instagram Campaign - Spring Launch', type: 'social', status: 'review', created_at: new Date(Date.now() - 1 * 86400000).toISOString() },
-  { id: 'a3', title: 'Blog: 5 Marketing Automation Tips', type: 'blog', status: 'review', created_at: new Date(Date.now() - 3 * 86400000).toISOString() },
-  { id: 'a4', title: 'LinkedIn Thought Leadership Series', type: 'social', status: 'draft', created_at: new Date(Date.now() - 4 * 86400000).toISOString() },
-  { id: 'a5', title: 'Product Update Announcement', type: 'email', status: 'approved', created_at: new Date(Date.now() - 5 * 86400000).toISOString() },
-  { id: 'a6', title: 'Customer Case Study: Acme Corp', type: 'blog', status: 'approved', created_at: new Date(Date.now() - 6 * 86400000).toISOString() },
-];
-
 // ─── Component ──────────────────────────────────────────────────────
 
 export default function ContentApprovals() {
@@ -67,7 +56,7 @@ export default function ContentApprovals() {
     content: c.content,
   }));
 
-  const items = apiItems.length > 0 ? apiItems : SEED_ITEMS;
+  const items = apiItems;
 
   // Filter by status
   const reviewItems = items.filter(i => i.status === 'review');

@@ -402,19 +402,19 @@ const JourneyBuilder = () => {
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Totaal ingeschreven' : fr ? 'Total inscrits' : 'Total Enrolled'}</p>
-        <p className="text-2xl font-bold">1,247</p>
+        <p className="text-2xl font-bold">0</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Voltooid' : fr ? 'Termines' : 'Completed'}</p>
-        <p className="text-2xl font-bold">892</p>
+        <p className="text-2xl font-bold">0</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Conversieratio' : fr ? 'Taux de conversion' : 'Conversion Rate'}</p>
-        <p className="text-2xl font-bold text-green-600">71.5%</p>
+        <p className="text-2xl font-bold">0%</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Gem. tijd' : fr ? 'Temps moy.' : 'Avg. Time'}</p>
-        <p className="text-2xl font-bold">{nl ? '4,3 dagen' : fr ? '4,3 jours' : '4.3 days'}</p>
+        <p className="text-2xl font-bold">–</p>
       </div>
     </div>
   );
@@ -423,19 +423,19 @@ const JourneyBuilder = () => {
     <div className="space-y-4">
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Totaal uitgevoerd' : fr ? "Total d'executions" : 'Total Executions'}</p>
-        <p className="text-2xl font-bold">3,421</p>
+        <p className="text-2xl font-bold">0</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Slagingspercentage' : fr ? 'Taux de succes' : 'Success Rate'}</p>
-        <p className="text-2xl font-bold text-green-600">98.7%</p>
+        <p className="text-2xl font-bold">0%</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Gem. duur' : fr ? 'Duree moy.' : 'Avg. Duration'}</p>
-        <p className="text-2xl font-bold">1.2s</p>
+        <p className="text-2xl font-bold">–</p>
       </div>
       <div>
         <p className="text-sm text-muted-foreground">{nl ? 'Fouten vandaag' : fr ? "Erreurs aujourd'hui" : 'Errors Today'}</p>
-        <p className="text-2xl font-bold text-red-600">3</p>
+        <p className="text-2xl font-bold">0</p>
       </div>
     </div>
   );

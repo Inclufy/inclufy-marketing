@@ -32,14 +32,7 @@ interface JourneyItem {
   created_at: string;
 }
 
-// ─── Seed data when API returns empty ───────────────────────────────
-
-const SEED_JOURNEYS: JourneyItem[] = [
-  { id: 'j1', name: 'Welcome Email Series', status: 'active', description: 'Onboard new subscribers with a 5-email welcome sequence', enrollment_count: 142, created_at: new Date(Date.now() - 14 * 86400000).toISOString() },
-  { id: 'j2', name: 'Cart Abandonment Recovery', status: 'active', description: 'Re-engage customers who left items in their cart', enrollment_count: 89, created_at: new Date(Date.now() - 10 * 86400000).toISOString() },
-  { id: 'j3', name: 'Product Launch Campaign', status: 'draft', description: 'Multi-channel launch sequence for new products', enrollment_count: 0, created_at: new Date(Date.now() - 5 * 86400000).toISOString() },
-  { id: 'j4', name: 'Customer Re-engagement', status: 'paused', description: 'Win back inactive customers with personalized offers', enrollment_count: 56, created_at: new Date(Date.now() - 21 * 86400000).toISOString() },
-];
+// No more seed data — show real data only, with empty state when none exist
 
 // ─── Status helpers ─────────────────────────────────────────────────
 
@@ -87,7 +80,7 @@ export default function JourneyDashboard() {
     created_at: j.created_at,
   }));
 
-  const journeys = apiJourneys.length > 0 ? apiJourneys : SEED_JOURNEYS;
+  const journeys = apiJourneys;
 
   // Filter by status
   const activeJourneys = journeys.filter(j => j.status === 'active');
@@ -209,7 +202,7 @@ export default function JourneyDashboard() {
                 asChild
                 title={nl ? 'Bewerken' : fr ? 'Modifier' : 'Edit'}
               >
-                <Link to={`/app/journey-builder?id=${journey.id}`}>
+                <Link to={`/app/automation/workflows?id=${journey.id}`}>
                   <Pencil className="h-4 w-4" />
                 </Link>
               </Button>
@@ -243,7 +236,7 @@ export default function JourneyDashboard() {
         </div>
 
         <Button asChild>
-          <Link to="/app/journey-builder">
+          <Link to="/app/automation/workflows">
             <Plus className="h-4 w-4 mr-2" />
             {nl ? 'Nieuwe Journey' : fr ? 'Nouveau Parcours' : 'Create New Journey'}
           </Link>
@@ -324,7 +317,7 @@ export default function JourneyDashboard() {
               }
               action={{
                 label: nl ? 'Nieuwe Journey' : fr ? 'Nouveau Parcours' : 'Create Journey',
-                onClick: () => { window.location.href = '/app/journey-builder'; },
+                onClick: () => { window.location.href = '/app/automation/workflows'; },
               }}
             />
           ) : (

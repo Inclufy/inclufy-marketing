@@ -29,26 +29,26 @@ const AITrainingInterface = () => {
     {
       id: "content-optimizer",
       name: "Content Optimizer",
-      accuracy: 89,
-      lastUpdated: "2 hours ago",
+      accuracy: 0,
+      lastUpdated: "–",
       status: "active",
-      trainingSessions: 1234
+      trainingSessions: 0
     },
     {
       id: "audience-predictor",
       name: "Audience Predictor",
-      accuracy: 92,
-      lastUpdated: "1 day ago",
+      accuracy: 0,
+      lastUpdated: "–",
       status: "active",
-      trainingSessions: 892
+      trainingSessions: 0
     },
     {
       id: "campaign-analyzer",
       name: "Campaign Analyzer",
-      accuracy: 87,
-      lastUpdated: "3 days ago",
-      status: "training",
-      trainingSessions: 567
+      accuracy: 0,
+      lastUpdated: "–",
+      status: "active",
+      trainingSessions: 0
     }
   ];
 
@@ -78,10 +78,9 @@ const AITrainingInterface = () => {
             <CardTitle className="text-sm font-medium">{nl ? "Model Nauwkeurigheid" : fr ? "Précision du Modèle" : "Model Accuracy"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">89%</div>
-            <p className="text-xs text-green-600 flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              {nl ? "+3% sinds vorige week" : fr ? "+3% depuis la semaine dernière" : "+3% from last week"}
+            <div className="text-2xl font-bold">0%</div>
+            <p className="text-xs text-muted-foreground">
+              {nl ? "Nog geen data" : fr ? "Pas encore de données" : "No data yet"}
             </p>
           </CardContent>
         </Card>
@@ -91,7 +90,7 @@ const AITrainingInterface = () => {
             <CardTitle className="text-sm font-medium">{nl ? "Trainingssessies" : fr ? "Sessions d'Entraînement" : "Training Sessions"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,693</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">{nl ? "Over alle modellen" : fr ? "Sur tous les modèles" : "Across all models"}</p>
           </CardContent>
         </Card>
@@ -101,7 +100,7 @@ const AITrainingInterface = () => {
             <CardTitle className="text-sm font-medium">{nl ? "Datapunten" : fr ? "Points de Données" : "Data Points"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1.2M</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">{nl ? "Trainingsvoorbeelden" : fr ? "Échantillons d'entraînement" : "Training samples"}</p>
           </CardContent>
         </Card>
@@ -111,8 +110,8 @@ const AITrainingInterface = () => {
             <CardTitle className="text-sm font-medium">{nl ? "Laatst Bijgewerkt" : fr ? "Dernière Mise à Jour" : "Last Updated"}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{nl ? "2u geleden" : fr ? "Il y a 2h" : "2h ago"}</div>
-            <p className="text-xs text-muted-foreground">{nl ? "Auto-training ingeschakeld" : fr ? "Entraînement automatique activé" : "Auto-training enabled"}</p>
+            <div className="text-2xl font-bold">–</div>
+            <p className="text-xs text-muted-foreground">{nl ? "Nog niet getraind" : fr ? "Pas encore entraîné" : "Not yet trained"}</p>
           </CardContent>
         </Card>
       </div>
@@ -198,28 +197,28 @@ const AITrainingInterface = () => {
                       <BarChart3 className="h-4 w-4 text-blue-600" />
                       <span className="text-sm">{nl ? "Precisie" : fr ? "Précision" : "Precision"}</span>
                     </div>
-                    <div className="text-2xl font-bold">91.2%</div>
+                    <div className="text-2xl font-bold">0%</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Zap className="h-4 w-4 text-green-600" />
                       <span className="text-sm">{nl ? "Snelheid" : fr ? "Vitesse" : "Speed"}</span>
                     </div>
-                    <div className="text-2xl font-bold">124ms</div>
+                    <div className="text-2xl font-bold">–</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <Database className="h-4 w-4 text-purple-600" />
                       <span className="text-sm">{nl ? "Trainingsdata" : fr ? "Données d'Entraînement" : "Training Data"}</span>
                     </div>
-                    <div className="text-2xl font-bold">423K</div>
+                    <div className="text-2xl font-bold">0</div>
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <FileText className="h-4 w-4 text-orange-600" />
                       <span className="text-sm">{nl ? "Parameters" : fr ? "Paramètres" : "Parameters"}</span>
                     </div>
-                    <div className="text-2xl font-bold">2.3M</div>
+                    <div className="text-2xl font-bold">0</div>
                   </div>
                 </div>
               </div>
@@ -227,21 +226,12 @@ const AITrainingInterface = () => {
               {/* Recent Training Sessions */}
               <div>
                 <h3 className="text-sm font-medium mb-4">{nl ? "Recente Trainingssessies" : fr ? "Sessions d'Entraînement Récentes" : "Recent Training Sessions"}</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-muted-foreground">{nl ? "2 uur geleden" : fr ? "Il y a 2 heures" : "2 hours ago"}</span>
-                    <span>{nl ? "Succesvol getraind op 12K nieuwe voorbeelden" : fr ? "Entraîné avec succès sur 12K nouveaux échantillons" : "Successfully trained on 12K new samples"}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    <span className="text-muted-foreground">{nl ? "1 dag geleden" : fr ? "Il y a 1 jour" : "1 day ago"}</span>
-                    <span>{nl ? "Modeloptimalisatie voltooid (+3% nauwkeurigheid)" : fr ? "Optimisation du modèle terminée (+3% précision)" : "Model optimization completed (+3% accuracy)"}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <AlertCircle className="h-4 w-4 text-yellow-600" />
-                    <span className="text-muted-foreground">{nl ? "2 dagen geleden" : fr ? "Il y a 2 jours" : "2 days ago"}</span>
-                    <span>{nl ? "Training gepauzeerd - onvoldoende datakwaliteit" : fr ? "Entraînement en pause - qualité des données insuffisante" : "Training paused - insufficient data quality"}</span>
+                <div className="flex items-center justify-center py-8 text-center">
+                  <div className="space-y-2">
+                    <Brain className="h-8 w-8 mx-auto text-gray-300" />
+                    <p className="text-sm text-muted-foreground">
+                      {nl ? "Start training om modellen te verbeteren" : fr ? "Commencez l'entraînement pour améliorer les modèles" : "Start training to improve models"}
+                    </p>
                   </div>
                 </div>
               </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { EmptyState } from '@/components/DataState';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -102,174 +103,26 @@ const EnterpriseGovernance = () => {
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Sample Integrations
-  const integrations: Integration[] = [
-    {
-      id: '1',
-      name: 'Salesforce',
-      category: 'crm',
-      status: 'connected',
-      logo: '/logos/salesforce.svg',
-      lastSync: new Date(Date.now() - 5 * 60 * 1000),
-      dataPoints: 45678,
-      config: {
-        syncFrequency: 'real-time',
-        dataFlow: 'bidirectional',
-        fields: ['contacts', 'accounts', 'opportunities', 'campaigns']
-      }
-    },
-    {
-      id: '2',
-      name: 'Google Ads',
-      category: 'ads',
-      status: 'connected',
-      logo: '/logos/google-ads.svg',
-      lastSync: new Date(Date.now() - 30 * 60 * 1000),
-      dataPoints: 23456,
-      config: {
-        syncFrequency: nl ? 'per uur' : fr ? 'toutes les heures' : 'hourly',
-        dataFlow: 'bidirectional',
-        fields: ['campaigns', 'ad_groups', 'keywords', 'conversions']
-      }
-    },
-    {
-      id: '3',
-      name: 'Stripe',
-      category: 'finance',
-      status: 'connected',
-      logo: '/logos/stripe.svg',
-      lastSync: new Date(Date.now() - 15 * 60 * 1000),
-      dataPoints: 12345,
-      config: {
-        syncFrequency: 'real-time',
-        dataFlow: 'import',
-        fields: ['customers', 'subscriptions', 'invoices', 'revenue']
-      }
-    },
-    {
-      id: '4',
-      name: 'HubSpot',
-      category: 'crm',
-      status: 'error',
-      logo: '/logos/hubspot.svg',
-      lastSync: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      config: {
-        syncFrequency: '15min',
-        dataFlow: 'bidirectional',
-        fields: ['contacts', 'companies', 'deals']
-      }
-    }
-  ];
+  // Integrations (none connected yet)
+  const integrations: Integration[] = [];
 
-  // Sample Brands
-  const brands: Brand[] = [
-    {
-      id: '1',
-      name: 'Inclufy Marketing',
-      logo: '/logos/inclufy.svg',
-      users: 45,
-      campaigns: 127,
-      settings: {
-        timezone: 'America/New_York',
-        currency: 'USD',
-        language: 'en'
-      }
-    },
-    {
-      id: '2',
-      name: 'Inclufy Academy',
-      logo: '/logos/inclufy-academy.svg',
-      users: 23,
-      campaigns: 56,
-      settings: {
-        timezone: 'America/New_York',
-        currency: 'USD',
-        language: 'en'
-      }
-    },
-    {
-      id: '3',
-      name: 'Inclufy Europe',
-      logo: '/logos/inclufy-eu.svg',
-      users: 18,
-      campaigns: 34,
-      settings: {
-        timezone: 'Europe/London',
-        currency: 'EUR',
-        language: 'en'
-      }
-    }
-  ];
+  // Brands (none configured yet)
+  const brands: Brand[] = [];
 
-  // Sample Roles
+  // Roles (default Administrator only)
   const roles: Role[] = [
     {
       id: '1',
       name: nl ? 'Beheerder' : fr ? 'Administrateur' : 'Administrator',
       description: nl ? 'Volledige systeemtoegang' : fr ? 'Acc\u00e8s complet au syst\u00e8me' : 'Full system access',
       permissions: ['*'],
-      users: 3,
+      users: 1,
       isSystem: true
-    },
-    {
-      id: '2',
-      name: nl ? 'Marketing Manager' : fr ? 'Responsable Marketing' : 'Marketing Manager',
-      description: nl ? 'Beheer campagnes en content' : fr ? 'G\u00e9rer les campagnes et le contenu' : 'Manage campaigns and content',
-      permissions: ['campaigns:*', 'content:*', 'analytics:read'],
-      users: 12,
-      isSystem: false
-    },
-    {
-      id: '3',
-      name: nl ? 'Content Creator' : fr ? 'Cr\u00e9ateur de Contenu' : 'Content Creator',
-      description: nl ? 'Content aanmaken en bewerken' : fr ? 'Cr\u00e9er et modifier du contenu' : 'Create and edit content',
-      permissions: ['content:create', 'content:edit', 'analytics:read'],
-      users: 23,
-      isSystem: false
-    },
-    {
-      id: '4',
-      name: nl ? 'Analist' : fr ? 'Analyste' : 'Analyst',
-      description: nl ? 'Rapporten en analyses bekijken' : fr ? 'Consulter les rapports et analyses' : 'View reports and analytics',
-      permissions: ['analytics:*', 'campaigns:read'],
-      users: 8,
-      isSystem: false
     }
   ];
 
-  // Sample Audit Log
-  const auditLog: AuditLogEntry[] = [
-    {
-      id: '1',
-      timestamp: new Date(Date.now() - 5 * 60 * 1000),
-      user: 'john@inclufy.com',
-      action: 'integration.connect',
-      resource: 'Salesforce',
-      details: nl ? 'Salesforce-integratie verbonden met volledige synchronisatie' : fr ? 'Int\u00e9gration Salesforce connect\u00e9e avec synchronisation compl\u00e8te' : 'Connected Salesforce integration with full sync',
-      ip: '192.168.1.100',
-      riskLevel: 'low'
-    },
-    {
-      id: '2',
-      timestamp: new Date(Date.now() - 30 * 60 * 1000),
-      user: 'sarah@inclufy.com',
-      action: 'user.permission.modify',
-      resource: 'mike@inclufy.com',
-      details: nl ? 'Beheerdersrol toegekend' : fr ? 'R\u00f4le Administrateur accord\u00e9' : 'Granted Administrator role',
-      ip: '10.0.0.42',
-      riskLevel: 'high'
-    },
-    {
-      id: '3',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      user: 'system',
-      action: 'data.export',
-      resource: nl ? 'Klantendatabase' : fr ? 'Base de donn\u00e9es clients' : 'Customer Database',
-      details: nl ? 'Geplande export voltooid: 45.678 records' : fr ? 'Export planifi\u00e9 termin\u00e9 : 45 678 enregistrements' : 'Scheduled export completed: 45,678 records',
-      ip: 'system',
-      riskLevel: 'medium'
-    }
-  ];
+  // Audit Log (no entries yet)
+  const auditLog: AuditLogEntry[] = [];
 
   const IntegrationIcon = ({ category }: { category: string }) => {
     switch (category) {
@@ -323,8 +176,8 @@ const EnterpriseGovernance = () => {
             <CardTitle className="text-sm font-medium">{nl ? 'Compliance Score' : fr ? 'Score de Conformit\u00e9' : 'Compliance Score'}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">98%</div>
-            <p className="text-xs text-muted-foreground">SOC2, GDPR, CCPA</p>
+            <div className="text-2xl font-bold">–</div>
+            <p className="text-xs text-muted-foreground">{nl ? 'Niet geconfigureerd' : fr ? 'Non configuré' : 'Not configured'}</p>
           </CardContent>
         </Card>
 
@@ -333,8 +186,8 @@ const EnterpriseGovernance = () => {
             <CardTitle className="text-sm font-medium">{nl ? 'Actieve Integraties' : fr ? 'Int\u00e9grations Actives' : 'Active Integrations'}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">24</div>
-            <p className="text-xs text-muted-foreground">{nl ? '3 vereisen aandacht' : fr ? '3 n\u00e9cessitent une attention' : '3 need attention'}</p>
+            <div className="text-2xl font-bold">0</div>
+            <p className="text-xs text-muted-foreground">{nl ? 'Geen verbonden' : fr ? 'Aucune connect\u00e9e' : 'None connected'}</p>
           </CardContent>
         </Card>
 
@@ -343,7 +196,7 @@ const EnterpriseGovernance = () => {
             <CardTitle className="text-sm font-medium">{nl ? 'Gesynchroniseerde Data' : fr ? 'Donn\u00e9es Synchronis\u00e9es' : 'Data Synced'}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2.3M</div>
+            <div className="text-2xl font-bold">0</div>
             <p className="text-xs text-muted-foreground">{nl ? 'Records/dag' : fr ? 'Enregistrements/jour' : 'Records/day'}</p>
           </CardContent>
         </Card>
@@ -354,7 +207,7 @@ const EnterpriseGovernance = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{brands.length}</div>
-            <p className="text-xs text-muted-foreground">{nl ? '86 totaal gebruikers' : fr ? '86 utilisateurs au total' : '86 total users'}</p>
+            <p className="text-xs text-muted-foreground">{nl ? '0 totaal gebruikers' : fr ? '0 utilisateurs au total' : '0 total users'}</p>
           </CardContent>
         </Card>
       </div>
@@ -374,11 +227,11 @@ const EnterpriseGovernance = () => {
             {/* Integration Categories */}
             <div className="grid gap-4 md:grid-cols-5">
               {[
-                { category: 'CRM', count: 4, icon: Users },
-                { category: nl ? 'Advertenties' : fr ? 'Publicit\u00e9' : 'Advertising', count: 6, icon: BarChart3 },
-                { category: nl ? 'Financieel' : fr ? 'Finance' : 'Finance', count: 3, icon: DollarSign },
-                { category: nl ? 'Analyses' : fr ? 'Analytique' : 'Analytics', count: 5, icon: Activity },
-                { category: nl ? 'Communicatie' : fr ? 'Communication' : 'Communication', count: 6, icon: MessageSquare }
+                { category: 'CRM', count: 0, icon: Users },
+                { category: nl ? 'Advertenties' : fr ? 'Publicit\u00e9' : 'Advertising', count: 0, icon: BarChart3 },
+                { category: nl ? 'Financieel' : fr ? 'Finance' : 'Finance', count: 0, icon: DollarSign },
+                { category: nl ? 'Analyses' : fr ? 'Analytique' : 'Analytics', count: 0, icon: Activity },
+                { category: nl ? 'Communicatie' : fr ? 'Communication' : 'Communication', count: 0, icon: MessageSquare }
               ].map((cat) => (
                 <Card key={cat.category} className="cursor-pointer hover:shadow-md transition-shadow">
                   <CardContent className="pt-6">
@@ -406,6 +259,12 @@ const EnterpriseGovernance = () => {
                 </div>
               </CardHeader>
               <CardContent>
+                {integrations.length === 0 ? (
+                  <EmptyState
+                    title={nl ? 'Nog geen integraties' : fr ? 'Pas encore d\'int\u00e9grations' : 'No integrations yet'}
+                    description={nl ? 'Verbind uw eerste integratie om data te synchroniseren.' : fr ? 'Connectez votre premi\u00e8re int\u00e9gration pour synchroniser les donn\u00e9es.' : 'Connect your first integration to sync data.'}
+                  />
+                ) : (
                 <div className="space-y-4">
                   {integrations.map((integration) => (
                     <div key={integration.id} className="flex items-center justify-between p-4 border rounded-lg">
@@ -448,17 +307,9 @@ const EnterpriseGovernance = () => {
                     </div>
                   ))}
                 </div>
+                )}
               </CardContent>
             </Card>
-
-            {/* Integration Health */}
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                <strong>{nl ? 'HubSpot-integratie vereist aandacht:' : fr ? 'L\'int\u00e9gration HubSpot n\u00e9cessite une attention :' : 'HubSpot integration needs attention:'}</strong> {nl ? 'Authenticatie verlopen.' : fr ? 'Authentification expir\u00e9e.' : 'Authentication expired.'}{' '}
-                <Button variant="link" className="px-1">{nl ? 'Nu opnieuw verbinden' : fr ? 'Reconnecter maintenant' : 'Reconnect now'}</Button>
-              </AlertDescription>
-            </Alert>
           </div>
         </TabsContent>
 
@@ -567,6 +418,16 @@ const EnterpriseGovernance = () => {
         <TabsContent value="brands">
           <div className="space-y-6">
             {/* Brand Overview */}
+            {brands.length === 0 ? (
+              <Card>
+                <CardContent className="pt-6">
+                  <EmptyState
+                    title={nl ? 'Nog geen merken' : fr ? 'Pas encore de marques' : 'No brands yet'}
+                    description={nl ? 'Configureer uw eerste merk om multi-merk beheer te starten.' : fr ? 'Configurez votre premi\u00e8re marque pour d\u00e9marrer la gestion multi-marques.' : 'Configure your first brand to start multi-brand management.'}
+                  />
+                </CardContent>
+              </Card>
+            ) : (
             <div className="grid gap-4 md:grid-cols-3">
               {brands.map((brand) => (
                 <Card key={brand.id} className="cursor-pointer hover:shadow-md transition-shadow">
@@ -598,6 +459,7 @@ const EnterpriseGovernance = () => {
                 </Card>
               ))}
             </div>
+            )}
 
             {/* Brand Settings */}
             <Card>
@@ -670,10 +532,10 @@ const EnterpriseGovernance = () => {
             {/* Compliance Overview */}
             <div className="grid gap-4 md:grid-cols-4">
               {[
-                { standard: 'SOC 2 Type II', status: 'certified', expiry: '2026-03-15' },
-                { standard: 'GDPR', status: 'compliant', expiry: nl ? 'Doorlopend' : fr ? 'En cours' : 'Ongoing' },
-                { standard: 'CCPA', status: 'compliant', expiry: nl ? 'Doorlopend' : fr ? 'En cours' : 'Ongoing' },
-                { standard: 'ISO 27001', status: 'in-progress', expiry: '2025-12-01' }
+                { standard: 'SOC 2 Type II', status: 'not-configured', expiry: nl ? 'Niet geconfigureerd' : fr ? 'Non configur\u00e9' : 'Not configured' },
+                { standard: 'GDPR', status: 'not-configured', expiry: nl ? 'Niet geconfigureerd' : fr ? 'Non configur\u00e9' : 'Not configured' },
+                { standard: 'CCPA', status: 'not-configured', expiry: nl ? 'Niet geconfigureerd' : fr ? 'Non configur\u00e9' : 'Not configured' },
+                { standard: 'ISO 27001', status: 'not-configured', expiry: nl ? 'Niet geconfigureerd' : fr ? 'Non configur\u00e9' : 'Not configured' }
               ].map((cert) => (
                 <Card key={cert.standard}>
                   <CardContent className="pt-6">
@@ -811,6 +673,12 @@ const EnterpriseGovernance = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {auditLog.length === 0 ? (
+                <EmptyState
+                  title={nl ? 'Nog geen logboekitems' : fr ? 'Pas encore d\'entr\u00e9es de journal' : 'No audit log entries yet'}
+                  description={nl ? 'Systeemactiviteiten verschijnen hier zodra er acties worden uitgevoerd.' : fr ? 'Les activit\u00e9s du syst\u00e8me apparaîtront ici d\u00e8s que des actions seront effectu\u00e9es.' : 'System activities will appear here as actions are performed.'}
+                />
+              ) : (
               <ScrollArea className="h-[400px]">
                 <div className="space-y-2">
                   {auditLog.map((entry) => (
@@ -842,6 +710,7 @@ const EnterpriseGovernance = () => {
                   ))}
                 </div>
               </ScrollArea>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

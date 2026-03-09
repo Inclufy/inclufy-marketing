@@ -13,6 +13,7 @@ import {
   Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import { brandMemoryService } from '@/services/brand/brand-memory.service';
 
 interface PostScanWizardProps {
   blueprintId: string;
@@ -69,39 +70,47 @@ export const PostScanWizard: React.FC<PostScanWizardProps> = ({
   const loadBlueprintData = async () => {
     try {
       setLoading(true);
-      
+
+      // Fetch brand memory as fallback data source
+      let brandMemory: any = null;
+      try {
+        brandMemory = await brandMemoryService.getOrCreateActive();
+      } catch (e) {
+        console.debug('Could not load brand memory for PostScanWizard fallback:', e);
+      }
+
       // Fetch blueprint data
       const response = await axios.get(`/api/growth-blueprint/${blueprintId}`);
       const blueprint = response.data;
-      
-      // Pre-fill wizard with blueprint data
+
+      // Pre-fill wizard with blueprint data + brand memory fallback
       const aiAnalysis = blueprint.status_quo?.ai_analysis || {};
-      
+
       setWizardData({
-        // Pre-filled from scan
-        company_name: blueprint.blueprint.company_name,
-        industry: blueprint.status_quo?.industry || 'Unknown',
-        website_url: blueprint.status_quo?.website_url || '',
-        mission: aiAnalysis.value_proposition || '',
-        brand_colors: ['#6B46C1', '#EC4899'], // TODO: Extract from website
-        
+        // Pre-filled from scan + Brand Memory fallback
+        company_name: blueprint.blueprint.company_name || brandMemory?.brand_name || '',
+        industry: blueprint.status_quo?.industry || (brandMemory?.industries?.length ? brandMemory.industries[0] : '') || 'Unknown',
+        website_url: blueprint.status_quo?.website_url || (brandMemory?.urls?.length ? brandMemory.urls[0] : '') || '',
+        mission: aiAnalysis.value_proposition || brandMemory?.mission || '',
+        brand_colors: [brandMemory?.primary_color || '#6B46C1', brandMemory?.secondary_color || '#EC4899'],
+
         // Empty - needs user input
         target_age_range: '',
         target_job_title: '',
         target_company_size: '',
         target_location: 'Netherlands',
         pain_points: blueprint.status_quo?.weaknesses || [],
-        
+
         monthly_budget: 0,
         annual_budget: 0,
         team_size: 0,
         content_creators: 0,
         current_tools: [],
-        
+
         // AI-generated goals from weaknesses
         goals: generateGoalsFromWeaknesses(blueprint.status_quo),
       });
-      
+
     } catch (error) {
       console.error('Failed to load blueprint:', error);
     } finally {

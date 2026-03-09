@@ -24,7 +24,13 @@ const mockAIService = {
   generatePresentation: vi.fn(),
   generateEmailCampaign: vi.fn(),
   generateLandingPage: vi.fn(),
+  setBrandContext: vi.fn(),
 };
+
+vi.mock('@/hooks/queries/useBrandMemory', () => ({
+  useBrandMemory: () => ({ data: null, isLoading: false }),
+  toBrandContext: () => undefined,
+}));
 
 vi.mock('@/services/ai.service', () => ({
   getAIService: () => mockAIService,

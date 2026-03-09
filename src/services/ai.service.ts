@@ -50,6 +50,7 @@ class AIService {
         audience: targetAudience || 'general',
         goal: tone || 'engagement',
         variants: 1,
+        brand_context: this.getBrandContextPayload(),
       });
 
       // Backend returns { variants: [...] }
@@ -161,19 +162,41 @@ class AIService {
   }
 
   // =============================================
-  // Convenience methods used by hooks/use-ai.tsx
+  // Brand context management
   // =============================================
 
   private defaultBrandContext: BrandContext = {
     brand_name: 'Brand',
   };
 
+  /** The active brand context — set from Brand Memory via useAI hook */
+  private brandContext: BrandContext = this.defaultBrandContext;
+
+  /**
+   * Store brand context fetched from Brand Memory.
+   * Called by the useAI hook so every subsequent generation uses it.
+   */
+  setBrandContext(ctx: BrandContext) {
+    this.brandContext = ctx;
+  }
+
+  /** Return the brand context in a plain object suitable for API request body */
+  private getBrandContextPayload(): Record<string, unknown> | undefined {
+    // Only send if we have real brand data (not the fallback)
+    if (this.brandContext === this.defaultBrandContext) return undefined;
+    return { ...this.brandContext };
+  }
+
+  // =============================================
+  // Convenience methods used by hooks/use-ai.tsx
+  // =============================================
+
   async generateTutorial(topic: string, steps: number = 5) {
     const result = await this.generateContent({
       prompt: `Create a step-by-step tutorial about "${topic}" with ${steps} steps.`,
       type: 'blog',
       tone: 'educational',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 2000,
     });
     try { return JSON.parse(result.content); } catch { return result; }
@@ -184,7 +207,7 @@ class AIService {
       prompt: `Write a ${duration} commercial script for "${product}". Tone: ${tone}.`,
       type: 'ad-copy',
       tone,
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 1500,
     });
     try { return JSON.parse(result.content); } catch { return result; }
@@ -197,6 +220,7 @@ class AIService {
         topic,
         tone: style || 'professional',
         count: 1,
+        brand_context: this.getBrandContextPayload(),
       });
       return response.data;
     } catch {
@@ -205,7 +229,7 @@ class AIService {
         prompt: `Create a ${platform} post about: ${topic}`,
         type,
         tone: style || 'professional',
-        brandContext: this.defaultBrandContext,
+        brandContext: this.brandContext,
       });
       try { return JSON.parse(result.content); } catch { return result; }
     }
@@ -216,6 +240,7 @@ class AIService {
       const response = await api.post('/content/improve', {
         content,
         goal,
+        brand_context: this.getBrandContextPayload(),
       });
       return response.data;
     } catch {
@@ -228,7 +253,7 @@ class AIService {
       prompt: `Generate ${count} content ideas based on: ${brandInfo}`,
       type: 'blog',
       tone: 'creative',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 2000,
     });
     try { return JSON.parse(result.content); } catch { return []; }
@@ -239,7 +264,7 @@ class AIService {
       prompt: `Analyze this content for quality: ${content}`,
       type: 'blog',
       tone: 'analytical',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
     });
     try { return JSON.parse(result.content); } catch { return { score: 0, suggestions: [] }; }
   }
@@ -261,7 +286,7 @@ class AIService {
       prompt: `Analyze this website and create a sales presentation:\n\nWebsite: ${websiteContent.substring(0, 2000)}\n\nProspect: ${JSON.stringify(prospectContext)}`,
       type: 'ad-copy',
       tone: 'professional',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 3000,
     });
     try { return JSON.parse(result.content); } catch { return { analysis: {}, presentation: { slides: [] } }; }
@@ -272,7 +297,7 @@ class AIService {
       prompt: `Research the company "${companyName}". ${additionalInfo || ''}`,
       type: 'blog',
       tone: 'analytical',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 2000,
     });
     try { return JSON.parse(result.content); } catch { return result; }
@@ -283,7 +308,7 @@ class AIService {
       prompt: `Analyze this website content:\n\n${websiteContent.substring(0, 2000)}`,
       type: 'blog',
       tone: 'analytical',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
     });
     try { return JSON.parse(result.content); } catch { return result; }
   }
@@ -293,7 +318,7 @@ class AIService {
       prompt: `Create a presentation based on:\n\nAnalysis: ${JSON.stringify(websiteAnalysis)}\nProspect: ${JSON.stringify(prospectInfo)}`,
       type: 'ad-copy',
       tone: 'professional',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 3000,
     });
     try { return JSON.parse(result.content); } catch { return result; }
@@ -305,7 +330,7 @@ class AIService {
       prompt: `Extract brand knowledge from these documents:\n\n${combined}`,
       type: 'blog',
       tone: 'analytical',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 2000,
     });
     try { return JSON.parse(result.content); } catch { return result; }
@@ -319,13 +344,14 @@ class AIService {
         audience: params.audience,
         goal: params.goal,
         variants: params.variants || 1,
+        brand_context: this.getBrandContextPayload(),
       });
       return response.data;
     } catch {
       return this.generateMockContent(
         `${params.type} email for ${params.product}`,
         'email',
-        this.defaultBrandContext
+        this.brandContext
       );
     }
   }
@@ -335,7 +361,7 @@ class AIService {
       prompt: `Create a ${params.type} landing page:\nProduct: ${params.product}\nAudience: ${params.audience}\nUnique Value: ${params.uniqueValue}\nGoals: ${params.goals}`,
       type: 'ad-copy',
       tone: 'persuasive',
-      brandContext: this.defaultBrandContext,
+      brandContext: this.brandContext,
       maxTokens: 2500,
     });
     try { return JSON.parse(result.content); } catch { return result; }

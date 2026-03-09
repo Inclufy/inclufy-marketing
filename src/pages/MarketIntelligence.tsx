@@ -31,7 +31,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { useAnalyticsDashboard } from '@/hooks/queries/useAnalytics';
 import { LoadingSkeleton, ErrorState } from '@/components/DataState';
 
-// ─── Fallback / seed data ───────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────
 
 interface TrendData {
   topic: string;
@@ -58,26 +58,6 @@ interface MarketInsight {
   date: string;
 }
 
-const FALLBACK_TRENDS: TrendData[] = [
-  { topic: 'AI Marketing Automation', growth: 125, volume: 45000, sentiment: 'positive', category: 'Technology' },
-  { topic: 'Privacy-First Marketing', growth: 89, volume: 28000, sentiment: 'positive', category: 'Compliance' },
-  { topic: 'Short-Form Video Content', growth: 67, volume: 92000, sentiment: 'neutral', category: 'Content' },
-  { topic: 'Voice Search Optimization', growth: 45, volume: 15000, sentiment: 'positive', category: 'SEO' },
-  { topic: 'Sustainable Marketing', growth: -12, volume: 8000, sentiment: 'negative', category: 'Branding' }
-];
-
-const FALLBACK_COMPETITOR_UPDATES: CompetitorUpdate[] = [
-  { company: 'Competitor A', type: 'Product Launch', description: 'Launched AI-powered email personalization tool', impact: 'high', date: '2 days ago' },
-  { company: 'Competitor B', type: 'Pricing Change', description: 'Reduced enterprise pricing by 20%', impact: 'medium', date: '5 days ago' },
-  { company: 'Competitor C', type: 'Partnership', description: 'Announced integration with Salesforce', impact: 'high', date: '1 week ago' }
-];
-
-const FALLBACK_INSIGHTS: MarketInsight[] = [
-  { title: 'AI Adoption in Marketing Reaches Tipping Point', description: '73% of marketers now use AI tools daily, up from 42% last year', source: 'Marketing Week', relevance: 95, category: 'Technology', date: '1 day ago' },
-  { title: 'Email Marketing ROI Hits Record High', description: 'Average ROI of $42 for every $1 spent on email marketing', source: 'DMA Report', relevance: 88, category: 'Performance', date: '3 days ago' },
-  { title: 'B2B Buyers Prefer Self-Service', description: '75% of B2B buyers prefer to research independently before sales contact', source: 'Gartner', relevance: 82, category: 'Sales', date: '1 week ago' }
-];
-
 export default function MarketIntelligence() {
   const { lang } = useLanguage();
   const nl = lang === 'nl';
@@ -91,12 +71,12 @@ export default function MarketIntelligence() {
   // Fetch real dashboard stats to enrich market data
   const { data: dashboardStats, isLoading, isError, refetch } = useAnalyticsDashboard();
 
-  const trends = FALLBACK_TRENDS;
-  const competitorUpdates = FALLBACK_COMPETITOR_UPDATES;
-  const marketInsights = FALLBACK_INSIGHTS;
+  const trends: TrendData[] = dashboardStats?.market_trends ?? [];
+  const competitorUpdates: CompetitorUpdate[] = dashboardStats?.competitor_updates ?? [];
+  const marketInsights: MarketInsight[] = dashboardStats?.market_insights ?? [];
 
-  // Enrich stats with real data when available
-  const activeCampaigns = dashboardStats?.active_campaigns ?? 12;
+  // Real data from API
+  const activeCampaigns = dashboardStats?.active_campaigns ?? 0;
   const totalContacts = dashboardStats?.total_contacts ?? 0;
 
   const handleRefresh = async () => {
@@ -214,7 +194,7 @@ export default function MarketIntelligence() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-gray-600">{nl ? 'Trending Onderwerpen' : fr ? 'Sujets Tendance' : 'Trending Topics'}</p>
-                    <p className="text-2xl font-bold">{trends.length * 9 + 2}</p>
+                    <p className="text-2xl font-bold">{trends.length}</p>
                     <p className="text-xs text-gray-600 mt-1">{nl ? 'Worden gevolgd' : fr ? 'En suivi' : 'Being tracked'}</p>
                   </div>
                   <Hash className="w-8 h-8 text-purple-600" />
@@ -243,37 +223,43 @@ export default function MarketIntelligence() {
               <CardDescription>{nl ? 'Snelst groeiende onderwerpen en gesprekken' : fr ? 'Sujets et conversations à plus forte croissance' : 'Top growing topics and conversations'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {trends.slice(0, 3).map((trend, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="text-2xl font-bold text-gray-400">#{index + 1}</div>
-                      <div>
-                        <p className="font-medium">{trend.topic}</p>
-                        <div className="flex items-center gap-3 mt-1">
-                          <Badge variant="outline" className="text-xs">
-                            {trend.category}
-                          </Badge>
-                          <span className="text-xs text-gray-500">
-                            {trend.volume.toLocaleString()} {nl ? 'vermeldingen' : fr ? 'mentions' : 'mentions'}
-                          </span>
+              {trends.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">
+                  {nl ? 'Nog geen trenddata beschikbaar' : fr ? 'Pas encore de données de tendance' : 'No trend data available yet'}
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {trends.slice(0, 3).map((trend, index) => (
+                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-4">
+                        <div className="text-2xl font-bold text-gray-400">#{index + 1}</div>
+                        <div>
+                          <p className="font-medium">{trend.topic}</p>
+                          <div className="flex items-center gap-3 mt-1">
+                            <Badge variant="outline" className="text-xs">
+                              {trend.category}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {trend.volume.toLocaleString()} {nl ? 'vermeldingen' : fr ? 'mentions' : 'mentions'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`flex items-center gap-1 ${
-                        trend.growth > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {trend.growth > 0 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        <span className="font-medium">{Math.abs(trend.growth)}%</span>
+                      <div className="flex items-center gap-3">
+                        <div className={`flex items-center gap-1 ${
+                          trend.growth > 0 ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {trend.growth > 0 ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                          <span className="font-medium">{Math.abs(trend.growth)}%</span>
+                        </div>
+                        <Button variant="ghost" size="sm">
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button variant="ghost" size="sm">
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -284,27 +270,33 @@ export default function MarketIntelligence() {
               <CardDescription>{nl ? 'Laatste bewegingen van je concurrenten' : fr ? 'Derniers mouvements de la concurrence' : 'Latest moves from your competition'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {competitorUpdates.map((update, index) => (
-                  <div key={index} className="flex items-start gap-3 p-3 border rounded-lg">
-                    <div className={`w-2 h-2 rounded-full mt-2 ${
-                      update.impact === 'high' ? 'bg-red-500' :
-                      update.impact === 'medium' ? 'bg-yellow-500' :
-                      'bg-gray-400'
-                    }`} />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{update.company}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {update.type}
-                        </Badge>
+              {competitorUpdates.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">
+                  {nl ? 'Nog geen concurrentie-updates' : fr ? 'Pas encore de mises à jour concurrentielles' : 'No competitor updates yet'}
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {competitorUpdates.map((update, index) => (
+                    <div key={index} className="flex items-start gap-3 p-3 border rounded-lg">
+                      <div className={`w-2 h-2 rounded-full mt-2 ${
+                        update.impact === 'high' ? 'bg-red-500' :
+                        update.impact === 'medium' ? 'bg-yellow-500' :
+                        'bg-gray-400'
+                      }`} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{update.company}</span>
+                          <Badge variant="secondary" className="text-xs">
+                            {update.type}
+                          </Badge>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{update.description}</p>
+                        <p className="text-xs text-gray-500 mt-1">{update.date}</p>
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">{update.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">{update.date}</p>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -318,26 +310,32 @@ export default function MarketIntelligence() {
                 <CardDescription>{nl ? 'Onderwerpen met snelle groei' : fr ? 'Sujets en forte croissance' : 'Topics experiencing rapid growth'}</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {trends.filter(t => t.growth > 0).map((trend, index) => (
-                    <div key={index} className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{trend.topic}</span>
-                        <span className="text-green-600 font-medium">+{trend.growth}%</span>
+                {trends.filter(t => t.growth > 0).length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">
+                    {nl ? 'Nog geen groeitrends beschikbaar' : fr ? 'Pas encore de tendances de croissance' : 'No growth trends available yet'}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {trends.filter(t => t.growth > 0).map((trend, index) => (
+                      <div key={index} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{trend.topic}</span>
+                          <span className="text-green-600 font-medium">+{trend.growth}%</span>
+                        </div>
+                        <Progress value={trend.growth} className="h-2" />
+                        <div className="flex items-center justify-between text-xs text-gray-500">
+                          <span>{trend.volume.toLocaleString()} {nl ? 'vermeldingen' : fr ? 'mentions' : 'mentions'}</span>
+                          <Badge
+                            variant={trend.sentiment === 'positive' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {trend.sentiment}
+                          </Badge>
+                        </div>
                       </div>
-                      <Progress value={trend.growth} className="h-2" />
-                      <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>{trend.volume.toLocaleString()} {nl ? 'vermeldingen' : fr ? 'mentions' : 'mentions'}</span>
-                        <Badge
-                          variant={trend.sentiment === 'positive' ? 'default' : 'secondary'}
-                          className="text-xs"
-                        >
-                          {trend.sentiment}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -496,29 +494,35 @@ export default function MarketIntelligence() {
               <CardDescription>{nl ? 'Strategische inzichten op basis van marktanalyse' : fr ? 'Insights stratégiques basés sur l\'analyse de marché' : 'Strategic insights based on market analysis'}</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {marketInsights.map((insight, index) => (
-                  <div key={index} className="border rounded-lg p-4">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <h4 className="font-semibold">{insight.title}</h4>
-                        <p className="text-sm text-gray-600 mt-1">{insight.description}</p>
-                        <div className="flex items-center gap-4 mt-3">
-                          <Badge variant="outline" className="text-xs">
-                            {insight.category}
-                          </Badge>
-                          <span className="text-xs text-gray-500">{insight.source}</span>
-                          <span className="text-xs text-gray-500">{insight.date}</span>
+              {marketInsights.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">
+                  {nl ? 'Nog geen marktinzichten beschikbaar' : fr ? 'Pas encore d\'insights de marché' : 'No market insights available yet'}
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {marketInsights.map((insight, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold">{insight.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{insight.description}</p>
+                          <div className="flex items-center gap-4 mt-3">
+                            <Badge variant="outline" className="text-xs">
+                              {insight.category}
+                            </Badge>
+                            <span className="text-xs text-gray-500">{insight.source}</span>
+                            <span className="text-xs text-gray-500">{insight.date}</span>
+                          </div>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-xs text-gray-600">{nl ? 'Relevantie' : fr ? 'Pertinence' : 'Relevance'}</p>
+                          <p className="text-2xl font-bold text-purple-600">{insight.relevance}%</p>
                         </div>
                       </div>
-                      <div className="text-right ml-4">
-                        <p className="text-xs text-gray-600">{nl ? 'Relevantie' : fr ? 'Pertinence' : 'Relevance'}</p>
-                        <p className="text-2xl font-bold text-purple-600">{insight.relevance}%</p>
-                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 

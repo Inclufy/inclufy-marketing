@@ -20,101 +20,41 @@ import { useAnalyticsOverview } from "@/hooks/queries/useAnalytics";
 import { LoadingSkeleton, ErrorState } from "@/components/DataState";
 import { useLanguage } from '@/contexts/LanguageContext';
 
-// ─── Fallback data when backend is offline ──────────────────────────
-
-const generateFallbackRevenueData = () => {
-  const data = [];
-  const today = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    data.push({
-      date: date.toISOString().split('T')[0],
-      day: date.toLocaleDateString('en', { weekday: 'short' }),
-      mrr: 120000 + Math.random() * 20000,
-      newCustomers: Math.floor(15 + Math.random() * 10),
-      churn: Math.floor(3 + Math.random() * 5),
-      revenue: 4000 + Math.random() * 2000
-    });
-  }
-  return data;
-};
-
-const FALLBACK_ATTRIBUTION = [
-  { channel: 'Email Marketing', value: 35, revenue: 142500 },
-  { channel: 'Paid Search', value: 28, revenue: 114000 },
-  { channel: 'Social Media', value: 22, revenue: 89500 },
-  { channel: 'Direct', value: 15, revenue: 61000 }
-];
-
-const FALLBACK_COHORT = [
-  { month: 'Jan', month1: 100, month2: 85, month3: 78, month4: 72, month5: 68, month6: 65 },
-  { month: 'Feb', month1: 100, month2: 88, month3: 82, month4: 76, month5: 71 },
-  { month: 'Mar', month1: 100, month2: 90, month3: 84, month4: 79 },
-  { month: 'Apr', month1: 100, month2: 87, month3: 81 },
-  { month: 'May', month1: 100, month2: 89 },
-  { month: 'Jun', month1: 100 }
-];
-
-const FALLBACK_RECOMMENDATIONS = [
-  {
-    id: 1,
-    title: "Focus on Enterprise Segment",
-    description: "Enterprise conversion is 47% higher. Shifting 20% of budget could yield +$2.3M ARR.",
-    impact: "high" as const,
-    confidence: 89,
-    estimatedRevenue: "$2.3M",
-    action: "Reallocate Budget"
-  },
-  {
-    id: 2,
-    title: "Optimize Trial-to-Paid Flow",
-    description: "23% of trials abandon at payment. Simplifying checkout could recover $400K ARR.",
-    impact: "medium" as const,
-    confidence: 76,
-    estimatedRevenue: "$400K",
-    action: "A/B Test Checkout"
-  },
-  {
-    id: 3,
-    title: "Reduce Churn in Month 2",
-    description: "15% churn spike in second month. Better onboarding could save $180K annually.",
-    impact: "high" as const,
-    confidence: 82,
-    estimatedRevenue: "$180K",
-    action: "Launch Onboarding"
-  }
-];
-
 const COLORS = ['#3b82f6', '#10b981', '#8b5cf6', '#f59e0b', '#ef4444'];
 
 const RevenueIntelligence = () => {
   const [timeRange, setTimeRange] = useState("30");
-  const [revenueData] = useState(generateFallbackRevenueData);
 
   const { lang } = useLanguage();
   const nl = lang === 'nl';
   const fr = lang === 'fr';
 
-  // Fetch real analytics data (falls back gracefully)
+  // Fetch real analytics data
   const { data: overview, isLoading, isError, refetch } = useAnalyticsOverview();
 
-  // Derive metrics from API or use fallback values
+  // Derive metrics from API — use zeros when no data
   const metrics = overview?.revenue_metrics;
-  const currentMRR = metrics?.mrr ?? 127450;
-  const previousMRR = 105000;
-  const mrrGrowth = metrics?.growth_rate?.toFixed(1) ?? ((currentMRR - previousMRR) / previousMRR * 100).toFixed(1);
-  const currentCAC = metrics?.cac ?? 1250;
-  const previousCAC = 1450;
-  const cacChange = ((currentCAC - previousCAC) / previousCAC * 100).toFixed(1);
-  const ltv = metrics?.ltv ?? 37500;
-  const ltvCacRatio = (ltv / currentCAC).toFixed(1);
+  const currentMRR = metrics?.mrr ?? 0;
+  const previousMRR = metrics?.previous_mrr ?? 0;
+  const mrrGrowth = metrics?.growth_rate?.toFixed(1) ?? (previousMRR > 0 ? ((currentMRR - previousMRR) / previousMRR * 100).toFixed(1) : '0.0');
+  const currentCAC = metrics?.cac ?? 0;
+  const previousCAC = metrics?.previous_cac ?? 0;
+  const cacChange = previousCAC > 0 ? ((currentCAC - previousCAC) / previousCAC * 100).toFixed(1) : '0.0';
+  const ltv = metrics?.ltv ?? 0;
+  const ltvCacRatio = currentCAC > 0 ? (ltv / currentCAC).toFixed(1) : '0.0';
 
-  const attributionData = FALLBACK_ATTRIBUTION;
-  const cohortData = FALLBACK_COHORT;
-  const recommendations = FALLBACK_RECOMMENDATIONS;
+  // Real data from API
+  const revenueData: { date: string; day: string; mrr: number; newCustomers: number; churn: number; revenue: number }[] =
+    overview?.revenue_data ?? [];
+  const attributionData: { channel: string; value: number; revenue: number }[] =
+    overview?.attribution_data ?? [];
+  const cohortData: Record<string, any>[] =
+    overview?.cohort_data ?? [];
+  const recommendations: { id: number; title: string; description: string; impact: 'high' | 'medium' | 'low'; confidence: number; estimatedRevenue: string; action: string }[] =
+    overview?.recommendations ?? [];
 
   const exportData = () => {
+    if (revenueData.length === 0) return;
     const csvContent = "data:text/csv;charset=utf-8,"
       + "Date,MRR,New Customers,Revenue\n"
       + revenueData.map(row => `${row.date},${row.mrr},${row.newCustomers},${row.revenue}`).join("\n");
@@ -229,31 +169,37 @@ const RevenueIntelligence = () => {
           <CardDescription>{nl ? 'Maandelijks terugkerende omzet over de tijd' : fr ? 'Revenus récurrents mensuels au fil du temps' : 'Monthly recurring revenue over time'}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={revenueData}>
-              <defs>
-                <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="day" className="text-xs" />
-              <YAxis className="text-xs" tickFormatter={(value) => `$${(value/1000).toFixed(0)}K`} />
-              <Tooltip
-                formatter={(value: any) => `$${(value/1000).toFixed(1)}K`}
-                labelFormatter={(label) => `Day: ${label}`}
-              />
-              <Area
-                type="monotone"
-                dataKey="mrr"
-                stroke="#3b82f6"
-                fillOpacity={1}
-                fill="url(#colorMrr)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          {revenueData.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-sm text-muted-foreground">
+              {nl ? 'Nog geen omzetdata beschikbaar' : fr ? 'Pas encore de données de revenus' : 'No revenue data available yet'}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={revenueData}>
+                <defs>
+                  <linearGradient id="colorMrr" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.1}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis dataKey="day" className="text-xs" />
+                <YAxis className="text-xs" tickFormatter={(value) => `$${(value/1000).toFixed(0)}K`} />
+                <Tooltip
+                  formatter={(value: any) => `$${(value/1000).toFixed(1)}K`}
+                  labelFormatter={(label) => `Day: ${label}`}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="mrr"
+                  stroke="#3b82f6"
+                  fillOpacity={1}
+                  fill="url(#colorMrr)"
+                  strokeWidth={2}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -270,39 +216,45 @@ const RevenueIntelligence = () => {
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recommendations.map((rec) => (
-              <div key={rec.id} className="p-4 border rounded-lg space-y-3 hover:shadow-sm transition-shadow">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <h4 className="font-semibold flex items-center gap-2">
-                      <Lightbulb className="h-4 w-4 text-yellow-600" />
-                      {rec.title}
-                    </h4>
-                    <p className="text-sm text-muted-foreground">{rec.description}</p>
-                  </div>
-                  <Badge
-                    variant={rec.impact === 'high' ? 'default' : 'secondary'}
-                  >
-                    {rec.impact} {nl ? 'impact' : fr ? 'impact' : 'impact'}
-                  </Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <span className="text-muted-foreground">{nl ? 'Zekerheid:' : fr ? 'Confiance :' : 'Confidence:'} </span>
-                      <span className="font-medium">{rec.confidence}%</span>
+            {recommendations.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                {nl ? 'Nog geen AI-aanbevelingen beschikbaar' : fr ? 'Pas encore de recommandations IA' : 'No AI recommendations available yet'}
+              </p>
+            ) : (
+              recommendations.map((rec) => (
+                <div key={rec.id} className="p-4 border rounded-lg space-y-3 hover:shadow-sm transition-shadow">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <h4 className="font-semibold flex items-center gap-2">
+                        <Lightbulb className="h-4 w-4 text-yellow-600" />
+                        {rec.title}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">{rec.description}</p>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">{nl ? 'Gesch. Omzet:' : fr ? 'Rev. Estimé :' : 'Est. Revenue:'} </span>
-                      <span className="font-medium text-green-600">+{rec.estimatedRevenue}</span>
-                    </div>
+                    <Badge
+                      variant={rec.impact === 'high' ? 'default' : 'secondary'}
+                    >
+                      {rec.impact} {nl ? 'impact' : fr ? 'impact' : 'impact'}
+                    </Badge>
                   </div>
-                  <Button size="sm" variant="outline">
-                    {rec.action}
-                  </Button>
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-4">
+                      <div>
+                        <span className="text-muted-foreground">{nl ? 'Zekerheid:' : fr ? 'Confiance :' : 'Confidence:'} </span>
+                        <span className="font-medium">{rec.confidence}%</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">{nl ? 'Gesch. Omzet:' : fr ? 'Rev. Estimé :' : 'Est. Revenue:'} </span>
+                        <span className="font-medium text-green-600">+{rec.estimatedRevenue}</span>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline">
+                      {rec.action}
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </CardContent>
         </Card>
 
@@ -313,35 +265,43 @@ const RevenueIntelligence = () => {
             <CardDescription>{nl ? 'Omzetbijdrage per kanaal' : fr ? 'Contribution au revenu par canal' : 'Revenue contribution by channel'}</CardDescription>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={attributionData}
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                  label={({ channel, value }) => `${channel}: ${value}%`}
-                >
-                  {attributionData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            {attributionData.length === 0 ? (
+              <div className="flex items-center justify-center h-[300px] text-sm text-muted-foreground">
+                {nl ? 'Nog geen attributiedata beschikbaar' : fr ? 'Pas encore de données d\'attribution' : 'No attribution data available yet'}
+              </div>
+            ) : (
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={attributionData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({ channel, value }) => `${channel}: ${value}%`}
+                    >
+                      {attributionData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 space-y-2">
+                  {attributionData.map((channel, index) => (
+                    <div key={channel.channel} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
+                        <span>{channel.channel}</span>
+                      </div>
+                      <span className="font-medium">${(channel.revenue / 1000).toFixed(1)}K</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 space-y-2">
-              {attributionData.map((channel, index) => (
-                <div key={channel.channel} className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index] }} />
-                    <span>{channel.channel}</span>
-                  </div>
-                  <span className="font-medium">${(channel.revenue / 1000).toFixed(1)}K</span>
                 </div>
-              ))}
-            </div>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -353,20 +313,26 @@ const RevenueIntelligence = () => {
           <CardDescription>{nl ? 'Klantretentie per maandcohort' : fr ? 'Rétention client par cohorte mensuelle' : 'Customer retention by monthly cohort'}</CardDescription>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={cohortData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `${value}%`} />
-              <Tooltip formatter={(value: any) => `${value}%`} />
-              <Legend />
-              <Line type="monotone" dataKey="month1" stroke="#3b82f6" name={nl ? 'Maand 1' : fr ? 'Mois 1' : 'Month 1'} strokeWidth={2} />
-              <Line type="monotone" dataKey="month2" stroke="#10b981" name={nl ? 'Maand 2' : fr ? 'Mois 2' : 'Month 2'} strokeWidth={2} />
-              <Line type="monotone" dataKey="month3" stroke="#8b5cf6" name={nl ? 'Maand 3' : fr ? 'Mois 3' : 'Month 3'} strokeWidth={2} />
-              <Line type="monotone" dataKey="month4" stroke="#f59e0b" name={nl ? 'Maand 4' : fr ? 'Mois 4' : 'Month 4'} strokeWidth={2} />
-              <Line type="monotone" dataKey="month5" stroke="#ef4444" name={nl ? 'Maand 5' : fr ? 'Mois 5' : 'Month 5'} strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          {cohortData.length === 0 ? (
+            <div className="flex items-center justify-center h-[300px] text-sm text-muted-foreground">
+              {nl ? 'Nog geen cohortdata beschikbaar' : fr ? 'Pas encore de données de cohorte' : 'No cohort data available yet'}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={cohortData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis tickFormatter={(value) => `${value}%`} />
+                <Tooltip formatter={(value: any) => `${value}%`} />
+                <Legend />
+                <Line type="monotone" dataKey="month1" stroke="#3b82f6" name={nl ? 'Maand 1' : fr ? 'Mois 1' : 'Month 1'} strokeWidth={2} />
+                <Line type="monotone" dataKey="month2" stroke="#10b981" name={nl ? 'Maand 2' : fr ? 'Mois 2' : 'Month 2'} strokeWidth={2} />
+                <Line type="monotone" dataKey="month3" stroke="#8b5cf6" name={nl ? 'Maand 3' : fr ? 'Mois 3' : 'Month 3'} strokeWidth={2} />
+                <Line type="monotone" dataKey="month4" stroke="#f59e0b" name={nl ? 'Maand 4' : fr ? 'Mois 4' : 'Month 4'} strokeWidth={2} />
+                <Line type="monotone" dataKey="month5" stroke="#ef4444" name={nl ? 'Maand 5' : fr ? 'Mois 5' : 'Month 5'} strokeWidth={2} />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
