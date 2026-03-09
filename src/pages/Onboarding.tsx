@@ -1845,6 +1845,7 @@ export default function Onboarding() {
                   logoUrl={data.logoPreview}
                   lang={lang as 'nl' | 'en' | 'fr'}
                   usps={data.products.filter(p => p.name.trim()).map(p => p.usp || p.description).filter(Boolean)}
+                  audiences={data.audiences.filter(a => a.audienceType || a.idealCustomer)}
                 />
               </div>
 

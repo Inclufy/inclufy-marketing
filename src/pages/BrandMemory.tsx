@@ -797,6 +797,15 @@ export default function BrandMemory() {
             logoUrl={null}
             lang={lang as 'nl' | 'en' | 'fr'}
             usps={bm?.usps || []}
+            audiences={icps.map(icp => ({
+              audienceType: (icp.metadata as any)?.audience_type || 'B2B',
+              idealCustomer: icp.name,
+              occupation: (icp.metadata as any)?.occupation || '',
+              ageGroup: (icp.metadata as any)?.age_group || '',
+              companySize: (icp.metadata as any)?.company_size || '',
+              customerSector: (icp.metadata as any)?.sector || '',
+              painPoints: (icp.metadata as any)?.pain_points || '',
+            }))}
           />
 
           {/* Huisstijl Guide */}
