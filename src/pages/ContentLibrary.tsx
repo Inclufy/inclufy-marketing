@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { api } from "@/lib/api";
+import { useContentLibrary } from "@/hooks/queries/useContentLibrary";
+import { LoadingSpinner, EmptyState } from "@/components/DataState";
 import {
   FolderOpen,
   Video,
@@ -16,11 +18,11 @@ import {
   Copy,
   Mail,
   Globe,
-  Loader2,
   RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ContentItem {
   id: string;
@@ -44,56 +46,36 @@ const TYPE_CONFIG: Record<string, { icon: typeof FileText; color: string; label:
 };
 
 const ContentLibrary = () => {
-  const [items, setItems] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
-  const [stats, setStats] = useState<{ total: number; by_type: Record<string, number> }>({ total: 0, by_type: {} });
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    fetchItems();
-    fetchStats();
-  }, []);
+  // React Query for content list
+  const params: Record<string, string> = {};
+  if (filterType !== "all") params.content_type = filterType;
+  if (searchQuery) params.search = searchQuery;
 
-  async function fetchItems() {
-    setLoading(true);
-    try {
-      const params: Record<string, string> = {};
-      if (filterType !== "all") params.content_type = filterType;
-      if (searchQuery) params.search = searchQuery;
+  const { data: rawData, isLoading, refetch } = useContentLibrary(params as any);
+  const items: ContentItem[] = (rawData as any) || [];
 
-      const response = await api.get("/content-library/", { params });
-      setItems(response.data || []);
-    } catch {
-      // Silently fail - empty library is valid state
-      setItems([]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function fetchStats() {
-    try {
-      const response = await api.get("/content-library/stats");
-      setStats(response.data);
-    } catch {
-      // ignore
-    }
-  }
-
-  useEffect(() => {
-    fetchItems();
-  }, [filterType]);
+  // Derive stats from fetched data
+  const stats = {
+    total: items.length,
+    by_type: items.reduce((acc, item) => {
+      const type = item.content_type || 'other';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>),
+  };
 
   function handleSearch() {
-    fetchItems();
+    refetch();
   }
 
   async function deleteItem(id: string) {
     try {
       await api.delete(`/content-library/${id}`);
-      setItems(items.filter((item) => item.id !== id));
-      fetchStats();
+      queryClient.invalidateQueries({ queryKey: ['content-library'] });
       toast.success("Item deleted");
     } catch {
       toast.error("Failed to delete item");
@@ -136,7 +118,7 @@ const ContentLibrary = () => {
             </p>
           </div>
         </div>
-        <Button variant="outline" onClick={() => { fetchItems(); fetchStats(); }}>
+        <Button variant="outline" onClick={() => refetch()}>
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
         </Button>
@@ -231,29 +213,16 @@ const ContentLibrary = () => {
       </div>
 
       {/* Content Grid */}
-      {loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        </div>
+      {isLoading ? (
+        <LoadingSpinner />
       ) : items.length === 0 ? (
-        <Card>
-          <CardContent className="py-16 text-center">
-            <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">
-              {searchQuery ? "No results found" : "Your content library is empty"}
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery
-                ? "Try a different search term"
-                : "Generated content from campaigns and tools will appear here"}
-            </p>
-            <div className="flex justify-center gap-2">
-              <Link to="/app/campaigns/email">
-                <Button>Create Email Campaign</Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          title={searchQuery ? "No results found" : "Your content library is empty"}
+          description={searchQuery
+            ? "Try a different search term"
+            : "Generated content from campaigns and tools will appear here"}
+          action={!searchQuery ? { label: "Create Email Campaign", onClick: () => window.location.href = "/app/campaigns/email" } : undefined}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {items.map((item) => {
@@ -275,7 +244,7 @@ const ContentLibrary = () => {
                     </div>
                   </div>
 
-                  {item.tags.length > 0 && (
+                  {item.tags?.length > 0 && (
                     <div className="flex gap-1 flex-wrap mb-3">
                       {item.tags.slice(0, 3).map((tag) => (
                         <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>

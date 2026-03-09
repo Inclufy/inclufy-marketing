@@ -35,23 +35,23 @@ const INDUSTRIES = [
 ];
 
 const TONES = [
-  { key: 'professional', emoji: '\u{1F454}', nl: 'Professioneel', en: 'Professional' },
-  { key: 'friendly', emoji: '\u{1F60A}', nl: 'Vriendelijk', en: 'Friendly' },
-  { key: 'innovative', emoji: '\u{1F680}', nl: 'Innovatief', en: 'Innovative' },
-  { key: 'playful', emoji: '\u{1F3A8}', nl: 'Creatief', en: 'Creative' },
-  { key: 'authoritative', emoji: '\u{1F4CA}', nl: 'Autoritair', en: 'Authoritative' },
-  { key: 'casual', emoji: '\u{2615}', nl: 'Casual', en: 'Casual' },
+  { key: 'professional', emoji: '\u{1F454}', nl: 'Professioneel', fr: 'Professionnel', en: 'Professional' },
+  { key: 'friendly', emoji: '\u{1F60A}', nl: 'Vriendelijk', fr: 'Amical', en: 'Friendly' },
+  { key: 'innovative', emoji: '\u{1F680}', nl: 'Innovatief', fr: 'Innovant', en: 'Innovative' },
+  { key: 'playful', emoji: '\u{1F3A8}', nl: 'Creatief', fr: 'Cr\u00e9atif', en: 'Creative' },
+  { key: 'authoritative', emoji: '\u{1F4CA}', nl: 'Autoritair', fr: 'Autoritaire', en: 'Authoritative' },
+  { key: 'casual', emoji: '\u{2615}', nl: 'Casual', fr: 'D\u00e9contract\u00e9', en: 'Casual' },
 ];
 
 const COUNTRIES = [
-  { value: 'nl', label: 'Nederland', en: 'Netherlands' },
-  { value: 'be', label: 'België', en: 'Belgium' },
-  { value: 'de', label: 'Duitsland', en: 'Germany' },
-  { value: 'uk', label: 'Verenigd Koninkrijk', en: 'United Kingdom' },
-  { value: 'us', label: 'Verenigde Staten', en: 'United States' },
-  { value: 'fr', label: 'Frankrijk', en: 'France' },
-  { value: 'es', label: 'Spanje', en: 'Spain' },
-  { value: 'other', label: 'Anders', en: 'Other' },
+  { value: 'nl', label: 'Nederland', fr: 'Pays-Bas', en: 'Netherlands' },
+  { value: 'be', label: 'België', fr: 'Belgique', en: 'Belgium' },
+  { value: 'de', label: 'Duitsland', fr: 'Allemagne', en: 'Germany' },
+  { value: 'uk', label: 'Verenigd Koninkrijk', fr: 'Royaume-Uni', en: 'United Kingdom' },
+  { value: 'us', label: 'Verenigde Staten', fr: '\u00c9tats-Unis', en: 'United States' },
+  { value: 'fr', label: 'Frankrijk', fr: 'France', en: 'France' },
+  { value: 'es', label: 'Spanje', fr: 'Espagne', en: 'Spain' },
+  { value: 'other', label: 'Anders', fr: 'Autre', en: 'Other' },
 ];
 
 const LANGUAGES_LIST = [
@@ -63,19 +63,19 @@ const LANGUAGES_LIST = [
 ];
 
 const MARKETING_GOALS = [
-  { key: 'leads', icon: UserPlus, nl: 'Meer Leads', en: 'More Leads' },
-  { key: 'sales', icon: DollarSign, nl: 'Meer Sales', en: 'More Sales' },
-  { key: 'traffic', icon: Globe, nl: 'Meer Websitebezoekers', en: 'More Website Visitors' },
-  { key: 'social', icon: Share2, nl: 'Social Media Groei', en: 'Social Media Growth' },
-  { key: 'awareness', icon: Megaphone, nl: 'Meer Naamsbekendheid', en: 'More Brand Awareness' },
-  { key: 'retention', icon: Heart, nl: 'Betere Klantretentie', en: 'Better Customer Retention' },
+  { key: 'leads', icon: UserPlus, nl: 'Meer Leads', fr: 'Plus de Leads', en: 'More Leads' },
+  { key: 'sales', icon: DollarSign, nl: 'Meer Sales', fr: 'Plus de Ventes', en: 'More Sales' },
+  { key: 'traffic', icon: Globe, nl: 'Meer Websitebezoekers', fr: 'Plus de Visiteurs', en: 'More Website Visitors' },
+  { key: 'social', icon: Share2, nl: 'Social Media Groei', fr: 'Croissance R\u00e9seaux Sociaux', en: 'Social Media Growth' },
+  { key: 'awareness', icon: Megaphone, nl: 'Meer Naamsbekendheid', fr: 'Plus de Notori\u00e9t\u00e9', en: 'More Brand Awareness' },
+  { key: 'retention', icon: Heart, nl: 'Betere Klantretentie', fr: 'Meilleure R\u00e9tention Client', en: 'Better Customer Retention' },
 ];
 
 const COMPANY_SIZES = [
-  { value: 'startup', nl: 'Startup', en: 'Startup' },
-  { value: 'mkb', nl: 'MKB', en: 'SME' },
-  { value: 'enterprise', nl: 'Enterprise', en: 'Enterprise' },
-  { value: 'corporate', nl: 'Corporate', en: 'Corporate' },
+  { value: 'startup', nl: 'Startup', fr: 'Startup', en: 'Startup' },
+  { value: 'mkb', nl: 'MKB', fr: 'PME', en: 'SME' },
+  { value: 'enterprise', nl: 'Enterprise', fr: 'Entreprise', en: 'Enterprise' },
+  { value: 'corporate', nl: 'Corporate', fr: 'Corporate', en: 'Corporate' },
 ];
 
 const AGE_GROUPS = ['18-24', '25-34', '35-44', '45-54', '55+'];
@@ -88,18 +88,18 @@ const SOCIAL_PLATFORMS = [
 ];
 
 const BRAND_VALUES = [
-  { key: 'innovation', nl: 'Innovatie', en: 'Innovation' },
-  { key: 'quality', nl: 'Kwaliteit', en: 'Quality' },
-  { key: 'trust', nl: 'Vertrouwen', en: 'Trust' },
-  { key: 'sustainability', nl: 'Duurzaamheid', en: 'Sustainability' },
-  { key: 'customer-first', nl: 'Klant Eerst', en: 'Customer First' },
-  { key: 'simplicity', nl: 'Eenvoud', en: 'Simplicity' },
-  { key: 'transparency', nl: 'Transparantie', en: 'Transparency' },
-  { key: 'speed', nl: 'Snelheid', en: 'Speed' },
-  { key: 'creativity', nl: 'Creativiteit', en: 'Creativity' },
-  { key: 'expertise', nl: 'Expertise', en: 'Expertise' },
-  { key: 'community', nl: 'Community', en: 'Community' },
-  { key: 'inclusivity', nl: 'Inclusiviteit', en: 'Inclusivity' },
+  { key: 'innovation', nl: 'Innovatie', fr: 'Innovation', en: 'Innovation' },
+  { key: 'quality', nl: 'Kwaliteit', fr: 'Qualit\u00e9', en: 'Quality' },
+  { key: 'trust', nl: 'Vertrouwen', fr: 'Confiance', en: 'Trust' },
+  { key: 'sustainability', nl: 'Duurzaamheid', fr: 'Durabilit\u00e9', en: 'Sustainability' },
+  { key: 'customer-first', nl: 'Klant Eerst', fr: 'Client d\u2019abord', en: 'Customer First' },
+  { key: 'simplicity', nl: 'Eenvoud', fr: 'Simplicit\u00e9', en: 'Simplicity' },
+  { key: 'transparency', nl: 'Transparantie', fr: 'Transparence', en: 'Transparency' },
+  { key: 'speed', nl: 'Snelheid', fr: 'Rapidit\u00e9', en: 'Speed' },
+  { key: 'creativity', nl: 'Creativiteit', fr: 'Cr\u00e9ativit\u00e9', en: 'Creativity' },
+  { key: 'expertise', nl: 'Expertise', fr: 'Expertise', en: 'Expertise' },
+  { key: 'community', nl: 'Community', fr: 'Communaut\u00e9', en: 'Community' },
+  { key: 'inclusivity', nl: 'Inclusiviteit', fr: 'Inclusivit\u00e9', en: 'Inclusivity' },
 ];
 
 // ─── Types ──────────────────────────────────────────────────────────────
@@ -206,10 +206,11 @@ const initialData: OnboardingData = {
 
 export default function Onboarding() {
   const { user } = useAuth();
-  const { t, lang } = useLanguage();
+  const { t, lang, setLang } = useLanguage();
   const { toast } = useToast();
   const navigate = useNavigate();
   const nl = lang === 'nl';
+  const fr = lang === 'fr';
 
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OnboardingData>(initialData);
@@ -316,7 +317,7 @@ export default function Onboarding() {
         },
       });
       if (error) {
-        toast({ title: nl ? 'Fout bij opslaan' : 'Save failed', description: error.message, variant: 'destructive' });
+        toast({ title: nl ? 'Fout bij opslaan' : fr ? 'Erreur lors de la sauvegarde' : 'Save failed', description: error.message, variant: 'destructive' });
         setSaving(false);
         return;
       }
@@ -324,13 +325,13 @@ export default function Onboarding() {
       try {
         const filteredProducts = data.products.filter(p => p.name.trim());
         const toneMap: Record<string, string> = {
-          professional: nl ? 'Zakelijk en betrouwbaar' : 'Business-like and trustworthy',
-          friendly: nl ? 'Warm en benaderbaar' : 'Warm and approachable',
-          innovative: nl ? 'Vernieuwend en gedurfd' : 'Forward-thinking and bold',
-          luxury: nl ? 'Premium en exclusief' : 'Premium and exclusive',
-          playful: nl ? 'Speels en energiek' : 'Playful and energetic',
-          authoritative: nl ? 'Gezaghebbend en expert' : 'Authoritative and expert',
-          casual: nl ? 'Ontspannen en informeel' : 'Relaxed and informal',
+          professional: nl ? 'Zakelijk en betrouwbaar' : fr ? 'Professionnel et fiable' : 'Business-like and trustworthy',
+          friendly: nl ? 'Warm en benaderbaar' : fr ? 'Chaleureux et accessible' : 'Warm and approachable',
+          innovative: nl ? 'Vernieuwend en gedurfd' : fr ? 'Innovant et audacieux' : 'Forward-thinking and bold',
+          luxury: nl ? 'Premium en exclusief' : fr ? 'Premium et exclusif' : 'Premium and exclusive',
+          playful: nl ? 'Speels en energiek' : fr ? 'Ludique et \u00e9nergique' : 'Playful and energetic',
+          authoritative: nl ? 'Gezaghebbend en expert' : fr ? 'Autoritaire et expert' : 'Authoritative and expert',
+          casual: nl ? 'Ontspannen en informeel' : fr ? 'D\u00e9contract\u00e9 et informel' : 'Relaxed and informal',
         };
         await brandMemoryService.upsertActive({
           // Core identity
@@ -347,11 +348,11 @@ export default function Onboarding() {
           audiences: [
             data.audienceType && `${data.audienceType}`,
             data.idealCustomer,
-            data.occupation && (nl ? `Beroep: ${data.occupation}` : `Role: ${data.occupation}`),
-            data.ageGroup && (nl ? `Leeftijd: ${data.ageGroup}` : `Age: ${data.ageGroup}`),
-            data.painPoints && (nl ? `Pijnpunten: ${data.painPoints}` : `Pain points: ${data.painPoints}`),
-            data.customerSector && (nl ? `Sector: ${data.customerSector}` : `Sector: ${data.customerSector}`),
-            data.companySize && (nl ? `Bedrijfsgrootte: ${data.companySize}` : `Company size: ${data.companySize}`),
+            data.occupation && (nl ? `Beroep: ${data.occupation}` : fr ? `Profession : ${data.occupation}` : `Role: ${data.occupation}`),
+            data.ageGroup && (nl ? `Leeftijd: ${data.ageGroup}` : fr ? `\u00c2ge : ${data.ageGroup}` : `Age: ${data.ageGroup}`),
+            data.painPoints && (nl ? `Pijnpunten: ${data.painPoints}` : fr ? `Points de douleur : ${data.painPoints}` : `Pain points: ${data.painPoints}`),
+            data.customerSector && (nl ? `Sector: ${data.customerSector}` : fr ? `Secteur : ${data.customerSector}` : `Sector: ${data.customerSector}`),
+            data.companySize && (nl ? `Bedrijfsgrootte: ${data.companySize}` : fr ? `Taille de l'entreprise : ${data.companySize}` : `Company size: ${data.companySize}`),
           ].filter(Boolean) as string[],
           regions: data.country ? [data.country] : [],
           languages: data.language ? [data.language] : ['nl'],
@@ -402,10 +403,10 @@ export default function Onboarding() {
         console.warn('Brand kit sync failed (non-blocking)');
       }
 
-      toast({ title: nl ? 'Onboarding voltooid!' : 'Onboarding complete!' });
+      toast({ title: nl ? 'Onboarding voltooid!' : fr ? 'Onboarding termin\u00e9 !' : 'Onboarding complete!' });
       navigate('/app/dashboard', { replace: true });
     } catch (err) {
-      toast({ title: nl ? 'Fout bij opslaan' : 'Save failed', description: String(err), variant: 'destructive' });
+      toast({ title: nl ? 'Fout bij opslaan' : fr ? 'Erreur lors de la sauvegarde' : 'Save failed', description: String(err), variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -431,6 +432,8 @@ export default function Onboarding() {
   const stepIcons = [Building2, Search, Package, Users, Target, Palette, Swords, FolderOpen, Rocket];
   const stepLabelsArr = nl
     ? ['Bedrijf', 'Scan', 'Product', 'Doelgroep', 'Doelen', 'Merk', 'Concurrentie', 'Portfolio', 'Klaar!']
+    : fr
+    ? ['Entreprise', 'Scan', 'Produit', 'Cible', 'Objectifs', 'Marque', 'Concurrents', 'Portfolio', 'Termin\u00e9 !']
     : ['Company', 'Scan', 'Product', 'Audience', 'Goals', 'Brand', 'Competitors', 'Portfolio', 'Done!'];
 
   // ─── Confetti ───────────────────────────────────────────────────────
@@ -450,7 +453,7 @@ export default function Onboarding() {
 
   // ─── Dynamic subtitle ──────────────────────────────────────────────
 
-  const companyLabel = data.companyName || (nl ? 'je bedrijf' : 'your business');
+  const companyLabel = data.companyName || (nl ? 'je bedrijf' : fr ? 'votre entreprise' : 'your business');
 
   // ─── Render ─────────────────────────────────────────────────────────
 
@@ -460,12 +463,34 @@ export default function Onboarding() {
       {/* ─── Top Bar + Step Indicator ──────────────────────────────── */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-6xl mx-auto px-4 py-3">
-          {/* Logo + step count */}
+          {/* Logo + lang switcher + step count */}
           <div className="flex items-center justify-between mb-3">
             <img src="/logo-inclufy.svg" alt="Inclufy" className="h-8" />
-            <span className="text-xs text-gray-400">
-              {t('onboarding.step')} {step} {t('onboarding.of')} {TOTAL_STEPS}
-            </span>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 bg-white/5 rounded-full p-0.5">
+                {([
+                  { code: 'nl' as const, flag: '🇳🇱' },
+                  { code: 'en' as const, flag: '🇬🇧' },
+                  { code: 'fr' as const, flag: '🇫🇷' },
+                ] as const).map(({ code, flag }) => (
+                  <button
+                    key={code}
+                    onClick={() => setLang(code)}
+                    className={cn(
+                      "text-sm px-2 py-0.5 rounded-full transition-all",
+                      lang === code
+                        ? "bg-purple-600 text-white shadow-sm"
+                        : "text-gray-400 hover:text-white"
+                    )}
+                  >
+                    {flag}
+                  </button>
+                ))}
+              </div>
+              <span className="text-xs text-gray-400">
+                {t('onboarding.step')} {step} {t('onboarding.of')} {TOTAL_STEPS}
+              </span>
+            </div>
           </div>
 
           {/* Step dots */}
@@ -525,10 +550,10 @@ export default function Onboarding() {
                   <Building2 className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Vertel ons over je bedrijf' : 'Tell us about your business'}
+                  {nl ? 'Vertel ons over je bedrijf' : fr ? 'Parlez-nous de votre entreprise' : 'Tell us about your business'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? 'We gebruiken deze informatie om je marketing te personaliseren' : 'We use this to personalize your marketing'}
+                  {nl ? 'We gebruiken deze informatie om je marketing te personaliseren' : fr ? 'Nous utilisons ces informations pour personnaliser votre marketing' : 'We use this to personalize your marketing'}
                 </p>
               </div>
               <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
@@ -536,12 +561,12 @@ export default function Onboarding() {
                   {/* Company Name */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Bedrijfsnaam' : 'Company Name'} <span className="text-red-400">*</span>
+                      {nl ? 'Bedrijfsnaam' : fr ? "Nom de l'entreprise" : 'Company Name'} <span className="text-red-400">*</span>
                     </label>
                     <Input
                       value={data.companyName}
                       onChange={e => update({ companyName: e.target.value })}
-                      placeholder={nl ? 'bijv. Inclufy Marketing' : 'e.g. Inclufy Marketing'}
+                      placeholder={nl ? 'bijv. Inclufy Marketing' : fr ? 'ex. Inclufy Marketing' : 'e.g. Inclufy Marketing'}
                       className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
                   </div>
@@ -549,7 +574,7 @@ export default function Onboarding() {
                   {/* Website */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Website URL' : 'Website URL'}
+                      {nl ? 'Website URL' : fr ? 'URL du site web' : 'Website URL'}
                     </label>
                     <div className="relative">
                       <Globe className="absolute left-3 top-3.5 w-4 h-4 text-gray-500" />
@@ -565,13 +590,13 @@ export default function Onboarding() {
                   {/* Tagline */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Tagline / Slogan' : 'Tagline / Slogan'}
-                      <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                      {nl ? 'Tagline / Slogan' : fr ? 'Tagline / Slogan' : 'Tagline / Slogan'}
+                      <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : fr ? 'optionnel' : 'optional'})</span>
                     </label>
                     <Input
                       value={data.tagline}
                       onChange={e => update({ tagline: e.target.value })}
-                      placeholder={nl ? 'bijv. "Marketing die werkt"' : 'e.g. "Marketing that works"'}
+                      placeholder={nl ? 'bijv. "Marketing die werkt"' : fr ? 'ex. "Le marketing qui marche"' : 'e.g. "Marketing that works"'}
                       className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
                   </div>
@@ -579,7 +604,7 @@ export default function Onboarding() {
                   {/* Industry */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Branche / Sector' : 'Industry / Sector'}
+                      {nl ? 'Branche / Sector' : fr ? 'Secteur / Industrie' : 'Industry / Sector'}
                     </label>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {INDUSTRIES.map((ind, idx) => (
@@ -606,7 +631,7 @@ export default function Onboarding() {
                   {/* Country */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Land' : 'Country'}
+                      {nl ? 'Land' : fr ? 'Pays' : 'Country'}
                     </label>
                     <div className="grid grid-cols-4 gap-2">
                       {COUNTRIES.map(c => (
@@ -621,7 +646,7 @@ export default function Onboarding() {
                               : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15 hover:border-purple-500/50'
                           )}
                         >
-                          {nl ? c.label : c.en}
+                          {nl ? c.label : fr ? c.fr : c.en}
                         </motion.button>
                       ))}
                     </div>
@@ -630,7 +655,7 @@ export default function Onboarding() {
                   {/* Language */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Taal' : 'Language'}
+                      {nl ? 'Taal' : fr ? 'Langue' : 'Language'}
                     </label>
                     <div className="grid grid-cols-5 gap-2">
                       {LANGUAGES_LIST.map(l => (
@@ -663,10 +688,10 @@ export default function Onboarding() {
                   <Search className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'AI Website Analyse' : 'AI Website Analysis'}
+                  {nl ? 'AI Website Analyse' : fr ? 'Analyse IA du site web' : 'AI Website Analysis'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? `Even kijken hoe ${companyLabel} er online voor staat...` : `Let's see how ${companyLabel} is doing online...`}
+                  {nl ? `Even kijken hoe ${companyLabel} er online voor staat...` : fr ? `Voyons comment ${companyLabel} se porte en ligne...` : `Let's see how ${companyLabel} is doing online...`}
                 </p>
               </div>
               <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
@@ -675,7 +700,7 @@ export default function Onboarding() {
                     <div className="space-y-6 py-8">
                       <Loader2 className="w-12 h-12 text-purple-400 mx-auto animate-spin" />
                       <p className="text-white text-lg font-medium">
-                        {nl ? 'Je website wordt gescand...' : 'Scanning your website...'}
+                        {nl ? 'Je website wordt gescand...' : fr ? 'Analyse de votre site web en cours...' : 'Scanning your website...'}
                       </p>
                       <p className="text-gray-400 text-sm">{data.website || data.companyName}</p>
                       <div className="w-full bg-white/10 rounded-full h-2">
@@ -686,14 +711,14 @@ export default function Onboarding() {
                     <div className="space-y-6">
                       <div className="flex items-center justify-center gap-2 mb-2">
                         <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-                        <p className="text-emerald-400 font-semibold">{nl ? 'Scan voltooid!' : 'Scan complete!'}</p>
+                        <p className="text-emerald-400 font-semibold">{nl ? 'Scan voltooid!' : fr ? 'Analyse termin\u00e9e !' : 'Scan complete!'}</p>
                       </div>
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         {[
-                          { label: nl ? 'Totaal' : 'Overall', score: data.scanScore!, icon: TrendingUp },
+                          { label: nl ? 'Totaal' : fr ? 'Total' : 'Overall', score: data.scanScore!, icon: TrendingUp },
                           { label: 'SEO', score: data.scanSeo!, icon: Search },
                           { label: 'Content', score: data.scanContent!, icon: Sparkles },
-                          { label: nl ? 'Prestatie' : 'Performance', score: data.scanPerformance!, icon: BarChart3 },
+                          { label: nl ? 'Prestatie' : fr ? 'Performance' : 'Performance', score: data.scanPerformance!, icon: BarChart3 },
                         ].map((item, idx) => (
                           <motion.div
                             key={item.label}
@@ -712,15 +737,15 @@ export default function Onboarding() {
                       </div>
                       <p className="text-sm text-gray-400 mt-4">
                         {(data.scanScore ?? 0) >= 70
-                          ? (nl ? 'Goede basis! Inclufy gaat dit naar een hoger niveau tillen' : 'Great foundation! Inclufy will take this to the next level')
-                          : (nl ? 'Er is ruimte voor groei \u2014 precies waarom je hier bent \u{1F4AA}' : 'Room for growth \u2014 exactly why you\'re here \u{1F4AA}')}
+                          ? (nl ? 'Goede basis! Inclufy gaat dit naar een hoger niveau tillen' : fr ? 'Bonne base ! Inclufy va porter cela au niveau sup\u00e9rieur' : 'Great foundation! Inclufy will take this to the next level')
+                          : (nl ? 'Er is ruimte voor groei \u2014 precies waarom je hier bent \u{1F4AA}' : fr ? 'Il y a de la marge pour progresser \u2014 c\'est exactement pourquoi vous \u00eates ici \u{1F4AA}' : 'Room for growth \u2014 exactly why you\'re here \u{1F4AA}')}
                       </p>
                     </div>
                   ) : (
                     <div className="py-12 space-y-4">
                       <BarChart3 className="w-12 h-12 text-gray-600 mx-auto" />
                       <p className="text-gray-400">
-                        {nl ? 'Klik op Volgende om de scan te starten' : 'Click Next to start the scan'}
+                        {nl ? 'Klik op Volgende om de scan te starten' : fr ? "Cliquez sur Suivant pour d\u00e9marrer l'analyse" : 'Click Next to start the scan'}
                       </p>
                     </div>
                   )}
@@ -737,10 +762,10 @@ export default function Onboarding() {
                   <Package className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Product of Dienst' : 'Product or Service'}
+                  {nl ? 'Product of Dienst' : fr ? 'Produit ou Service' : 'Product or Service'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? `Wat verkoopt ${companyLabel}?` : `What does ${companyLabel} sell?`}
+                  {nl ? `Wat verkoopt ${companyLabel}?` : fr ? `Que vend ${companyLabel} ?` : `What does ${companyLabel} sell?`}
                 </p>
               </div>
 
@@ -765,7 +790,7 @@ export default function Onboarding() {
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
                             <Crown className="w-3.5 h-3.5 text-purple-400" />
-                            {nl ? 'Productnaam' : 'Product Name'}
+                            {nl ? 'Productnaam' : fr ? 'Nom du produit' : 'Product Name'}
                           </label>
                           <Input
                             value={product.name}
@@ -774,7 +799,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], name: e.target.value };
                               update({ products: updated });
                             }}
-                            placeholder={nl ? 'bijv. Marketing Automation Suite' : 'e.g. Marketing Automation Suite'}
+                            placeholder={nl ? 'bijv. Marketing Automation Suite' : fr ? 'ex. Marketing Automation Suite' : 'e.g. Marketing Automation Suite'}
                             className="h-10 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                           />
                         </div>
@@ -783,7 +808,7 @@ export default function Onboarding() {
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
                             <Gem className="w-3.5 h-3.5 text-purple-400" />
-                            {nl ? 'Korte beschrijving' : 'Short Description'}
+                            {nl ? 'Korte beschrijving' : fr ? 'Description courte' : 'Short Description'}
                           </label>
                           <Textarea
                             value={product.description}
@@ -792,7 +817,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], description: e.target.value };
                               update({ products: updated });
                             }}
-                            placeholder={nl ? 'Beschrijf kort je product of dienst...' : 'Briefly describe your product or service...'}
+                            placeholder={nl ? 'Beschrijf kort je product of dienst...' : fr ? 'D\u00e9crivez bri\u00e8vement votre produit ou service...' : 'Briefly describe your product or service...'}
                             rows={2}
                             className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                           />
@@ -802,7 +827,7 @@ export default function Onboarding() {
                         <div className="space-y-1.5">
                           <label className="text-xs font-medium text-gray-300 flex items-center gap-1.5">
                             <Lightbulb className="w-3.5 h-3.5 text-purple-400" />
-                            {nl ? 'Belangrijkste voordelen' : 'Key Benefits'}
+                            {nl ? 'Belangrijkste voordelen' : fr ? 'Avantages cl\u00e9s' : 'Key Benefits'}
                           </label>
                           <Input
                             value={product.features}
@@ -811,7 +836,7 @@ export default function Onboarding() {
                               updated[idx] = { ...updated[idx], features: e.target.value };
                               update({ products: updated });
                             }}
-                            placeholder={nl ? 'bijv. Tijdbesparend, AI-gestuurd, Betaalbaar' : 'e.g. Time-saving, AI-powered, Affordable'}
+                            placeholder={nl ? 'bijv. Tijdbesparend, AI-gestuurd, Betaalbaar' : fr ? 'ex. Gain de temps, Pilot\u00e9 par IA, Abordable' : 'e.g. Time-saving, AI-powered, Affordable'}
                             className="h-10 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                           />
                         </div>
@@ -826,7 +851,7 @@ export default function Onboarding() {
                             className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
-                            {nl ? 'Verwijderen' : 'Remove'}
+                            {nl ? 'Verwijderen' : fr ? 'Supprimer' : 'Remove'}
                           </button>
                         )}
                       </CardContent>
@@ -841,7 +866,7 @@ export default function Onboarding() {
                     className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-white/15 text-gray-400 hover:text-purple-300 hover:border-purple-500/40 transition-all text-sm font-medium"
                   >
                     <Plus className="w-4 h-4" />
-                    {nl ? 'Product toevoegen' : 'Add Product'}
+                    {nl ? 'Product toevoegen' : fr ? 'Ajouter un produit' : 'Add Product'}
                   </button>
                 )}
               </div>
@@ -856,10 +881,10 @@ export default function Onboarding() {
                   <Users className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Doelgroep' : 'Target Audience'}
+                  {nl ? 'Doelgroep' : fr ? 'Public cible' : 'Target Audience'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? `Wie wil ${companyLabel} bereiken?` : `Who does ${companyLabel} want to reach?`}
+                  {nl ? `Wie wil ${companyLabel} bereiken?` : fr ? `Qui ${companyLabel} souhaite atteindre ?` : `Who does ${companyLabel} want to reach?`}
                 </p>
               </div>
               <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
@@ -867,7 +892,7 @@ export default function Onboarding() {
                   {/* B2B / B2C Toggle */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Type klant' : 'Customer Type'}
+                      {nl ? 'Type klant' : fr ? 'Type de client' : 'Customer Type'}
                     </label>
                     <div className="grid grid-cols-2 gap-3">
                       {(['B2B', 'B2C'] as const).map(type => (
@@ -894,12 +919,12 @@ export default function Onboarding() {
                   {/* Ideal Customer */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Ideale Klant' : 'Ideal Customer'}
+                      {nl ? 'Ideale Klant' : fr ? 'Client id\u00e9al' : 'Ideal Customer'}
                     </label>
                     <Textarea
                       value={data.idealCustomer}
                       onChange={e => update({ idealCustomer: e.target.value })}
-                      placeholder={nl ? 'Beschrijf je ideale klant...' : 'Describe your ideal customer...'}
+                      placeholder={nl ? 'Beschrijf je ideale klant...' : fr ? 'D\u00e9crivez votre client id\u00e9al...' : 'Describe your ideal customer...'}
                       rows={2}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
@@ -910,18 +935,18 @@ export default function Onboarding() {
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-200">
-                          {nl ? 'Sector / Branche van klanten' : 'Client Sector / Industry'}
+                          {nl ? 'Sector / Branche van klanten' : fr ? 'Secteur / Industrie des clients' : 'Client Sector / Industry'}
                         </label>
                         <Input
                           value={data.customerSector}
                           onChange={e => update({ customerSector: e.target.value })}
-                          placeholder={nl ? 'bijv. Technologie, Gezondheidszorg' : 'e.g. Technology, Healthcare'}
+                          placeholder={nl ? 'bijv. Technologie, Gezondheidszorg' : fr ? 'ex. Technologie, Sant\u00e9' : 'e.g. Technology, Healthcare'}
                           className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                         />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-200">
-                          {nl ? 'Bedrijfsgrootte' : 'Company Size'}
+                          {nl ? 'Bedrijfsgrootte' : fr ? "Taille de l'entreprise" : 'Company Size'}
                         </label>
                         <div className="grid grid-cols-4 gap-2">
                           {COMPANY_SIZES.map(s => (
@@ -936,7 +961,7 @@ export default function Onboarding() {
                                   : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15'
                               )}
                             >
-                              {nl ? s.nl : s.en}
+                              {nl ? s.nl : fr ? s.fr : s.en}
                             </motion.button>
                           ))}
                         </div>
@@ -949,7 +974,7 @@ export default function Onboarding() {
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-gray-200">
-                          {nl ? 'Leeftijdsgroep' : 'Age Group'}
+                          {nl ? 'Leeftijdsgroep' : fr ? "Tranche d'\u00e2ge" : 'Age Group'}
                         </label>
                         <div className="grid grid-cols-5 gap-2">
                           {AGE_GROUPS.map(ag => (
@@ -975,12 +1000,12 @@ export default function Onboarding() {
                   {/* Occupation */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Beroep / Rol' : 'Occupation / Role'}
+                      {nl ? 'Beroep / Rol' : fr ? 'Profession / R\u00f4le' : 'Occupation / Role'}
                     </label>
                     <Input
                       value={data.occupation}
                       onChange={e => update({ occupation: e.target.value })}
-                      placeholder={nl ? 'bijv. MKB-ondernemer, CMO' : 'e.g. SME Owner, CMO'}
+                      placeholder={nl ? 'bijv. MKB-ondernemer, CMO' : fr ? 'ex. Dirigeant PME, CMO' : 'e.g. SME Owner, CMO'}
                       className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
                   </div>
@@ -988,12 +1013,12 @@ export default function Onboarding() {
                   {/* Pain Points */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Pijnpunten' : 'Pain Points'}
+                      {nl ? 'Pijnpunten' : fr ? 'Points de douleur' : 'Pain Points'}
                     </label>
                     <Textarea
                       value={data.painPoints}
                       onChange={e => update({ painPoints: e.target.value })}
-                      placeholder={nl ? 'Welke problemen lost je product op?' : 'What problems does your product solve?'}
+                      placeholder={nl ? 'Welke problemen lost je product op?' : fr ? 'Quels probl\u00e8mes votre produit r\u00e9sout-il ?' : 'What problems does your product solve?'}
                       rows={2}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
@@ -1011,10 +1036,10 @@ export default function Onboarding() {
                   <Target className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Marketingdoelen' : 'Marketing Goals'}
+                  {nl ? 'Marketingdoelen' : fr ? 'Objectifs marketing' : 'Marketing Goals'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? 'Wat wil je bereiken? (selecteer meerdere)' : 'What do you want to achieve? (select multiple)'}
+                  {nl ? 'Wat wil je bereiken? (selecteer meerdere)' : fr ? 'Que souhaitez-vous accomplir ? (s\u00e9lection multiple)' : 'What do you want to achieve? (select multiple)'}
                 </p>
               </div>
 
@@ -1042,7 +1067,7 @@ export default function Onboarding() {
                       )}
                     >
                       <goal.icon className={cn('w-8 h-8', selected ? 'text-purple-400' : 'text-gray-500')} />
-                      <span className="text-sm font-medium">{nl ? goal.nl : goal.en}</span>
+                      <span className="text-sm font-medium">{nl ? goal.nl : fr ? goal.fr : goal.en}</span>
                       {selected && <CheckCircle2 className="w-5 h-5 text-purple-400" />}
                     </motion.button>
                   );
@@ -1059,10 +1084,10 @@ export default function Onboarding() {
                   <Palette className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Merkprofiel' : 'Brand Profile'}
+                  {nl ? 'Merkprofiel' : fr ? 'Profil de marque' : 'Brand Profile'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? `Geef ${companyLabel} een visuele identiteit die opvalt` : `Give ${companyLabel} a visual identity that stands out`}
+                  {nl ? `Geef ${companyLabel} een visuele identiteit die opvalt` : fr ? `Donnez \u00e0 ${companyLabel} une identit\u00e9 visuelle qui se d\u00e9marque` : `Give ${companyLabel} a visual identity that stands out`}
                 </p>
               </div>
               <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
@@ -1071,7 +1096,7 @@ export default function Onboarding() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-200">
-                        {nl ? 'Primaire kleur' : 'Primary Color'}
+                        {nl ? 'Primaire kleur' : fr ? 'Couleur primaire' : 'Primary Color'}
                       </label>
                       <div className="flex items-center gap-3">
                         <input
@@ -1089,7 +1114,7 @@ export default function Onboarding() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-200">
-                        {nl ? 'Secundaire kleur' : 'Secondary Color'}
+                        {nl ? 'Secundaire kleur' : fr ? 'Couleur secondaire' : 'Secondary Color'}
                       </label>
                       <div className="flex items-center gap-3">
                         <input
@@ -1124,7 +1149,7 @@ export default function Onboarding() {
                         {data.companyName || 'Your Brand'}
                       </p>
                       <p className="text-white/70 text-sm capitalize mt-1">
-                        {TONES.find(t => t.key === data.tone)?.[nl ? 'nl' : 'en'] || data.tone}
+                        {TONES.find(t => t.key === data.tone)?.[nl ? 'nl' : fr ? 'fr' : 'en'] || data.tone}
                       </p>
                     </div>
                   </div>
@@ -1132,7 +1157,7 @@ export default function Onboarding() {
                   {/* Tone selector */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Merkstijl' : 'Brand Tone'}
+                      {nl ? 'Merkstijl' : fr ? 'Ton de la marque' : 'Brand Tone'}
                     </label>
                     <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
                       {TONES.map((tone, idx) => (
@@ -1151,7 +1176,7 @@ export default function Onboarding() {
                           )}
                         >
                           <span className="text-xl">{tone.emoji}</span>
-                          <span className="text-[10px] font-medium">{nl ? tone.nl : tone.en}</span>
+                          <span className="text-[10px] font-medium">{nl ? tone.nl : fr ? tone.fr : tone.en}</span>
                         </motion.button>
                       ))}
                     </div>
@@ -1160,8 +1185,8 @@ export default function Onboarding() {
                   {/* Brand Values */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Merkwaarden' : 'Brand Values'}
-                      <span className="text-gray-500 text-xs ml-2">({nl ? 'selecteer max. 5' : 'select up to 5'})</span>
+                      {nl ? 'Merkwaarden' : fr ? 'Valeurs de la marque' : 'Brand Values'}
+                      <span className="text-gray-500 text-xs ml-2">({nl ? 'selecteer max. 5' : fr ? 's\u00e9lectionnez max. 5' : 'select up to 5'})</span>
                     </label>
                     <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                       {BRAND_VALUES.map((val, idx) => {
@@ -1186,7 +1211,7 @@ export default function Onboarding() {
                                 : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15 hover:border-purple-500/50'
                             )}
                           >
-                            {nl ? val.nl : val.en}
+                            {nl ? val.nl : fr ? val.fr : val.en}
                           </motion.button>
                         );
                       })}
@@ -1196,13 +1221,13 @@ export default function Onboarding() {
                   {/* Mission */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Missie' : 'Mission'}
-                      <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                      {nl ? 'Missie' : fr ? 'Mission' : 'Mission'}
+                      <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : fr ? 'optionnel' : 'optional'})</span>
                     </label>
                     <Textarea
                       value={data.mission}
                       onChange={e => update({ mission: e.target.value })}
-                      placeholder={nl ? 'bijv. "We helpen MKB-bedrijven groeien met AI-gestuurde marketing"' : 'e.g. "We help SMBs grow with AI-powered marketing"'}
+                      placeholder={nl ? 'bijv. "We helpen MKB-bedrijven groeien met AI-gestuurde marketing"' : fr ? 'ex. "Nous aidons les PME \u00e0 cro\u00eetre avec le marketing pilot\u00e9 par IA"' : 'e.g. "We help SMBs grow with AI-powered marketing"'}
                       rows={2}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
@@ -1212,26 +1237,26 @@ export default function Onboarding() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-200">
-                        {nl ? 'Wel zeggen' : 'Do Say'}
-                        <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                        {nl ? 'Wel zeggen' : fr ? '\u00c0 dire' : 'Do Say'}
+                        <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : fr ? 'optionnel' : 'optional'})</span>
                       </label>
                       <Textarea
                         value={data.messagingDos}
                         onChange={e => update({ messagingDos: e.target.value })}
-                        placeholder={nl ? 'bijv. "Gebruik altijd u/uw, nooit je/jij"' : 'e.g. "Always use inclusive language"'}
+                        placeholder={nl ? 'bijv. "Gebruik altijd u/uw, nooit je/jij"' : fr ? 'ex. "Utilisez toujours le vouvoiement"' : 'e.g. "Always use inclusive language"'}
                         rows={2}
                         className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-sm font-medium text-gray-200">
-                        {nl ? 'Niet zeggen' : "Don't Say"}
-                        <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : 'optional'})</span>
+                        {nl ? 'Niet zeggen' : fr ? '\u00c0 ne pas dire' : "Don't Say"}
+                        <span className="text-gray-500 text-xs ml-2">({nl ? 'optioneel' : fr ? 'optionnel' : 'optional'})</span>
                       </label>
                       <Textarea
                         value={data.messagingDonts}
                         onChange={e => update({ messagingDonts: e.target.value })}
-                        placeholder={nl ? 'bijv. "Vermijd jargon, geen superlatieven"' : 'e.g. "Avoid jargon, no superlatives"'}
+                        placeholder={nl ? 'bijv. "Vermijd jargon, geen superlatieven"' : fr ? 'ex. "\u00c9vitez le jargon, pas de superlatifs"' : 'e.g. "Avoid jargon, no superlatives"'}
                         rows={2}
                         className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                       />
@@ -1241,7 +1266,7 @@ export default function Onboarding() {
                   {/* Logo Upload */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Logo (optioneel)' : 'Logo (optional)'}
+                      {nl ? 'Logo (optioneel)' : fr ? 'Logo (optionnel)' : 'Logo (optional)'}
                     </label>
                     <div
                       className="border-2 border-dashed border-white/20 rounded-xl p-6 text-center cursor-pointer hover:border-purple-500/40 transition-colors"
@@ -1250,12 +1275,12 @@ export default function Onboarding() {
                       {data.logoPreview ? (
                         <div className="space-y-2">
                           <img src={data.logoPreview} alt="Logo" className="h-16 mx-auto object-contain" />
-                          <p className="text-xs text-gray-400">{nl ? 'Klik om te wijzigen' : 'Click to change'}</p>
+                          <p className="text-xs text-gray-400">{nl ? 'Klik om te wijzigen' : fr ? 'Cliquez pour modifier' : 'Click to change'}</p>
                         </div>
                       ) : (
                         <div className="space-y-2">
                           <Upload className="w-8 h-8 text-gray-500 mx-auto" />
-                          <p className="text-sm text-gray-400">{nl ? 'Upload je logo' : 'Upload your logo'}</p>
+                          <p className="text-sm text-gray-400">{nl ? 'Upload je logo' : fr ? 'T\u00e9l\u00e9chargez votre logo' : 'Upload your logo'}</p>
                           <p className="text-xs text-gray-500">SVG, PNG, JPG (max 5MB)</p>
                         </div>
                       )}
@@ -1288,10 +1313,10 @@ export default function Onboarding() {
                   <Swords className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Concurrenten' : 'Competitors'}
+                  {nl ? 'Concurrenten' : fr ? 'Concurrents' : 'Competitors'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? 'AI gebruikt dit om SEO-kansen en content gaps te vinden' : 'AI uses this to find SEO opportunities and content gaps'}
+                  {nl ? 'AI gebruikt dit om SEO-kansen en content gaps te vinden' : fr ? "L'IA utilise cela pour trouver des opportunit\u00e9s SEO et des lacunes de contenu" : 'AI uses this to find SEO opportunities and content gaps'}
                 </p>
               </div>
               <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
@@ -1304,7 +1329,7 @@ export default function Onboarding() {
                       className="space-y-3"
                     >
                       <p className="text-xs font-medium text-gray-400">
-                        {nl ? `Concurrent ${idx + 1}` : `Competitor ${idx + 1}`}
+                        {nl ? `Concurrent ${idx + 1}` : fr ? `Concurrent ${idx + 1}` : `Competitor ${idx + 1}`}
                       </p>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <Input
@@ -1314,7 +1339,7 @@ export default function Onboarding() {
                             updated[idx] = { ...updated[idx], name: e.target.value };
                             update({ competitors: updated });
                           }}
-                          placeholder={nl ? 'Naam' : 'Name'}
+                          placeholder={nl ? 'Naam' : fr ? 'Nom' : 'Name'}
                           className="h-10 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                         />
                         <div className="relative">
@@ -1340,7 +1365,7 @@ export default function Onboarding() {
                           className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
                         >
                           <Trash2 className="w-3 h-3" />
-                          {nl ? 'Verwijderen' : 'Remove'}
+                          {nl ? 'Verwijderen' : fr ? 'Supprimer' : 'Remove'}
                         </button>
                       )}
                     </motion.div>
@@ -1352,12 +1377,12 @@ export default function Onboarding() {
                       className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-white/15 text-gray-400 hover:text-purple-300 hover:border-purple-500/40 transition-all text-sm font-medium"
                     >
                       <Plus className="w-4 h-4" />
-                      {nl ? 'Concurrent toevoegen' : 'Add competitor'}
+                      {nl ? 'Concurrent toevoegen' : fr ? 'Ajouter un concurrent' : 'Add competitor'}
                     </button>
                   )}
 
                   <p className="text-xs text-gray-500 text-center pt-2">
-                    {nl ? 'Optioneel \u2014 je kunt dit later altijd aanpassen' : 'Optional \u2014 you can always adjust this later'}
+                    {nl ? 'Optioneel \u2014 je kunt dit later altijd aanpassen' : fr ? 'Optionnel \u2014 vous pourrez toujours ajuster cela plus tard' : 'Optional \u2014 you can always adjust this later'}
                   </p>
                 </CardContent>
               </Card>
@@ -1372,10 +1397,10 @@ export default function Onboarding() {
                   <FolderOpen className="w-8 h-8 text-purple-400" />
                 </div>
                 <h1 className="text-3xl font-bold mb-2">
-                  {nl ? 'Portfolio / Bestaande Content' : 'Portfolio / Existing Content'}
+                  {nl ? 'Portfolio / Bestaande Content' : fr ? 'Portfolio / Contenu existant' : 'Portfolio / Existing Content'}
                 </h1>
                 <p className="text-gray-400">
-                  {nl ? 'Laat AI leren van je bestaande stijl' : 'Let AI learn from your existing style'}
+                  {nl ? 'Laat AI leren van je bestaande stijl' : fr ? "Laissez l'IA apprendre de votre style existant" : 'Let AI learn from your existing style'}
                 </p>
               </div>
               <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
@@ -1406,12 +1431,12 @@ export default function Onboarding() {
                   {/* Existing Campaigns */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Bestaande campagnes' : 'Existing Campaigns'}
+                      {nl ? 'Bestaande campagnes' : fr ? 'Campagnes existantes' : 'Existing Campaigns'}
                     </label>
                     <Textarea
                       value={data.existingCampaigns}
                       onChange={e => update({ existingCampaigns: e.target.value })}
-                      placeholder={nl ? 'Beschrijf lopende of afgelopen campagnes...' : 'Describe ongoing or past campaigns...'}
+                      placeholder={nl ? 'Beschrijf lopende of afgelopen campagnes...' : fr ? 'D\u00e9crivez vos campagnes en cours ou pass\u00e9es...' : 'Describe ongoing or past campaigns...'}
                       rows={3}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
@@ -1420,19 +1445,19 @@ export default function Onboarding() {
                   {/* Example Content */}
                   <div className="space-y-2">
                     <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Voorbeeld content' : 'Example Content'}
+                      {nl ? 'Voorbeeld content' : fr ? 'Exemple de contenu' : 'Example Content'}
                     </label>
                     <Textarea
                       value={data.exampleContent}
                       onChange={e => update({ exampleContent: e.target.value })}
-                      placeholder={nl ? 'Plak hier een voorbeeld van je bestaande content...' : 'Paste an example of your existing content here...'}
+                      placeholder={nl ? 'Plak hier een voorbeeld van je bestaande content...' : fr ? 'Collez ici un exemple de votre contenu existant...' : 'Paste an example of your existing content here...'}
                       rows={3}
                       className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
                     />
                   </div>
 
                   <p className="text-xs text-gray-500 text-center">
-                    {nl ? 'Optioneel \u2014 dit helpt AI om beter passende content te genereren' : 'Optional \u2014 this helps AI generate better matching content'}
+                    {nl ? 'Optioneel \u2014 dit helpt AI om beter passende content te genereren' : fr ? "Optionnel \u2014 cela aide l'IA \u00e0 g\u00e9n\u00e9rer du contenu mieux adapt\u00e9" : 'Optional \u2014 this helps AI generate better matching content'}
                   </p>
                 </CardContent>
               </Card>
@@ -1447,10 +1472,10 @@ export default function Onboarding() {
                   <Rocket className="w-10 h-10 text-green-400" />
                 </div>
                 <h1 className="text-4xl font-bold mb-3">
-                  {nl ? `${data.companyName || 'Je bedrijf'} is klaar om te groeien!` : `${data.companyName || 'Your business'} is ready to grow!`}
+                  {nl ? `${data.companyName || 'Je bedrijf'} is klaar om te groeien!` : fr ? `${data.companyName || 'Votre entreprise'} est pr\u00eat \u00e0 grandir !` : `${data.companyName || 'Your business'} is ready to grow!`}
                 </h1>
                 <p className="text-gray-400 text-lg">
-                  {nl ? 'Hier is een overzicht van je setup' : "Here's an overview of your setup"}
+                  {nl ? 'Hier is een overzicht van je setup' : fr ? 'Voici un aper\u00e7u de votre configuration' : "Here's an overview of your setup"}
                 </p>
               </div>
 
@@ -1461,13 +1486,13 @@ export default function Onboarding() {
                   <CardContent className="p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <Building2 className="w-5 h-5 text-purple-400" />
-                      <h3 className="font-semibold text-white">{nl ? 'Bedrijf' : 'Company'}</h3>
+                      <h3 className="font-semibold text-white">{nl ? 'Bedrijf' : fr ? 'Entreprise' : 'Company'}</h3>
                     </div>
                     <p className="text-sm text-white font-medium">{data.companyName}</p>
                     {data.tagline && <p className="text-xs text-gray-300 italic mt-0.5">"{data.tagline}"</p>}
                     <p className="text-xs text-gray-400 mt-1">
                       {data.industry && `${data.industry} \u00B7 `}
-                      {COUNTRIES.find(c => c.value === data.country)?.[nl ? 'label' : 'en'] || data.country}
+                      {COUNTRIES.find(c => c.value === data.country)?.[nl ? 'label' : fr ? 'fr' : 'en'] || data.country}
                     </p>
                     {data.website && <p className="text-xs text-gray-500 mt-1">{data.website}</p>}
                   </CardContent>
@@ -1479,14 +1504,14 @@ export default function Onboarding() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <Search className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-semibold text-white">{nl ? 'Website Score' : 'Website Score'}</h3>
+                        <h3 className="font-semibold text-white">{nl ? 'Website Score' : fr ? 'Score du site' : 'Website Score'}</h3>
                       </div>
                       <div className="flex items-center gap-4">
                         <span className={cn('text-2xl font-bold', scoreColor(data.scanScore))}>{data.scanScore}</span>
                         <div className="flex gap-2 text-xs text-gray-400">
                           <span>SEO: {data.scanSeo}</span>
                           <span>Content: {data.scanContent}</span>
-                          <span>{nl ? 'Prestatie' : 'Perf'}: {data.scanPerformance}</span>
+                          <span>{nl ? 'Prestatie' : fr ? 'Perf' : 'Perf'}: {data.scanPerformance}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -1499,7 +1524,7 @@ export default function Onboarding() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <Package className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-semibold text-white">{nl ? 'Producten' : 'Products'}</h3>
+                        <h3 className="font-semibold text-white">{nl ? 'Producten' : fr ? 'Produits' : 'Products'}</h3>
                       </div>
                       {data.products.filter(p => p.name.trim()).map((p, i) => (
                         <div key={i} className="flex items-start gap-2 mb-1">
@@ -1520,7 +1545,7 @@ export default function Onboarding() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <Users className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-semibold text-white">{nl ? 'Doelgroep' : 'Target Audience'}</h3>
+                        <h3 className="font-semibold text-white">{nl ? 'Doelgroep' : fr ? 'Public cible' : 'Target Audience'}</h3>
                       </div>
                       <div className="flex flex-wrap gap-2 mb-2">
                         {data.audienceType && <Badge className="bg-purple-500/20 text-purple-300 border-0 text-xs">{data.audienceType}</Badge>}
@@ -1539,12 +1564,12 @@ export default function Onboarding() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <Target className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-semibold text-white">{nl ? 'Doelen' : 'Goals'}</h3>
+                        <h3 className="font-semibold text-white">{nl ? 'Doelen' : fr ? 'Objectifs' : 'Goals'}</h3>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         {data.marketingGoals.map(g => {
                           const goal = MARKETING_GOALS.find(mg => mg.key === g);
-                          return goal ? <Badge key={g} className="bg-purple-500/20 text-purple-300 border-0 text-xs">{nl ? goal.nl : goal.en}</Badge> : null;
+                          return goal ? <Badge key={g} className="bg-purple-500/20 text-purple-300 border-0 text-xs">{nl ? goal.nl : fr ? goal.fr : goal.en}</Badge> : null;
                         })}
                       </div>
                     </CardContent>
@@ -1556,13 +1581,13 @@ export default function Onboarding() {
                   <CardContent className="p-5">
                     <div className="flex items-center gap-2 mb-3">
                       <Palette className="w-5 h-5 text-purple-400" />
-                      <h3 className="font-semibold text-white">{nl ? 'Merkstijl' : 'Brand Style'}</h3>
+                      <h3 className="font-semibold text-white">{nl ? 'Merkstijl' : fr ? 'Style de marque' : 'Brand Style'}</h3>
                     </div>
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-6 h-6 rounded-full border border-white/20" style={{ backgroundColor: data.primaryColor }} />
                       <div className="w-6 h-6 rounded-full border border-white/20" style={{ backgroundColor: data.secondaryColor }} />
                       <span className="text-xs text-gray-400 capitalize ml-1">
-                        {TONES.find(t => t.key === data.tone)?.[nl ? 'nl' : 'en'] || data.tone}
+                        {TONES.find(t => t.key === data.tone)?.[nl ? 'nl' : fr ? 'fr' : 'en'] || data.tone}
                       </span>
                     </div>
                     {data.logoPreview && <img src={data.logoPreview} alt="" className="h-8 mt-2 object-contain" />}
@@ -1571,7 +1596,7 @@ export default function Onboarding() {
                       <div className="flex flex-wrap gap-1 mt-2">
                         {data.brandValues.map(v => {
                           const val = BRAND_VALUES.find(bv => bv.key === v);
-                          return val ? <Badge key={v} className="bg-white/10 text-gray-300 border-0 text-[10px]">{nl ? val.nl : val.en}</Badge> : null;
+                          return val ? <Badge key={v} className="bg-white/10 text-gray-300 border-0 text-[10px]">{nl ? val.nl : fr ? val.fr : val.en}</Badge> : null;
                         })}
                       </div>
                     )}
@@ -1584,7 +1609,7 @@ export default function Onboarding() {
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <Swords className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-semibold text-white">{nl ? 'Concurrenten' : 'Competitors'}</h3>
+                        <h3 className="font-semibold text-white">{nl ? 'Concurrenten' : fr ? 'Concurrents' : 'Competitors'}</h3>
                       </div>
                       {data.competitors.filter(c => c.name.trim()).map((c, i) => (
                         <p key={i} className="text-sm text-gray-300">
@@ -1621,7 +1646,7 @@ export default function Onboarding() {
                   className="h-12 flex items-center justify-center gap-2 rounded-lg border border-white/20 text-gray-300 hover:bg-white/10 text-sm font-medium transition-colors"
                 >
                   <LayoutDashboard className="w-4 h-4" />
-                  {nl ? 'Naar Dashboard' : 'Go to Dashboard'}
+                  {nl ? 'Naar Dashboard' : fr ? 'Aller au tableau de bord' : 'Go to Dashboard'}
                 </button>
                 <button
                   onClick={handleFinish}

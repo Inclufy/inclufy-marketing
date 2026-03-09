@@ -28,6 +28,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const { lang } = useLanguage();
   const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
@@ -42,12 +43,12 @@ export default function Signup() {
     e.preventDefault();
 
     if (formData.password !== formData.confirmPassword) {
-      toast.error(nl ? 'Wachtwoorden komen niet overeen!' : 'Passwords do not match!');
+      toast.error(nl ? 'Wachtwoorden komen niet overeen!' : fr ? 'Les mots de passe ne correspondent pas !' : 'Passwords do not match!');
       return;
     }
 
     if (!formData.agreeToTerms) {
-      toast.error(nl ? 'Ga akkoord met de voorwaarden' : 'Please agree to the terms');
+      toast.error(nl ? 'Ga akkoord met de voorwaarden' : fr ? 'Veuillez accepter les conditions' : 'Please agree to the terms');
       return;
     }
 
@@ -66,14 +67,14 @@ export default function Signup() {
 
       // If auto-confirmed (session exists), go straight to onboarding
       if (data.session) {
-        toast.success(nl ? 'Welkom bij Inclufy!' : 'Welcome to Inclufy!');
+        toast.success(nl ? 'Welkom bij Inclufy!' : fr ? 'Bienvenue sur Inclufy !' : 'Welcome to Inclufy!');
         navigate('/app/onboarding', { replace: true });
       } else {
-        toast.success(nl ? 'Account aangemaakt! Controleer je e-mail om te verifiëren.' : 'Account created! Check your email to verify.');
+        toast.success(nl ? 'Account aangemaakt! Controleer je e-mail om te verifiëren.' : fr ? 'Compte créé ! Vérifiez votre e-mail.' : 'Account created! Check your email to verify.');
         navigate('/login');
       }
     } catch (error: any) {
-      toast.error(error.message || (nl ? 'Account aanmaken mislukt' : 'Failed to create account'));
+      toast.error(error.message || (nl ? 'Account aanmaken mislukt' : fr ? 'Échec de la création du compte' : 'Failed to create account'));
     } finally {
       setIsLoading(false);
     }
@@ -102,21 +103,21 @@ export default function Signup() {
           className="text-3xl font-bold mb-2"
           style={{ fontFamily: "'Roboto', sans-serif" }}
         >
-          {nl ? 'Maak je account aan' : 'Create your account'}
+          {nl ? 'Maak je account aan' : fr ? 'Créez votre compte' : 'Create your account'}
         </h2>
-        <p className="text-gray-500">{nl ? 'Start je 14 dagen gratis proefperiode' : 'Start your 14-day free trial'}</p>
+        <p className="text-gray-500">{nl ? 'Start je 14 dagen gratis proefperiode' : fr ? 'Commencez votre essai gratuit de 14 jours' : 'Start your 14-day free trial'}</p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <Label htmlFor="fullName" className="text-gray-400 text-sm">{nl ? 'Volledige Naam' : 'Full Name'}</Label>
+          <Label htmlFor="fullName" className="text-gray-400 text-sm">{nl ? 'Volledige Naam' : fr ? 'Nom Complet' : 'Full Name'}</Label>
           <div className="relative mt-1.5">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
               id="fullName"
               type="text"
-              placeholder={nl ? 'Je volledige naam' : 'Your full name'}
+              placeholder={nl ? 'Je volledige naam' : fr ? 'Votre nom complet' : 'Your full name'}
               value={formData.fullName}
               onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
               className={inputClass}
@@ -132,7 +133,7 @@ export default function Signup() {
             <Input
               id="email"
               type="email"
-              placeholder={nl ? 'jij@bedrijf.com' : 'you@company.com'}
+              placeholder={nl ? 'jij@bedrijf.com' : fr ? 'vous@entreprise.com' : 'you@company.com'}
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className={inputClass}
@@ -142,13 +143,13 @@ export default function Signup() {
         </div>
 
         <div>
-          <Label htmlFor="password" className="text-gray-400 text-sm">{nl ? 'Wachtwoord' : 'Password'}</Label>
+          <Label htmlFor="password" className="text-gray-400 text-sm">{nl ? 'Wachtwoord' : fr ? 'Mot de passe' : 'Password'}</Label>
           <div className="relative mt-1.5">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
               id="password"
               type={showPassword ? 'text' : 'password'}
-              placeholder={nl ? 'Maak een wachtwoord' : 'Create a password'}
+              placeholder={nl ? 'Maak een wachtwoord' : fr ? 'Créez un mot de passe' : 'Create a password'}
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
               className={`${inputClass} pr-10`}
@@ -165,13 +166,13 @@ export default function Signup() {
         </div>
 
         <div>
-          <Label htmlFor="confirmPassword" className="text-gray-400 text-sm">{nl ? 'Bevestig Wachtwoord' : 'Confirm Password'}</Label>
+          <Label htmlFor="confirmPassword" className="text-gray-400 text-sm">{nl ? 'Bevestig Wachtwoord' : fr ? 'Confirmer le Mot de Passe' : 'Confirm Password'}</Label>
           <div className="relative mt-1.5">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
             <Input
               id="confirmPassword"
               type={showPassword ? 'text' : 'password'}
-              placeholder={nl ? 'Bevestig je wachtwoord' : 'Confirm your password'}
+              placeholder={nl ? 'Bevestig je wachtwoord' : fr ? 'Confirmez votre mot de passe' : 'Confirm your password'}
               value={formData.confirmPassword}
               onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
               className={inputClass}
@@ -195,6 +196,11 @@ export default function Signup() {
               <span className="text-purple-400 hover:text-purple-300">Servicevoorwaarden</span>
               {' '}en het{' '}
               <span className="text-purple-400 hover:text-purple-300">Privacybeleid</span></>
+            ) : fr ? (
+              <>J'accepte les{' '}
+              <span className="text-purple-400 hover:text-purple-300">Conditions d'utilisation</span>
+              {' '}et la{' '}
+              <span className="text-purple-400 hover:text-purple-300">Politique de confidentialité</span></>
             ) : (
               <>I agree to the{' '}
               <span className="text-purple-400 hover:text-purple-300">Terms of Service</span>
@@ -212,11 +218,11 @@ export default function Signup() {
           {isLoading ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              {nl ? 'Account aanmaken...' : 'Creating account...'}
+              {nl ? 'Account aanmaken...' : fr ? 'Création du compte...' : 'Creating account...'}
             </>
           ) : (
             <>
-              {nl ? 'Account Aanmaken' : 'Create Account'}
+              {nl ? 'Account Aanmaken' : fr ? 'Créer un Compte' : 'Create Account'}
               <ArrowRight className="w-4 h-4 ml-2" />
             </>
           )}
@@ -225,7 +231,7 @@ export default function Signup() {
 
       {/* Trial features */}
       <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-gray-500">
-        {(nl ? ['5.000 AI credits', 'Alle functies', 'Geen creditcard', 'Altijd opzegbaar'] : ['5,000 AI credits', 'All features', 'No credit card', 'Cancel anytime']).map((f) => (
+        {(nl ? ['5.000 AI credits', 'Alle functies', 'Geen creditcard', 'Altijd opzegbaar'] : fr ? ['5 000 crédits IA', 'Toutes les fonctionnalités', 'Sans carte bancaire', 'Annulable à tout moment'] : ['5,000 AI credits', 'All features', 'No credit card', 'Cancel anytime']).map((f) => (
           <span key={f} className="flex items-center gap-1.5">
             <Check className="w-3 h-3 text-emerald-500" />
             {f}
@@ -239,7 +245,7 @@ export default function Signup() {
           <span className="w-full border-t border-white/10" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-[#0a0a0f] px-3 text-gray-600">{nl ? 'Of registreer met' : 'Or sign up with'}</span>
+          <span className="bg-[#0a0a0f] px-3 text-gray-600">{nl ? 'Of registreer met' : fr ? "Ou inscrivez-vous avec" : 'Or sign up with'}</span>
         </div>
       </div>
 
@@ -267,9 +273,9 @@ export default function Signup() {
 
       {/* Login link */}
       <p className="text-center text-sm text-gray-500 mt-8">
-        {nl ? 'Heb je al een account?' : 'Already have an account?'}{' '}
+        {nl ? 'Heb je al een account?' : fr ? 'Vous avez déjà un compte ?' : 'Already have an account?'}{' '}
         <Link to="/login" className="text-purple-400 hover:text-purple-300 font-medium">
-          {nl ? 'Inloggen' : 'Sign in'}
+          {nl ? 'Inloggen' : fr ? 'Se connecter' : 'Sign in'}
         </Link>
       </p>
     </motion.div>

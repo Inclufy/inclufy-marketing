@@ -311,19 +311,40 @@ async def stripe_webhook(request: Request):
     return {"received": True}
 
 
+def _price_id_to_plan(price_id: str) -> Optional[str]:
+    """Map a Stripe Price ID back to a plan name."""
+    for plan_key, plan_data in PLANS.items():
+        if price_id in (
+            plan_data.get("stripe_price_monthly"),
+            plan_data.get("stripe_price_yearly"),
+        ):
+            return plan_key
+    return None
+
+
 def _handle_checkout_completed(db, session):
-    """Handle successful checkout – link Stripe customer to organization."""
+    """Handle successful checkout – link Stripe customer to organization and set plan."""
     org_id = session.get("metadata", {}).get("organization_id")
     customer_id = session.get("customer")
+    plan = session.get("metadata", {}).get("plan")
+    subscription_id = session.get("subscription")
 
     if org_id and customer_id:
         try:
-            db.table("organizations").update(
-                {"stripe_customer_id": customer_id}
-            ).eq("id", org_id).execute()
-            logger.info("Linked Stripe customer %s to org %s", customer_id, org_id)
+            update_data = {"stripe_customer_id": customer_id}
+            if plan:
+                update_data["plan"] = plan
+            if subscription_id:
+                update_data["subscription_id"] = subscription_id
+                update_data["subscription_status"] = "active"
+
+            db.table("organizations").update(update_data).eq("id", org_id).execute()
+            logger.info(
+                "Checkout completed: org=%s customer=%s plan=%s",
+                org_id, customer_id, plan,
+            )
         except Exception as e:
-            logger.error("Failed to update org with Stripe customer: %s", e)
+            logger.error("Failed to update org after checkout: %s", e)
 
 
 def _handle_subscription_updated(db, subscription):
@@ -331,17 +352,49 @@ def _handle_subscription_updated(db, subscription):
     org_id = subscription.get("metadata", {}).get("organization_id")
     status = subscription.get("status")
     plan = subscription.get("metadata", {}).get("plan")
+    subscription_id = subscription.get("id")
+    current_period_end = subscription.get("current_period_end")
+
+    # Try to resolve plan from price ID if not in metadata
+    if not plan and subscription.get("items", {}).get("data"):
+        price_id = subscription["items"]["data"][0].get("price", {}).get("id")
+        if price_id:
+            plan = _price_id_to_plan(price_id)
 
     if org_id:
-        logger.info(
-            "Subscription updated for org %s: plan=%s status=%s",
-            org_id, plan, status,
-        )
+        try:
+            update_data = {"subscription_status": status}
+            if plan:
+                update_data["plan"] = plan
+            if subscription_id:
+                update_data["subscription_id"] = subscription_id
+            if current_period_end:
+                from datetime import datetime, timezone
+                update_data["current_period_end"] = datetime.fromtimestamp(
+                    current_period_end, tz=timezone.utc
+                ).isoformat()
+
+            db.table("organizations").update(update_data).eq("id", org_id).execute()
+            logger.info(
+                "Subscription updated: org=%s plan=%s status=%s",
+                org_id, plan, status,
+            )
+        except Exception as e:
+            logger.error("Failed to update subscription for org %s: %s", org_id, e)
 
 
 def _handle_subscription_deleted(db, subscription):
-    """Handle subscription cancellation."""
+    """Handle subscription cancellation – revert org to free plan."""
     org_id = subscription.get("metadata", {}).get("organization_id")
 
     if org_id:
-        logger.info("Subscription cancelled for org %s", org_id)
+        try:
+            db.table("organizations").update({
+                "plan": "free",
+                "subscription_status": "canceled",
+                "subscription_id": None,
+                "current_period_end": None,
+            }).eq("id", org_id).execute()
+            logger.info("Subscription cancelled: org=%s reverted to free", org_id)
+        except Exception as e:
+            logger.error("Failed to handle subscription deletion for org %s: %s", org_id, e)

@@ -45,6 +45,7 @@ const EmailCampaignGenerator = lazy(() => import("./pages/EmailCampaignGenerator
 const LandingPageGenerator = lazy(() => import("./pages/LandingPageGenerator"));
 const SocialPostGenerator = lazy(() => import("./pages/SocialPostGenerator"));
 const JourneyBuilder = lazy(() => import("./pages/JourneyBuilder"));
+const JourneyDashboard = lazy(() => import("./pages/JourneyDashboard"));
 const CampaignOrchestrator = lazy(() => import("./pages/CampaignOrchestrator"));
 const ConversationalAI = lazy(() => import("./pages/ConversationalAI"));
 const AITrainingInterface = lazy(() => import("./pages/AITrainingInterface"));
@@ -65,6 +66,8 @@ const AppSettings = lazy(() => import("./pages/Settings"));
 const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
 const ContentHub = lazy(() => import("./pages/ContentHub"));
+const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
+const ContentApprovals = lazy(() => import("./pages/ContentApprovals"));
 
 // Tenant Admin Portal pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -184,6 +187,8 @@ export default function App() {
                         <Route path="writer" element={<AIWriter />} />
                         <Route path="images" element={<ImageGenerator />} />
                         <Route path="video" element={<CommercialCreator />} />
+                        <Route path="calendar" element={<ContentCalendar />} />
+                        <Route path="approvals" element={<ContentApprovals />} />
                       </Route>
 
                       {/* Campaigns - Phase 4 */}
@@ -196,12 +201,15 @@ export default function App() {
 
                       {/* Automation - Phase 5 */}
                       <Route path="automation">
-                        <Route index element={<JourneyBuilder />} />
+                        <Route index element={<JourneyDashboard />} />
                         <Route path="workflows" element={<JourneyBuilder />} />
-                        <Route path="journeys" element={<JourneyBuilder />} />
+                        <Route path="journeys" element={<JourneyDashboard />} />
                         <Route path="agents" element={<ConversationalAI />} />
                         <Route path="triggers" element={<CampaignOrchestrator />} />
                       </Route>
+
+                      {/* Journey Dashboard (direct route) */}
+                      <Route path="journey-dashboard" element={<JourneyDashboard />} />
 
                       {/* Contacts */}
                       <Route path="contacts" element={<ContactManager />} />

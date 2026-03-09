@@ -8,28 +8,21 @@ import {
   DollarSign,
   TrendingUp,
   Activity,
-  BarChart3,
   Target,
   Zap,
   Calendar,
   ChevronRight,
   Download,
   Eye,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  ArrowUp,
-  ArrowDown,
   MoreVertical,
   Sparkles,
-  Brain,
-  Mail,
-  Share2
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
   Select,
@@ -45,12 +38,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
-  BarChart,
-  Bar,
   PieChart,
   Pie,
   Cell,
@@ -61,11 +50,13 @@ import {
   ResponsiveContainer,
   RadialBarChart,
   RadialBar,
-  Legend
 } from 'recharts';
+import { useAnalyticsDashboard } from '@/hooks/queries/useAnalytics';
+import { LoadingSkeleton, ErrorState } from '@/components/DataState';
 
-// Data
-const performanceData = [
+// ─── Fallback data ─────────────────────────────────────────────────
+
+const FALLBACK_PERFORMANCE = [
   { month: 'Jan', revenue: 45000, campaigns: 12, engagement: 78 },
   { month: 'Feb', revenue: 52000, campaigns: 15, engagement: 82 },
   { month: 'Mar', revenue: 48000, campaigns: 14, engagement: 75 },
@@ -74,56 +65,28 @@ const performanceData = [
   { month: 'Jun', revenue: 88000, campaigns: 24, engagement: 95 },
 ];
 
-const campaignStatusData = [
+const FALLBACK_CAMPAIGN_STATUS = [
   { name: 'Actief', value: 12, color: '#7c3aed' },
   { name: 'Gepland', value: 5, color: '#f59e0b' },
   { name: 'Voltooid', value: 18, color: '#10b981' },
   { name: 'Concept', value: 3, color: '#94a3b8' },
 ];
 
-const engagementData = [
+const FALLBACK_ENGAGEMENT = [
   { name: 'Zeer Actief', value: 28, color: '#10b981' },
   { name: 'Actief', value: 45, color: '#3b82f6' },
   { name: 'Matig', value: 20, color: '#f59e0b' },
   { name: 'Inactief', value: 7, color: '#ef4444' },
 ];
 
-const recentActivities = [
-  {
-    id: 1,
-    user: 'Sarah Chen',
-    action: 'lanceerde campagne',
-    target: 'Zomer Uitverkoop 2024',
-    time: '2 uur geleden',
-    type: 'campaign',
-  },
-  {
-    id: 2,
-    user: 'Mike Johnson',
-    action: 'genereerde content',
-    target: '5 social media posts',
-    time: '3 uur geleden',
-    type: 'ai',
-  },
-  {
-    id: 3,
-    user: 'Emily Davis',
-    action: 'maakte klantreis aan',
-    target: 'Onboarding Flow v2',
-    time: '5 uur geleden',
-    type: 'journey',
-  },
-  {
-    id: 4,
-    user: 'Alex Rivera',
-    action: 'updated segment',
-    target: 'High-Value Customers',
-    time: '1 day ago',
-    type: 'segment',
-  },
+const FALLBACK_ACTIVITIES = [
+  { id: 1, user: 'Sarah Chen', action: 'lanceerde campagne', target: 'Zomer Uitverkoop 2024', time: '2 uur geleden', type: 'campaign' },
+  { id: 2, user: 'Mike Johnson', action: 'genereerde content', target: '5 social media posts', time: '3 uur geleden', type: 'ai' },
+  { id: 3, user: 'Emily Davis', action: 'maakte klantreis aan', target: 'Onboarding Flow v2', time: '5 uur geleden', type: 'journey' },
+  { id: 4, user: 'Alex Rivera', action: 'updated segment', target: 'High-Value Customers', time: '1 day ago', type: 'segment' },
 ];
 
-const topPerformers = [
+const FALLBACK_TOP_PERFORMERS = [
   { name: 'Sarah Chen', score: 98, campaigns: 24, revenue: '$125K' },
   { name: 'Mike Johnson', score: 92, campaigns: 21, revenue: '$108K' },
   { name: 'Emily Davis', score: 87, campaigns: 18, revenue: '$95K' },
@@ -131,31 +94,39 @@ const topPerformers = [
 
 export default function DashboardOverview() {
   const [dateRange, setDateRange] = useState('month');
-  
+
+  // Fetch real dashboard stats
+  const { data: dashboardStats, isLoading, isError, refetch } = useAnalyticsDashboard();
+
+  // Build stats cards from API data or fallback
   const stats = [
     {
       title: 'Total Revenue',
-      value: '$877.9K',
+      value: dashboardStats?.revenue
+        ? `$${(dashboardStats.revenue / 1000).toFixed(1)}K`
+        : '$877.9K',
       change: '+23%',
-      trend: 'up',
+      trend: 'up' as const,
       icon: DollarSign,
       gradient: 'from-emerald-500 to-teal-600',
       bgGradient: 'from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20'
     },
     {
       title: 'Active Campaigns',
-      value: '38',
+      value: dashboardStats?.active_campaigns?.toString() ?? '38',
       change: '+12%',
-      trend: 'up',
+      trend: 'up' as const,
       icon: Activity,
       gradient: 'from-purple-500 to-pink-600',
       bgGradient: 'from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20'
     },
     {
       title: 'Total Contacts',
-      value: '24,583',
+      value: dashboardStats?.total_contacts
+        ? dashboardStats.total_contacts.toLocaleString()
+        : '24,583',
       change: '+18%',
-      trend: 'up',
+      trend: 'up' as const,
       icon: Users,
       gradient: 'from-blue-500 to-indigo-600',
       bgGradient: 'from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20'
@@ -164,33 +135,31 @@ export default function DashboardOverview() {
       title: 'Avg. Engagement',
       value: '68.5%',
       change: '-2.3%',
-      trend: 'down',
+      trend: 'down' as const,
       icon: Target,
       gradient: 'from-orange-500 to-red-600',
       bgGradient: 'from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/20'
     },
   ];
 
+  const performanceData = FALLBACK_PERFORMANCE;
+  const campaignStatusData = FALLBACK_CAMPAIGN_STATUS;
+  const engagementData = FALLBACK_ENGAGEMENT;
+  const recentActivities = FALLBACK_ACTIVITIES;
+  const topPerformers = FALLBACK_TOP_PERFORMERS;
+
   const containerVariants = {
     hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
+    visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
   };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      transition: {
-        duration: 0.5
-      }
-    }
+    visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
   };
+
+  if (isLoading) return <LoadingSkeleton cards={4} />;
+  if (isError) return <ErrorState onRetry={() => refetch()} />;
 
   return (
     <motion.div
@@ -203,7 +172,7 @@ export default function DashboardOverview() {
       <motion.div variants={itemVariants} className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
-            Welcome back, Sami! ✨
+            Welcome back, Sami!
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
             Your campaigns are performing <span className="text-green-600 font-semibold">23% better</span> than last month
@@ -251,7 +220,7 @@ export default function DashboardOverview() {
                   <div className={`p-3 rounded-xl bg-gradient-to-br ${stat.gradient} shadow-lg`}>
                     <stat.icon className="w-6 h-6 text-white" />
                   </div>
-                  <Badge 
+                  <Badge
                     variant={stat.trend === 'up' ? 'success' : 'destructive'}
                     className="flex items-center gap-1"
                   >
@@ -308,19 +277,19 @@ export default function DashboardOverview() {
                   <XAxis dataKey="month" className="text-xs" />
                   <YAxis className="text-xs" />
                   <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#7c3aed" 
-                    fillOpacity={1} 
-                    fill="url(#colorRevenue)" 
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#7c3aed"
+                    fillOpacity={1}
+                    fill="url(#colorRevenue)"
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="engagement" 
-                    stroke="#10b981" 
-                    fillOpacity={1} 
-                    fill="url(#colorEngagement)" 
+                  <Area
+                    type="monotone"
+                    dataKey="engagement"
+                    stroke="#10b981"
+                    fillOpacity={1}
+                    fill="url(#colorEngagement)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -333,7 +302,9 @@ export default function DashboardOverview() {
           <Card className="h-full shadow-lg border-0">
             <CardHeader>
               <CardTitle>Campaign Status</CardTitle>
-              <p className="text-sm text-gray-500">Total: 38 campaigns</p>
+              <p className="text-sm text-gray-500">
+                Total: {dashboardStats?.total_campaigns ?? 38} campaigns
+              </p>
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={250}>
@@ -357,8 +328,8 @@ export default function DashboardOverview() {
               <div className="grid grid-cols-2 gap-4 mt-4">
                 {campaignStatusData.map((status) => (
                   <div key={status.name} className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
+                    <div
+                      className="w-3 h-3 rounded-full"
                       style={{ backgroundColor: status.color }}
                     />
                     <span className="text-sm">{status.name}</span>
@@ -391,8 +362,8 @@ export default function DashboardOverview() {
                 {engagementData.map((item) => (
                   <div key={item.name} className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
+                      <div
+                        className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: item.color }}
                       />
                       <span className="text-sm">{item.name}</span>
@@ -472,14 +443,14 @@ export default function DashboardOverview() {
                     </Avatar>
                     {index === 0 && (
                       <div className="absolute -top-1 -right-1 w-5 h-5 bg-yellow-400 rounded-full flex items-center justify-center">
-                        <span className="text-xs">👑</span>
+                        <span className="text-xs">&#x1F451;</span>
                       </div>
                     )}
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">{performer.name}</p>
                     <p className="text-sm text-gray-500">
-                      {performer.campaigns} campaigns • {performer.revenue}
+                      {performer.campaigns} campaigns &bull; {performer.revenue}
                     </p>
                   </div>
                   <Badge variant="secondary" className="font-bold">

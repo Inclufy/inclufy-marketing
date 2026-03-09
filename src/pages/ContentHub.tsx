@@ -1,11 +1,10 @@
 // src/pages/ContentHub.tsx
 // Content creation hub — central starting point for all creation tools
 
-import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { api } from '@/lib/api';
+import { useRecentContent } from '@/hooks/queries/useContentLibrary';
 import {
   Pen,
   Share2,
@@ -23,18 +22,12 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
-interface ContentItem {
-  id: string;
-  title: string;
-  type: string;
-  created_at: string;
-}
-
-const creationTools = (nl: boolean) => [
+const creationTools = (nl: boolean, fr: boolean) => [
   {
-    title: nl ? 'AI Schrijver' : 'AI Writer',
+    title: nl ? 'AI Schrijver' : fr ? 'Rédacteur IA' : 'AI Writer',
     description: nl
       ? 'Blogs, artikelen en webteksten genereren met AI'
+      : fr ? 'Générer des blogs, articles et textes web avec IA'
       : 'Generate blogs, articles and web copy with AI',
     icon: Pen,
     href: '/app/content/writer',
@@ -42,9 +35,10 @@ const creationTools = (nl: boolean) => [
     badge: 'GPT-4',
   },
   {
-    title: nl ? 'Social Media Posts' : 'Social Media Posts',
+    title: nl ? 'Social Media Posts' : fr ? 'Publications Sociales' : 'Social Media Posts',
     description: nl
       ? 'Posts voor Instagram, LinkedIn, Twitter en meer'
+      : fr ? 'Publications pour Instagram, LinkedIn, Twitter et plus'
       : 'Posts for Instagram, LinkedIn, Twitter and more',
     icon: Share2,
     href: '/app/campaigns/social',
@@ -52,9 +46,10 @@ const creationTools = (nl: boolean) => [
     badge: 'AI',
   },
   {
-    title: nl ? 'Afbeeldingen' : 'Image Generator',
+    title: nl ? 'Afbeeldingen' : fr ? 'Générateur d\'Images' : 'Image Generator',
     description: nl
       ? 'Creëer unieke visuals met AI beeldgeneratie'
+      : fr ? 'Créez des visuels uniques avec la génération d\'images IA'
       : 'Create unique visuals with AI image generation',
     icon: Image,
     href: '/app/content/images',
@@ -62,9 +57,10 @@ const creationTools = (nl: boolean) => [
     badge: 'DALL-E',
   },
   {
-    title: nl ? 'Video Creator' : 'Video Creator',
+    title: nl ? 'Video Creator' : fr ? 'Créateur Vidéo' : 'Video Creator',
     description: nl
       ? 'Commercials en video content produceren'
+      : fr ? 'Produire des publicités et du contenu vidéo'
       : 'Produce commercials and video content',
     icon: Video,
     href: '/app/content/video',
@@ -72,9 +68,10 @@ const creationTools = (nl: boolean) => [
     badge: null,
   },
   {
-    title: nl ? 'E-mail Campagnes' : 'Email Campaigns',
+    title: nl ? 'E-mail Campagnes' : fr ? 'Campagnes E-mail' : 'Email Campaigns',
     description: nl
       ? 'Professionele e-mail campagnes opzetten'
+      : fr ? 'Mettre en place des campagnes e-mail professionnelles'
       : 'Set up professional email campaigns',
     icon: Mail,
     href: '/app/campaigns/email',
@@ -82,9 +79,10 @@ const creationTools = (nl: boolean) => [
     badge: null,
   },
   {
-    title: nl ? 'Tutorial Creator' : 'Tutorial Creator',
+    title: nl ? 'Tutorial Creator' : fr ? 'Créateur de Tutoriels' : 'Tutorial Creator',
     description: nl
       ? 'Stap-voor-stap tutorials en handleidingen maken'
+      : fr ? 'Créer des tutoriels et guides étape par étape'
       : 'Create step-by-step tutorials and guides',
     icon: BookOpen,
     href: '/app/tutorial-creator',
@@ -96,35 +94,21 @@ const creationTools = (nl: boolean) => [
 export default function ContentHub() {
   const { t, lang } = useLanguage();
   const nl = lang === 'nl';
-  const [recentContent, setRecentContent] = useState<ContentItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, thisWeek: 0, published: 0 });
+  const fr = lang === 'fr';
 
-  useEffect(() => {
-    loadRecentContent();
-  }, []);
+  // React Query for recent content — auto caching + retry
+  const { data: recentData, isLoading } = useRecentContent(6);
+  const recentContent = (recentData as any)?.items || recentData || [];
 
-  const loadRecentContent = async () => {
-    try {
-      const res = await api.get('/content-library/?limit=6');
-      setRecentContent(res.data?.items || []);
-
-      // Simple stats from the response
-      const items = res.data?.items || [];
-      setStats({
-        total: res.data?.total || items.length,
-        thisWeek: items.filter((i: ContentItem) => {
-          const d = new Date(i.created_at);
-          const now = new Date();
-          return now.getTime() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
-        }).length,
-        published: items.filter((i: ContentItem) => i.type === 'published').length,
-      });
-    } catch {
-      // API not available, use empty state
-    } finally {
-      setLoading(false);
-    }
+  // Derive stats from fetched data
+  const stats = {
+    total: (recentData as any)?.total || recentContent.length,
+    thisWeek: recentContent.filter((i: any) => {
+      const d = new Date(i.created_at);
+      const now = new Date();
+      return now.getTime() - d.getTime() < 7 * 24 * 60 * 60 * 1000;
+    }).length,
+    published: recentContent.filter((i: any) => i.type === 'published').length,
   };
 
   const typeLabel = (type: string) => {
@@ -139,7 +123,7 @@ export default function ContentHub() {
     return labels[type] || type;
   };
 
-  const tools = creationTools(nl);
+  const tools = creationTools(nl, fr);
 
   return (
     <div className="w-full px-6 py-8 space-y-8">
@@ -156,9 +140,9 @@ export default function ContentHub() {
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: nl ? 'Totale Content' : 'Total Content', value: stats.total, icon: FileText },
-          { label: nl ? 'Deze Week' : 'This Week', value: stats.thisWeek, icon: BarChart3 },
-          { label: nl ? 'Gepubliceerd' : 'Published', value: stats.published, icon: Sparkles },
+          { label: nl ? 'Totale Content' : fr ? 'Contenu Total' : 'Total Content', value: stats.total, icon: FileText },
+          { label: nl ? 'Deze Week' : fr ? 'Cette Semaine' : 'This Week', value: stats.thisWeek, icon: BarChart3 },
+          { label: nl ? 'Gepubliceerd' : fr ? 'Publié' : 'Published', value: stats.published, icon: Sparkles },
         ].map((stat) => (
           <Card key={stat.label} className="border-gray-200 dark:border-gray-800">
             <CardContent className="p-4 flex items-center gap-3">
@@ -207,7 +191,7 @@ export default function ContentHub() {
                       {tool.description}
                     </p>
                     <span className="text-sm text-purple-600 dark:text-purple-400 font-medium flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      {nl ? 'Start' : 'Get started'}
+                      {nl ? 'Start' : fr ? 'Commencer' : 'Get started'}
                       <ArrowRight className="w-3.5 h-3.5" />
                     </span>
                   </CardContent>
@@ -228,12 +212,12 @@ export default function ContentHub() {
             to="/app/content-library"
             className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 font-medium flex items-center gap-1"
           >
-            {nl ? 'Bekijk alles' : 'View all'}
+            {nl ? 'Bekijk alles' : fr ? 'Voir tout' : 'View all'}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
-        {loading ? (
+        {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="w-6 h-6 animate-spin text-purple-500" />
           </div>
@@ -242,7 +226,7 @@ export default function ContentHub() {
             <CardContent className="p-8 text-center">
               <Sparkles className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <p className="text-gray-500 dark:text-gray-400 font-medium">
-                {nl ? 'Nog geen content gemaakt' : 'No content created yet'}
+                {nl ? 'Nog geen content gemaakt' : fr ? 'Pas encore de contenu créé' : 'No content created yet'}
               </p>
               <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
                 {nl
@@ -253,7 +237,7 @@ export default function ContentHub() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {recentContent.map((item) => (
+            {recentContent.map((item: any) => (
               <Card key={item.id} className="border-gray-200 dark:border-gray-800 hover:shadow-md transition-shadow">
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between mb-2">
@@ -262,7 +246,7 @@ export default function ContentHub() {
                     </Badge>
                     <span className="text-[11px] text-gray-400 flex items-center gap-1">
                       <Clock className="w-3 h-3" />
-                      {new Date(item.created_at).toLocaleDateString(nl ? 'nl-NL' : 'en-US', {
+                      {new Date(item.created_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-US', {
                         day: 'numeric',
                         month: 'short',
                       })}

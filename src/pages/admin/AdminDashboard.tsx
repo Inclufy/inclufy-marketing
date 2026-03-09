@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Users,
   Building2,
@@ -43,6 +44,10 @@ interface RecentUser {
 }
 
 export default function AdminDashboard() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [recentUsers, setRecentUsers] = useState<RecentUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,7 +64,7 @@ export default function AdminDashboard() {
       setStats(statsRes.data);
       setRecentUsers(usersRes.data);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || 'Laden mislukt');
+      setError(err.response?.data?.detail || err.message || (nl ? 'Laden mislukt' : fr ? 'Échec du chargement' : 'Failed to load'));
     } finally {
       setLoading(false);
     }
@@ -84,7 +89,7 @@ export default function AdminDashboard() {
             <div className="flex-1">
               <p className="font-medium text-red-800 dark:text-red-200">{error}</p>
             </div>
-            <Button variant="outline" onClick={fetchData}>Opnieuw</Button>
+            <Button variant="outline" onClick={fetchData}>{nl ? 'Opnieuw' : fr ? 'Réessayer' : 'Retry'}</Button>
           </CardContent>
         </Card>
       </div>
@@ -93,28 +98,28 @@ export default function AdminDashboard() {
 
   const statCards = [
     {
-      label: 'Total Users',
+      label: nl ? 'Totaal Gebruikers' : fr ? 'Total Utilisateurs' : 'Total Users',
       value: stats?.total_users || 0,
       icon: Users,
       color: 'bg-blue-50 dark:bg-blue-900/20',
       iconColor: 'text-blue-600',
     },
     {
-      label: 'Organizations',
+      label: nl ? 'Organisaties' : fr ? 'Organisations' : 'Organizations',
       value: stats?.organizations || 0,
       icon: Building2,
       color: 'bg-emerald-50 dark:bg-emerald-900/20',
       iconColor: 'text-emerald-600',
     },
     {
-      label: 'Active Subscriptions',
+      label: nl ? 'Actieve Abonnementen' : fr ? 'Abonnements Actifs' : 'Active Subscriptions',
       value: stats?.active_subscriptions || 0,
       icon: CreditCard,
       color: 'bg-purple-50 dark:bg-purple-900/20',
       iconColor: 'text-purple-600',
     },
     {
-      label: 'Projects',
+      label: nl ? 'Projecten' : fr ? 'Projets' : 'Projects',
       value: stats?.projects || 0,
       icon: FolderKanban,
       color: 'bg-orange-50 dark:bg-orange-900/20',
@@ -128,11 +133,11 @@ export default function AdminDashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Admin Dashboard</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">System overview and statistics</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{nl ? 'Systeemoverzicht en statistieken' : fr ? "Vue d'ensemble et statistiques" : 'System overview and statistics'}</p>
         </div>
         <Button variant="outline" size="sm" onClick={fetchData}>
           <RefreshCw className="h-4 w-4 mr-2" />
-          Refresh
+          {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
         </Button>
       </div>
 
@@ -175,7 +180,7 @@ export default function AdminDashboard() {
         </Card>
         <Card className="border-0 shadow-sm">
           <CardContent className="p-5">
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">User Growth</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">{nl ? 'Gebruikersgroei' : fr ? 'Croissance Utilisateurs' : 'User Growth'}</p>
             <div className="flex items-center gap-2">
               {(stats?.user_growth || 0) >= 0 ? (
                 <TrendingUp className="h-5 w-5 text-emerald-500" />
@@ -193,11 +198,11 @@ export default function AdminDashboard() {
       {/* Recent Users */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">Recent Users</CardTitle>
+          <CardTitle className="text-lg">{nl ? 'Recente Gebruikers' : fr ? 'Utilisateurs Récents' : 'Recent Users'}</CardTitle>
         </CardHeader>
         <CardContent>
           {recentUsers.length === 0 ? (
-            <p className="text-gray-500 text-center py-6">Geen gebruikers gevonden</p>
+            <p className="text-gray-500 text-center py-6">{nl ? 'Geen gebruikers gevonden' : fr ? 'Aucun utilisateur trouvé' : 'No users found'}</p>
           ) : (
             <div className="space-y-3">
               {recentUsers.map((user) => (
@@ -211,7 +216,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {user.full_name || user.email?.split('@')[0] || 'Onbekend'}
+                        {user.full_name || user.email?.split('@')[0] || (nl ? 'Onbekend' : fr ? 'Inconnu' : 'Unknown')}
                       </p>
                       {user.organization && (
                         <p className="text-xs text-gray-500">{user.organization}</p>
@@ -219,7 +224,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                   <span className="text-xs text-gray-400">
-                    {user.created_at ? new Date(user.created_at).toLocaleDateString('nl-NL') : '-'}
+                    {user.created_at ? new Date(user.created_at).toLocaleDateString(nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-US') : '-'}
                   </span>
                 </div>
               ))}
@@ -231,17 +236,17 @@ export default function AdminDashboard() {
       {/* Import & Export */}
       <Card className="border-0 shadow-sm">
         <CardHeader>
-          <CardTitle className="text-lg">Import & Export</CardTitle>
+          <CardTitle className="text-lg">{nl ? 'Importeren & Exporteren' : fr ? 'Importer & Exporter' : 'Import & Export'}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-4">
             <Button variant="outline" className="flex-1">
               <Upload className="h-4 w-4 mr-2" />
-              Importeren
+              {nl ? 'Importeren' : fr ? 'Importer' : 'Import'}
             </Button>
             <Button variant="outline" className="flex-1">
               <Download className="h-4 w-4 mr-2" />
-              Exporteren
+              {nl ? 'Exporteren' : fr ? 'Exporter' : 'Export'}
             </Button>
           </div>
         </CardContent>

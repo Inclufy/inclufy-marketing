@@ -46,6 +46,7 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || '/app/dashboard';
   const nl = lang === 'nl';
+  const fr = lang === 'fr';
 
   // Check onboarding status and resolve destination
   const resolveDestination = async () => {
@@ -71,17 +72,17 @@ export default function Login() {
           setMfaCode('');
         } else {
           // No verified factor found, proceed anyway
-          toast.success(nl ? 'Welkom terug!' : 'Welcome back!');
+          toast.success(nl ? 'Welkom terug!' : fr ? 'Bon retour !' : 'Welcome back!');
           const dest = await resolveDestination();
           navigate(dest, { replace: true });
         }
       } else {
-        toast.success(nl ? 'Welkom terug!' : 'Welcome back!');
+        toast.success(nl ? 'Welkom terug!' : fr ? 'Bon retour !' : 'Welcome back!');
         const dest = await resolveDestination();
         navigate(dest, { replace: true });
       }
     } catch (error: any) {
-      toast.error(error.message || (nl ? 'Ongeldige inloggegevens' : 'Invalid credentials'));
+      toast.error(error.message || (nl ? 'Ongeldige inloggegevens' : fr ? 'Identifiants invalides' : 'Invalid credentials'));
     } finally {
       setLoading(false);
     }
@@ -93,7 +94,7 @@ export default function Login() {
     setMfaVerifying(true);
     try {
       await verifyMfa(mfaFactorId, mfaCode);
-      toast.success(nl ? 'Welkom terug!' : 'Welcome back!');
+      toast.success(nl ? 'Welkom terug!' : fr ? 'Bon retour !' : 'Welcome back!');
       const dest = await resolveDestination();
       navigate(dest, { replace: true });
     } catch (error: any) {
@@ -120,7 +121,7 @@ export default function Login() {
         await signInWithGitHub();
       }
     } catch (error: any) {
-      toast.error(nl ? `Inloggen met ${provider} mislukt` : `Login with ${provider} failed`);
+      toast.error(nl ? `Inloggen met ${provider} mislukt` : fr ? `Connexion avec ${provider} échouée` : `Login with ${provider} failed`);
     }
   };
 
@@ -186,7 +187,7 @@ export default function Login() {
               {mfaVerifying ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {nl ? 'Verifiëren...' : 'Verifying...'}
+                  {nl ? 'Verifiëren...' : fr ? 'Vérification...' : 'Verifying...'}
                 </>
               ) : (
                 <>
@@ -201,7 +202,7 @@ export default function Login() {
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 mx-auto transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
-              {nl ? 'Terug naar inloggen' : 'Back to login'}
+              {nl ? 'Terug naar inloggen' : fr ? 'Retour à la connexion' : 'Back to login'}
             </button>
           </div>
         </motion.div>
@@ -226,10 +227,10 @@ export default function Login() {
               className="text-3xl font-bold mb-2"
               style={{ fontFamily: "'Roboto', sans-serif" }}
             >
-              {nl ? 'Welkom terug' : 'Welcome back'}
+              {nl ? 'Welkom terug' : fr ? 'Bon retour' : 'Welcome back'}
             </h2>
             <p className="text-gray-500">
-              {nl ? 'Log in op je account om verder te gaan' : 'Sign in to your account to continue'}
+              {nl ? 'Log in op je account om verder te gaan' : fr ? 'Connectez-vous à votre compte pour continuer' : 'Sign in to your account to continue'}
             </p>
           </div>
 
@@ -244,7 +245,7 @@ export default function Login() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder={nl ? 'jij@bedrijf.com' : 'you@company.com'}
+                  placeholder={nl ? 'jij@bedrijf.com' : fr ? 'vous@entreprise.com' : 'you@company.com'}
                   className="pl-10 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20"
                   required
                   disabled={loading}
@@ -254,7 +255,7 @@ export default function Login() {
 
             <div>
               <Label htmlFor="password" className="text-gray-400 text-sm">
-                {nl ? 'Wachtwoord' : 'Password'}
+                {nl ? 'Wachtwoord' : fr ? 'Mot de passe' : 'Password'}
               </Label>
               <div className="relative mt-1.5">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
@@ -263,7 +264,7 @@ export default function Login() {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder={nl ? 'Voer je wachtwoord in' : 'Enter your password'}
+                  placeholder={nl ? 'Voer je wachtwoord in' : fr ? 'Entrez votre mot de passe' : 'Enter your password'}
                   className="pl-10 pr-10 h-11 bg-white/5 border-white/10 text-white placeholder:text-gray-600 focus:border-purple-500/50 focus:ring-purple-500/20"
                   required
                   disabled={loading}
@@ -287,14 +288,14 @@ export default function Login() {
                   className="border-white/20 data-[state=checked]:bg-purple-600 data-[state=checked]:border-purple-600"
                 />
                 <label htmlFor="remember" className="text-sm text-gray-500 cursor-pointer">
-                  {nl ? 'Onthoud mij' : 'Remember me'}
+                  {nl ? 'Onthoud mij' : fr ? 'Se souvenir de moi' : 'Remember me'}
                 </label>
               </div>
               <Link
                 to="/forgot-password"
                 className="text-sm text-purple-400 hover:text-purple-300"
               >
-                {nl ? 'Wachtwoord vergeten?' : 'Forgot password?'}
+                {nl ? 'Wachtwoord vergeten?' : fr ? 'Mot de passe oublié ?' : 'Forgot password?'}
               </Link>
             </div>
 
@@ -306,11 +307,11 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  {nl ? 'Inloggen...' : 'Signing in...'}
+                  {nl ? 'Inloggen...' : fr ? 'Connexion...' : 'Signing in...'}
                 </>
               ) : (
                 <>
-                  {nl ? 'Inloggen' : 'Sign in'}
+                  {nl ? 'Inloggen' : fr ? 'Se connecter' : 'Sign in'}
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </>
               )}
@@ -324,7 +325,7 @@ export default function Login() {
             </div>
             <div className="relative flex justify-center text-xs">
               <span className="bg-[#0a0a0f] px-3 text-gray-600">
-                {nl ? 'Of ga verder met' : 'Or continue with'}
+                {nl ? 'Of ga verder met' : fr ? 'Ou continuer avec' : 'Or continue with'}
               </span>
             </div>
           </div>
@@ -355,12 +356,12 @@ export default function Login() {
 
           {/* Sign up link */}
           <p className="text-center text-sm text-gray-500 mt-8">
-            {nl ? 'Nog geen account?' : "Don't have an account?"}{' '}
+            {nl ? 'Nog geen account?' : fr ? "Pas encore de compte ?" : "Don't have an account?"}{' '}
             <Link
               to="/signup"
               className="text-purple-400 hover:text-purple-300 font-medium"
             >
-              {nl ? 'Gratis aanmelden' : 'Sign up for free'}
+              {nl ? 'Gratis aanmelden' : fr ? "S'inscrire gratuitement" : 'Sign up for free'}
             </Link>
           </p>
         </motion.div>

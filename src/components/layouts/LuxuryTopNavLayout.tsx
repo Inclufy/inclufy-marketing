@@ -8,12 +8,13 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import SideNav from '@/components/navigation/SideNav';
 import AICopilot from '@/components/AICopilot';
 import {
-  Sun, Moon, Globe, LogOut, Sparkles, Home, Bell, Search
+  Sun, Moon, Globe, LogOut, Sparkles, Home, Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
+import NotificationCenter from '@/components/NotificationCenter';
 
 export default function LuxuryTopNavLayout() {
   const [copilotOpen, setCopilotOpen] = useState(false);
@@ -45,7 +46,7 @@ export default function LuxuryTopNavLayout() {
   }, [theme]);
 
   const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  const toggleLang = () => setLang(lang === 'nl' ? 'en' : 'nl');
+  const toggleLang = () => setLang(lang === 'nl' ? 'en' : lang === 'en' ? 'fr' : 'nl');
 
   const handleSignOut = async () => {
     try {
@@ -119,10 +120,7 @@ export default function LuxuryTopNavLayout() {
           </Link>
 
           {/* Notifications */}
-          <Button variant="ghost" size="sm" className="h-9 w-9 p-0 relative">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
-          </Button>
+          <NotificationCenter />
 
           {/* Language Toggle */}
           <Button
@@ -130,9 +128,9 @@ export default function LuxuryTopNavLayout() {
             size="sm"
             onClick={toggleLang}
             className="h-9 gap-1.5 px-2"
-            title={lang === 'nl' ? 'Switch to English' : 'Wissel naar Nederlands'}
+            title={lang === 'nl' ? 'Switch to English' : lang === 'en' ? 'Passer au Français' : 'Wissel naar Nederlands'}
           >
-            <span className="text-base leading-none">{lang === 'nl' ? '🇳🇱' : '🇬🇧'}</span>
+            <span className="text-base leading-none">{lang === 'nl' ? '🇳🇱' : lang === 'en' ? '🇬🇧' : '🇫🇷'}</span>
             {/* <span className="text-xs font-semibold uppercase">{lang}</span> */}
           </Button>
 

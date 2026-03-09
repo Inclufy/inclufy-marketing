@@ -26,7 +26,7 @@ export default function Profile() {
   const fullName = user?.user_metadata?.full_name || 'Sami Admin';
   const email = user?.email || 'sami@inclufy.com';
   const createdAt = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', {
+    ? new Date(user.created_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : lang === 'fr' ? 'fr-FR' : 'en-US', {
         year: 'numeric', month: 'long', day: 'numeric'
       })
     : 'Januari 2025';
@@ -51,7 +51,7 @@ export default function Profile() {
             {t('nav.profile')}
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-1">
-            {lang === 'nl' ? 'Je profiel overzicht' : 'Your profile overview'}
+            {lang === 'nl' ? 'Je profiel overzicht' : lang === 'fr' ? 'Aperçu de votre profil' : 'Your profile overview'}
           </p>
         </div>
         <Link to="/app/settings">
@@ -150,7 +150,7 @@ export default function Profile() {
               </div>
               <div>
                 <p className="text-xs text-gray-500">{t('settings.preferences.language')}</p>
-                <p className="text-sm font-medium">{lang === 'nl' ? 'Nederlands' : 'English'}</p>
+                <p className="text-sm font-medium">{lang === 'nl' ? 'Nederlands' : lang === 'fr' ? 'Français' : 'English'}</p>
               </div>
             </div>
           </div>
@@ -164,7 +164,7 @@ export default function Profile() {
             <div className="text-center">
               <p className="text-3xl font-bold text-purple-600">12</p>
               <p className="text-sm text-gray-500 mt-1">
-                {lang === 'nl' ? 'Actieve Campagnes' : 'Active Campaigns'}
+                {lang === 'nl' ? 'Actieve Campagnes' : lang === 'fr' ? 'Campagnes Actives' : 'Active Campaigns'}
               </p>
             </div>
           </CardContent>
@@ -184,7 +184,7 @@ export default function Profile() {
             <div className="text-center">
               <p className="text-3xl font-bold text-indigo-600">156</p>
               <p className="text-sm text-gray-500 mt-1">
-                {lang === 'nl' ? 'Content Items' : 'Content Items'}
+                {lang === 'nl' ? 'Content Items' : lang === 'fr' ? 'Éléments de Contenu' : 'Content Items'}
               </p>
             </div>
           </CardContent>

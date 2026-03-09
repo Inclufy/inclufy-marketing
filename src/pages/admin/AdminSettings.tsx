@@ -30,6 +30,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/contexts/LanguageContext';
 import api from '@/lib/api';
 
 interface SystemSettings {
@@ -68,18 +69,22 @@ interface SystemSettings {
   };
 }
 
-const TABS = [
-  { id: 'general', label: 'General', icon: Settings },
-  { id: 'security', label: 'Security', icon: Shield },
-  { id: 'email', label: 'Email', icon: Mail },
-  { id: 'features', label: 'Features', icon: Sparkles },
-  { id: 'billing', label: 'Billing', icon: CreditCard },
-  { id: 'maintenance', label: 'Maintenance', icon: Wrench },
-  { id: 'api-keys', label: 'API Keys', icon: Key },
-];
+const TAB_DEFS = [
+  { id: 'general', icon: Settings },
+  { id: 'security', icon: Shield },
+  { id: 'email', icon: Mail },
+  { id: 'features', icon: Sparkles },
+  { id: 'billing', icon: CreditCard },
+  { id: 'maintenance', icon: Wrench },
+  { id: 'api-keys', icon: Key },
+] as const;
 
 export default function AdminSettings() {
   const { toast } = useToast();
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [apiConfig, setApiConfig] = useState<Record<string, any> | null>(null);
@@ -92,6 +97,19 @@ export default function AdminSettings() {
   const [email, setEmail] = useState({ smtp_host: '', smtp_port: '587', smtp_from: '', email_provider: 'resend' });
   const [features, setFeatures] = useState({ trial_days: 14, max_campaigns_free: 3, max_contacts_free: 500 });
   const [billing, setBilling] = useState({ currency: 'EUR', tax_rate: 21 });
+
+  // ─── Translated tab labels ─────────────────────────────────────────
+  const TAB_LABELS: Record<string, string> = {
+    general: nl ? 'Algemeen' : fr ? 'Général' : 'General',
+    security: nl ? 'Beveiliging' : fr ? 'Sécurité' : 'Security',
+    email: nl ? 'E-mail' : fr ? 'E-mail' : 'Email',
+    features: nl ? 'Functies' : fr ? 'Fonctionnalités' : 'Features',
+    billing: nl ? 'Facturering' : fr ? 'Facturation' : 'Billing',
+    maintenance: nl ? 'Onderhoud' : fr ? 'Maintenance' : 'Maintenance',
+    'api-keys': nl ? 'API Sleutels' : fr ? 'Clés API' : 'API Keys',
+  };
+
+  const TABS = TAB_DEFS.map((t) => ({ ...t, label: TAB_LABELS[t.id] }));
 
   const fetchSettings = async () => {
     try {
@@ -110,7 +128,10 @@ export default function AdminSettings() {
       if (s.features) setFeatures({ trial_days: s.features.trial_days, max_campaigns_free: s.features.max_campaigns_free, max_contacts_free: s.features.max_contacts_free });
       if (s.billing) setBilling({ currency: s.billing.currency, tax_rate: s.billing.tax_rate });
     } catch {
-      toast({ title: 'Instellingen laden mislukt', variant: 'destructive' });
+      toast({
+        title: nl ? 'Instellingen laden mislukt' : fr ? 'Échec du chargement des paramètres' : 'Failed to load settings',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -128,9 +149,12 @@ export default function AdminSettings() {
         api.patch('/tenant-admin/settings', { category: 'features', settings: features }),
         api.patch('/tenant-admin/settings', { category: 'billing', settings: billing }),
       ]);
-      toast({ title: 'Instellingen opgeslagen!' });
+      toast({ title: nl ? 'Instellingen opgeslagen!' : fr ? 'Paramètres enregistrés !' : 'Settings saved!' });
     } catch {
-      toast({ title: 'Opslaan mislukt', variant: 'destructive' });
+      toast({
+        title: nl ? 'Opslaan mislukt' : fr ? "Échec de l'enregistrement" : 'Save failed',
+        variant: 'destructive',
+      });
     } finally {
       setSaving(false);
     }
@@ -147,11 +171,11 @@ export default function AdminSettings() {
   const API_KEY_LABELS: Record<string, string> = {
     openai: 'OpenAI',
     supabase_url: 'Supabase URL',
-    supabase_key: 'Supabase Sleutel',
+    supabase_key: nl ? 'Supabase Sleutel' : fr ? 'Clé Supabase' : 'Supabase Key',
     stripe: 'Stripe',
     email_api: 'E-mail API',
     anthropic: 'Anthropic',
-    allowed_origins: 'Toegestane Origins',
+    allowed_origins: nl ? 'Toegestane Origins' : fr ? 'Origines Autorisées' : 'Allowed Origins',
   };
 
   return (
@@ -161,13 +185,21 @@ export default function AdminSettings() {
         <div className="flex items-center gap-3">
           <Settings className="h-6 w-6 text-gray-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">System Settings</h1>
-            <p className="text-sm text-gray-500">Configure general settings for the platform</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              {nl ? 'Systeeminstellingen' : fr ? 'Paramètres Système' : 'System Settings'}
+            </h1>
+            <p className="text-sm text-gray-500">
+              {nl
+                ? 'Configureer algemene instellingen voor het platform'
+                : fr
+                  ? 'Configurer les paramètres généraux de la plateforme'
+                  : 'Configure general settings for the platform'}
+            </p>
           </div>
         </div>
         <Button onClick={handleSaveAll} disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
           {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-          Save All
+          {nl ? 'Alles Opslaan' : fr ? 'Tout Enregistrer' : 'Save All'}
         </Button>
       </div>
 
@@ -193,28 +225,45 @@ export default function AdminSettings() {
       {activeTab === 'general' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Settings className="h-5 w-5" /> General Settings</CardTitle>
-            <CardDescription>Configure general settings for the platform</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5" />
+              {nl ? 'Algemene Instellingen' : fr ? 'Paramètres Généraux' : 'General Settings'}
+            </CardTitle>
+            <CardDescription>
+              {nl
+                ? 'Configureer algemene instellingen voor het platform'
+                : fr
+                  ? 'Configurer les paramètres généraux de la plateforme'
+                  : 'Configure general settings for the platform'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Default Language</Label>
-              <p className="text-xs text-gray-500 mb-1.5">Default platform language</p>
+              <Label>{nl ? 'Standaardtaal' : fr ? 'Langue par Défaut' : 'Default Language'}</Label>
+              <p className="text-xs text-gray-500 mb-1.5">
+                {nl ? 'Standaard platformtaal' : fr ? 'Langue par défaut de la plateforme' : 'Default platform language'}
+              </p>
               <Input value={general.default_language} onChange={(e) => setGeneral({ ...general, default_language: e.target.value })} />
             </div>
             <div>
-              <Label>Max Upload Size Mb</Label>
-              <p className="text-xs text-gray-500 mb-1.5">Maximum file upload size in MB</p>
+              <Label>{nl ? 'Max Upload (MB)' : fr ? 'Taille Max Upload (Mo)' : 'Max Upload Size (MB)'}</Label>
+              <p className="text-xs text-gray-500 mb-1.5">
+                {nl ? 'Maximale bestandsgrootte in MB' : fr ? 'Taille maximale de téléchargement en Mo' : 'Maximum file upload size in MB'}
+              </p>
               <Input type="number" value={general.max_upload_size_mb} onChange={(e) => setGeneral({ ...general, max_upload_size_mb: parseInt(e.target.value) || 10 })} />
             </div>
             <div>
-              <Label>Site Name</Label>
-              <p className="text-xs text-gray-500 mb-1.5">Platform name</p>
+              <Label>{nl ? 'Sitenaam' : fr ? 'Nom du Site' : 'Site Name'}</Label>
+              <p className="text-xs text-gray-500 mb-1.5">
+                {nl ? 'Naam van het platform' : fr ? 'Nom de la plateforme' : 'Platform name'}
+              </p>
               <Input value={general.site_name} onChange={(e) => setGeneral({ ...general, site_name: e.target.value })} />
             </div>
             <div>
-              <Label>Support Email</Label>
-              <p className="text-xs text-gray-500 mb-1.5">Support contact email</p>
+              <Label>{nl ? 'Support E-mail' : fr ? 'E-mail Support' : 'Support Email'}</Label>
+              <p className="text-xs text-gray-500 mb-1.5">
+                {nl ? 'E-mailadres voor ondersteuning' : fr ? 'Adresse e-mail de support' : 'Support contact email'}
+              </p>
               <Input type="email" value={general.support_email} onChange={(e) => setGeneral({ ...general, support_email: e.target.value })} />
             </div>
           </CardContent>
@@ -224,20 +273,29 @@ export default function AdminSettings() {
       {activeTab === 'security' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5" /> Security Settings</CardTitle>
-            <CardDescription>Security and authentication configuration</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5" />
+              {nl ? 'Beveiligingsinstellingen' : fr ? 'Paramètres de Sécurité' : 'Security Settings'}
+            </CardTitle>
+            <CardDescription>
+              {nl
+                ? 'Beveiliging en authenticatie configuratie'
+                : fr
+                  ? "Configuration de sécurité et d'authentification"
+                  : 'Security and authentication configuration'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Session Timeout (minuten)</Label>
+              <Label>{nl ? 'Sessie Timeout (minuten)' : fr ? 'Délai de Session (minutes)' : 'Session Timeout (minutes)'}</Label>
               <Input type="number" value={security.session_timeout_minutes} onChange={(e) => setSecurity({ ...security, session_timeout_minutes: parseInt(e.target.value) || 60 })} className="mt-1.5" />
             </div>
             <div>
-              <Label>Max Login Attempts</Label>
+              <Label>{nl ? 'Max Inlogpogingen' : fr ? 'Tentatives Max de Connexion' : 'Max Login Attempts'}</Label>
               <Input type="number" value={security.max_login_attempts} onChange={(e) => setSecurity({ ...security, max_login_attempts: parseInt(e.target.value) || 5 })} className="mt-1.5" />
             </div>
             <div>
-              <Label>Min. Wachtwoord Lengte</Label>
+              <Label>{nl ? 'Min. Wachtwoordlengte' : fr ? 'Longueur Min. Mot de Passe' : 'Min. Password Length'}</Label>
               <Input type="number" value={security.password_min_length} onChange={(e) => setSecurity({ ...security, password_min_length: parseInt(e.target.value) || 8 })} className="mt-1.5" />
             </div>
           </CardContent>
@@ -247,12 +305,17 @@ export default function AdminSettings() {
       {activeTab === 'email' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Mail className="h-5 w-5" /> Email Configuration</CardTitle>
-            <CardDescription>Email service settings</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Mail className="h-5 w-5" />
+              {nl ? 'E-mailconfiguratie' : fr ? 'Configuration E-mail' : 'Email Configuration'}
+            </CardTitle>
+            <CardDescription>
+              {nl ? 'Instellingen voor de e-mailservice' : fr ? "Paramètres du service d'e-mail" : 'Email service settings'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Email Provider</Label>
+              <Label>{nl ? 'E-mailprovider' : fr ? 'Fournisseur E-mail' : 'Email Provider'}</Label>
               <Select value={email.email_provider} onValueChange={(v) => setEmail({ ...email, email_provider: v })}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -282,20 +345,29 @@ export default function AdminSettings() {
       {activeTab === 'features' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5" /> Feature Flags</CardTitle>
-            <CardDescription>Enable or disable platform features</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              {nl ? 'Functie Instellingen' : fr ? 'Options de Fonctionnalités' : 'Feature Flags'}
+            </CardTitle>
+            <CardDescription>
+              {nl
+                ? 'Platformfuncties in- of uitschakelen'
+                : fr
+                  ? 'Activer ou désactiver les fonctionnalités de la plateforme'
+                  : 'Enable or disable platform features'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Trial Periode (dagen)</Label>
+              <Label>{nl ? 'Proefperiode (dagen)' : fr ? "Période d'Essai (jours)" : 'Trial Period (days)'}</Label>
               <Input type="number" value={features.trial_days} onChange={(e) => setFeatures({ ...features, trial_days: parseInt(e.target.value) || 14 })} className="mt-1.5" />
             </div>
             <div>
-              <Label>Max Campagnes (gratis)</Label>
+              <Label>{nl ? 'Max Campagnes (gratis)' : fr ? 'Max Campagnes (gratuit)' : 'Max Campaigns (free)'}</Label>
               <Input type="number" value={features.max_campaigns_free} onChange={(e) => setFeatures({ ...features, max_campaigns_free: parseInt(e.target.value) || 3 })} className="mt-1.5" />
             </div>
             <div>
-              <Label>Max Contacten (gratis)</Label>
+              <Label>{nl ? 'Max Contacten (gratis)' : fr ? 'Max Contacts (gratuit)' : 'Max Contacts (free)'}</Label>
               <Input type="number" value={features.max_contacts_free} onChange={(e) => setFeatures({ ...features, max_contacts_free: parseInt(e.target.value) || 500 })} className="mt-1.5" />
             </div>
           </CardContent>
@@ -305,23 +377,32 @@ export default function AdminSettings() {
       {activeTab === 'billing' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Billing Settings</CardTitle>
-            <CardDescription>Payment and billing configuration</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              {nl ? 'Facturatie-instellingen' : fr ? 'Paramètres de Facturation' : 'Billing Settings'}
+            </CardTitle>
+            <CardDescription>
+              {nl
+                ? 'Betalings- en factureringsconfiguratie'
+                : fr
+                  ? 'Configuration des paiements et de la facturation'
+                  : 'Payment and billing configuration'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <Label>Valuta</Label>
+              <Label>{nl ? 'Valuta' : fr ? 'Devise' : 'Currency'}</Label>
               <Select value={billing.currency} onValueChange={(v) => setBilling({ ...billing, currency: v })}>
                 <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="EUR">EUR - Euro</SelectItem>
                   <SelectItem value="USD">USD - Dollar</SelectItem>
-                  <SelectItem value="GBP">GBP - Pond</SelectItem>
+                  <SelectItem value="GBP">{nl ? 'GBP - Pond' : fr ? 'GBP - Livre' : 'GBP - Pound'}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label>BTW Tarief (%)</Label>
+              <Label>{nl ? 'BTW Tarief (%)' : fr ? 'Taux TVA (%)' : 'Tax Rate (%)'}</Label>
               <Input type="number" value={billing.tax_rate} onChange={(e) => setBilling({ ...billing, tax_rate: parseInt(e.target.value) || 21 })} className="mt-1.5" />
             </div>
           </CardContent>
@@ -331,23 +412,44 @@ export default function AdminSettings() {
       {activeTab === 'maintenance' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Wrench className="h-5 w-5" /> Maintenance</CardTitle>
-            <CardDescription>System maintenance and health</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Wrench className="h-5 w-5" />
+              {nl ? 'Onderhoud' : fr ? 'Maintenance' : 'Maintenance'}
+            </CardTitle>
+            <CardDescription>
+              {nl
+                ? 'Systeemonderhoud en status'
+                : fr
+                  ? 'Maintenance système et état de santé'
+                  : 'System maintenance and health'}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-800">
               <div>
-                <p className="font-medium">Maintenance Mode</p>
-                <p className="text-sm text-gray-500">Disable access for non-admin users</p>
+                <p className="font-medium">
+                  {nl ? 'Onderhoudsmodus' : fr ? 'Mode Maintenance' : 'Maintenance Mode'}
+                </p>
+                <p className="text-sm text-gray-500">
+                  {nl
+                    ? 'Toegang uitschakelen voor niet-admin gebruikers'
+                    : fr
+                      ? "Désactiver l'accès pour les utilisateurs non-admin"
+                      : 'Disable access for non-admin users'}
+                </p>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-700 border-0">Uitgeschakeld</Badge>
+              <Badge className="bg-emerald-100 text-emerald-700 border-0">
+                {nl ? 'Uitgeschakeld' : fr ? 'Désactivé' : 'Disabled'}
+              </Badge>
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-800">
               <div>
                 <p className="font-medium">Database Status</p>
                 <p className="text-sm text-gray-500">Supabase connection</p>
               </div>
-              <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1"><CheckCircle className="h-3 w-3" /> Connected</Badge>
+              <Badge className="bg-emerald-100 text-emerald-700 border-0 gap-1">
+                <CheckCircle className="h-3 w-3" /> {nl ? 'Verbonden' : fr ? 'Connecté' : 'Connected'}
+              </Badge>
             </div>
             <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-800">
               <div>
@@ -363,8 +465,17 @@ export default function AdminSettings() {
       {activeTab === 'api-keys' && (
         <Card className="border-0 shadow-sm">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Key className="h-5 w-5" /> API Keys</CardTitle>
-            <CardDescription>Server-side API key status (keys are never sent to the browser)</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5" />
+              {nl ? 'API Sleutels' : fr ? 'Clés API' : 'API Keys'}
+            </CardTitle>
+            <CardDescription>
+              {nl
+                ? 'Server-side API sleutelstatus (sleutels worden nooit naar de browser gestuurd)'
+                : fr
+                  ? "État des clés API côté serveur (les clés ne sont jamais envoyées au navigateur)"
+                  : 'Server-side API key status (keys are never sent to the browser)'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {apiConfig ? (
@@ -387,13 +498,13 @@ export default function AdminSettings() {
                         {v.configured ? (
                           <>
                             <Badge className="bg-emerald-100 text-emerald-700 border-0 text-xs gap-1">
-                              <CheckCircle className="h-3 w-3" /> Actief
+                              <CheckCircle className="h-3 w-3" /> {nl ? 'Actief' : fr ? 'Actif' : 'Active'}
                             </Badge>
                             <span className="text-xs text-gray-400 font-mono">{v.masked}</span>
                           </>
                         ) : (
                           <Badge className="bg-gray-100 text-gray-500 border-0 text-xs gap-1">
-                            <XCircle className="h-3 w-3" /> Niet geconfigureerd
+                            <XCircle className="h-3 w-3" /> {nl ? 'Niet geconfigureerd' : fr ? 'Non configuré' : 'Not configured'}
                           </Badge>
                         )}
                       </div>
@@ -402,7 +513,13 @@ export default function AdminSettings() {
                 })}
               </div>
             ) : (
-              <p className="text-gray-500 text-center py-6">Kon API configuratie niet laden</p>
+              <p className="text-gray-500 text-center py-6">
+                {nl
+                  ? 'Kon API configuratie niet laden'
+                  : fr
+                    ? "Impossible de charger la configuration de l'API"
+                    : 'Could not load API configuration'}
+              </p>
             )}
           </CardContent>
         </Card>

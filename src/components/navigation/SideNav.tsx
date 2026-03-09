@@ -39,6 +39,8 @@ import {
   Pen,
   MessageSquare,
   Contact,
+  Calendar,
+  CheckCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +63,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
     location.pathname === href || location.pathname.startsWith(href + '/');
 
   const nl = lang === 'nl';
+  const fr = lang === 'fr';
 
   // ─── Navigation structure — alle items met sub-items ─────────
   const mainNavItems = [
@@ -75,10 +78,10 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       label: nl ? 'Configuratie' : 'Configuration',
       icon: Building,
       children: [
-        { label: nl ? 'Merk Setup' : 'Brand Setup', href: '/app/setup/brand', icon: Palette },
-        { label: nl ? 'Doelgroep' : 'Target Audience', href: '/app/setup/audience', icon: Users },
-        { label: nl ? 'Doelen & KPIs' : 'Goals & KPIs', href: '/app/setup/goals', icon: Target },
-        { label: nl ? 'Concurrentie' : 'Competition', href: '/app/setup/competition', icon: Globe },
+        { label: nl ? 'Merk Setup' : fr ? 'Configuration Marque' : 'Brand Setup', href: '/app/setup/brand', icon: Palette },
+        { label: nl ? 'Doelgroep' : fr ? 'Public Cible' : 'Target Audience', href: '/app/setup/audience', icon: Users },
+        { label: nl ? 'Doelen & KPIs' : fr ? 'Objectifs & KPIs' : 'Goals & KPIs', href: '/app/setup/goals', icon: Target },
+        { label: nl ? 'Concurrentie' : fr ? 'Concurrence' : 'Competition', href: '/app/setup/competition', icon: Globe },
       ],
     },
     {
@@ -86,11 +89,11 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       label: t('nav.intelligence'),
       icon: Brain,
       children: [
-        { label: nl ? 'Groei Blauwdruk' : 'Growth Blueprint', href: '/app/growth-blueprint', icon: Sparkles, badge: 'AI' },
-        { label: nl ? 'Merkgeheugen' : 'Brand Memory', href: '/app/intelligence/brand', icon: Brain, badge: 'AI' },
-        { label: nl ? 'Marktinzichten' : 'Market Insights', href: '/app/intelligence/market', icon: TrendingUp },
-        { label: nl ? 'Concurrentieanalyse' : 'Competitor Analysis', href: '/app/intelligence/competitors', icon: Users },
-        { label: nl ? 'Content Studio' : 'Content Studio', href: '/app/content-studio', icon: Sparkles, badge: 'NEW' },
+        { label: nl ? 'Groei Blauwdruk' : fr ? 'Plan de Croissance' : 'Growth Blueprint', href: '/app/growth-blueprint', icon: Sparkles, badge: 'AI' },
+        { label: nl ? 'Merkgeheugen' : fr ? 'Mémoire de Marque' : 'Brand Memory', href: '/app/intelligence/brand', icon: Brain, badge: 'AI' },
+        { label: nl ? 'Marktinzichten' : fr ? 'Insights Marché' : 'Market Insights', href: '/app/intelligence/market', icon: TrendingUp },
+        { label: nl ? 'Concurrentieanalyse' : fr ? 'Analyse Concurrentielle' : 'Competitor Analysis', href: '/app/intelligence/competitors', icon: Users },
+        { label: nl ? 'Content Studio' : fr ? 'Studio de Contenu' : 'Content Studio', href: '/app/content-studio', icon: Sparkles, badge: 'NEW' },
       ],
     },
     {
@@ -98,22 +101,24 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       label: t('nav.campaigns'),
       icon: Rocket,
       children: [
-        { label: nl ? 'Campagne Beheer' : 'Campaign Manager', href: '/app/campaigns', icon: Rocket },
-        { label: nl ? 'E-mail Marketing' : 'Email Marketing', href: '/app/campaigns/email', icon: Mail },
-        { label: nl ? 'Social Media' : 'Social Media', href: '/app/campaigns/social', icon: Share2 },
-        { label: nl ? 'Landingspagina\'s' : 'Landing Pages', href: '/app/campaigns/landing', icon: FileText },
+        { label: nl ? 'Campagne Beheer' : fr ? 'Gestion de Campagnes' : 'Campaign Manager', href: '/app/campaigns', icon: Rocket },
+        { label: nl ? 'E-mail Marketing' : fr ? 'Marketing par E-mail' : 'Email Marketing', href: '/app/campaigns/email', icon: Mail },
+        { label: nl ? 'Social Media' : fr ? 'Réseaux Sociaux' : 'Social Media', href: '/app/campaigns/social', icon: Share2 },
+        { label: nl ? 'Landingspagina\'s' : fr ? "Pages d'Atterrissage" : 'Landing Pages', href: '/app/campaigns/landing', icon: FileText },
       ],
     },
     {
       key: 'content-hub',
-      label: 'Content Hub',
+      label: fr ? 'Hub de Contenu' : 'Content Hub',
       icon: Sparkles,
       children: [
-        { label: nl ? 'Overzicht' : 'Overview', href: '/app/content-hub', icon: LayoutDashboard },
-        { label: nl ? 'AI Schrijver' : 'AI Writer', href: '/app/content/writer', icon: Pen },
-        { label: nl ? 'Afbeeldingen' : 'Image Generator', href: '/app/content/images', icon: Image },
-        { label: nl ? 'Video Creator' : 'Video Creator', href: '/app/content/video', icon: MessageSquare },
-        { label: nl ? 'Media Bibliotheek' : 'Media Library', href: '/app/media-library', icon: BookOpen },
+        { label: nl ? 'Overzicht' : fr ? 'Aperçu' : 'Overview', href: '/app/content-hub', icon: LayoutDashboard },
+        { label: nl ? 'AI Schrijver' : fr ? 'Rédacteur IA' : 'AI Writer', href: '/app/content/writer', icon: Pen },
+        { label: nl ? 'Afbeeldingen' : fr ? 'Générateur d\'Images' : 'Image Generator', href: '/app/content/images', icon: Image },
+        { label: nl ? 'Video Creator' : fr ? 'Créateur Vidéo' : 'Video Creator', href: '/app/content/video', icon: MessageSquare },
+        { label: nl ? 'Media Bibliotheek' : fr ? 'Médiathèque' : 'Media Library', href: '/app/media-library', icon: BookOpen },
+        { label: nl ? 'Kalender' : fr ? 'Calendrier' : 'Calendar', href: '/app/content/calendar', icon: Calendar },
+        { label: nl ? 'Goedkeuring' : fr ? 'Approbation' : 'Approvals', href: '/app/content/approvals', icon: CheckCircle },
       ],
     },
     {
@@ -123,9 +128,9 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       badge: 'PRO',
       children: [
         { label: 'Workflows', href: '/app/automation/workflows', icon: GitBranch },
-        { label: nl ? 'Klantreis' : 'Customer Journey', href: '/app/automation/journeys', icon: Activity },
+        { label: nl ? 'Klantreis' : fr ? 'Parcours Client' : 'Customer Journey', href: '/app/automation/journeys', icon: Activity },
         { label: 'AI Agents', href: '/app/automation/agents', icon: Bot, badge: 'BETA' },
-        { label: nl ? 'Slimme Triggers' : 'Smart Triggers', href: '/app/automation/triggers', icon: Sparkles },
+        { label: nl ? 'Slimme Triggers' : fr ? 'Déclencheurs Intelligents' : 'Smart Triggers', href: '/app/automation/triggers', icon: Sparkles },
       ],
     },
     {
@@ -133,8 +138,8 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       label: t('nav.analytics'),
       icon: BarChart3,
       children: [
-        { label: nl ? 'Overzicht' : 'Overview', href: '/app/analytics', icon: BarChart3 },
-        { label: nl ? 'Rapporten' : 'Reports', href: '/app/reports', icon: LineChart },
+        { label: nl ? 'Overzicht' : fr ? 'Aperçu' : 'Overview', href: '/app/analytics', icon: BarChart3 },
+        { label: nl ? 'Rapporten' : fr ? 'Rapports' : 'Reports', href: '/app/reports', icon: LineChart },
         { label: nl ? 'Contacten' : 'Contacts', href: '/app/contacts', icon: Contact },
       ],
     },

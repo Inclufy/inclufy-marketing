@@ -28,6 +28,8 @@ from routers import (
     admin,
     copilot,
     tenant_admin,
+    journeys,
+    social_auth,
 )
 
 app = FastAPI(title="Inclufy Marketing API", version="1.0.0")
@@ -104,3 +106,5 @@ app.include_router(content_library.router)
 app.include_router(admin.router)
 app.include_router(copilot.router)
 app.include_router(tenant_admin.router)
+app.include_router(journeys.router)
+app.include_router(social_auth.router)

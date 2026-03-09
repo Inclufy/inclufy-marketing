@@ -64,6 +64,35 @@ class GenerateWriterInput(BaseModel):
         return v
 
 
+class GenerateImageInput(BaseModel):
+    prompt: str
+    size: str = "1024x1024"
+    style: str = "vivid"
+
+    @field_validator("size")
+    @classmethod
+    def valid_size(cls, v):
+        allowed = {"1024x1024", "1792x1024", "1024x1792"}
+        if v not in allowed:
+            raise ValueError(f"size must be one of {allowed}")
+        return v
+
+    @field_validator("style")
+    @classmethod
+    def valid_style(cls, v):
+        allowed = {"vivid", "natural"}
+        if v not in allowed:
+            raise ValueError(f"style must be one of {allowed}")
+        return v
+
+    @field_validator("prompt")
+    @classmethod
+    def prompt_not_empty_img(cls, v):
+        if not v.strip():
+            raise ValueError("Prompt cannot be empty")
+        return v
+
+
 class ImproveContentInput(BaseModel):
     content: str
     goal: str
@@ -89,6 +118,29 @@ def _get_openai_client():
     if not api_key:
         raise HTTPException(status_code=503, detail="AI service not configured")
     return openai.OpenAI(api_key=api_key)
+
+
+@router.post("/image")
+def generate_image(
+    data: GenerateImageInput,
+    current_user: dict = Depends(get_current_user),
+):
+    """Generate an image using DALL-E 3."""
+    try:
+        client = _get_openai_client()
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=data.prompt,
+            size=data.size,
+            style=data.style,
+            n=1,
+        )
+        return {"image_url": response.data[0].url, "revised_prompt": response.data[0].revised_prompt}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Image generation failed: %s", e)
+        raise HTTPException(status_code=500, detail="Failed to generate image")
 
 
 @router.post("/email")

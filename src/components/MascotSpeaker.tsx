@@ -617,12 +617,13 @@ export const MascotSpeaker = ({ mascotImage, mascotName = "Pax" }: MascotSpeaker
             <SelectContent>
               <SelectItem value="nl">🇳🇱 Nederlands</SelectItem>
               <SelectItem value="en">🇬🇧 English</SelectItem>
+              <SelectItem value="fr">🇫🇷 Français</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div>
           <label className="text-sm font-medium text-muted-foreground mb-1 block">
-            {language === "nl" ? "Stem" : "Voice"}
+            {language === "nl" ? "Stem" : language === "fr" ? "Voix" : "Voice"}
           </label>
           <Select value={voice} onValueChange={(v) => setVoice(v as Voice)}>
             <SelectTrigger>

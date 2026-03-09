@@ -15,18 +15,23 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from '@/components/ui/input-otp
 import {
   User, Shield, Settings as SettingsIcon, Key, Lock, Bell, Moon, Sun, Globe,
   Loader2, Eye, EyeOff, Monitor, Copy, Check, Plus, Trash2, Smartphone, Laptop,
-  QrCode, ShieldCheck, ShieldOff, AlertTriangle, RotateCcw
+  QrCode, ShieldCheck, ShieldOff, AlertTriangle, RotateCcw, CreditCard, ExternalLink,
+  Share2, Linkedin, Facebook, Instagram, Unlink
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase/client';
 import { cn } from '@/lib/utils';
+import { useSubscription, useCreatePortalSession } from '@/hooks/queries/useSubscription';
+import { useSocialAccounts, useConnectSocial, useDisconnectSocial } from '@/hooks/queries/useSocialAccounts';
 
 // Tab definitions
 const tabs = [
   { key: 'profile', icon: User, labelKey: 'settings.tab.profile' },
   { key: 'security', icon: Shield, labelKey: 'settings.tab.security' },
+  { key: 'subscription', icon: CreditCard, labelKey: 'settings.tab.subscription' },
+  { key: 'social', icon: Share2, labelKey: 'settings.tab.social' },
   { key: 'preferences', icon: SettingsIcon, labelKey: 'settings.tab.preferences' },
   { key: 'apikeys', icon: Key, labelKey: 'settings.tab.apiKeys' },
 ] as const;
@@ -244,7 +249,7 @@ export default function Settings() {
   };
 
   const createdAt = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    ? new Date(user.created_at).toLocaleDateString(lang === 'nl' ? 'nl-NL' : lang === 'fr' ? 'fr-FR' : 'en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     : 'N/A';
 
   return (
@@ -376,11 +381,13 @@ export default function Settings() {
               <div>
                 <h3 className="font-semibold flex items-center gap-2">
                   <RotateCcw className="h-4 w-4" />
-                  {lang === 'nl' ? 'Onboarding herstarten' : 'Restart Onboarding'}
+                  {lang === 'nl' ? 'Onboarding herstarten' : lang === 'fr' ? "Relancer l'Onboarding" : 'Restart Onboarding'}
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   {lang === 'nl'
                     ? 'Doorloop de onboarding wizard opnieuw om je bedrijfsinstellingen bij te werken.'
+                    : lang === 'fr'
+                    ? "Parcourez à nouveau l'assistant d'intégration pour mettre à jour vos paramètres."
                     : 'Go through the onboarding wizard again to update your business settings.'}
                 </p>
               </div>
@@ -392,7 +399,7 @@ export default function Settings() {
                 }}
               >
                 <RotateCcw className="h-4 w-4 mr-2" />
-                {lang === 'nl' ? 'Herstarten' : 'Restart'}
+                {lang === 'nl' ? 'Herstarten' : lang === 'fr' ? 'Relancer' : 'Restart'}
               </Button>
             </div>
           </CardContent>
@@ -697,6 +704,12 @@ export default function Settings() {
         </div>
       )}
 
+      {/* ─── SUBSCRIPTION TAB ─────────────────────────────── */}
+      {activeTab === 'subscription' && <SubscriptionTab lang={lang} />}
+
+      {/* ─── SOCIAL MEDIA TAB ──────────────────────────────── */}
+      {activeTab === 'social' && <SocialMediaTab lang={lang} />}
+
       {/* ─── PREFERENCES TAB ──────────────────────────────── */}
       {activeTab === 'preferences' && (
         <div className="space-y-6">
@@ -730,6 +743,16 @@ export default function Settings() {
                   )}
                 >
                   <span className="text-lg">🇬🇧</span> English
+                </Button>
+                <Button
+                  variant={lang === 'fr' ? 'default' : 'outline'}
+                  onClick={() => setLang('fr')}
+                  className={cn(
+                    "gap-2",
+                    lang === 'fr' && "bg-gradient-to-r from-purple-600 to-pink-600 text-white"
+                  )}
+                >
+                  <span className="text-lg">🇫🇷</span> Français
                 </Button>
               </div>
             </CardContent>
@@ -883,6 +906,8 @@ export default function Settings() {
               <CardDescription>
                 {lang === 'nl'
                   ? 'Deze API-sleutels worden server-side geconfigureerd'
+                  : lang === 'fr'
+                  ? 'Ces clés API sont configurées côté serveur'
                   : 'These API keys are configured server-side'}
               </CardDescription>
             </CardHeader>
@@ -907,6 +932,272 @@ export default function Settings() {
           </Card>
         </div>
       )}
+    </div>
+  );
+}
+
+
+// ─── Subscription Tab Component ──────────────────────────────────────────────
+
+function SubscriptionTab({ lang }: { lang: string }) {
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  const { data: sub, isLoading } = useSubscription();
+  const portalMutation = useCreatePortalSession();
+
+  const planNames: Record<string, string> = {
+    free: 'Free',
+    starter: 'Starter',
+    professional: 'Professional',
+    enterprise: 'Enterprise',
+  };
+
+  const handleManageSubscription = async () => {
+    try {
+      const data = await portalMutation.mutateAsync(window.location.href);
+      window.location.href = data.portal_url;
+    } catch {
+      // Fallback — user might not have a subscription yet
+    }
+  };
+
+  const renewalDate = sub?.current_period_end
+    ? new Date(sub.current_period_end * 1000).toLocaleDateString(
+        nl ? 'nl-NL' : fr ? 'fr-FR' : 'en-US',
+        { year: 'numeric', month: 'long', day: 'numeric' }
+      )
+    : null;
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            {nl ? 'Abonnement' : fr ? 'Abonnement' : 'Subscription'}
+          </CardTitle>
+          <CardDescription>
+            {nl ? 'Beheer je abonnement en facturatie'
+              : fr ? 'Gérez votre abonnement et facturation'
+              : 'Manage your subscription and billing'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {isLoading ? (
+            <div className="flex items-center gap-3 py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <span className="text-sm text-gray-500">
+                {nl ? 'Laden...' : fr ? 'Chargement...' : 'Loading...'}
+              </span>
+            </div>
+          ) : (
+            <>
+              {/* Current Plan */}
+              <div className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                    <CreditCard className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-bold">
+                      {planNames[sub?.plan || 'free'] || sub?.plan || 'Free'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          sub?.subscribed
+                            ? 'text-green-600 border-green-200'
+                            : 'text-gray-500 border-gray-300'
+                        )}
+                      >
+                        {sub?.subscribed
+                          ? (nl ? 'Actief' : fr ? 'Actif' : 'Active')
+                          : (nl ? 'Gratis' : fr ? 'Gratuit' : 'Free')}
+                      </Badge>
+                      {sub?.cancel_at_period_end && (
+                        <Badge variant="outline" className="text-amber-600 border-amber-200">
+                          {nl ? 'Wordt geannuleerd' : fr ? 'Sera annulé' : 'Canceling'}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Renewal info */}
+              {renewalDate && (
+                <div className="text-sm text-gray-500">
+                  {sub?.cancel_at_period_end
+                    ? (nl ? `Toegang tot ${renewalDate}` : fr ? `Accès jusqu'au ${renewalDate}` : `Access until ${renewalDate}`)
+                    : (nl ? `Verlenging op ${renewalDate}` : fr ? `Renouvellement le ${renewalDate}` : `Renews on ${renewalDate}`)}
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3">
+                {sub?.subscribed ? (
+                  <Button
+                    onClick={handleManageSubscription}
+                    disabled={portalMutation.isPending}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  >
+                    {portalMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    {nl ? 'Abonnement beheren' : fr ? "Gérer l'abonnement" : 'Manage Subscription'}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => window.location.href = '/pricing'}
+                    className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                  >
+                    {nl ? 'Upgraden' : fr ? 'Mettre à niveau' : 'Upgrade Plan'}
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+
+// ─── Social Media Tab Component ──────────────────────────────────────────────
+
+const PLATFORM_CONFIG = [
+  { id: 'linkedin', name: 'LinkedIn', icon: Linkedin, color: 'text-blue-600', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  { id: 'facebook', name: 'Facebook', icon: Facebook, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30' },
+  { id: 'instagram', name: 'Instagram', icon: Instagram, color: 'text-pink-500', bg: 'bg-pink-100 dark:bg-pink-900/30' },
+];
+
+function SocialMediaTab({ lang }: { lang: string }) {
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
+  const { data: accounts = [], isLoading } = useSocialAccounts();
+  const connectMutation = useConnectSocial();
+  const disconnectMutation = useDisconnectSocial();
+
+  const handleConnect = async (platform: string) => {
+    try {
+      const data = await connectMutation.mutateAsync(platform);
+      window.location.href = data.authorization_url;
+    } catch {
+      // Error handled by mutation
+    }
+  };
+
+  const getAccountForPlatform = (platform: string) =>
+    accounts.find(a => a.platform === platform && a.status === 'active');
+
+  return (
+    <div className="space-y-6">
+      <Card className="border-0 shadow-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Share2 className="h-5 w-5" />
+            {nl ? 'Social Media Accounts' : fr ? 'Comptes de Réseaux Sociaux' : 'Social Media Accounts'}
+          </CardTitle>
+          <CardDescription>
+            {nl ? 'Koppel je social media accounts om direct te publiceren'
+              : fr ? 'Connectez vos comptes de réseaux sociaux pour publier directement'
+              : 'Connect your social media accounts to publish directly'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isLoading ? (
+            <div className="flex items-center gap-3 py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+              <span className="text-sm text-gray-500">
+                {nl ? 'Laden...' : fr ? 'Chargement...' : 'Loading...'}
+              </span>
+            </div>
+          ) : (
+            PLATFORM_CONFIG.map(platform => {
+              const account = getAccountForPlatform(platform.id);
+              const PlatformIcon = platform.icon;
+
+              return (
+                <div
+                  key={platform.id}
+                  className="flex items-center justify-between p-4 rounded-xl border border-gray-200 dark:border-gray-700"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl ${platform.bg} flex items-center justify-center`}>
+                      <PlatformIcon className={`h-6 w-6 ${platform.color}`} />
+                    </div>
+                    <div>
+                      <p className="font-semibold">{platform.name}</p>
+                      {account ? (
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Badge variant="outline" className="text-green-600 border-green-200 text-xs">
+                            {nl ? 'Verbonden' : fr ? 'Connecté' : 'Connected'}
+                          </Badge>
+                          {account.account_name && (
+                            <span className="text-xs text-gray-500">{account.account_name}</span>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-500">
+                          {nl ? 'Niet verbonden' : fr ? 'Non connecté' : 'Not connected'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  {account ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => disconnectMutation.mutate(account.id)}
+                      disabled={disconnectMutation.isPending}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/10 border-red-200"
+                    >
+                      {disconnectMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Unlink className="h-4 w-4 mr-2" />
+                      )}
+                      {nl ? 'Ontkoppelen' : fr ? 'Déconnecter' : 'Disconnect'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleConnect(platform.id)}
+                      disabled={connectMutation.isPending}
+                      className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+                    >
+                      {connectMutation.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      {nl ? 'Verbinden' : fr ? 'Connecter' : 'Connect'}
+                    </Button>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Info Card */}
+      <Card className="border-0 shadow-lg border-l-4 border-l-blue-500/50">
+        <CardContent className="pt-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-blue-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">
+                {nl ? 'OAuth Configuratie Vereist' : fr ? 'Configuration OAuth requise' : 'OAuth Configuration Required'}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {nl ? 'Om social media accounts te koppelen, moeten LinkedIn en Meta Developer Apps geconfigureerd zijn met de juiste redirect URIs.'
+                  : fr ? "Pour connecter des comptes de réseaux sociaux, les applications développeur LinkedIn et Meta doivent être configurées avec les URI de redirection corrects."
+                  : 'To connect social media accounts, LinkedIn and Meta Developer Apps must be configured with the correct redirect URIs.'}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

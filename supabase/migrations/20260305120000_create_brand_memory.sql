@@ -1,5 +1,6 @@
 -- Brand Memory System: core tables for AI content generation context
 -- Run in Supabase SQL Editor to create all brand memory tables
+-- Fully idempotent: safe to run multiple times
 
 -- ═══════════════════════════════════════════════════════════════════
 -- Table 1: brand_memory — Central brand identity store
@@ -64,6 +65,15 @@ CREATE TABLE IF NOT EXISTS public.brand_memory (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Add new columns if table existed without them
+DO $$ BEGIN
+  ALTER TABLE public.brand_memory ADD COLUMN IF NOT EXISTS competitors JSONB DEFAULT '[]'::jsonb;
+  ALTER TABLE public.brand_memory ADD COLUMN IF NOT EXISTS marketing_goals TEXT[] DEFAULT '{}';
+  ALTER TABLE public.brand_memory ADD COLUMN IF NOT EXISTS primary_color TEXT DEFAULT '#7c3aed';
+  ALTER TABLE public.brand_memory ADD COLUMN IF NOT EXISTS secondary_color TEXT DEFAULT '#ec4899';
+EXCEPTION WHEN others THEN NULL;
+END $$;
+
 -- One active brand memory per user
 CREATE UNIQUE INDEX IF NOT EXISTS idx_brand_memory_user_active
   ON brand_memory(user_id) WHERE is_active = true;
@@ -74,12 +84,14 @@ CREATE INDEX IF NOT EXISTS idx_brand_memory_user
 -- RLS
 ALTER TABLE brand_memory ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own brand memory" ON brand_memory;
 CREATE POLICY "Users can manage their own brand memory"
   ON brand_memory FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
 -- Reuse existing trigger function
+DROP TRIGGER IF EXISTS update_brand_memory_updated_at ON brand_memory;
 CREATE TRIGGER update_brand_memory_updated_at
   BEFORE UPDATE ON brand_memory
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -102,6 +114,7 @@ CREATE INDEX IF NOT EXISTS idx_brand_memory_versions_bm
 
 ALTER TABLE brand_memory_versions ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own brand memory versions" ON brand_memory_versions;
 CREATE POLICY "Users can manage their own brand memory versions"
   ON brand_memory_versions FOR ALL
   USING (user_id = auth.uid())
@@ -131,11 +144,13 @@ CREATE INDEX IF NOT EXISTS idx_brand_entities_bm
 
 ALTER TABLE brand_entities ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own brand entities" ON brand_entities;
 CREATE POLICY "Users can manage their own brand entities"
   ON brand_entities FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+DROP TRIGGER IF EXISTS update_brand_entities_updated_at ON brand_entities;
 CREATE TRIGGER update_brand_entities_updated_at
   BEFORE UPDATE ON brand_entities
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -164,11 +179,13 @@ CREATE INDEX IF NOT EXISTS idx_brand_messaging_examples_bm
 
 ALTER TABLE brand_messaging_examples ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own brand messaging examples" ON brand_messaging_examples;
 CREATE POLICY "Users can manage their own brand messaging examples"
   ON brand_messaging_examples FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+DROP TRIGGER IF EXISTS update_brand_messaging_examples_updated_at ON brand_messaging_examples;
 CREATE TRIGGER update_brand_messaging_examples_updated_at
   BEFORE UPDATE ON brand_messaging_examples
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
@@ -201,11 +218,13 @@ CREATE INDEX IF NOT EXISTS idx_brand_documents_bm
 
 ALTER TABLE brand_documents ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own brand documents" ON brand_documents;
 CREATE POLICY "Users can manage their own brand documents"
   ON brand_documents FOR ALL
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+DROP TRIGGER IF EXISTS update_brand_documents_updated_at ON brand_documents;
 CREATE TRIGGER update_brand_documents_updated_at
   BEFORE UPDATE ON brand_documents
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
