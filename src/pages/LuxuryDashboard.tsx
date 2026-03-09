@@ -39,6 +39,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 import api from '@/lib/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const CHART_COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444'];
 
@@ -66,7 +67,8 @@ const LuxuryMetricCard = ({
   icon: Icon,
   color,
   subtitle,
-  loading = false
+  loading = false,
+  loadingText = 'Loading...'
 }: any) => (
   <Card className="group relative overflow-hidden border-gray-200 dark:border-gray-800 hover:shadow-xl transition-all duration-300 hover:scale-[1.02]">
     <div className={cn(
@@ -112,7 +114,7 @@ const LuxuryMetricCard = ({
         {loading ? (
           <div className="flex items-center gap-2 mt-1">
             <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
-            <span className="text-gray-400">Loading...</span>
+            <span className="text-gray-400">{loadingText}</span>
           </div>
         ) : (
           <p className="text-3xl font-bold mt-1 bg-gradient-to-br from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
@@ -129,6 +131,9 @@ const LuxuryMetricCard = ({
 
 // Performance indicator component
 const PerformanceIndicator = ({ label, value, target, color }: any) => {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const percentage = target > 0 ? (value / target) * 100 : 0;
   const isExceeding = percentage > 100;
 
@@ -157,10 +162,10 @@ const PerformanceIndicator = ({ label, value, target, color }: any) => {
         )}
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-500">{percentage.toFixed(1)}% achieved</span>
+        <span className="text-xs text-gray-500">{percentage.toFixed(1)}% {nl ? 'behaald' : fr ? 'atteint' : 'achieved'}</span>
         {isExceeding && (
           <Badge variant="outline" className="text-xs border-amber-500 text-amber-600">
-            Exceeding Target
+            {nl ? 'Doel Overschreden' : fr ? 'Objectif Dépassé' : 'Exceeding Target'}
           </Badge>
         )}
       </div>
@@ -169,6 +174,9 @@ const PerformanceIndicator = ({ label, value, target, color }: any) => {
 };
 
 export default function LuxuryDashboard() {
+  const { lang } = useLanguage();
+  const nl = lang === 'nl';
+  const fr = lang === 'fr';
   const [dateRange, setDateRange] = useState('month');
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -226,14 +234,14 @@ export default function LuxuryDashboard() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 text-transparent bg-clip-text">
-                  Executive Dashboard
+                  {nl ? 'Executive Dashboard' : fr ? 'Tableau de Bord Exécutif' : 'Executive Dashboard'}
                 </h1>
                 <p className="text-gray-600 dark:text-gray-400 mt-1">
-                  {loading ? 'Loading your data...' : (
+                  {loading ? (nl ? 'Data laden...' : fr ? 'Chargement des données...' : 'Loading your data...') : (
                     <>
                       {activeCampaigns > 0
-                        ? <><span className="text-green-600 font-semibold">{activeCampaigns} active campaigns</span> running</>
-                        : 'No active campaigns yet — create one to get started'
+                        ? <><span className="text-green-600 font-semibold">{activeCampaigns} {nl ? 'actieve campagnes' : fr ? 'campagnes actives' : 'active campaigns'}</span> {nl ? 'actief' : fr ? 'en cours' : 'running'}</>
+                        : (nl ? 'Nog geen actieve campagnes — maak er een om te beginnen' : fr ? 'Pas encore de campagnes actives — créez-en une pour commencer' : 'No active campaigns yet — create one to get started')
                       }
                     </>
                   )}
@@ -242,23 +250,23 @@ export default function LuxuryDashboard() {
               <div className="flex items-center gap-3">
                 <Button variant="outline" className="h-10" onClick={fetchDashboardData} disabled={loading}>
                   <RefreshCw className={cn("h-4 w-4 mr-2", loading && "animate-spin")} />
-                  Refresh
+                  {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
                 </Button>
                 <Select value={dateRange} onValueChange={setDateRange}>
                   <SelectTrigger className="w-36 h-10">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="today">Today</SelectItem>
-                    <SelectItem value="week">This Week</SelectItem>
-                    <SelectItem value="month">This Month</SelectItem>
-                    <SelectItem value="quarter">This Quarter</SelectItem>
-                    <SelectItem value="year">This Year</SelectItem>
+                    <SelectItem value="today">{nl ? 'Vandaag' : fr ? "Aujourd'hui" : 'Today'}</SelectItem>
+                    <SelectItem value="week">{nl ? 'Deze Week' : fr ? 'Cette Semaine' : 'This Week'}</SelectItem>
+                    <SelectItem value="month">{nl ? 'Deze Maand' : fr ? 'Ce Mois' : 'This Month'}</SelectItem>
+                    <SelectItem value="quarter">{nl ? 'Dit Kwartaal' : fr ? 'Ce Trimestre' : 'This Quarter'}</SelectItem>
+                    <SelectItem value="year">{nl ? 'Dit Jaar' : fr ? 'Cette Année' : 'This Year'}</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline" className="h-10">
                   <Filter className="h-4 w-4 mr-2" />
-                  Filter
+                  {nl ? 'Filter' : fr ? 'Filtrer' : 'Filter'}
                 </Button>
                 <Button
                   className="h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
@@ -277,7 +285,7 @@ export default function LuxuryDashboard() {
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Export Report
+                  {nl ? 'Rapport Exporteren' : fr ? 'Exporter le Rapport' : 'Export Report'}
                 </Button>
               </div>
             </div>
@@ -293,11 +301,11 @@ export default function LuxuryDashboard() {
             <div className="flex-1">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                Make sure the backend is running at localhost:8000 and you are logged in.
+                {nl ? 'Zorg dat de backend draait op localhost:8000 en je bent ingelogd.' : fr ? 'Assurez-vous que le backend tourne sur localhost:8000 et que vous êtes connecté.' : 'Make sure the backend is running at localhost:8000 and you are logged in.'}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={fetchDashboardData}>
-              Retry
+              {nl ? 'Opnieuw' : fr ? 'Réessayer' : 'Retry'}
             </Button>
           </div>
         </div>
@@ -313,28 +321,28 @@ export default function LuxuryDashboard() {
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
               >
                 <Sparkles className="h-4 w-4 mr-2" />
-                Overview
+                {nl ? 'Overzicht' : fr ? 'Aperçu' : 'Overview'}
               </TabsTrigger>
               <TabsTrigger
                 value="performance"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
               >
                 <TrendingUp className="h-4 w-4 mr-2" />
-                Performance
+                {nl ? 'Prestaties' : fr ? 'Performance' : 'Performance'}
               </TabsTrigger>
               <TabsTrigger
                 value="analytics"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
-                Analytics
+                {nl ? 'Analyses' : fr ? 'Analytique' : 'Analytics'}
               </TabsTrigger>
               <TabsTrigger
                 value="intelligence"
                 className="rounded-none border-b-2 border-transparent data-[state=active]:border-purple-600 data-[state=active]:bg-transparent px-6 py-4"
               >
                 <Gem className="h-4 w-4 mr-2" />
-                Intelligence
+                {nl ? 'Intelligentie' : fr ? 'Intelligence' : 'Intelligence'}
               </TabsTrigger>
             </TabsList>
           </div>
@@ -345,40 +353,44 @@ export default function LuxuryDashboard() {
             {/* Key Metrics - Connected to real data */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <LuxuryMetricCard
-                title="Total Budget"
+                title={nl ? 'Totaal Budget' : fr ? 'Budget Total' : 'Total Budget'}
                 value={totalBudget > 0 ? `$${(totalBudget / 1000).toFixed(1)}K` : '$0'}
                 change={null}
                 icon={DollarSign}
                 color="purple"
-                subtitle={`Across ${totalCampaigns} campaign${totalCampaigns !== 1 ? 's' : ''}`}
+                subtitle={nl ? `Over ${totalCampaigns} campagne${totalCampaigns !== 1 ? 's' : ''}` : fr ? `Sur ${totalCampaigns} campagne${totalCampaigns !== 1 ? 's' : ''}` : `Across ${totalCampaigns} campaign${totalCampaigns !== 1 ? 's' : ''}`}
                 loading={loading}
+                loadingText={nl ? 'Laden...' : fr ? 'Chargement...' : 'Loading...'}
               />
               <LuxuryMetricCard
-                title="Active Campaigns"
+                title={nl ? 'Actieve Campagnes' : fr ? 'Campagnes Actives' : 'Active Campaigns'}
                 value={String(activeCampaigns)}
                 change={null}
                 icon={Activity}
                 color="blue"
-                subtitle={`${draftCampaigns} in draft`}
+                subtitle={nl ? `${draftCampaigns} in concept` : fr ? `${draftCampaigns} en brouillon` : `${draftCampaigns} in draft`}
                 loading={loading}
+                loadingText={nl ? 'Laden...' : fr ? 'Chargement...' : 'Loading...'}
               />
               <LuxuryMetricCard
-                title="Total Contacts"
+                title={nl ? 'Totaal Contacten' : fr ? 'Total Contacts' : 'Total Contacts'}
                 value={totalContacts.toLocaleString()}
                 change={null}
                 icon={Users}
                 color="green"
-                subtitle="In your database"
+                subtitle={nl ? 'In je database' : fr ? 'Dans votre base de données' : 'In your database'}
                 loading={loading}
+                loadingText={nl ? 'Laden...' : fr ? 'Chargement...' : 'Loading...'}
               />
               <LuxuryMetricCard
-                title="Total Campaigns"
+                title={nl ? 'Totaal Campagnes' : fr ? 'Total Campagnes' : 'Total Campaigns'}
                 value={String(totalCampaigns)}
                 change={null}
                 icon={Target}
                 color="amber"
-                subtitle={`${activeCampaigns} active, ${draftCampaigns} draft`}
+                subtitle={nl ? `${activeCampaigns} actief, ${draftCampaigns} concept` : fr ? `${activeCampaigns} actives, ${draftCampaigns} brouillon` : `${activeCampaigns} active, ${draftCampaigns} draft`}
                 loading={loading}
+                loadingText={nl ? 'Laden...' : fr ? 'Chargement...' : 'Loading...'}
               />
             </div>
 
@@ -387,8 +399,8 @@ export default function LuxuryDashboard() {
               <CardHeader className="pb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle>Campaign Progress</CardTitle>
-                    <CardDescription>Overview of your marketing campaigns</CardDescription>
+                    <CardTitle>{nl ? 'Campagnevoortgang' : fr ? 'Progrès des Campagnes' : 'Campaign Progress'}</CardTitle>
+                    <CardDescription>{nl ? 'Overzicht van je marketingcampagnes' : fr ? 'Aperçu de vos campagnes marketing' : 'Overview of your marketing campaigns'}</CardDescription>
                   </div>
                   <Button variant="ghost" size="sm">
                     <MoreVertical className="h-4 w-4" />
@@ -403,19 +415,19 @@ export default function LuxuryDashboard() {
                 ) : campaigns.length > 0 ? (
                   <>
                     <PerformanceIndicator
-                      label="Active Campaigns"
+                      label={nl ? 'Actieve Campagnes' : fr ? 'Campagnes Actives' : 'Active Campaigns'}
                       value={activeCampaigns}
                       target={totalCampaigns || 1}
                       color="purple"
                     />
                     <PerformanceIndicator
-                      label="Contacts Reached"
+                      label={nl ? 'Contacten Bereikt' : fr ? 'Contacts Atteints' : 'Contacts Reached'}
                       value={totalContacts}
                       target={Math.max(totalContacts, 1000)}
                       color="blue"
                     />
                     <PerformanceIndicator
-                      label="Total Budget Allocated"
+                      label={nl ? 'Totaal Budget Toegewezen' : fr ? 'Budget Total Alloué' : 'Total Budget Allocated'}
                       value={totalBudget}
                       target={Math.max(totalBudget * 1.2, 10000)}
                       color="green"
@@ -424,7 +436,7 @@ export default function LuxuryDashboard() {
                 ) : (
                   <div className="text-center py-8">
                     <Target className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">No campaigns yet. Create your first campaign to see progress.</p>
+                    <p className="text-gray-500">{nl ? 'Nog geen campagnes. Maak je eerste campagne om voortgang te zien.' : fr ? 'Pas encore de campagnes. Créez votre première campagne pour voir les progrès.' : 'No campaigns yet. Create your first campaign to see progress.'}</p>
                   </div>
                 )}
               </CardContent>
@@ -434,8 +446,8 @@ export default function LuxuryDashboard() {
             {recentCampaigns.length > 0 && (
               <Card className="border-gray-200 dark:border-gray-800">
                 <CardHeader>
-                  <CardTitle>Recent Campaigns</CardTitle>
-                  <CardDescription>Your latest campaign activity</CardDescription>
+                  <CardTitle>{nl ? 'Recente Campagnes' : fr ? 'Campagnes Récentes' : 'Recent Campaigns'}</CardTitle>
+                  <CardDescription>{nl ? 'Je laatste campagne-activiteit' : fr ? 'Votre dernière activité de campagne' : 'Your latest campaign activity'}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
@@ -482,8 +494,8 @@ export default function LuxuryDashboard() {
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
                   <div>
-                    <CardTitle>AI-Powered Insights</CardTitle>
-                    <CardDescription>Intelligence from your marketing data</CardDescription>
+                    <CardTitle>{nl ? 'AI-Gestuurde Inzichten' : fr ? 'Insights Alimentés par IA' : 'AI-Powered Insights'}</CardTitle>
+                    <CardDescription>{nl ? 'Intelligentie uit je marketingdata' : fr ? 'Intelligence issue de vos données marketing' : 'Intelligence from your marketing data'}</CardDescription>
                   </div>
                 </div>
               </CardHeader>
@@ -495,11 +507,11 @@ export default function LuxuryDashboard() {
                         <Zap className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm">Campaign Status</h4>
+                        <h4 className="font-semibold text-sm">{nl ? 'Campagnestatus' : fr ? 'Statut des Campagnes' : 'Campaign Status'}</h4>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           {activeCampaigns > 0
-                            ? `${activeCampaigns} campaign${activeCampaigns > 1 ? 's are' : ' is'} active. ${draftCampaigns > 0 ? `${draftCampaigns} in draft waiting to launch.` : ''}`
-                            : 'No active campaigns. Launch a campaign to start engaging your audience.'}
+                            ? (nl ? `${activeCampaigns} campagne${activeCampaigns > 1 ? 's zijn' : ' is'} actief. ${draftCampaigns > 0 ? `${draftCampaigns} in concept.` : ''}` : fr ? `${activeCampaigns} campagne${activeCampaigns > 1 ? 's sont' : ' est'} active${activeCampaigns > 1 ? 's' : ''}. ${draftCampaigns > 0 ? `${draftCampaigns} en brouillon.` : ''}` : `${activeCampaigns} campaign${activeCampaigns > 1 ? 's are' : ' is'} active. ${draftCampaigns > 0 ? `${draftCampaigns} in draft waiting to launch.` : ''}`)
+                            : (nl ? 'Geen actieve campagnes. Start een campagne om je publiek te bereiken.' : fr ? 'Pas de campagnes actives. Lancez une campagne pour engager votre audience.' : 'No active campaigns. Launch a campaign to start engaging your audience.')}
                         </p>
                       </div>
                     </div>
@@ -510,11 +522,11 @@ export default function LuxuryDashboard() {
                         <TrendingUp className="h-4 w-4 text-green-600 dark:text-green-400" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm">Contact Growth</h4>
+                        <h4 className="font-semibold text-sm">{nl ? 'Contactgroei' : fr ? 'Croissance des Contacts' : 'Contact Growth'}</h4>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           {totalContacts > 0
-                            ? `${totalContacts.toLocaleString()} contacts in your database. Import more to expand your reach.`
-                            : 'No contacts yet. Import a CSV or add contacts manually to get started.'}
+                            ? (nl ? `${totalContacts.toLocaleString()} contacten in je database. Importeer meer om je bereik te vergroten.` : fr ? `${totalContacts.toLocaleString()} contacts dans votre base de données. Importez-en plus pour élargir votre portée.` : `${totalContacts.toLocaleString()} contacts in your database. Import more to expand your reach.`)
+                            : (nl ? 'Nog geen contacten. Importeer een CSV of voeg contacten handmatig toe.' : fr ? 'Pas encore de contacts. Importez un CSV ou ajoutez des contacts manuellement.' : 'No contacts yet. Import a CSV or add contacts manually to get started.')}
                         </p>
                       </div>
                     </div>
@@ -525,11 +537,11 @@ export default function LuxuryDashboard() {
                         <Award className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       </div>
                       <div>
-                        <h4 className="font-semibold text-sm">Budget Utilization</h4>
+                        <h4 className="font-semibold text-sm">{nl ? 'Budgetbenutting' : fr ? 'Utilisation du Budget' : 'Budget Utilization'}</h4>
                         <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           {totalBudget > 0
-                            ? `$${(totalBudget / 1000).toFixed(1)}K total budget allocated across campaigns.`
-                            : 'Set campaign budgets to track your marketing spend.'}
+                            ? (nl ? `$${(totalBudget / 1000).toFixed(1)}K totaal budget toegewezen aan campagnes.` : fr ? `$${(totalBudget / 1000).toFixed(1)}K de budget total alloué aux campagnes.` : `$${(totalBudget / 1000).toFixed(1)}K total budget allocated across campaigns.`)
+                            : (nl ? 'Stel campagnebudgetten in om je marketinguitgaven bij te houden.' : fr ? 'Définissez des budgets de campagne pour suivre vos dépenses marketing.' : 'Set campaign budgets to track your marketing spend.')}
                         </p>
                       </div>
                     </div>
@@ -543,17 +555,17 @@ export default function LuxuryDashboard() {
             {/* Email Performance */}
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Email Performance</CardTitle>
-                <CardDescription>Delivery, opens, and clicks from your email campaigns</CardDescription>
+                <CardTitle>{nl ? 'E-mail Prestaties' : fr ? 'Performance des E-mails' : 'Email Performance'}</CardTitle>
+                <CardDescription>{nl ? 'Aflevering, opens en clicks van je e-mailcampagnes' : fr ? 'Livraison, ouvertures et clics de vos campagnes e-mail' : 'Delivery, opens, and clicks from your email campaigns'}</CardDescription>
               </CardHeader>
               <CardContent>
                 {overview?.emails?.sent > 0 ? (
                   <div className="space-y-6">
                     <ResponsiveContainer width="100%" height={250}>
                       <BarChart data={[
-                        { name: 'Sent', value: overview.emails.sent },
-                        { name: 'Opened', value: overview.emails.opened },
-                        { name: 'Clicked', value: overview.emails.clicked },
+                        { name: nl ? 'Verzonden' : fr ? 'Envoyés' : 'Sent', value: overview.emails.sent },
+                        { name: nl ? 'Geopend' : fr ? 'Ouverts' : 'Opened', value: overview.emails.opened },
+                        { name: nl ? 'Geklikt' : fr ? 'Cliqués' : 'Clicked', value: overview.emails.clicked },
                       ]}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                         <XAxis dataKey="name" />
@@ -569,22 +581,22 @@ export default function LuxuryDashboard() {
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-900/20">
                         <p className="text-2xl font-bold text-purple-600">{overview.emails.sent}</p>
-                        <p className="text-xs text-gray-500 mt-1">Emails Sent</p>
+                        <p className="text-xs text-gray-500 mt-1">{nl ? 'E-mails Verzonden' : fr ? 'E-mails Envoyés' : 'Emails Sent'}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20">
                         <p className="text-2xl font-bold text-blue-600">{overview.emails.open_rate}%</p>
-                        <p className="text-xs text-gray-500 mt-1">Open Rate</p>
+                        <p className="text-xs text-gray-500 mt-1">{nl ? 'Open Rate' : fr ? "Taux d'Ouverture" : 'Open Rate'}</p>
                       </div>
                       <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20">
                         <p className="text-2xl font-bold text-green-600">{overview.emails.click_rate}%</p>
-                        <p className="text-xs text-gray-500 mt-1">Click Rate</p>
+                        <p className="text-xs text-gray-500 mt-1">{nl ? 'Klikpercentage' : fr ? 'Taux de Clic' : 'Click Rate'}</p>
                       </div>
                     </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
                     <Activity className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">Send emails to see performance metrics.</p>
+                    <p className="text-gray-500">{nl ? 'Verstuur e-mails om prestatiestatistieken te zien.' : fr ? 'Envoyez des e-mails pour voir les métriques de performance.' : 'Send emails to see performance metrics.'}</p>
                   </div>
                 )}
               </CardContent>
@@ -593,7 +605,7 @@ export default function LuxuryDashboard() {
             {/* Active Campaigns List */}
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Active Campaigns</CardTitle>
+                <CardTitle>{nl ? 'Actieve Campagnes' : fr ? 'Campagnes Actives' : 'Active Campaigns'}</CardTitle>
               </CardHeader>
               <CardContent>
                 {campaigns.filter(c => c.status === 'active').length > 0 ? (
@@ -614,7 +626,7 @@ export default function LuxuryDashboard() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-center py-8">No active campaigns.</p>
+                  <p className="text-gray-500 text-center py-8">{nl ? 'Geen actieve campagnes.' : fr ? 'Pas de campagnes actives.' : 'No active campaigns.'}</p>
                 )}
               </CardContent>
             </Card>
@@ -624,8 +636,8 @@ export default function LuxuryDashboard() {
             {/* Growth Timeline */}
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Growth Timeline</CardTitle>
-                <CardDescription>Campaigns, contacts, and content over the last 6 months</CardDescription>
+                <CardTitle>{nl ? 'Groeioverzicht' : fr ? 'Chronologie de Croissance' : 'Growth Timeline'}</CardTitle>
+                <CardDescription>{nl ? 'Campagnes, contacten en content over de laatste 6 maanden' : fr ? 'Campagnes, contacts et contenu des 6 derniers mois' : 'Campaigns, contacts, and content over the last 6 months'}</CardDescription>
               </CardHeader>
               <CardContent>
                 {overview?.campaigns?.timeline?.some((d: any) => d.count > 0) ||
@@ -642,15 +654,15 @@ export default function LuxuryDashboard() {
                       <YAxis allowDecimals={false} />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="campaigns" fill="#8b5cf6" name="Campaigns" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="contacts" fill="#3b82f6" name="Contacts" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="content" fill="#10b981" name="Content" radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="campaigns" fill="#8b5cf6" name={nl ? 'Campagnes' : fr ? 'Campagnes' : 'Campaigns'} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="contacts" fill="#3b82f6" name={nl ? 'Contacten' : fr ? 'Contacts' : 'Contacts'} radius={[4, 4, 0, 0]} />
+                      <Bar dataKey="content" fill="#10b981" name={nl ? 'Content' : fr ? 'Contenu' : 'Content'} radius={[4, 4, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 ) : (
                   <div className="text-center py-8">
                     <BarChart3 className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                    <p className="text-gray-500">Data will appear here as you create campaigns and content.</p>
+                    <p className="text-gray-500">{nl ? 'Data verschijnt hier zodra je campagnes en content aanmaakt.' : fr ? 'Les données apparaîtront ici lorsque vous créerez des campagnes et du contenu.' : 'Data will appear here as you create campaigns and content.'}</p>
                   </div>
                 )}
               </CardContent>
@@ -660,7 +672,7 @@ export default function LuxuryDashboard() {
               {/* Campaign Type Pie */}
               <Card className="border-gray-200 dark:border-gray-800">
                 <CardHeader>
-                  <CardTitle>Campaign Types</CardTitle>
+                  <CardTitle>{nl ? 'Campagnetypes' : fr ? 'Types de Campagnes' : 'Campaign Types'}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {Object.keys(typeDistribution).length > 0 ? (
@@ -683,7 +695,7 @@ export default function LuxuryDashboard() {
                     </ResponsiveContainer>
                   ) : (
                     <div className="h-[220px] flex items-center justify-center text-gray-500">
-                      <p>No campaigns yet.</p>
+                      <p>{nl ? 'Nog geen campagnes.' : fr ? 'Pas encore de campagnes.' : 'No campaigns yet.'}</p>
                     </div>
                   )}
                 </CardContent>
@@ -692,7 +704,7 @@ export default function LuxuryDashboard() {
               {/* Content Breakdown */}
               <Card className="border-gray-200 dark:border-gray-800">
                 <CardHeader>
-                  <CardTitle>Content Library</CardTitle>
+                  <CardTitle>{nl ? 'Contentbibliotheek' : fr ? 'Bibliothèque de Contenu' : 'Content Library'}</CardTitle>
                   <CardDescription>{overview?.content?.total || 0} items</CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -709,7 +721,7 @@ export default function LuxuryDashboard() {
                     </div>
                   ) : (
                     <div className="h-[220px] flex items-center justify-center text-gray-500">
-                      <p>No content saved yet.</p>
+                      <p>{nl ? 'Nog geen content opgeslagen.' : fr ? 'Aucun contenu enregistré.' : 'No content saved yet.'}</p>
                     </div>
                   )}
                 </CardContent>
@@ -720,24 +732,27 @@ export default function LuxuryDashboard() {
           <TabsContent value="intelligence" className="space-y-6 mt-0">
             <Card className="border-gray-200 dark:border-gray-800">
               <CardHeader>
-                <CardTitle>Business Intelligence</CardTitle>
-                <CardDescription>AI-powered insights and recommendations</CardDescription>
+                <CardTitle>{nl ? 'Bedrijfsintelligentie' : fr ? 'Intelligence d\'Affaires' : 'Business Intelligence'}</CardTitle>
+                <CardDescription>{nl ? 'AI-gestuurde inzichten en aanbevelingen' : fr ? 'Insights et recommandations alimentés par IA' : 'AI-powered insights and recommendations'}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                    <h4 className="font-semibold mb-1">Summary</h4>
+                    <h4 className="font-semibold mb-1">{nl ? 'Samenvatting' : fr ? 'Résumé' : 'Summary'}</h4>
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      You have {totalCampaigns} campaign{totalCampaigns !== 1 ? 's' : ''} ({activeCampaigns} active),{' '}
-                      {totalContacts.toLocaleString()} contact{totalContacts !== 1 ? 's' : ''}, and{' '}
-                      ${totalBudget.toLocaleString()} in total budget.
+                      {nl
+                        ? `Je hebt ${totalCampaigns} campagne${totalCampaigns !== 1 ? 's' : ''} (${activeCampaigns} actief), ${totalContacts.toLocaleString()} contact${totalContacts !== 1 ? 'en' : ''} en $${totalBudget.toLocaleString()} totaal budget.`
+                        : fr
+                        ? `Vous avez ${totalCampaigns} campagne${totalCampaigns !== 1 ? 's' : ''} (${activeCampaigns} active${activeCampaigns !== 1 ? 's' : ''}), ${totalContacts.toLocaleString()} contact${totalContacts !== 1 ? 's' : ''} et $${totalBudget.toLocaleString()} de budget total.`
+                        : <>You have {totalCampaigns} campaign{totalCampaigns !== 1 ? 's' : ''} ({activeCampaigns} active),{' '}{totalContacts.toLocaleString()} contact{totalContacts !== 1 ? 's' : ''}, and{' '}${totalBudget.toLocaleString()} in total budget.</>
+                      }
                     </p>
                   </div>
                   {totalCampaigns === 0 && (
                     <div className="p-4 border-2 border-dashed rounded-lg text-center">
                       <Sparkles className="h-8 w-8 text-purple-400 mx-auto mb-2" />
                       <p className="text-sm text-gray-500">
-                        Start creating campaigns and importing contacts to unlock AI-powered recommendations.
+                        {nl ? 'Begin met het aanmaken van campagnes en het importeren van contacten om AI-gestuurde aanbevelingen te ontgrendelen.' : fr ? 'Commencez à créer des campagnes et à importer des contacts pour débloquer les recommandations IA.' : 'Start creating campaigns and importing contacts to unlock AI-powered recommendations.'}
                       </p>
                     </div>
                   )}

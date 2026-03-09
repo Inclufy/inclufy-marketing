@@ -152,10 +152,10 @@ describe('Onboarding Wizard', () => {
   });
 
   describe('Step navigation', () => {
-    it('renders step indicator with 9 steps', () => {
+    it('renders step indicator with 10 steps', () => {
       renderOnboarding();
       expect(screen.getByText(/Stap 1/i)).toBeInTheDocument();
-      expect(screen.getByText(/van 9/i) || screen.getByText(/9/)).toBeTruthy();
+      expect(screen.getByText(/van 10/i) || screen.getByText(/10/)).toBeTruthy();
     });
 
     it('renders next button', () => {

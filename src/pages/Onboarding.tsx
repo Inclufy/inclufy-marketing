@@ -1,5 +1,5 @@
 // src/pages/Onboarding.tsx
-// Multi-step onboarding wizard — full-screen, no sidebar (9 steps)
+// Multi-step onboarding wizard — full-screen, no sidebar (10 steps)
 
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,7 +14,7 @@ import {
   Building2, Globe, Sparkles, Palette, Users, ArrowRight, ArrowLeft,
   Loader2, CheckCircle2, Upload, Rocket, BarChart3, Search, TrendingUp,
   Share2, LayoutDashboard, Zap, Package, Target, Lightbulb,
-  Plus, Trash2, Crown, Gem, Swords, FolderOpen,
+  Plus, Trash2, Crown, Gem, Swords, FolderOpen, FileText,
   DollarSign, UserPlus, Megaphone, Heart,
   Instagram, Linkedin, Facebook, Twitter
 } from 'lucide-react';
@@ -26,7 +26,7 @@ import { brandMemoryService } from '@/services/brand/brand-memory.service';
 import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 10;
 
 const INDUSTRIES = [
   'E-commerce', 'SaaS / Technology', 'Consulting', 'Healthcare',
@@ -124,6 +124,18 @@ interface SocialAccount {
   url: string;
 }
 
+interface Audience {
+  audienceType: 'B2B' | 'B2C' | '';
+  idealCustomer: string;
+  customerSector: string;
+  companySize: string;
+  ageGroup: string;
+  occupation: string;
+  painPoints: string;
+}
+
+const emptyAudience: Audience = { audienceType: '', idealCustomer: '', customerSector: '', companySize: '', ageGroup: '', occupation: '', painPoints: '' };
+
 interface OnboardingData {
   // Step 1: Company
   companyName: string;
@@ -137,19 +149,17 @@ interface OnboardingData {
   scanSeo: number | null;
   scanContent: number | null;
   scanPerformance: number | null;
-  // Step 3: Products
+  // Step 2: Documents
+  hasDocuments: boolean | null;
+  uploadedFiles: File[];
+  documentAnalyzing: boolean;
+  // Step 4: Products
   products: Product[];
-  // Step 4: Audience
-  audienceType: 'B2B' | 'B2C' | '';
-  idealCustomer: string;
-  customerSector: string;
-  companySize: string;
-  ageGroup: string;
-  occupation: string;
-  painPoints: string;
-  // Step 5: Goals
+  // Step 5: Audience
+  audiences: Audience[];
+  // Step 6: Goals
   marketingGoals: string[];
-  // Step 6: Brand
+  // Step 7: Brand
   primaryColor: string;
   secondaryColor: string;
   tone: string;
@@ -159,9 +169,9 @@ interface OnboardingData {
   messagingDonts: string;
   logoFile: File | null;
   logoPreview: string | null;
-  // Step 7: Competitors
+  // Step 8: Competitors
   competitors: Competitor[];
-  // Step 8: Portfolio
+  // Step 9: Portfolio
   socialAccounts: SocialAccount[];
   existingCampaigns: string;
   exampleContent: string;
@@ -178,14 +188,11 @@ const initialData: OnboardingData = {
   scanSeo: null,
   scanContent: null,
   scanPerformance: null,
+  hasDocuments: null,
+  uploadedFiles: [],
+  documentAnalyzing: false,
   products: [{ ...emptyProduct }],
-  audienceType: '',
-  idealCustomer: '',
-  customerSector: '',
-  companySize: '',
-  ageGroup: '',
-  occupation: '',
-  painPoints: '',
+  audiences: [{ ...emptyAudience }],
   marketingGoals: [],
   primaryColor: '#7c3aed',
   secondaryColor: '#ec4899',
@@ -302,13 +309,14 @@ export default function Onboarding() {
           messaging_dos: data.messagingDos,
           messaging_donts: data.messagingDonts,
           products: data.products.filter(p => p.name.trim() || p.description.trim()),
-          audience_type: data.audienceType,
-          ideal_customer: data.idealCustomer,
-          customer_sector: data.customerSector,
-          company_size: data.companySize,
-          age_group: data.ageGroup,
-          occupation: data.occupation,
-          pain_points: data.painPoints,
+          audience_type: data.audiences[0]?.audienceType || '',
+          ideal_customer: data.audiences[0]?.idealCustomer || '',
+          customer_sector: data.audiences[0]?.customerSector || '',
+          company_size: data.audiences[0]?.companySize || '',
+          age_group: data.audiences[0]?.ageGroup || '',
+          occupation: data.audiences[0]?.occupation || '',
+          pain_points: data.audiences[0]?.painPoints || '',
+          audiences: data.audiences.filter(a => a.audienceType || a.idealCustomer),
           marketing_goals: data.marketingGoals,
           competitors: data.competitors.filter(c => c.name.trim()),
           social_accounts: data.socialAccounts.filter(s => s.url.trim()),
@@ -345,15 +353,15 @@ export default function Onboarding() {
 
           // Market definition
           industries: data.industry ? [data.industry] : [],
-          audiences: [
-            data.audienceType && `${data.audienceType}`,
-            data.idealCustomer,
-            data.occupation && (nl ? `Beroep: ${data.occupation}` : fr ? `Profession : ${data.occupation}` : `Role: ${data.occupation}`),
-            data.ageGroup && (nl ? `Leeftijd: ${data.ageGroup}` : fr ? `\u00c2ge : ${data.ageGroup}` : `Age: ${data.ageGroup}`),
-            data.painPoints && (nl ? `Pijnpunten: ${data.painPoints}` : fr ? `Points de douleur : ${data.painPoints}` : `Pain points: ${data.painPoints}`),
-            data.customerSector && (nl ? `Sector: ${data.customerSector}` : fr ? `Secteur : ${data.customerSector}` : `Sector: ${data.customerSector}`),
-            data.companySize && (nl ? `Bedrijfsgrootte: ${data.companySize}` : fr ? `Taille de l'entreprise : ${data.companySize}` : `Company size: ${data.companySize}`),
-          ].filter(Boolean) as string[],
+          audiences: data.audiences.flatMap(a => [
+            a.audienceType && `${a.audienceType}`,
+            a.idealCustomer,
+            a.occupation && (nl ? `Beroep: ${a.occupation}` : fr ? `Profession : ${a.occupation}` : `Role: ${a.occupation}`),
+            a.ageGroup && (nl ? `Leeftijd: ${a.ageGroup}` : fr ? `\u00c2ge : ${a.ageGroup}` : `Age: ${a.ageGroup}`),
+            a.painPoints && (nl ? `Pijnpunten: ${a.painPoints}` : fr ? `Points de douleur : ${a.painPoints}` : `Pain points: ${a.painPoints}`),
+            a.customerSector && (nl ? `Sector: ${a.customerSector}` : fr ? `Secteur : ${a.customerSector}` : `Sector: ${a.customerSector}`),
+            a.companySize && (nl ? `Bedrijfsgrootte: ${a.companySize}` : fr ? `Taille de l'entreprise : ${a.companySize}` : `Company size: ${a.companySize}`),
+          ]).filter(Boolean) as string[],
           regions: data.country ? [data.country] : [],
           languages: data.language ? [data.language] : ['nl'],
 
@@ -420,7 +428,7 @@ export default function Onboarding() {
   };
 
   const handleNext = () => {
-    if (step === 2 && data.scanScore === null && !scanning) {
+    if (step === 3 && data.scanScore === null && !scanning) {
       handleScan();
       return;
     }
@@ -429,12 +437,12 @@ export default function Onboarding() {
 
   // ─── Step indicator data ────────────────────────────────────────────
 
-  const stepIcons = [Building2, Search, Package, Users, Target, Palette, Swords, FolderOpen, Rocket];
+  const stepIcons = [Building2, Upload, Search, Package, Users, Target, Palette, Swords, FolderOpen, Rocket];
   const stepLabelsArr = nl
-    ? ['Bedrijf', 'Scan', 'Product', 'Doelgroep', 'Doelen', 'Merk', 'Concurrentie', 'Portfolio', 'Klaar!']
+    ? ['Bedrijf', 'Documenten', 'Scan', 'Product', 'Doelgroep', 'Doelen', 'Merk', 'Concurrentie', 'Portfolio', 'Klaar!']
     : fr
-    ? ['Entreprise', 'Scan', 'Produit', 'Cible', 'Objectifs', 'Marque', 'Concurrents', 'Portfolio', 'Termin\u00e9 !']
-    : ['Company', 'Scan', 'Product', 'Audience', 'Goals', 'Brand', 'Competitors', 'Portfolio', 'Done!'];
+    ? ['Entreprise', 'Documents', 'Scan', 'Produit', 'Cible', 'Objectifs', 'Marque', 'Concurrents', 'Portfolio', 'Termin\u00e9 !']
+    : ['Company', 'Documents', 'Scan', 'Product', 'Audience', 'Goals', 'Brand', 'Competitors', 'Portfolio', 'Done!'];
 
   // ─── Confetti ───────────────────────────────────────────────────────
 
@@ -680,8 +688,135 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 2: Website Analyse ══════════════════════════ */}
+          {/* ═══ STEP 2: Document Upload ══════════════════════════ */}
           {step === 2 && (
+            <>
+              <div className="text-center mb-8">
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
+                  <Upload className="w-8 h-8 text-purple-400" />
+                </div>
+                <h1 className="text-3xl font-bold mb-2">
+                  {nl ? 'Heb je al marketingdocumenten?' : fr ? 'Avez-vous déjà des documents marketing ?' : 'Do you already have marketing documents?'}
+                </h1>
+                <p className="text-gray-400">
+                  {nl ? 'Upload een businesscase, marketingplan of productinfo — AI vult de rest automatisch in' : fr ? 'Téléchargez un business case, plan marketing ou info produit — l\'IA remplira le reste automatiquement' : 'Upload a business case, marketing plan or product info — AI will auto-fill the rest'}
+                </p>
+              </div>
+
+              {data.hasDocuments === null ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => update({ hasDocuments: true })}
+                    className="flex flex-col items-center gap-4 p-8 rounded-xl border-2 bg-white/5 border-white/15 text-gray-400 hover:bg-purple-600/10 hover:border-purple-500/50 transition-all"
+                  >
+                    <Upload className="w-10 h-10 text-purple-400" />
+                    <div className="text-center">
+                      <p className="text-lg font-semibold text-white">{nl ? 'Ja, ik heb documenten' : fr ? 'Oui, j\'ai des documents' : 'Yes, I have documents'}</p>
+                      <p className="text-xs text-gray-400 mt-1">{nl ? 'Marketingplan, businesscase, productinfo, etc.' : fr ? 'Plan marketing, business case, info produit, etc.' : 'Marketing plan, business case, product info, etc.'}</p>
+                    </div>
+                  </motion.button>
+                  <motion.button
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => update({ hasDocuments: false })}
+                    className="flex flex-col items-center gap-4 p-8 rounded-xl border-2 bg-white/5 border-white/15 text-gray-400 hover:bg-white/10 hover:border-white/30 transition-all"
+                  >
+                    <ArrowRight className="w-10 h-10 text-gray-500" />
+                    <div className="text-center">
+                      <p className="text-lg font-semibold text-white">{nl ? 'Nee, ik begin blanco' : fr ? 'Non, je pars de zéro' : 'No, starting from scratch'}</p>
+                      <p className="text-xs text-gray-400 mt-1">{nl ? 'Ik vul alle stappen handmatig in' : fr ? 'Je remplirai toutes les étapes manuellement' : 'I\'ll fill in all steps manually'}</p>
+                    </div>
+                  </motion.button>
+                </div>
+              ) : data.hasDocuments ? (
+                <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl max-w-2xl mx-auto">
+                  <CardContent className="p-6 space-y-6">
+                    <div
+                      className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center cursor-pointer hover:border-purple-500/40 transition-colors"
+                      onClick={() => document.getElementById('doc-upload')?.click()}
+                    >
+                      <Upload className="w-10 h-10 text-gray-500 mx-auto mb-3" />
+                      <p className="text-sm text-gray-300 font-medium">
+                        {nl ? 'Klik om documenten te uploaden' : fr ? 'Cliquez pour télécharger des documents' : 'Click to upload documents'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">PDF, DOCX, PPTX, TXT (max 10MB per bestand)</p>
+                      <input
+                        id="doc-upload"
+                        type="file"
+                        accept=".pdf,.docx,.doc,.pptx,.ppt,.txt,.rtf"
+                        multiple
+                        className="hidden"
+                        onChange={e => {
+                          const files = Array.from(e.target.files || []);
+                          const valid = files.filter(f => f.size <= 10 * 1024 * 1024);
+                          if (valid.length > 0) update({ uploadedFiles: [...data.uploadedFiles, ...valid] });
+                        }}
+                      />
+                    </div>
+
+                    {data.uploadedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-gray-200">
+                          {nl ? 'Geüploade bestanden' : fr ? 'Fichiers téléchargés' : 'Uploaded files'}
+                        </p>
+                        {data.uploadedFiles.map((file, idx) => (
+                          <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/10">
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-4 h-4 text-purple-400" />
+                              <div>
+                                <p className="text-sm text-gray-200">{file.name}</p>
+                                <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(0)} KB</p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => update({ uploadedFiles: data.uploadedFiles.filter((_, i) => i !== idx) })}
+                              className="text-red-400 hover:text-red-300"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => update({ hasDocuments: null, uploadedFiles: [] })}
+                        className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                      >
+                        {nl ? '← Terug' : fr ? '← Retour' : '← Back'}
+                      </button>
+                    </div>
+
+                    <p className="text-xs text-gray-500 text-center">
+                      {nl ? 'AI analyseert je documenten en vult zoveel mogelijk velden automatisch in. Je kunt alles nog aanpassen in de volgende stappen.' : fr ? 'L\'IA analysera vos documents et remplira autant de champs que possible. Vous pourrez tout ajuster dans les étapes suivantes.' : 'AI will analyze your documents and auto-fill as many fields as possible. You can adjust everything in the following steps.'}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl max-w-2xl mx-auto">
+                  <CardContent className="p-8 text-center space-y-4">
+                    <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto" />
+                    <p className="text-lg font-semibold text-white">
+                      {nl ? 'Geen probleem!' : fr ? 'Pas de problème !' : 'No problem!'}
+                    </p>
+                    <p className="text-sm text-gray-400">
+                      {nl ? 'We loodsen je door alle stappen om je profiel in te vullen.' : fr ? 'Nous vous guiderons à travers toutes les étapes pour compléter votre profil.' : 'We\'ll guide you through all steps to complete your profile.'}
+                    </p>
+                    <button
+                      onClick={() => update({ hasDocuments: null })}
+                      className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                    >
+                      {nl ? '← Terug naar keuze' : fr ? '← Retour au choix' : '← Back to choice'}
+                    </button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
+          )}
+
+          {/* ═══ STEP 3: Website Analyse ══════════════════════════ */}
+          {step === 3 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -754,8 +889,8 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 3: Product of Dienst ════════════════════════ */}
-          {step === 3 && (
+          {/* ═══ STEP 4: Product of Dienst ════════════════════════ */}
+          {step === 4 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -873,8 +1008,8 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 4: Doelgroep ════════════════════════════════ */}
-          {step === 4 && (
+          {/* ═══ STEP 5: Doelgroep ════════════════════════════════ */}
+          {step === 5 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -887,149 +1022,221 @@ export default function Onboarding() {
                   {nl ? `Wie wil ${companyLabel} bereiken?` : fr ? `Qui ${companyLabel} souhaite atteindre ?` : `Who does ${companyLabel} want to reach?`}
                 </p>
               </div>
-              <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl">
-                <CardContent className="p-6 space-y-6">
-                  {/* B2B / B2C Toggle */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Type klant' : fr ? 'Type de client' : 'Customer Type'}
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      {(['B2B', 'B2C'] as const).map(type => (
-                        <motion.button
-                          key={type}
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => update({ audienceType: type })}
-                          className={cn(
-                            'py-4 rounded-xl border-2 text-lg font-bold transition-all',
-                            data.audienceType === type
-                              ? 'bg-purple-600/30 border-purple-500 text-white shadow-lg shadow-purple-500/20'
-                              : 'bg-white/5 border-white/20 text-gray-400 hover:bg-white/10'
-                          )}
-                        >
-                          {type}
-                          <span className="block text-xs font-normal mt-1 text-gray-400">
-                            {type === 'B2B' ? 'Business-to-Business' : 'Business-to-Consumer'}
-                          </span>
-                        </motion.button>
-                      ))}
-                    </div>
-                  </div>
 
-                  {/* Ideal Customer */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Ideale Klant' : fr ? 'Client id\u00e9al' : 'Ideal Customer'}
-                    </label>
-                    <Textarea
-                      value={data.idealCustomer}
-                      onChange={e => update({ idealCustomer: e.target.value })}
-                      placeholder={nl ? 'Beschrijf je ideale klant...' : fr ? 'D\u00e9crivez votre client id\u00e9al...' : 'Describe your ideal customer...'}
-                      rows={2}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-                    />
-                  </div>
-
-                  {/* B2B fields */}
-                  {data.audienceType === 'B2B' && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-200">
-                          {nl ? 'Sector / Branche van klanten' : fr ? 'Secteur / Industrie des clients' : 'Client Sector / Industry'}
-                        </label>
-                        <Input
-                          value={data.customerSector}
-                          onChange={e => update({ customerSector: e.target.value })}
-                          placeholder={nl ? 'bijv. Technologie, Gezondheidszorg' : fr ? 'ex. Technologie, Sant\u00e9' : 'e.g. Technology, Healthcare'}
-                          className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-200">
-                          {nl ? 'Bedrijfsgrootte' : fr ? "Taille de l'entreprise" : 'Company Size'}
-                        </label>
-                        <div className="grid grid-cols-4 gap-2">
-                          {COMPANY_SIZES.map(s => (
-                            <motion.button
-                              key={s.value}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => update({ companySize: s.value })}
-                              className={cn(
-                                'px-3 py-2.5 rounded-lg text-xs font-medium border transition-all',
-                                data.companySize === s.value
-                                  ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20'
-                                  : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15'
-                              )}
-                            >
-                              {nl ? s.nl : fr ? s.fr : s.en}
-                            </motion.button>
-                          ))}
+              <div className="space-y-4">
+                {data.audiences.map((audience, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05 }}
+                  >
+                    <Card className="!bg-[#1a1a2e] !border-white/15 shadow-xl relative">
+                      <CardContent className="p-6 space-y-4">
+                        {/* Audience number badge */}
+                        <div className="absolute top-3 right-3">
+                          <Badge className="bg-purple-500/20 text-purple-300 border-0 text-[10px]">
+                            #{idx + 1}
+                          </Badge>
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
 
-                  {/* B2C fields */}
-                  {data.audienceType === 'B2C' && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-200">
-                          {nl ? 'Leeftijdsgroep' : fr ? "Tranche d'\u00e2ge" : 'Age Group'}
-                        </label>
-                        <div className="grid grid-cols-5 gap-2">
-                          {AGE_GROUPS.map(ag => (
-                            <motion.button
-                              key={ag}
-                              whileTap={{ scale: 0.95 }}
-                              onClick={() => update({ ageGroup: ag })}
-                              className={cn(
-                                'px-3 py-2.5 rounded-lg text-xs font-medium border transition-all',
-                                data.ageGroup === ag
-                                  ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20'
-                                  : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15'
-                              )}
-                            >
-                              {ag}
-                            </motion.button>
-                          ))}
+                        {/* B2B / B2C Toggle */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-200">
+                            {nl ? 'Type klant' : fr ? 'Type de client' : 'Customer Type'}
+                          </label>
+                          <div className="grid grid-cols-2 gap-3">
+                            {(['B2B', 'B2C'] as const).map(type => (
+                              <motion.button
+                                key={type}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  const updated = [...data.audiences];
+                                  updated[idx] = { ...updated[idx], audienceType: type };
+                                  update({ audiences: updated });
+                                }}
+                                className={cn(
+                                  'py-4 rounded-xl border-2 text-lg font-bold transition-all',
+                                  audience.audienceType === type
+                                    ? 'bg-purple-600/30 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                                    : 'bg-white/5 border-white/20 text-gray-400 hover:bg-white/10'
+                                )}
+                              >
+                                {type}
+                                <span className="block text-xs font-normal mt-1 text-gray-400">
+                                  {type === 'B2B' ? 'Business-to-Business' : 'Business-to-Consumer'}
+                                </span>
+                              </motion.button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  )}
 
-                  {/* Occupation */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Beroep / Rol' : fr ? 'Profession / R\u00f4le' : 'Occupation / Role'}
-                    </label>
-                    <Input
-                      value={data.occupation}
-                      onChange={e => update({ occupation: e.target.value })}
-                      placeholder={nl ? 'bijv. MKB-ondernemer, CMO' : fr ? 'ex. Dirigeant PME, CMO' : 'e.g. SME Owner, CMO'}
-                      className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-                    />
-                  </div>
+                        {/* Ideal Customer */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-200">
+                            {nl ? 'Ideale Klant' : fr ? 'Client id\u00e9al' : 'Ideal Customer'}
+                          </label>
+                          <Textarea
+                            value={audience.idealCustomer}
+                            onChange={e => {
+                              const updated = [...data.audiences];
+                              updated[idx] = { ...updated[idx], idealCustomer: e.target.value };
+                              update({ audiences: updated });
+                            }}
+                            placeholder={nl ? 'Beschrijf je ideale klant...' : fr ? 'D\u00e9crivez votre client id\u00e9al...' : 'Describe your ideal customer...'}
+                            rows={2}
+                            className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                          />
+                        </div>
 
-                  {/* Pain Points */}
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-200">
-                      {nl ? 'Pijnpunten' : fr ? 'Points de douleur' : 'Pain Points'}
-                    </label>
-                    <Textarea
-                      value={data.painPoints}
-                      onChange={e => update({ painPoints: e.target.value })}
-                      placeholder={nl ? 'Welke problemen lost je product op?' : fr ? 'Quels probl\u00e8mes votre produit r\u00e9sout-il ?' : 'What problems does your product solve?'}
-                      rows={2}
-                      className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+                        {/* B2B fields */}
+                        {audience.audienceType === 'B2B' && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-200">
+                                {nl ? 'Sector / Branche van klanten' : fr ? 'Secteur / Industrie des clients' : 'Client Sector / Industry'}
+                              </label>
+                              <Input
+                                value={audience.customerSector}
+                                onChange={e => {
+                                  const updated = [...data.audiences];
+                                  updated[idx] = { ...updated[idx], customerSector: e.target.value };
+                                  update({ audiences: updated });
+                                }}
+                                placeholder={nl ? 'bijv. Technologie, Gezondheidszorg' : fr ? 'ex. Technologie, Sant\u00e9' : 'e.g. Technology, Healthcare'}
+                                className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-200">
+                                {nl ? 'Bedrijfsgrootte' : fr ? "Taille de l'entreprise" : 'Company Size'}
+                              </label>
+                              <div className="grid grid-cols-4 gap-2">
+                                {COMPANY_SIZES.map(s => (
+                                  <motion.button
+                                    key={s.value}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => {
+                                      const updated = [...data.audiences];
+                                      updated[idx] = { ...updated[idx], companySize: s.value };
+                                      update({ audiences: updated });
+                                    }}
+                                    className={cn(
+                                      'px-3 py-2.5 rounded-lg text-xs font-medium border transition-all',
+                                      audience.companySize === s.value
+                                        ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                                        : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15'
+                                    )}
+                                  >
+                                    {nl ? s.nl : fr ? s.fr : s.en}
+                                  </motion.button>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* B2C fields */}
+                        {audience.audienceType === 'B2C' && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="space-y-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-200">
+                                {nl ? 'Leeftijdsgroep' : fr ? "Tranche d'\u00e2ge" : 'Age Group'}
+                              </label>
+                              <div className="grid grid-cols-5 gap-2">
+                                {AGE_GROUPS.map(ag => (
+                                  <motion.button
+                                    key={ag}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => {
+                                      const updated = [...data.audiences];
+                                      updated[idx] = { ...updated[idx], ageGroup: ag };
+                                      update({ audiences: updated });
+                                    }}
+                                    className={cn(
+                                      'px-3 py-2.5 rounded-lg text-xs font-medium border transition-all',
+                                      audience.ageGroup === ag
+                                        ? 'bg-purple-600 border-purple-500 text-white shadow-lg shadow-purple-500/20'
+                                        : 'bg-white/10 border-white/20 text-gray-300 hover:bg-white/15'
+                                    )}
+                                  >
+                                    {ag}
+                                  </motion.button>
+                                ))}
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Occupation */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-200">
+                            {nl ? 'Beroep / Rol' : fr ? 'Profession / R\u00f4le' : 'Occupation / Role'}
+                          </label>
+                          <Input
+                            value={audience.occupation}
+                            onChange={e => {
+                              const updated = [...data.audiences];
+                              updated[idx] = { ...updated[idx], occupation: e.target.value };
+                              update({ audiences: updated });
+                            }}
+                            placeholder={nl ? 'bijv. MKB-ondernemer, CMO' : fr ? 'ex. Dirigeant PME, CMO' : 'e.g. SME Owner, CMO'}
+                            className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                          />
+                        </div>
+
+                        {/* Pain Points */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-200">
+                            {nl ? 'Pijnpunten' : fr ? 'Points de douleur' : 'Pain Points'}
+                          </label>
+                          <Textarea
+                            value={audience.painPoints}
+                            onChange={e => {
+                              const updated = [...data.audiences];
+                              updated[idx] = { ...updated[idx], painPoints: e.target.value };
+                              update({ audiences: updated });
+                            }}
+                            placeholder={nl ? 'Welke problemen lost je product op?' : fr ? 'Quels probl\u00e8mes votre produit r\u00e9sout-il ?' : 'What problems does your product solve?'}
+                            rows={2}
+                            className="bg-white/10 border-white/20 text-white placeholder:text-gray-500"
+                          />
+                        </div>
+
+                        {/* Remove button */}
+                        {data.audiences.length > 1 && (
+                          <button
+                            onClick={() => {
+                              const updated = data.audiences.filter((_, i) => i !== idx);
+                              update({ audiences: updated });
+                            }}
+                            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            {nl ? 'Verwijderen' : fr ? 'Supprimer' : 'Remove'}
+                          </button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+
+                {/* Add audience button */}
+                {data.audiences.length < 5 && (
+                  <button
+                    onClick={() => update({ audiences: [...data.audiences, { ...emptyAudience }] })}
+                    className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border-2 border-dashed border-white/15 text-gray-400 hover:text-purple-300 hover:border-purple-500/40 transition-all text-sm font-medium"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {nl ? 'Doelgroep toevoegen' : fr ? 'Ajouter un public cible' : 'Add Audience'}
+                  </button>
+                )}
+              </div>
             </>
           )}
 
-          {/* ═══ STEP 5: Marketingdoelen ══════════════════════════ */}
-          {step === 5 && (
+          {/* ═══ STEP 6: Marketingdoelen ══════════════════════════ */}
+          {step === 6 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -1076,8 +1283,8 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 6: Merkprofiel ═════════════════════════════ */}
-          {step === 6 && (
+          {/* ═══ STEP 7: Merkprofiel ═════════════════════════════ */}
+          {step === 7 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -1305,8 +1512,8 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 7: Concurrenten ════════════════════════════ */}
-          {step === 7 && (
+          {/* ═══ STEP 8: Concurrenten ════════════════════════════ */}
+          {step === 8 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -1389,8 +1596,8 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 8: Portfolio / Bestaande Content ═══════════ */}
-          {step === 8 && (
+          {/* ═══ STEP 9: Portfolio / Bestaande Content ═══════════ */}
+          {step === 9 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-4">
@@ -1464,8 +1671,8 @@ export default function Onboarding() {
             </>
           )}
 
-          {/* ═══ STEP 9: Samenvatting ════════════════════════════ */}
-          {step === 9 && (
+          {/* ═══ STEP 10: Samenvatting ═══════════════════════════ */}
+          {step === 10 && (
             <>
               <div className="text-center mb-8">
                 <div className="w-20 h-20 rounded-2xl bg-green-500/20 flex items-center justify-center mx-auto mb-6">
@@ -1539,21 +1746,25 @@ export default function Onboarding() {
                   </Card>
                 )}
 
-                {/* Audience */}
-                {(data.audienceType || data.idealCustomer || data.occupation) && (
+                {/* Audiences */}
+                {data.audiences.some(a => a.audienceType || a.idealCustomer || a.occupation) && (
                   <Card className="!bg-[#1a1a2e] !border-white/15">
                     <CardContent className="p-5">
                       <div className="flex items-center gap-2 mb-3">
                         <Users className="w-5 h-5 text-purple-400" />
-                        <h3 className="font-semibold text-white">{nl ? 'Doelgroep' : fr ? 'Public cible' : 'Target Audience'}</h3>
+                        <h3 className="font-semibold text-white">{nl ? 'Doelgroepen' : fr ? 'Publics cibles' : 'Target Audiences'}</h3>
                       </div>
-                      <div className="flex flex-wrap gap-2 mb-2">
-                        {data.audienceType && <Badge className="bg-purple-500/20 text-purple-300 border-0 text-xs">{data.audienceType}</Badge>}
-                        {data.companySize && <Badge className="bg-white/10 text-gray-300 border-0 text-xs">{data.companySize}</Badge>}
-                        {data.ageGroup && <Badge className="bg-white/10 text-gray-300 border-0 text-xs">{data.ageGroup}</Badge>}
-                      </div>
-                      {data.idealCustomer && <p className="text-xs text-gray-400">{data.idealCustomer.slice(0, 80)}{data.idealCustomer.length > 80 ? '...' : ''}</p>}
-                      {data.occupation && <p className="text-xs text-gray-500 mt-1">{data.occupation}</p>}
+                      {data.audiences.filter(a => a.audienceType || a.idealCustomer).map((a, i) => (
+                        <div key={i} className="mb-2 last:mb-0">
+                          <div className="flex flex-wrap gap-2 mb-1">
+                            {a.audienceType && <Badge className="bg-purple-500/20 text-purple-300 border-0 text-xs">{a.audienceType}</Badge>}
+                            {a.companySize && <Badge className="bg-white/10 text-gray-300 border-0 text-xs">{a.companySize}</Badge>}
+                            {a.ageGroup && <Badge className="bg-white/10 text-gray-300 border-0 text-xs">{a.ageGroup}</Badge>}
+                          </div>
+                          {a.idealCustomer && <p className="text-xs text-gray-400">{a.idealCustomer.slice(0, 80)}{a.idealCustomer.length > 80 ? '...' : ''}</p>}
+                          {a.occupation && <p className="text-xs text-gray-500">{a.occupation}</p>}
+                        </div>
+                      ))}
                     </CardContent>
                   </Card>
                 )}
@@ -1666,7 +1877,7 @@ export default function Onboarding() {
 
               {/* Back button */}
               <button
-                onClick={() => setStep(8)}
+                onClick={() => setStep(9)}
                 className="flex items-center gap-2 mx-auto px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -1678,8 +1889,8 @@ export default function Onboarding() {
         </motion.div>
         </AnimatePresence>
 
-        {/* ─── Navigation Footer (steps 1-8) ───────────────────── */}
-        {step < 9 && (
+        {/* ─── Navigation Footer (steps 1-9) ───────────────────── */}
+        {step < 10 && (
           <div className="flex items-center justify-between mt-8">
             <Button
               variant="outline"
