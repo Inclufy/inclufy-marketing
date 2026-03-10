@@ -89,6 +89,47 @@ export interface MarketSimulation {
   recommendations: string[];
 }
 
+export interface PredictiveAlert {
+  id: string;
+  type: 'metric_decline' | 'anomaly' | 'opportunity' | 'risk';
+  severity: 'critical' | 'warning' | 'info';
+  title: string;
+  description: string;
+  metric: string;
+  currentValue: number;
+  predictedValue: number;
+  timeframe: string;
+  suggestedAction: string;
+}
+
+export interface DiscoveredAudience {
+  id: string;
+  name: string;
+  size: number;
+  matchScore: number;
+  characteristics: string[];
+  recommendedActions: string[];
+  estimatedValue: number;
+}
+
+export interface AutoOptimization {
+  id: string;
+  testName: string;
+  status: 'running' | 'winner_found' | 'insufficient_data';
+  variants: Array<{ id: string; name: string; performance: number; isWinner: boolean }>;
+  autoAction: string;
+  confidenceLevel: number;
+}
+
+export interface ContentSchedule {
+  contentId: string;
+  title: string;
+  scheduledTime: string;
+  channel: string;
+  predictedEngagement: number;
+  reason: string;
+}
+
 // Service implementation
 class AutonomousService {
   private autonomyLevel: 'conservative' | 'balanced' | 'aggressive' = 'balanced';
@@ -460,6 +501,155 @@ class AutonomousService {
       total_revenue: 2850000,
       vs_manual_performance: 285 // 285% better than manual campaigns
     };
+  }
+
+  // Predictive Alerts
+  async getPredictiveAlerts(): Promise<PredictiveAlert[]> {
+    await new Promise(resolve => setTimeout(resolve, 400));
+    return [
+      {
+        id: 'alert_1',
+        type: 'metric_decline',
+        severity: 'warning',
+        title: 'Email Open Rate Declining',
+        description: 'Open rate dropped 12% in the last 7 days compared to previous period',
+        metric: 'email_open_rate',
+        currentValue: 22.4,
+        predictedValue: 18.1,
+        timeframe: '7 days',
+        suggestedAction: 'Review subject lines and optimize send times using AI',
+      },
+      {
+        id: 'alert_2',
+        type: 'opportunity',
+        severity: 'info',
+        title: 'Untapped Audience Segment Detected',
+        description: 'AI identified a high-potential segment of 2,500 contacts not yet targeted',
+        metric: 'audience_coverage',
+        currentValue: 65,
+        predictedValue: 89,
+        timeframe: '30 days',
+        suggestedAction: 'Create a targeted campaign for the new segment',
+      },
+      {
+        id: 'alert_3',
+        type: 'risk',
+        severity: 'critical',
+        title: 'Budget Burn Rate Too High',
+        description: 'At current pace, campaign budget will be exhausted 5 days before campaign end',
+        metric: 'budget_utilization',
+        currentValue: 78,
+        predictedValue: 100,
+        timeframe: '5 days',
+        suggestedAction: 'Reduce daily spend or reallocate from lower-priority campaigns',
+      }
+    ];
+  }
+
+  // Smart Audience Discovery
+  async discoverAudiences(): Promise<DiscoveredAudience[]> {
+    await new Promise(resolve => setTimeout(resolve, 800));
+    return [
+      {
+        id: 'aud_1',
+        name: 'Weekend Power Shoppers',
+        size: 3200,
+        matchScore: 94,
+        characteristics: ['High weekend activity', 'Avg order $120+', 'Mobile-first', 'Social media engaged'],
+        recommendedActions: ['Launch weekend flash sales', 'Mobile push notifications', 'Instagram stories'],
+        estimatedValue: 384000,
+      },
+      {
+        id: 'aud_2',
+        name: 'Dormant VIP Customers',
+        size: 1800,
+        matchScore: 87,
+        characteristics: ['Previously high-value', 'Inactive 60+ days', 'Email responsive', 'Loyalty members'],
+        recommendedActions: ['Win-back email series', 'Exclusive VIP offers', 'Personal outreach'],
+        estimatedValue: 216000,
+      },
+      {
+        id: 'aud_3',
+        name: 'Rising Stars',
+        size: 4500,
+        matchScore: 78,
+        characteristics: ['Increasing purchase frequency', 'Growing basket size', 'Multi-channel', 'Referral potential'],
+        recommendedActions: ['Loyalty program enrollment', 'Cross-sell campaigns', 'Referral incentives'],
+        estimatedValue: 540000,
+      }
+    ];
+  }
+
+  // Auto-Optimization (A/B testing)
+  async getAutoOptimizations(): Promise<AutoOptimization[]> {
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return [
+      {
+        id: 'opt_1',
+        testName: 'Subject Line Optimization',
+        status: 'winner_found',
+        variants: [
+          { id: 'v1', name: 'Urgency-based', performance: 34.2, isWinner: true },
+          { id: 'v2', name: 'Curiosity-based', performance: 28.7, isWinner: false },
+          { id: 'v3', name: 'Benefit-focused', performance: 31.1, isWinner: false },
+        ],
+        autoAction: 'Automatically applying winning variant to all future emails',
+        confidenceLevel: 96,
+      },
+      {
+        id: 'opt_2',
+        testName: 'Landing Page CTA Color',
+        status: 'running',
+        variants: [
+          { id: 'v1', name: 'Purple gradient', performance: 12.4, isWinner: false },
+          { id: 'v2', name: 'Green solid', performance: 14.1, isWinner: false },
+        ],
+        autoAction: 'Testing in progress — need 500 more conversions for statistical significance',
+        confidenceLevel: 72,
+      },
+      {
+        id: 'opt_3',
+        testName: 'Email Send Time',
+        status: 'running',
+        variants: [
+          { id: 'v1', name: 'Tuesday 10AM', performance: 24.8, isWinner: false },
+          { id: 'v2', name: 'Thursday 2PM', performance: 22.1, isWinner: false },
+        ],
+        autoAction: 'Testing in progress — results expected in 3 days',
+        confidenceLevel: 64,
+      }
+    ];
+  }
+
+  // Auto-Schedule Content
+  async autoScheduleContent(): Promise<ContentSchedule[]> {
+    await new Promise(resolve => setTimeout(resolve, 600));
+    return [
+      {
+        contentId: 'content_1',
+        title: 'Spring Collection Launch Post',
+        scheduledTime: new Date(Date.now() + 2 * 3600000).toISOString(),
+        channel: 'instagram',
+        predictedEngagement: 8.4,
+        reason: 'Optimal posting time for your audience on Instagram',
+      },
+      {
+        contentId: 'content_2',
+        title: 'Weekly Newsletter',
+        scheduledTime: new Date(Date.now() + 18 * 3600000).toISOString(),
+        channel: 'email',
+        predictedEngagement: 34.2,
+        reason: 'Tuesday mornings show highest open rates for your subscribers',
+      },
+      {
+        contentId: 'content_3',
+        title: 'Product Tutorial Video',
+        scheduledTime: new Date(Date.now() + 48 * 3600000).toISOString(),
+        channel: 'youtube',
+        predictedEngagement: 12.7,
+        reason: 'Wednesday afternoons drive most views for educational content',
+      }
+    ];
   }
 
   // Learning Engine

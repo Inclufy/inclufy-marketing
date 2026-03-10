@@ -74,6 +74,19 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       icon: LayoutDashboard,
     },
     {
+      key: 'autonomous',
+      label: nl ? 'AI Marketing' : fr ? 'Marketing IA' : 'AI Marketing',
+      href: '/app/autonomous',
+      icon: Brain,
+      badge: 'AI',
+    },
+    {
+      key: 'marketing-budget',
+      label: nl ? 'Marketing Budget' : fr ? 'Budget Marketing' : 'Marketing Budget',
+      href: '/app/marketing-budget',
+      icon: CreditCard,
+    },
+    {
       key: 'setup',
       label: nl ? 'Configuratie' : 'Configuration',
       icon: Building,
@@ -207,7 +220,8 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
                           variant="secondary"
                           className={cn(
                             "text-[9px] px-1.5 py-0 h-4",
-                            item.badge === 'PRO' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0"
+                            item.badge === 'PRO' && "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0",
+                            item.badge === 'AI' && "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0"
                           )}
                         >
                           {item.badge}
@@ -256,7 +270,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
             );
           }
 
-          // Simple link item (Dashboard only)
+          // Simple link item (Dashboard, AI Marketing, etc.)
           return (
             <Link
               key={item.href}
@@ -270,7 +284,22 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
               title={collapsed ? item.label : undefined}
             >
               <item.icon className="h-[18px] w-[18px] shrink-0" />
-              {!collapsed && <span className="truncate">{item.label}</span>}
+              {!collapsed && (
+                <>
+                  <span className="flex-1 truncate">{item.label}</span>
+                  {(item as any).badge && (
+                    <Badge
+                      variant="secondary"
+                      className={cn(
+                        "text-[9px] px-1.5 py-0 h-4",
+                        (item as any).badge === 'AI' && "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0"
+                      )}
+                    >
+                      {(item as any).badge}
+                    </Badge>
+                  )}
+                </>
+              )}
             </Link>
           );
         })}

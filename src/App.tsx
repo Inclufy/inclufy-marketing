@@ -9,6 +9,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { CurrencyProvider } from "@/contexts/CurrencyContext";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { Loader2 } from "lucide-react";
 
@@ -68,6 +69,8 @@ const Onboarding = lazy(() => import("./pages/Onboarding"));
 const ContentHub = lazy(() => import("./pages/ContentHub"));
 const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
 const ContentApprovals = lazy(() => import("./pages/ContentApprovals"));
+const AutonomousMarketing = lazy(() => import("./pages/AutonomousMarketing"));
+const MarketingBudget = lazy(() => import("./pages/MarketingBudget"));
 
 // Tenant Admin Portal pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -104,6 +107,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <LanguageProvider>
+          <CurrencyProvider>
           <TooltipProvider>
             <BrowserRouter>
               <AuthProvider>
@@ -137,6 +141,8 @@ export default function App() {
 
                       {/* Core - Phase 0 */}
                       <Route path="dashboard" element={<LuxuryDashboard />} />
+                      <Route path="autonomous" element={<AutonomousMarketing />} />
+                      <Route path="marketing-budget" element={<MarketingBudget />} />
                       <Route path="content-hub" element={<ContentHub />} />
                       <Route path="analytics" element={<Analytics />} />
                       <Route path="reports" element={<Reports />} />
@@ -265,6 +271,7 @@ export default function App() {
               </AuthProvider>
             </BrowserRouter>
           </TooltipProvider>
+          </CurrencyProvider>
           </LanguageProvider>
         </ThemeProvider>
       </QueryClientProvider>
