@@ -1,6 +1,8 @@
 // src/pages/CampaignOrchestrator.tsx
 import { useState, useEffect, useCallback } from "react";
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useCampaignReadiness } from '@/hooks/useCampaignReadiness';
+import CampaignReadinessGate from '@/components/CampaignReadinessGate';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -52,9 +54,11 @@ export default function CampaignOrchestrator() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isReadinessGateOpen, setIsReadinessGateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { isReady: campaignReady } = useCampaignReadiness();
 
   // New campaign form state
   const [newCampaign, setNewCampaign] = useState({
@@ -232,13 +236,29 @@ export default function CampaignOrchestrator() {
             {nl ? 'Vernieuwen' : fr ? 'Actualiser' : 'Refresh'}
           </Button>
 
+          {/* Readiness Gate — shown when score < 60% */}
+          <CampaignReadinessGate
+            open={isReadinessGateOpen}
+            onClose={() => setIsReadinessGateOpen(false)}
+            onProceedAnyway={() => { setIsReadinessGateOpen(false); setIsCreateDialogOpen(true); }}
+          />
+
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            onClick={() => {
+              if (campaignReady) {
+                setIsCreateDialogOpen(true);
+              } else {
+                setIsReadinessGateOpen(true);
+              }
+            }}
+          >
+            <Plus className="h-5 w-5 mr-2" />
+            {nl ? 'Nieuwe Campagne' : fr ? 'Nouvelle Campagne' : 'New Campaign'}
+          </Button>
+
           <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="lg" className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700">
-                <Plus className="h-5 w-5 mr-2" />
-                {nl ? 'Nieuwe Campagne' : fr ? 'Nouvelle Campagne' : 'New Campaign'}
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-2xl">
               <DialogHeader>
                 <DialogTitle>{nl ? 'Nieuwe Campagne Aanmaken' : fr ? 'Créer une Nouvelle Campagne' : 'Create New Campaign'}</DialogTitle>

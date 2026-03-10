@@ -6,3 +6,4 @@ export { useBrandKits, useCreateBrandKit } from './useBrandKits';
 export { useSubscription, useCreatePortalSession } from './useSubscription';
 export { useSocialAccounts, useConnectSocial, useDisconnectSocial, useRefreshSocialToken } from './useSocialAccounts';
 export { useJourneys, useJourney, useCreateJourney, useUpdateJourney, useActivateJourney, usePauseJourney, useEnrollContacts } from './useJourneys';
+export { useBrandMemory, toBrandContext } from './useBrandMemory';

@@ -33,9 +33,16 @@ interface Message {
   timestamp: Date;
 }
 
+interface CopilotInitialContext {
+  systemPrompt: string;
+  firstMessage?: string;
+}
+
 interface AICopilotProps {
   isOpen: boolean;
   onClose: () => void;
+  initialContext?: CopilotInitialContext | null;
+  onContextConsumed?: () => void;
 }
 
 const QUICK_PROMPTS = [
@@ -51,13 +58,15 @@ const SUGGESTIONS = [
   { icon: Zap, title: 'Groei tips', desc: 'Ontdek kansen om je bereik te vergroten' },
 ];
 
-export default function AICopilot({ isOpen, onClose }: AICopilotProps) {
+export default function AICopilot({ isOpen, onClose, initialContext, onContextConsumed }: AICopilotProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [customSystemPrompt, setCustomSystemPrompt] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const contextProcessedRef = useRef<string | null>(null);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -71,6 +80,29 @@ export default function AICopilot({ isOpen, onClose }: AICopilotProps) {
     }
   }, [isOpen]);
 
+  // Handle initialContext: auto-send first message when copilot opens with context
+  useEffect(() => {
+    if (!isOpen || !initialContext || isLoading) return;
+    // Prevent double-processing the same context
+    const contextKey = `${initialContext.systemPrompt}:${initialContext.firstMessage || ''}`;
+    if (contextProcessedRef.current === contextKey) return;
+    contextProcessedRef.current = contextKey;
+
+    // Set custom system prompt and clear chat for fresh context
+    setCustomSystemPrompt(initialContext.systemPrompt);
+    setMessages([]);
+
+    // Auto-send the first message if provided
+    if (initialContext.firstMessage) {
+      setTimeout(() => {
+        sendMessageWithPrompt(initialContext.firstMessage!, initialContext.systemPrompt);
+      }, 400);
+    }
+
+    // Notify parent that context has been consumed
+    onContextConsumed?.();
+  }, [isOpen, initialContext]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const generateId = () => `msg-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
   const copyMessage = (id: string, content: string) => {
@@ -79,14 +111,16 @@ export default function AICopilot({ isOpen, onClose }: AICopilotProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const sendMessage = async (text?: string) => {
-    const messageText = text || input.trim();
-    if (!messageText || isLoading) return;
+  const DEFAULT_SYSTEM_PROMPT = 'Je bent een behulpzame AI Marketing Co-pilot voor het Inclufy Marketing platform. Antwoord altijd in het Nederlands. Je helpt met marketing strategie, content creatie, campagne planning, SEO, social media, en e-mail marketing. Geef praktische, actiegerichte adviezen. Gebruik markdown formatting voor duidelijke structuur.';
+
+  /** Core send function that accepts an explicit system prompt override */
+  const sendMessageWithPrompt = async (text: string, systemPrompt?: string) => {
+    if (!text || isLoading) return;
 
     const userMessage: Message = {
       id: generateId(),
       role: 'user',
-      content: messageText,
+      content: text,
       timestamp: new Date(),
     };
 
@@ -102,7 +136,7 @@ export default function AICopilot({ isOpen, onClose }: AICopilotProps) {
 
       const res = await api.post('/copilot/chat', {
         messages: history,
-        system_prompt: 'Je bent een behulpzame AI Marketing Co-pilot voor het Inclufy Marketing platform. Antwoord altijd in het Nederlands. Je helpt met marketing strategie, content creatie, campagne planning, SEO, social media, en e-mail marketing. Geef praktische, actiegerichte adviezen. Gebruik markdown formatting voor duidelijke structuur.',
+        system_prompt: systemPrompt || customSystemPrompt || DEFAULT_SYSTEM_PROMPT,
       });
 
       const assistantMessage: Message = {
@@ -118,7 +152,7 @@ export default function AICopilot({ isOpen, onClose }: AICopilotProps) {
       const fallbackMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: getFallbackResponse(messageText),
+        content: getFallbackResponse(text),
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, fallbackMessage]);
@@ -127,8 +161,16 @@ export default function AICopilot({ isOpen, onClose }: AICopilotProps) {
     }
   };
 
+  const sendMessage = async (text?: string) => {
+    const messageText = text || input.trim();
+    if (!messageText) return;
+    await sendMessageWithPrompt(messageText);
+  };
+
   const clearChat = () => {
     setMessages([]);
+    setCustomSystemPrompt(null);
+    contextProcessedRef.current = null;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

@@ -78,7 +78,15 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
             </div>
             
             <button
-              onClick={() => onSelectBlueprint(blueprint)}
+              onClick={async () => {
+                try {
+                  const resp = await axios.get(`/api/growth-blueprint/${blueprint.id}`);
+                  onSelectBlueprint(resp.data);
+                } catch {
+                  // Fallback: pass flat object
+                  onSelectBlueprint(blueprint);
+                }
+              }}
               className="flex items-center gap-1 px-4 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all"
             >
               <TrendingUp className="w-4 h-4" />

@@ -5,6 +5,7 @@ import React, { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { CopilotProvider, useCopilot } from '@/contexts/CopilotContext';
 import SideNav from '@/components/navigation/SideNav';
 import AICopilot from '@/components/AICopilot';
 import {
@@ -16,13 +17,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import NotificationCenter from '@/components/NotificationCenter';
 
-export default function LuxuryTopNavLayout() {
-  const [copilotOpen, setCopilotOpen] = useState(false);
+function LayoutInner() {
   const [sideNavCollapsed, setSideNavCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
+  const { isOpen: copilotOpen, initialContext, openCopilot, closeCopilot, clearInitialContext } = useCopilot();
 
   const email = user?.email || 'sami@inclufy.com';
   const initials = (user?.user_metadata?.full_name || email).charAt(0).toUpperCase();
@@ -166,12 +167,17 @@ export default function LuxuryTopNavLayout() {
       </main>
 
       {/* ─── AI Copilot Sidebar (right) ────────────────────── */}
-      <AICopilot isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
+      <AICopilot
+        isOpen={copilotOpen}
+        onClose={closeCopilot}
+        initialContext={initialContext}
+        onContextConsumed={clearInitialContext}
+      />
 
       {/* Copilot Toggle */}
       {!copilotOpen && (
         <button
-          onClick={() => setCopilotOpen(true)}
+          onClick={openCopilot}
           className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 bg-gradient-to-b from-purple-600 to-pink-600 text-white pl-3 pr-2 py-3 rounded-l-xl shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all group"
           title="AI Copilot"
         >
@@ -188,5 +194,13 @@ export default function LuxuryTopNavLayout() {
         </button>
       )}
     </div>
+  );
+}
+
+export default function LuxuryTopNavLayout() {
+  return (
+    <CopilotProvider>
+      <LayoutInner />
+    </CopilotProvider>
   );
 }

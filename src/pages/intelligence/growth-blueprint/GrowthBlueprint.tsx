@@ -16,7 +16,10 @@ export default function GrowthBlueprint() {
   const [currentBlueprint, setCurrentBlueprint] = useState<any>(null);
   const [stats, setStats] = useState({ scans_this_month: 0, avg_score: 0, setups_completed: 0, opportunities: 0 });
 
-  useEffect(() => { loadStats(); }, []);
+  useEffect(() => {
+    loadStats();
+    loadLatestBlueprint();
+  }, []);
 
   const loadStats = async () => {
     try {
@@ -24,6 +27,22 @@ export default function GrowthBlueprint() {
       setStats(response.data);
     } catch (error) {
       console.error('Failed to load stats:', error);
+    }
+  };
+
+  /** Auto-load the most recent completed scan so Resultaten tab isn't empty */
+  const loadLatestBlueprint = async () => {
+    try {
+      const listResp = await axios.get('/api/growth-blueprint');
+      const blueprints = Array.isArray(listResp.data) ? listResp.data : [];
+      const latest = blueprints.find((bp: any) => bp.status === 'completed') || blueprints[0];
+      if (!latest) return;
+
+      const detailResp = await axios.get(`/api/growth-blueprint/${latest.id}`);
+      setCurrentBlueprint(detailResp.data);
+      setActiveTab('results');
+    } catch (error) {
+      console.debug('Could not auto-load latest blueprint:', error);
     }
   };
 

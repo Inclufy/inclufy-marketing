@@ -131,7 +131,14 @@ export default function HistoryList({ onSelectBlueprint }: HistoryListProps) {
             <BlueprintCard
               key={blueprint.id}
               blueprint={blueprint}
-              onSelect={() => onSelectBlueprint(blueprint)}
+              onSelect={async () => {
+                try {
+                  const resp = await axios.get(`/api/growth-blueprint/${blueprint.id}`);
+                  onSelectBlueprint(resp.data);
+                } catch {
+                  onSelectBlueprint(blueprint);
+                }
+              }}
               onDelete={() => deleteBlueprint(blueprint.id)}
             />
           ))}
