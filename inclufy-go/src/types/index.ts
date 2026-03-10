@@ -138,8 +138,10 @@ export interface TranscribeResponse {
 // ─── Navigation Types ────────────────────────────────────────────────
 
 export type RootStackParamList = {
+  // Auth
   Login: undefined;
   Main: undefined;
+  // Events
   EventSetup: { eventId?: string };
   LiveCapture: { eventId: string };
   PostReview: { captureId: string; eventId: string };
@@ -147,6 +149,17 @@ export type RootStackParamList = {
   StoryArc: { eventId: string };
   EventRecap: { eventId: string };
   TeamManage: { eventId: string };
+  // Campaigns
+  CampaignList: undefined;
+  CampaignDetail: { campaignId: string };
+  // AI & Content
+  ContentCreator: undefined;
+  AICommand: undefined;
+  // Leads & Budget
+  LeadCapture: undefined;
+  BudgetMonitor: undefined;
+  // Notifications
+  Notifications: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────

@@ -199,7 +199,7 @@ export default function EventDashboardScreen() {
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('TeamManage' as any, { eventId })}
+          onPress={() => navigation.navigate('TeamManage', { eventId })}
         >
           <Text style={styles.quickActionIcon}>{'\u{1F465}'}</Text>
           <Text style={styles.quickActionLabel}>Team</Text>
