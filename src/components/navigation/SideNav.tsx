@@ -29,6 +29,8 @@ import {
   Activity,
   TrendingUp,
   CreditCard,
+  Plug,
+  Send,
   User as UserIcon,
   PanelLeftClose,
   PanelLeft,
@@ -87,6 +89,13 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       icon: CreditCard,
     },
     {
+      key: 'integrations',
+      label: nl ? 'Integraties' : fr ? 'Intégrations' : 'Integrations',
+      href: '/app/integrations',
+      icon: Plug,
+      badge: 'NEW',
+    },
+    {
       key: 'setup',
       label: nl ? 'Configuratie' : 'Configuration',
       icon: Building,
@@ -132,6 +141,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         { label: nl ? 'Media Bibliotheek' : fr ? 'Médiathèque' : 'Media Library', href: '/app/media-library', icon: BookOpen },
         { label: nl ? 'Kalender' : fr ? 'Calendrier' : 'Calendar', href: '/app/content/calendar', icon: Calendar },
         { label: nl ? 'Goedkeuring' : fr ? 'Approbation' : 'Approvals', href: '/app/content/approvals', icon: CheckCircle },
+        { label: nl ? 'Publicatie Engine' : fr ? 'Moteur de Publication' : 'Publication Engine', href: '/app/publish', icon: Send, badge: 'NEW' },
       ],
     },
     {
@@ -142,7 +152,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       children: [
         { label: 'Workflows', href: '/app/automation/workflows', icon: GitBranch },
         { label: nl ? 'Klantreis' : fr ? 'Parcours Client' : 'Customer Journey', href: '/app/automation/journeys', icon: Activity },
-        { label: 'AI Agents', href: '/app/automation/agents', icon: Bot, badge: 'BETA' },
+        { label: nl ? 'Multi-Agent Systeem' : fr ? 'Système Multi-Agent' : 'Multi-Agent System', href: '/app/automation/agents', icon: Bot, badge: 'AI' },
         { label: nl ? 'Slimme Triggers' : fr ? 'Déclencheurs Intelligents' : 'Smart Triggers', href: '/app/automation/triggers', icon: Sparkles },
       ],
     },
@@ -154,6 +164,8 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         { label: nl ? 'Overzicht' : fr ? 'Aperçu' : 'Overview', href: '/app/analytics', icon: BarChart3 },
         { label: nl ? 'Rapporten' : fr ? 'Rapports' : 'Reports', href: '/app/reports', icon: LineChart },
         { label: nl ? 'Contacten' : 'Contacts', href: '/app/contacts', icon: Contact },
+        { label: nl ? 'Lead Scoring' : fr ? 'Scoring de Leads' : 'Lead Scoring', href: '/app/lead-scoring', icon: Target, badge: 'AI' },
+        { label: nl ? 'Attributie' : fr ? 'Attribution' : 'Attribution', href: '/app/attribution', icon: GitBranch },
       ],
     },
   ];

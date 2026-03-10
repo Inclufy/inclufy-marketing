@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Inclufy GO",
+    "slug": "inclufy-go",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#9333EA"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.inclufy.go",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Inclufy GO has camera nodig om foto's en video's te maken op events.",
+        "NSMicrophoneUsageDescription": "Inclufy GO heeft microfoon nodig voor video- en audio-opname.",
+        "NSPhotoLibraryUsageDescription": "Inclufy GO slaat branded content op in je fotobibliotheek."
+      }
+    },
+    "android": {
+      "package": "com.inclufy.go",
+      "adaptiveIcon": {
+        "backgroundColor": "#9333EA",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Inclufy GO heeft camera nodig om event content te maken."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Inclufy GO heeft microfoon nodig voor audio-opname en transcriptie."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Inclufy GO slaat branded afbeeldingen op in je fotobibliotheek."
+        }
+      ],
+      "expo-router"
+    ]
+  }
+}

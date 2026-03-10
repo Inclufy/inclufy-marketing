@@ -72,6 +72,13 @@ const ContentApprovals = lazy(() => import("./pages/ContentApprovals"));
 const AutonomousMarketing = lazy(() => import("./pages/AutonomousMarketing"));
 const MarketingBudget = lazy(() => import("./pages/MarketingBudget"));
 
+// Unicorn Features
+const IntegrationHub = lazy(() => import("./pages/IntegrationHub"));
+const PublicationEngine = lazy(() => import("./pages/PublicationEngine"));
+const PredictiveLeadScoring = lazy(() => import("./pages/PredictiveLeadScoring"));
+const MultiTouchAttribution = lazy(() => import("./pages/MultiTouchAttribution"));
+const MultiAgentSystem = lazy(() => import("./pages/MultiAgentSystem"));
+
 // Tenant Admin Portal pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -143,6 +150,10 @@ export default function App() {
                       <Route path="dashboard" element={<LuxuryDashboard />} />
                       <Route path="autonomous" element={<AutonomousMarketing />} />
                       <Route path="marketing-budget" element={<MarketingBudget />} />
+                      <Route path="integrations" element={<IntegrationHub />} />
+                      <Route path="publish" element={<PublicationEngine />} />
+                      <Route path="lead-scoring" element={<PredictiveLeadScoring />} />
+                      <Route path="attribution" element={<MultiTouchAttribution />} />
                       <Route path="content-hub" element={<ContentHub />} />
                       <Route path="analytics" element={<Analytics />} />
                       <Route path="reports" element={<Reports />} />
@@ -210,7 +221,7 @@ export default function App() {
                         <Route index element={<JourneyDashboard />} />
                         <Route path="workflows" element={<JourneyBuilder />} />
                         <Route path="journeys" element={<JourneyDashboard />} />
-                        <Route path="agents" element={<ConversationalAI />} />
+                        <Route path="agents" element={<MultiAgentSystem />} />
                         <Route path="triggers" element={<CampaignOrchestrator />} />
                       </Route>
 

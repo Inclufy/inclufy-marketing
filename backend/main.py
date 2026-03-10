@@ -30,6 +30,7 @@ from routers import (
     tenant_admin,
     journeys,
     social_auth,
+    event_studio,
 )
 
 app = FastAPI(title="Inclufy Marketing API", version="1.0.0")
@@ -37,7 +38,7 @@ app = FastAPI(title="Inclufy Marketing API", version="1.0.0")
 # CORS: restrict to known origins (override via ALLOWED_ORIGINS env var)
 allowed_origins = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:8080,http://localhost:8081,http://localhost:8082,http://localhost:5173,http://localhost:3000"
+    "http://localhost:8080,http://localhost:8081,http://localhost:8082,http://localhost:5173,http://localhost:3000,http://localhost:19006,http://localhost:8083"
 ).split(",")
 
 app.add_middleware(
@@ -108,3 +109,4 @@ app.include_router(copilot.router)
 app.include_router(tenant_admin.router)
 app.include_router(journeys.router)
 app.include_router(social_auth.router)
+app.include_router(event_studio.router)
