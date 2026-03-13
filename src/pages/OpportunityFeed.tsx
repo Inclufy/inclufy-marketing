@@ -111,6 +111,7 @@ function getTypeLabel(type: FeedItemType, nl: boolean, fr: boolean): string {
     budget_optimization: { en: 'Budget Optimization', nl: 'Budget Optimalisatie', fr: 'Optimisation Budget' },
   };
   const l = labels[type];
+  if (!l) return type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   return nl ? l.nl : fr ? l.fr : l.en;
 }
 
