@@ -18,7 +18,6 @@ export async function seedContent(userId: string, template: IndustryTemplate): P
     optimal_time_reason: i % 3 === 0 ? 'AI detected peak engagement at this time for your audience' : null,
     tags: c.tags,
     performance: c.performance || generateContentPerformance(c.status === 'published'),
-    created_by: 'ai_agent',
   }));
   const { error: contentError } = await marketingSupabase.from('publishable_content').insert(publishableContent);
   if (contentError) console.error('publishable_content seed error:', contentError);

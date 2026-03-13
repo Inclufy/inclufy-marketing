@@ -7,14 +7,14 @@ export async function seedAutomation(userId: string, template: IndustryTemplate)
   // Autonomous decisions
   const decisions = [
     {
-      user_id: userId, type: 'budget_reallocation', title: `Reallocate ad budget from Facebook to LinkedIn`,
+      user_id: userId, type: 'budget_reallocation', decision_type: 'budget_reallocation', title: `Reallocate ad budget from Facebook to LinkedIn`,
       description: `LinkedIn campaigns show 34% higher conversion rate for ${template.industry} audience. Recommend shifting €2,000 from Facebook display to LinkedIn Sponsored Content.`,
       priority: 'high', confidence: 0.89, estimated_impact: { revenue_increase: 15000, cost_savings: 2000 },
       risk_level: 'low', cost_estimate: 0, requires_approval: true, status: 'pending',
       decision_data: { from_channel: 'facebook', to_channel: 'linkedin', amount: 2000, reason: 'Higher B2B conversion rate' },
     },
     {
-      user_id: userId, type: 'content_publish', title: `Auto-publish trending ${template.industry} content`,
+      user_id: userId, type: 'content_publish', decision_type: 'content_publish', title: `Auto-publish trending ${template.industry} content`,
       description: `AI detected surge in interest for "${template.content[0]?.tags?.[0] || 'industry topic'}". Publishing prepared content within optimal engagement window.`,
       priority: 'medium', confidence: 0.92, estimated_impact: { impressions: 25000, leads: 12 },
       risk_level: 'low', cost_estimate: 0, requires_approval: false, status: 'approved',

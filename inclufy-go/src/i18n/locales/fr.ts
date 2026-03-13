@@ -53,6 +53,7 @@ const fr: Translations = {
     settings: 'Param\u00E8tres',
     notifications: 'Notifications',
     campaigns: 'Campagnes',
+    demoEnvironment: 'Environnement Démo',
   },
 
   // ─── Login Screen ──────────────────────────────────────────────────
@@ -407,6 +408,9 @@ const fr: Translations = {
     appVersion: 'Version de l\'app',
     inclufy: 'Inclufy GO',
     inclufyDesc: 'pour le Marketing \u00E9v\u00E9nementiel',
+    demo: 'D\u00E9mo',
+    demoEnvironment: 'Environnement D\u00E9mo',
+    demoEnvironmentDesc: 'G\u00E9rer les donn\u00E9es de d\u00E9mo',
   },
 
   // ─── Notifications Screen ──────────────────────────────────────────

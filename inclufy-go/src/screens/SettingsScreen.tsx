@@ -9,15 +9,19 @@ import {
   Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { supabase } from '../services/supabase';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import { useTranslation, LOCALE_LABELS, type Locale } from '../i18n';
+import type { RootStackParamList } from '../types';
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const { t, locale, setLocale } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [email, setEmail] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
@@ -205,6 +209,18 @@ export default function SettingsScreen() {
             iconColor={colors.success}
             label={t.settings.dataExport}
             onPress={handleComingSoon}
+          />
+        </View>
+
+        {/* ── Demo ──────────────────────────────────────────────────── */}
+        <Text style={styles.sectionLabel}>{t.settings.demo ?? 'DEMO'}</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="sparkles-outline"
+            iconColor={colors.accent}
+            label={t.settings.demoEnvironment ?? 'Demo Omgeving'}
+            value={t.settings.demoEnvironmentDesc ?? 'Beheer demo data'}
+            onPress={() => navigation.navigate('DemoEnvironment')}
           />
         </View>
 

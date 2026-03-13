@@ -51,6 +51,7 @@ const nl = {
     settings: 'Instellingen',
     notifications: 'Meldingen',
     campaigns: 'Campagnes',
+    demoEnvironment: 'Demo Omgeving',
   },
 
   // ─── Login Screen ──────────────────────────────────────────────────
@@ -421,6 +422,9 @@ const nl = {
     appVersion: 'App versie',
     inclufy: 'Inclufy GO',
     inclufyDesc: 'for Event Marketing',
+    demo: 'Demo',
+    demoEnvironment: 'Demo Omgeving',
+    demoEnvironmentDesc: 'Beheer demo data',
   },
 
   // ─── Notifications Screen ──────────────────────────────────────────

@@ -62,7 +62,7 @@ export async function seedLeads(userId: string, template: IndustryTemplate): Pro
     company: lead.company,
     type: signalTypes[i % signalTypes.length],
     description: `${lead.name} from ${lead.company}: ${lead.hot_signals[0] || 'Engaged with content'}`,
-    strength: lead.composite_score > 85 ? 'strong' : lead.composite_score > 70 ? 'moderate' : 'weak',
+    strength: lead.composite_score > 85 ? 95 : lead.composite_score > 70 ? 75 : 40,
     page_url: '/product/' + template.industry,
     duration_seconds: randomBetween(30, 600),
     metadata: { source: lead.source, tags: lead.tags },
