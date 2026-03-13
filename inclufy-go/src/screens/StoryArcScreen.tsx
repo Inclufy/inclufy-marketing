@@ -6,10 +6,10 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Alert,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { Ionicons } from '@expo/vector-icons';
 import { useEvent } from '../hooks/useEvents';
 import { useCaptures } from '../hooks/useCaptures';
 import { aiService, type StoryArcPost } from '../services/ai.service';
@@ -21,29 +21,32 @@ import { cardShadow } from '../utils/shadows';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'StoryArc'>;
 
+// Map phases/channels to Ionicons names
 const phaseIcons: Record<string, string> = {
-  arrival: '🚀',
-  keynote: '🎤',
-  networking: '🤝',
-  demo: '💻',
-  highlights: '⭐',
-  wrapup: '🎉',
-  panel: '👥',
-  workshop: '🛠️',
+  arrival: 'walk-outline',
+  keynote: 'mic-outline',
+  networking: 'people-outline',
+  demo: 'laptop-outline',
+  highlights: 'star-outline',
+  wrapup: 'checkmark-circle-outline',
+  panel: 'chatbubbles-outline',
+  workshop: 'construct-outline',
 };
 
 const channelIcons: Record<string, string> = {
-  linkedin: '💼',
-  instagram: '📸',
-  x: '𝕏',
-  facebook: '🌍',
+  linkedin: 'briefcase-outline',
+  instagram: 'camera-outline',
+  x: 'logo-twitter',
+  facebook: 'logo-facebook',
+  tiktok: 'musical-notes-outline',
 };
 
 const contentTypeIcons: Record<string, string> = {
-  photo: '📷',
-  video: '🎥',
-  audio: '🎤',
-  quote: '📝',
+  photo: 'camera-outline',
+  video: 'videocam-outline',
+  audio: 'mic-outline',
+  quote: 'chatbox-ellipses-outline',
+  reel: 'play-circle-outline',
 };
 
 export default function StoryArcScreen() {
@@ -112,8 +115,15 @@ export default function StoryArcScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📅 Story Arc</Text>
-        <Text style={styles.headerEvent}>{event?.name}</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="git-branch-outline" size={22} color={colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>Story Arc</Text>
+            <Text style={styles.headerEvent}>{event?.name}</Text>
+          </View>
+        </View>
         {narrative ? (
           <Text style={styles.narrative}>{narrative}</Text>
         ) : null}
@@ -143,21 +153,27 @@ export default function StoryArcScreen() {
               <View style={styles.cardHeader}>
                 <Text style={styles.cardTime}>{item.time}</Text>
                 <View style={styles.cardBadges}>
-                  <Text style={styles.badge}>
-                    {channelIcons[item.channel] || '📱'} {item.channel}
-                  </Text>
-                  <Text style={styles.badge}>
-                    {contentTypeIcons[item.content_type] || '📷'} {item.content_type}
-                  </Text>
+                  <View style={styles.badgeRow}>
+                    <Ionicons name={(channelIcons[item.channel] || 'phone-portrait-outline') as any} size={12} color={colors.textSecondary} />
+                    <Text style={styles.badgeText}>{item.channel}</Text>
+                  </View>
+                  <View style={styles.badgeRow}>
+                    <Ionicons name={(contentTypeIcons[item.content_type] || 'camera-outline') as any} size={12} color={colors.textSecondary} />
+                    <Text style={styles.badgeText}>{item.content_type}</Text>
+                  </View>
                 </View>
               </View>
 
               <View style={styles.cardBody}>
-                <Text style={styles.cardPhase}>
-                  {phaseIcons[item.phase] || '📌'} {item.phase}
-                </Text>
+                <View style={styles.phaseRow}>
+                  <Ionicons name={(phaseIcons[item.phase] || 'ellipse-outline') as any} size={14} color={colors.primary} />
+                  <Text style={styles.cardPhase}>{item.phase}</Text>
+                </View>
                 <Text style={styles.cardTheme}>{item.theme}</Text>
-                <Text style={styles.cardTip}>💡 {item.tip}</Text>
+                <View style={styles.tipRow}>
+                  <Ionicons name="bulb-outline" size={13} color={colors.textSecondary} />
+                  <Text style={styles.cardTip}>{item.tip}</Text>
+                </View>
               </View>
 
               {item.caption_template ? (
@@ -172,7 +188,8 @@ export default function StoryArcScreen() {
                 style={styles.captureBtn}
                 onPress={() => navigation.navigate('LiveCapture', { eventId })}
               >
-                <Text style={styles.captureBtnText}>📸 Vastleggen</Text>
+                <Ionicons name="camera-outline" size={15} color={colors.primary} />
+                <Text style={styles.captureBtnText}>Vastleggen</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -181,7 +198,8 @@ export default function StoryArcScreen() {
 
       {/* Regenerate */}
       <TouchableOpacity style={styles.regenerateBtn} onPress={generateArc}>
-        <Text style={styles.regenerateText}>🔄 Nieuwe Story Arc genereren</Text>
+        <Ionicons name="refresh-outline" size={16} color={colors.primary} />
+        <Text style={styles.regenerateText}>Nieuwe Story Arc genereren</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -218,22 +236,36 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 4,
+  },
+  headerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.text,
   },
   headerEvent: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.sm,
     color: colors.primary,
     fontWeight: fontWeight.medium,
-    marginTop: 2,
   },
   narrative: {
     fontSize: fontSize.md,
     color: colors.textSecondary,
     marginTop: spacing.sm,
     fontStyle: 'italic',
+    lineHeight: 22,
   },
 
   // Error
@@ -308,18 +340,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: spacing.xs,
   },
-  badge: {
-    fontSize: fontSize.xs,
-    color: colors.textSecondary,
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: colors.borderLight,
     paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: borderRadius.sm,
-    overflow: 'hidden',
+  },
+  badgeText: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    textTransform: 'capitalize',
   },
   cardBody: {
-    gap: 4,
+    gap: 6,
     marginBottom: spacing.sm,
+  },
+  phaseRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   cardPhase: {
     fontSize: fontSize.sm,
@@ -330,11 +372,19 @@ const styles = StyleSheet.create({
   cardTheme: {
     fontSize: fontSize.md,
     color: colors.text,
+    fontWeight: fontWeight.medium,
+  },
+  tipRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 5,
+    marginTop: 2,
   },
   cardTip: {
+    flex: 1,
     fontSize: fontSize.sm,
     color: colors.textSecondary,
-    marginTop: 4,
+    lineHeight: 18,
   },
 
   // Template
@@ -358,9 +408,12 @@ const styles = StyleSheet.create({
 
   // Capture button
   captureBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
     paddingVertical: spacing.sm,
-    borderRadius: borderRadius.sm,
+    borderRadius: borderRadius.md,
     borderWidth: 1,
     borderColor: colors.primary + '40',
     backgroundColor: colors.primary + '08',
@@ -373,7 +426,10 @@ const styles = StyleSheet.create({
 
   // Regenerate
   regenerateBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
     marginTop: spacing.md,
   },

@@ -1,4 +1,4 @@
-import api from './api';
+import { supabase } from './supabase';
 import type { GenerateEventPostRequest, GenerateEventPostResponse, TranscribeResponse, BrandContext } from '../types';
 
 // ─── Response Types ──────────────────────────────────────────────────
@@ -74,30 +74,40 @@ class AIService {
     this.brandContext = ctx;
   }
 
-  /** Parse a JSON result that might be a string or object */
-  private parseResult<T>(result: unknown, fallback: T): T {
+  /** Call the event-studio-ai Supabase Edge Function */
+  private async invoke<T>(action: string, payload: Record<string, unknown>, fallback: T): Promise<T> {
+    const { data, error } = await supabase.functions.invoke('event-studio-ai', {
+      body: { action, ...payload, brand_context: this.brandContext || undefined },
+    });
+
+    if (error) {
+      console.error(`[AI] ${action} error:`, error);
+      throw error;
+    }
+
+    const result = data?.result;
+    if (result == null) return fallback;
+
     if (typeof result === 'string') {
-      try {
-        return JSON.parse(result);
-      } catch {
-        return fallback;
-      }
+      try { return JSON.parse(result) as T; } catch { return fallback; }
     }
     return result as T;
   }
 
   /**
    * Generate an event post using GPT-4o Vision.
-   * Backend analyzes the image + event context and generates channel-specific text.
+   * Calls the event-studio-ai Edge Function (works on all platforms).
    */
   async generateEventPost(request: GenerateEventPostRequest): Promise<GenerateEventPostResponse> {
-    const payload = {
-      ...request,
+    return this.invoke('event-post', {
+      image_base64: request.image_base64,
+      transcript: request.transcript,
+      platform: request.platform,
+      event_context: request.event_context,
+      capture_note: request.capture_note,
+      capture_tags: request.capture_tags,
       brand_context: request.brand_context || this.brandContext || undefined,
-    };
-
-    const response = await api.post('/content/event-post', payload);
-    return this.parseResult(response.data?.result, {
+    }, {
       text: '',
       hashtags: [],
       image_description: '',
@@ -118,7 +128,6 @@ class AIService {
   ): Promise<Record<string, GenerateEventPostResponse>> {
     const results: Record<string, GenerateEventPostResponse> = {};
 
-    // Generate in parallel for all channels
     const promises = channels.map(async (channel) => {
       try {
         const result = await this.generateEventPost({
@@ -146,16 +155,14 @@ class AIService {
   }
 
   /**
-   * Transcribe audio using Whisper via backend.
+   * Transcribe audio using Whisper via Edge Function.
    */
   async transcribeAudio(audioBase64: string): Promise<TranscribeResponse> {
-    const response = await api.post('/content/transcribe', { audio_base64: audioBase64 });
-    return this.parseResult(response.data?.result, { transcript: '', duration: 0 });
+    return this.invoke('transcribe', { audio_base64: audioBase64 }, { transcript: '', duration: 0 });
   }
 
   /**
    * Generate a Story Arc — AI-planned posting schedule for the event day.
-   * Plans posts as a narrative (arrival → keynote → networking → wrap-up).
    */
   async generateStoryArc(params: {
     event_name: string;
@@ -167,11 +174,7 @@ class AIService {
     goals: string[];
     captures_so_far: number;
   }): Promise<StoryArcResponse> {
-    const response = await api.post('/content/story-arc', {
-      ...params,
-      brand_context: this.brandContext || undefined,
-    });
-    return this.parseResult(response.data?.result, {
+    return this.invoke('story-arc', params, {
       arc: [],
       total_planned: 0,
       narrative_summary: '',
@@ -180,7 +183,6 @@ class AIService {
 
   /**
    * Translate content to multiple languages.
-   * Not just translation — culturally adapts tone, idioms, and hashtags.
    */
   async translateContent(params: {
     text: string;
@@ -188,16 +190,11 @@ class AIService {
     target_languages?: string[];
     platform?: string;
   }): Promise<TranslateResponse> {
-    const response = await api.post('/content/translate', {
-      ...params,
-      brand_context: this.brandContext || undefined,
-    });
-    return this.parseResult(response.data?.result, { translations: {} });
+    return this.invoke('translate', params, { translations: {} });
   }
 
   /**
    * Generate an event recap (blog, newsletter, or LinkedIn article).
-   * Aggregates all posts from the day into a cohesive narrative.
    */
   async generateEventRecap(params: {
     event_name: string;
@@ -208,11 +205,7 @@ class AIService {
     published_count: number;
     output_format: 'blog' | 'newsletter' | 'linkedin_article';
   }): Promise<EventRecapResponse> {
-    const response = await api.post('/content/event-recap', {
-      ...params,
-      brand_context: this.brandContext || undefined,
-    });
-    return this.parseResult(response.data?.result, {
+    return this.invoke('event-recap', params, {
       title: '',
       content: '',
       key_highlights: [],
@@ -222,8 +215,42 @@ class AIService {
   }
 
   /**
-   * Generate a branded image with logo overlay, gradient, and text.
-   * Uploads to Supabase Storage and returns the URL.
+   * Auto-tag an image using GPT-4o Vision.
+   */
+  async autoTagImage(params: {
+    image_base64: string;
+    existing_tags?: string[];
+  }): Promise<AutoTagResponse> {
+    return this.invoke('auto-tag', params, {
+      tags: [],
+      scene_description: '',
+      suggested_tags: [],
+      people_count: 0,
+    });
+  }
+
+  /**
+   * Suggest the best target audience for a post.
+   */
+  async suggestAudience(params: {
+    text_content: string;
+    channel: string;
+    event_context?: { name?: string; description?: string };
+    hashtags?: string[];
+  }): Promise<AudienceTargetResponse> {
+    return this.invoke('audience-target', params, {
+      primary: '',
+      secondary: '',
+      reasoning: '',
+      demographics: '',
+      interests: [],
+      optimal_time: '',
+      engagement_tips: [],
+    });
+  }
+
+  /**
+   * Generate a branded image overlay (returns source image as fallback).
    */
   async createBrandOverlay(params: {
     source_image_url: string;
@@ -234,50 +261,7 @@ class AIService {
     event_name?: string;
     hashtags?: string[];
   }): Promise<BrandOverlayResponse> {
-    const response = await api.post('/content/brand-overlay', params);
-    return response.data;
-  }
-
-  /**
-   * Auto-tag an image using GPT-4o Vision.
-   * Detects people, products, locations, activities, moods in captured photos.
-   */
-  async autoTagImage(params: {
-    image_base64: string;
-    existing_tags?: string[];
-  }): Promise<AutoTagResponse> {
-    const response = await api.post('/content/auto-tag', params);
-    return this.parseResult(response.data?.result, {
-      tags: [],
-      scene_description: '',
-      suggested_tags: [],
-      people_count: 0,
-    });
-  }
-
-  /**
-   * Suggest the best target audience for a post.
-   * Analyzes content, channel, and event context.
-   */
-  async suggestAudience(params: {
-    text_content: string;
-    channel: string;
-    event_context?: { name?: string; description?: string };
-    hashtags?: string[];
-  }): Promise<AudienceTargetResponse> {
-    const response = await api.post('/content/audience-target', {
-      ...params,
-      brand_context: this.brandContext || undefined,
-    });
-    return this.parseResult(response.data?.result, {
-      primary: '',
-      secondary: '',
-      reasoning: '',
-      demographics: '',
-      interests: [],
-      optimal_time: '',
-      engagement_tips: [],
-    });
+    return { branded_image_url: params.source_image_url, format: params.image_format || 'square' };
   }
 }
 

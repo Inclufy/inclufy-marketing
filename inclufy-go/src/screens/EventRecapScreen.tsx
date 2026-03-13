@@ -9,6 +9,7 @@ import {
   Share,
 } from 'react-native';
 import { useRoute, RouteProp } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useEvent } from '../hooks/useEvents';
 import { useCaptures } from '../hooks/useCaptures';
 import { useEventPosts } from '../hooks/useEventPosts';
@@ -22,10 +23,10 @@ type Route = RouteProp<RootStackParamList, 'EventRecap'>;
 
 type OutputFormat = 'blog' | 'newsletter' | 'linkedin_article';
 
-const formatOptions: Array<{ key: OutputFormat; label: string; icon: string }> = [
-  { key: 'blog', label: 'Blog Post', icon: '📝' },
-  { key: 'newsletter', label: 'Newsletter', icon: '📧' },
-  { key: 'linkedin_article', label: 'LinkedIn Artikel', icon: '💼' },
+const formatOptions: Array<{ key: OutputFormat; label: string; ionicon: string }> = [
+  { key: 'blog', label: 'Blog Post', ionicon: 'create-outline' },
+  { key: 'newsletter', label: 'Newsletter', ionicon: 'mail-outline' },
+  { key: 'linkedin_article', label: 'LinkedIn', ionicon: 'briefcase-outline' },
 ];
 
 export default function EventRecapScreen() {
@@ -97,10 +98,17 @@ export default function EventRecapScreen() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>📝 Event Recap</Text>
-        <Text style={styles.headerEvent}>{event?.name}</Text>
+        <View style={styles.headerRow}>
+          <View style={styles.headerIcon}>
+            <Ionicons name="newspaper-outline" size={22} color={colors.primary} />
+          </View>
+          <View>
+            <Text style={styles.headerTitle}>Event Recap</Text>
+            <Text style={styles.headerEvent}>{event?.name}</Text>
+          </View>
+        </View>
         <Text style={styles.headerStats}>
-          {capturesData?.captures?.length || 0} captures • {postsData?.posts?.length || 0} posts
+          {(capturesData as any[])?.length || 0} captures • {(postsData as any[])?.length || 0} posts
         </Text>
       </View>
 
@@ -115,7 +123,11 @@ export default function EventRecapScreen() {
             ]}
             onPress={() => setSelectedFormat(opt.key)}
           >
-            <Text style={styles.formatIcon}>{opt.icon}</Text>
+            <Ionicons
+              name={opt.ionicon as any}
+              size={22}
+              color={selectedFormat === opt.key ? colors.primary : colors.textSecondary}
+            />
             <Text
               style={[
                 styles.formatLabel,
@@ -137,9 +149,12 @@ export default function EventRecapScreen() {
         {loading ? (
           <ActivityIndicator color={colors.textOnPrimary} />
         ) : (
-          <Text style={styles.generateBtnText}>
-            🚀 Genereer {formatOptions.find((f) => f.key === selectedFormat)?.label}
-          </Text>
+          <View style={styles.generateBtnInner}>
+            <Ionicons name="sparkles-outline" size={18} color={colors.textOnPrimary} />
+            <Text style={styles.generateBtnText}>
+              Genereer {formatOptions.find((f) => f.key === selectedFormat)?.label}
+            </Text>
+          </View>
         )}
       </TouchableOpacity>
 
@@ -162,7 +177,10 @@ export default function EventRecapScreen() {
           {/* Key highlights */}
           {recap.key_highlights?.length > 0 ? (
             <View style={styles.highlightsBox}>
-              <Text style={styles.sectionTitle}>⭐ Key Highlights</Text>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="star-outline" size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}>Key Highlights</Text>
+              </View>
               {recap.key_highlights.map((h, i) => (
                 <View key={i} style={styles.highlightItem}>
                   <Text style={styles.highlightBullet}>•</Text>
@@ -174,7 +192,10 @@ export default function EventRecapScreen() {
 
           {/* Full content */}
           <View style={styles.contentBox}>
-            <Text style={styles.sectionTitle}>📄 Volledige Tekst</Text>
+            <View style={styles.sectionTitleRow}>
+              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.sectionTitle}>Volledige Tekst</Text>
+            </View>
             <Text style={styles.recapContent}>{recap.content}</Text>
           </View>
 
@@ -188,7 +209,8 @@ export default function EventRecapScreen() {
 
           {/* Share */}
           <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
-            <Text style={styles.shareBtnText}>📤 Deel Recap</Text>
+            <Ionicons name="share-outline" size={18} color={colors.primary} />
+            <Text style={styles.shareBtnText}>Deel Recap</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -208,16 +230,29 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: spacing.lg,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: 4,
+  },
+  headerIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   headerTitle: {
-    fontSize: fontSize.xxl,
+    fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
     color: colors.text,
   },
   headerEvent: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.sm,
     color: colors.primary,
     fontWeight: fontWeight.medium,
-    marginTop: 2,
   },
   headerStats: {
     fontSize: fontSize.sm,
@@ -235,23 +270,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.surface,
-    gap: 4,
+    gap: 6,
   },
   formatOptionActive: {
     borderColor: colors.primary,
     backgroundColor: colors.primary + '10',
   },
-  formatIcon: {
-    fontSize: 24,
-  },
   formatLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
     color: colors.textSecondary,
+    textAlign: 'center',
   },
   formatLabelActive: {
     color: colors.primary,
@@ -262,17 +295,28 @@ const styles = StyleSheet.create({
   generateBtn: {
     backgroundColor: colors.primary,
     paddingVertical: 16,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
     marginBottom: spacing.md,
   },
   generateBtnDisabled: {
     opacity: 0.6,
   },
+  generateBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   generateBtnText: {
     color: colors.textOnPrimary,
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
   },
   errorText: {
     color: colors.error,
@@ -360,15 +404,18 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   shareBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1.5,
     borderColor: colors.primary,
     backgroundColor: colors.primary + '08',
   },
   shareBtnText: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
   },

@@ -1,8 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
-import api from '../services/api';
 
-// ─── Types ──────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────
 
 export interface TeamMember {
   id: string;
@@ -13,37 +12,45 @@ export interface TeamMember {
   status: 'pending' | 'accepted' | 'declined';
   invited_at: string;
   accepted_at: string | null;
-  // Joined from users (email lookup)
   email?: string;
 }
 
-// ─── Hooks ──────────────────────────────────────────────────────────
+// ─── Hooks ──────────────────────────────────────────────────
 
-/** List team members for an event */
+/** List team members for an event — direct Supabase query */
 export function useTeamMembers(eventId: string | undefined) {
   return useQuery<TeamMember[]>({
     queryKey: ['team-members', eventId],
     queryFn: async () => {
       if (!eventId) return [];
 
-      const response = await api.get(`/events/${eventId}/team`);
-      return (response.data?.members || []) as TeamMember[];
+      const { data, error } = await supabase
+        .from('go_event_members')
+        .select('*')
+        .eq('event_id', eventId)
+        .order('invited_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as TeamMember[];
     },
     enabled: !!eventId,
     staleTime: 30_000,
   });
 }
 
-/** Invite a user to an event team by email */
+/** Invite a user to an event team by email — via Edge Function (needs admin email lookup) */
 export function useInviteTeamMember() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ eventId, email, role }: { eventId: string; email: string; role?: string }) => {
-      const response = await api.post(`/events/${eventId}/team`, {
-        email,
-        role: role || 'contributor',
+      const { data, error } = await supabase.functions.invoke('team-invite', {
+        body: { event_id: eventId, email, role: role || 'contributor' },
       });
-      return response.data as TeamMember;
+
+      if (error) throw new Error(error.message || 'Uitnodiging mislukt');
+      if (data?.error) throw new Error(data.error);
+
+      return data?.member as TeamMember;
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['team-members', variables.eventId] });
@@ -51,7 +58,7 @@ export function useInviteTeamMember() {
   });
 }
 
-/** Update a team member (role, accept/decline) */
+/** Update a team member (role, accept/decline) — direct Supabase */
 export function useUpdateTeamMember() {
   const qc = useQueryClient();
   return useMutation({
@@ -66,11 +73,22 @@ export function useUpdateTeamMember() {
       role?: string;
       status?: string;
     }) => {
-      const response = await api.put(`/events/${eventId}/team/${memberId}`, {
-        role,
-        status,
-      });
-      return response.data as TeamMember;
+      const patch: Record<string, unknown> = {};
+      if (role) patch.role = role;
+      if (status) {
+        patch.status = status;
+        if (status === 'accepted') patch.accepted_at = new Date().toISOString();
+      }
+
+      const { data, error } = await supabase
+        .from('go_event_members')
+        .update(patch)
+        .eq('id', memberId)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      return data as TeamMember;
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['team-members', variables.eventId] });
@@ -79,12 +97,17 @@ export function useUpdateTeamMember() {
   });
 }
 
-/** Remove a team member */
+/** Remove a team member — direct Supabase */
 export function useRemoveTeamMember() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ eventId, memberId }: { eventId: string; memberId: string }) => {
-      await api.delete(`/events/${eventId}/team/${memberId}`);
+      const { error } = await supabase
+        .from('go_event_members')
+        .delete()
+        .eq('id', memberId);
+
+      if (error) throw error;
     },
     onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['team-members', variables.eventId] });
