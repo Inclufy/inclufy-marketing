@@ -4,7 +4,31 @@ import type { IndustryTemplate } from '../../types';
 import { daysAgo, generateContentPerformance, randomBetween } from '../../templates/base-template';
 
 export async function seedContent(userId: string, template: IndustryTemplate): Promise<void> {
-  // Publishable content
+  // ── 1. content_items table (used by ContentHub, ContentLibrary, Analytics, Dashboard) ──
+  const contentTypeMap: Record<string, string> = {
+    blog_post: 'blog', whitepaper: 'document', case_study: 'document',
+    social_post: 'social', email: 'email', video_script: 'video',
+    infographic: 'image', webinar_script: 'document', newsletter: 'email',
+    landing_page: 'landing_page', press_release: 'document',
+  };
+  const contentItems = template.content.map((c) => ({
+    user_id: userId,
+    title: c.title,
+    type: contentTypeMap[c.content_type] || 'other',
+    content_type: c.content_type,
+    content: JSON.stringify({ markdown: c.body, summary: c.body?.substring(0, 150) }),
+    status: c.status === 'published' ? 'published' : c.status === 'scheduled' ? 'scheduled' : 'draft',
+    tags: c.tags || [],
+    metadata: {
+      channels: c.channels,
+      performance: c.performance || generateContentPerformance(c.status === 'published'),
+      word_count: c.body ? c.body.split(' ').length : 0,
+    },
+  }));
+  const { error: ciError } = await marketingSupabase.from('content_items').insert(contentItems);
+  if (ciError) console.error('content_items seed error:', ciError);
+
+  // ── 2. publishable_content table (used by Content Studio / Social scheduling) ──
   const publishableContent = template.content.map((c, i) => ({
     user_id: userId,
     title: c.title,
@@ -22,7 +46,7 @@ export async function seedContent(userId: string, template: IndustryTemplate): P
   const { error: contentError } = await marketingSupabase.from('publishable_content').insert(publishableContent);
   if (contentError) console.error('publishable_content seed error:', contentError);
 
-  // Content templates
+  // ── 3. Content templates ──
   const templates = [
     {
       user_id: userId, name: `${template.brand.name} Blog Post`, description: `Standard blog post template for ${template.industry} thought leadership`,

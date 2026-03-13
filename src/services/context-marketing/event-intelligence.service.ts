@@ -3,7 +3,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-export type EventType = 'conference' | 'meetup' | 'trade_show' | 'webinar' | 'workshop' | 'networking' | 'hackathon';
+export type EventType = 'conference' | 'meetup' | 'trade_show' | 'webinar' | 'workshop' | 'networking' | 'hackathon' | 'summit' | 'technical' | 'expo' | 'exhibition';
 export type EventStatus = 'discovered' | 'evaluating' | 'registered' | 'attending' | 'completed' | 'skipped';
 
 export interface DiscoveredEvent {

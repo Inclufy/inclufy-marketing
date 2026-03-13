@@ -75,7 +75,23 @@ function getEventTypeBadge(type: EventType): { color: string; label: string; ico
       return { color: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300', label: 'Networking', icon: <Handshake className="h-3 w-3" /> };
     case 'hackathon':
       return { color: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300', label: 'Hackathon', icon: <Sparkles className="h-3 w-3" /> };
+    case 'summit':
+      return { color: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300', label: 'Summit', icon: <Award className="h-3 w-3" /> };
+    case 'technical':
+      return { color: 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-300', label: 'Technical', icon: <Hash className="h-3 w-3" /> };
+    case 'expo':
+    case 'exhibition':
+      return { color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300', label: type === 'expo' ? 'Expo' : 'Exhibition', icon: <Building className="h-3 w-3" /> };
+    default:
+      return { color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300', label: String(type), icon: <CalendarDays className="h-3 w-3" /> };
   }
+}
+
+/** Safely extract total cost — handles both number (seeder) and object (interface) formats */
+function getEventCost(cost: any): { total: number; ticket: number; travel: number; accommodation: number; booth: number } {
+  if (typeof cost === 'number') return { total: cost, ticket: Math.round(cost * 0.4), travel: Math.round(cost * 0.25), accommodation: Math.round(cost * 0.25), booth: Math.round(cost * 0.1) };
+  if (cost && typeof cost === 'object') return { total: cost.total || 0, ticket: cost.ticket || 0, travel: cost.travel || 0, accommodation: cost.accommodation || 0, booth: cost.booth || 0 };
+  return { total: 0, ticket: 0, travel: 0, accommodation: 0, booth: 0 };
 }
 
 function getPriorityColor(score: number): string {
@@ -217,7 +233,7 @@ export default function EventIntelligence() {
       .map(e => ({
         name: e.name.length > 25 ? e.name.substring(0, 22) + '...' : e.name,
         roi: e.estimated_roi,
-        cost: e.cost.total,
+        cost: getEventCost(e.cost).total,
         leads: e.estimated_leads,
       }));
   }, [events]);
@@ -422,7 +438,7 @@ export default function EventIntelligence() {
                               {nl ? 'Geregistreerd' : fr ? 'Inscrit' : 'Registered'}
                             </Badge>
                           )}
-                          {event.tags.includes('must-attend') && (
+                          {event.tags?.includes('must-attend') && (
                             <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 text-xs">
                               <Star className="h-3 w-3 mr-1" />
                               Must Attend
@@ -481,7 +497,7 @@ export default function EventIntelligence() {
                               {nl ? 'Kosten' : fr ? 'Cout' : 'Cost'}
                             </p>
                             <p className="text-sm font-bold text-amber-600 dark:text-amber-400">
-                              {formatCurrency(event.cost.total)}
+                              {formatCurrency(getEventCost(event.cost).total)}
                             </p>
                           </div>
                         </div>
@@ -563,7 +579,7 @@ export default function EventIntelligence() {
                           </Button>
                           <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
                             <Ticket className="h-3 w-3" />
-                            {formatCurrency(event.cost.ticket)}
+                            {formatCurrency(getEventCost(event.cost).ticket)}
                           </span>
                         </div>
                       </div>
@@ -652,7 +668,7 @@ export default function EventIntelligence() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <DollarSign className="h-3 w-3" />
-                                {formatCurrency(event.cost.total)}
+                                {formatCurrency(getEventCost(event.cost).total)}
                               </span>
                             </div>
                           </div>
@@ -823,7 +839,7 @@ export default function EventIntelligence() {
                                 {typeBadge.label}
                               </Badge>
                             </td>
-                            <td className="p-3 text-right font-mono text-sm">{formatCurrency(event.cost.total)}</td>
+                            <td className="p-3 text-right font-mono text-sm">{formatCurrency(getEventCost(event.cost).total)}</td>
                             <td className="p-3 text-right font-medium">{event.estimated_leads}</td>
                             <td className="p-3 text-right">
                               <span className={`font-bold ${event.estimated_roi >= 400 ? 'text-emerald-600 dark:text-emerald-400' : event.estimated_roi >= 200 ? 'text-cyan-600 dark:text-cyan-400' : 'text-amber-600 dark:text-amber-400'}`}>

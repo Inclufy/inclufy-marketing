@@ -1,5 +1,5 @@
 // src/pages/setup/BrandSetup.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,11 +22,14 @@ import {
   X,
   Image,
   FileText,
-  Globe
+  Globe,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useBrandMemory } from '@/hooks/queries/useBrandMemory';
+import { brandMemoryService } from '@/services/brand/brand-memory.service';
 
 interface BrandColor {
   name: string;
@@ -40,17 +43,54 @@ export default function BrandSetup() {
   const { lang } = useLanguage();
   const nl = lang === 'nl';
   const fr = lang === 'fr';
+  const { data: brandMemory, isLoading: brandLoading, refetch: refetchBrand } = useBrandMemory();
   const [activeTab, setActiveTab] = useState('basics');
   const [brandName, setBrandName] = useState('');
   const [tagline, setTagline] = useState('');
   const [mission, setMission] = useState('');
   const [vision, setVision] = useState('');
+  const [brandDescription, setBrandDescription] = useState('');
   const [brandColors, setBrandColors] = useState<BrandColor[]>([
     { name: 'Primary', hex: '#8B5CF6', usage: 'Main brand color' },
     { name: 'Secondary', hex: '#EC4899', usage: 'Accent color' }
   ]);
   const [brandVoice, setBrandVoice] = useState('professional');
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  // Load brand_memory data into form when available
+  useEffect(() => {
+    if (brandMemory && brandMemory.brand_name) {
+      setBrandName(brandMemory.brand_name || '');
+      setTagline(brandMemory.tagline || '');
+      setMission(brandMemory.mission || '');
+      setVision(brandMemory.vision || '');
+      setBrandDescription(brandMemory.brand_description || '');
+
+      const colors: BrandColor[] = [];
+      if (brandMemory.primary_color) {
+        colors.push({ name: 'Primary', hex: brandMemory.primary_color, usage: 'Main brand color' });
+      }
+      if (brandMemory.secondary_color) {
+        colors.push({ name: 'Secondary', hex: brandMemory.secondary_color, usage: 'Accent color' });
+      }
+      if (colors.length > 0) setBrandColors(colors);
+
+      // Map tone_attributes to voice preset
+      const toneAttrs = brandMemory.tone_attributes?.map((t: any) =>
+        typeof t === 'string' ? t.toLowerCase() : (t?.attribute || '').toLowerCase()
+      ) || [];
+      if (toneAttrs.some((a: string) => a.includes('playful') || a.includes('energetic'))) {
+        setBrandVoice('playful');
+      } else if (toneAttrs.some((a: string) => a.includes('innovat') || a.includes('bold'))) {
+        setBrandVoice('innovative');
+      } else if (toneAttrs.some((a: string) => a.includes('friend') || a.includes('warm'))) {
+        setBrandVoice('friendly');
+      } else {
+        setBrandVoice('professional');
+      }
+    }
+  }, [brandMemory]);
 
   const handleColorAdd = () => {
     setBrandColors([...brandColors, { name: '', hex: '#000000', usage: '' }]);
@@ -66,11 +106,37 @@ export default function BrandSetup() {
     setBrandColors(updated);
   };
 
-  const handleSave = () => {
-    toast({
-      title: nl ? 'Merkinstellingen opgeslagen!' : fr ? 'Paramètres de marque enregistrés !' : 'Brand settings saved!',
-      description: nl ? 'Je merkidentiteit is succesvol bijgewerkt.' : fr ? 'Votre identité de marque a été mise à jour avec succès.' : 'Your brand identity has been updated successfully.',
-    });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const primaryColor = brandColors.find(c => c.name.toLowerCase() === 'primary')?.hex || brandColors[0]?.hex;
+      const secondaryColor = brandColors.find(c => c.name.toLowerCase() === 'secondary')?.hex || brandColors[1]?.hex;
+
+      await brandMemoryService.upsertActive({
+        brand_name: brandName,
+        tagline,
+        mission,
+        vision,
+        brand_description: brandDescription,
+        primary_color: primaryColor || '#7c3aed',
+        secondary_color: secondaryColor || '#ec4899',
+      });
+
+      await refetchBrand();
+
+      toast({
+        title: nl ? 'Merkinstellingen opgeslagen!' : fr ? 'Paramètres de marque enregistrés !' : 'Brand settings saved!',
+        description: nl ? 'Je merkidentiteit is succesvol bijgewerkt.' : fr ? 'Votre identité de marque a été mise à jour avec succès.' : 'Your brand identity has been updated successfully.',
+      });
+    } catch (err: any) {
+      toast({
+        title: nl ? 'Opslaan mislukt' : fr ? 'Échec de l\'enregistrement' : 'Save failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleNext = () => {
@@ -83,6 +149,17 @@ export default function BrandSetup() {
     (tagline ? 25 : 0) +
     (brandColors.length >= 2 ? 25 : 0) +
     (logoFile ? 25 : 0);
+
+  if (brandLoading) {
+    return (
+      <div className="w-full py-2 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <p className="text-gray-500">{nl ? 'Merkgegevens laden...' : fr ? 'Chargement des données de marque...' : 'Loading brand data...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full py-2">
@@ -493,14 +570,16 @@ export default function BrandSetup() {
 
       {/* Actions */}
       <div className="flex items-center justify-between mt-8">
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleSave} disabled={saving}>
+          {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {nl ? 'Concept Opslaan' : fr ? 'Enregistrer le Brouillon' : 'Save Draft'}
         </Button>
         <div className="flex gap-3">
           <Button variant="outline" onClick={() => navigate('/app/quick-start')}>
             {nl ? 'Terug' : fr ? 'Retour' : 'Back'}
           </Button>
-          <Button onClick={handleNext}>
+          <Button onClick={handleNext} disabled={saving}>
+            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {nl ? 'Opslaan & Doorgaan' : fr ? 'Enregistrer & Continuer' : 'Save & Continue'}
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>

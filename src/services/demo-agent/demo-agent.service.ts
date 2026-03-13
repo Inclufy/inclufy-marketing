@@ -34,9 +34,9 @@ const TEMPLATES: Record<IndustryType, IndustryTemplate> = {
 const MARKETING_TABLES = [
   'data_flow_events', 'autonomous_decisions', 'qr_codes',
   'feed_items', 'discovered_events', 'opportunities',
-  'publishable_content', 'content_templates_ai',
-  'triggered_campaigns', 'campaign_triggers', 'autonomous_campaign_status',
-  'intent_signals', 'captured_contacts', 'lead_profiles', 'scored_leads',
+  'content_items', 'publishable_content', 'content_templates_ai',
+  'campaigns', 'triggered_campaigns', 'campaign_triggers', 'autonomous_campaign_status',
+  'contacts', 'intent_signals', 'captured_contacts', 'lead_profiles', 'scored_leads',
   'channel_attributions', 'attribution_models', 'channel_health',
   'scoring_models', 'scoring_rules',
   'ai_agents', 'integration_configs', 'agent_messages', 'agent_tasks',

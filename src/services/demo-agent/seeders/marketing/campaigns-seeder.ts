@@ -1,10 +1,28 @@
 // src/services/demo-agent/seeders/marketing/campaigns-seeder.ts
 import { marketingSupabase } from '../../config/supabase-clients';
 import type { IndustryTemplate } from '../../types';
-import { daysAgo, randomBetween } from '../../templates/base-template';
+import { daysAgo, daysFromNow, randomBetween } from '../../templates/base-template';
 
 export async function seedCampaigns(userId: string, template: IndustryTemplate): Promise<void> {
-  // Autonomous campaign status
+  // ── 1. campaigns table (used by CampaignOrchestrator, Analytics, Dashboard) ──
+  const campaignTypes = ['email', 'social', 'content', 'paid', 'event'];
+  const campaignStatuses = ['active', 'active', 'completed', 'draft', 'paused'];
+  const campaigns = template.campaigns.map((c, i) => ({
+    user_id: userId,
+    name: c.name,
+    type: campaignTypes[i % campaignTypes.length],
+    description: c.description,
+    status: campaignStatuses[i % campaignStatuses.length],
+    budget_amount: c.budget_total || randomBetween(5000, 25000),
+    starts_at: daysAgo(randomBetween(5, 30)),
+    ends_at: daysFromNow(randomBetween(10, 60)),
+    content: { objective: c.objective, channels: ['email', 'linkedin', 'blog'] },
+    settings: { ai_managed: c.ai_managed, performance_score: c.performance_score },
+  }));
+  const { error: mainCampError } = await marketingSupabase.from('campaigns').insert(campaigns);
+  if (mainCampError) console.error('campaigns seed error:', mainCampError);
+
+  // ── 2. autonomous_campaign_status (used by AutonomousMarketing) ──
   const autonomousCampaigns = template.campaigns.map((c) => ({
     user_id: userId,
     name: c.name,
@@ -22,7 +40,7 @@ export async function seedCampaigns(userId: string, template: IndustryTemplate):
   const { error: campError } = await marketingSupabase.from('autonomous_campaign_status').insert(autonomousCampaigns);
   if (campError) console.error('autonomous_campaign_status seed error:', campError);
 
-  // Campaign triggers
+  // ── 3. Campaign triggers ──
   const triggers = [
     {
       user_id: userId, name: 'High-Intent Lead Detected', type: 'behavioral',
@@ -58,7 +76,7 @@ export async function seedCampaigns(userId: string, template: IndustryTemplate):
   const { error: triggerError } = await marketingSupabase.from('campaign_triggers').insert(triggers);
   if (triggerError) console.error('campaign_triggers seed error:', triggerError);
 
-  // Triggered campaigns
+  // ── 4. Triggered campaigns ──
   const triggeredCampaigns = [
     {
       user_id: userId, trigger_name: 'High-Intent Lead Detected',

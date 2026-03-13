@@ -88,4 +88,22 @@ export async function seedLeads(userId: string, template: IndustryTemplate): Pro
   }));
   const { error: capturedError } = await marketingSupabase.from('captured_contacts').insert(captured);
   if (capturedError) console.error('captured_contacts seed error:', capturedError);
+
+  // ── contacts table (used by Dashboard Analytics, ContactManager) ──
+  const contacts = template.leads.map((lead) => {
+    const nameParts = lead.name.split(' ');
+    return {
+      user_id: userId,
+      email: lead.email,
+      first_name: nameParts[0] || lead.name,
+      last_name: nameParts.slice(1).join(' ') || '',
+      phone: '+31 6 ' + String(randomBetween(10000000, 99999999)),
+      company: lead.company,
+      title: lead.title,
+      source: lead.source,
+      tags: lead.tags,
+    };
+  });
+  const { error: contactsError } = await marketingSupabase.from('contacts').insert(contacts);
+  if (contactsError) console.error('contacts seed error:', contactsError);
 }
