@@ -11,7 +11,7 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface AnalyticsData {
@@ -58,11 +58,54 @@ export default function Analytics() {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/analytics/overview');
-      setData(res.data);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError('Not authenticated'); setLoading(false); return; }
+
+      const [campaignsRes, contactsRes, contentRes] = await Promise.all([
+        supabase.from('campaigns').select('status, type, budget_amount, created_at').eq('user_id', user.id),
+        supabase.from('contacts').select('id, created_at', { count: 'exact' }).eq('user_id', user.id),
+        supabase.from('content_items').select('id, type, created_at', { count: 'exact' }).eq('user_id', user.id),
+      ]);
+
+      const campaigns = campaignsRes.data || [];
+      const byStatus: Record<string, number> = {};
+      const byType: Record<string, number> = {};
+      let totalBudget = 0;
+      for (const c of campaigns) {
+        byStatus[c.status] = (byStatus[c.status] || 0) + 1;
+        byType[c.type] = (byType[c.type] || 0) + 1;
+        totalBudget += (c as any).budget_amount || 0;
+      }
+
+      const contentByType: Record<string, number> = {};
+      for (const ci of (contentRes.data || [])) {
+        contentByType[(ci as any).type] = (contentByType[(ci as any).type] || 0) + 1;
+      }
+
+      setData({
+        campaigns: {
+          total: campaigns.length,
+          by_status: byStatus,
+          by_type: byType,
+          total_budget: totalBudget,
+          timeline: [],
+        },
+        contacts: {
+          total: contactsRes.count || 0,
+          timeline: [],
+        },
+        emails: { sent: 0, opened: 0, clicked: 0, open_rate: 0, click_rate: 0 },
+        content: {
+          total: contentRes.count || 0,
+          by_type: contentByType,
+          timeline: [],
+        },
+        events: { total: 0, by_type: {} },
+      });
     } catch (err: any) {
       console.error('Analytics fetch error:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to load analytics');
+      setError(err.message || 'Failed to load analytics');
     } finally {
       setLoading(false);
     }

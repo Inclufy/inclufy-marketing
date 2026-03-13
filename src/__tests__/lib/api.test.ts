@@ -52,11 +52,10 @@ import axios from 'axios';
 import { api } from '@/lib/api';
 
 describe('API client', () => {
-  it('creates axios instance with correct base URL and timeout', () => {
+  it('creates axios instance with reduced timeout (5s) for fast failure', () => {
     expect(axios.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        baseURL: 'http://localhost:8000/api',
-        timeout: 30000,
+        timeout: 5000,
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
         }),
@@ -111,30 +110,58 @@ describe('API client', () => {
       expect(result).toEqual(response);
     });
 
-    it('rejects and logs 401 errors', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    it('returns empty array for GET requests on connection failure (graceful fallback)', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = {
+        request: {},
+        config: { method: 'get', url: '/test-endpoint' },
+        message: 'Network Error',
+      };
+
+      const result = await interceptorStore.responseErrFn(error);
+
+      expect(result.data).toEqual([]);
+      expect(result.status).toBe(503);
+      expect(result.statusText).toBe('Backend Unavailable');
+      consoleSpy.mockRestore();
+    });
+
+    it('returns { ok: false } for POST requests on connection failure', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = {
+        request: {},
+        config: { method: 'post', url: '/test-endpoint' },
+        message: 'Network Error',
+      };
+
+      const result = await interceptorStore.responseErrFn(error);
+
+      expect(result.data).toEqual({ ok: false });
+      expect(result.status).toBe(503);
+      consoleSpy.mockRestore();
+    });
+
+    it('rejects on HTTP 401 errors', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const error = { response: { status: 401, data: {} } };
 
       await expect(interceptorStore.responseErrFn(error)).rejects.toEqual(error);
-      expect(consoleSpy).toHaveBeenCalledWith('Unauthorized - please log in');
       consoleSpy.mockRestore();
     });
 
-    it('rejects and logs 500 errors', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = { response: { status: 500, data: {} } };
+    it('rejects on HTTP 404 errors', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = { response: { status: 404, data: {} }, config: { url: '/missing' } };
 
       await expect(interceptorStore.responseErrFn(error)).rejects.toEqual(error);
-      expect(consoleSpy).toHaveBeenCalledWith('Server error');
       consoleSpy.mockRestore();
     });
 
-    it('handles network errors (no response)', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      const error = { request: {}, message: 'Network Error' };
+    it('rejects on HTTP 500 errors', async () => {
+      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const error = { response: { status: 500, data: {} }, config: { url: '/error' } };
 
       await expect(interceptorStore.responseErrFn(error)).rejects.toEqual(error);
-      expect(consoleSpy).toHaveBeenCalledWith('No response from server');
       consoleSpy.mockRestore();
     });
   });

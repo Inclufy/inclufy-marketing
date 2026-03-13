@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function AIWriter() {
   const { toast } = useToast();
@@ -66,15 +66,13 @@ export default function AIWriter() {
     try {
       setGenerating(true);
       setResult(null);
-      const res = await api.post('/content/write', {
-        prompt: prompt.trim(),
-        content_type: contentType,
-        tone,
-        length,
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('ai-write', {
+        body: { prompt: prompt.trim(), content_type: contentType, tone, length },
       });
-      const parsed = typeof res.data.result === 'string'
-        ? JSON.parse(res.data.result)
-        : res.data.result;
+      if (fnError) throw fnError;
+      const parsed = typeof fnData?.result === 'string'
+        ? JSON.parse(fnData.result)
+        : fnData?.result || fnData;
       setResult(parsed);
     } catch (err: any) {
       toast({
@@ -97,10 +95,13 @@ export default function AIWriter() {
     if (!result) return;
     try {
       setSaving(true);
-      await api.post('/content-library/', {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      await supabase.from('content_items').insert({
+        user_id: user.id,
         title: result.title,
-        content_type: contentType === 'blog' ? 'blog' : 'other',
-        content: { markdown: result.content, summary: result.summary },
+        type: contentType === 'blog' ? 'blog' : 'other',
+        content: JSON.stringify({ markdown: result.content, summary: result.summary }),
         metadata: { tone, length, word_count: result.word_count, prompt },
         tags: [contentType, tone],
       });

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface BrandKit {
   id: string;
@@ -16,7 +16,18 @@ export interface BrandKit {
 export function useBrandKits() {
   return useQuery<BrandKit[]>({
     queryKey: ['brand-kits'],
-    queryFn: () => api.get('/brand-memory/kits').then(r => r.data),
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('brand_kits')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as BrandKit[];
+    },
     staleTime: 5 * 60_000,
     retry: 1,
   });
@@ -25,8 +36,18 @@ export function useBrandKits() {
 export function useCreateBrandKit() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (kit: Partial<BrandKit>) =>
-      api.post('/brand-memory/kits', kit).then(r => r.data),
+    mutationFn: async (kit: Partial<BrandKit>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('brand_kits')
+        .insert({ ...kit, user_id: user.id })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as BrandKit;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['brand-kits'] }),
   });
 }

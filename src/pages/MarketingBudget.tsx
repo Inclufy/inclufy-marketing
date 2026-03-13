@@ -47,7 +47,7 @@ import {
   Loader2,
   Euro,
 } from 'lucide-react';
-import api from '@/lib/api';
+// Budget data comes from local state (Inclufy Finance integration placeholder)
 
 const CHART_COLORS = ['#8b5cf6', '#ec4899', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#6366f1', '#14b8a6'];
 

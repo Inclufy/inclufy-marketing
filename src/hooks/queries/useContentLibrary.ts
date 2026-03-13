@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ContentItem {
   id: string;
@@ -19,10 +19,35 @@ interface ContentListParams {
   offset?: number;
 }
 
+async function fetchContentLibrary(params?: ContentListParams): Promise<ContentItem[]> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  let query = supabase
+    .from('content_items')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (params?.type) {
+    query = query.eq('type', params.type);
+  }
+  if (params?.limit) {
+    query = query.limit(params.limit);
+  }
+  if (params?.offset) {
+    query = query.range(params.offset, params.offset + (params.limit || 50) - 1);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data || []) as ContentItem[];
+}
+
 export function useContentLibrary(params?: ContentListParams) {
   return useQuery<ContentItem[]>({
     queryKey: ['content-library', params],
-    queryFn: () => api.get('/content-library/', { params }).then(r => r.data),
+    queryFn: () => fetchContentLibrary(params),
     staleTime: 2 * 60_000,
     retry: 1,
   });
@@ -31,7 +56,7 @@ export function useContentLibrary(params?: ContentListParams) {
 export function useRecentContent(limit = 6) {
   return useQuery<ContentItem[]>({
     queryKey: ['content-library', 'recent', limit],
-    queryFn: () => api.get(`/content-library/?limit=${limit}`).then(r => r.data),
+    queryFn: () => fetchContentLibrary({ limit }),
     staleTime: 2 * 60_000,
     retry: 1,
   });
@@ -40,8 +65,18 @@ export function useRecentContent(limit = 6) {
 export function useSaveContent() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (item: Partial<ContentItem>) =>
-      api.post('/content-library/', item).then(r => r.data),
+    mutationFn: async (item: Partial<ContentItem>) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('content_items')
+        .insert({ ...item, user_id: user.id })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ContentItem;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['content-library'] }),
   });
 }
@@ -49,8 +84,20 @@ export function useSaveContent() {
 export function useUpdateContentStatus() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      api.put(`/content-library/${id}`, { status }).then(r => r.data),
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data, error } = await supabase
+        .from('content_items')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as ContentItem;
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['content-library'] }),
   });
 }

@@ -39,7 +39,7 @@ export interface DataFlowEvent {
   data_type: string;
   record_count: number;
   status: 'success' | 'partial' | 'failed';
-  timestamp: string;
+  created_at: string;
   duration_ms: number;
 }
 
@@ -161,7 +161,7 @@ class IntegrationHubService {
       .from('data_flow_events')
       .select('*')
       .eq('user_id', userId)
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(20);
     if (flowError) throw flowError;
 
@@ -213,7 +213,7 @@ class IntegrationHubService {
       .from('data_flow_events')
       .select('*')
       .eq('user_id', userId)
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(20);
 
     if (integrationId) {

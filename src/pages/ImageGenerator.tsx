@@ -15,7 +15,7 @@ import {
   Image, Loader2, Download, Copy, Save, RefreshCw
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 const STYLES_DATA = [
@@ -47,15 +47,11 @@ export default function ImageGenerator() {
     try {
       setGenerating(true);
       setImageUrl(null);
-      const res = await api.post('/content/image', {
-        prompt: prompt.trim(),
-        style,
-        size,
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('ai-image', {
+        body: { prompt: prompt.trim(), style, size },
       });
-      const data = typeof res.data.result === 'string'
-        ? JSON.parse(res.data.result)
-        : res.data;
-      setImageUrl(data.url || data.image_url || data.result?.url);
+      if (fnError) throw fnError;
+      setImageUrl(fnData?.url || fnData?.image_url || fnData?.result?.url);
     } catch (err: any) {
       // If backend doesn't have image endpoint yet, show placeholder
       const placeholderUrl = `https://placehold.co/${size.replace('x', 'x')}/7c3aed/ffffff?text=${encodeURIComponent(prompt.slice(0, 30))}`;
@@ -82,10 +78,13 @@ export default function ImageGenerator() {
     if (!imageUrl) return;
     try {
       setSaving(true);
-      await api.post('/content-library/', {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      await supabase.from('content_items').insert({
+        user_id: user.id,
         title: prompt.slice(0, 80),
-        content_type: 'image',
-        content: { image_url: imageUrl, prompt, style, size },
+        type: 'image',
+        content: JSON.stringify({ image_url: imageUrl, prompt, style, size }),
         metadata: { style, size },
         tags: ['image', style],
       });

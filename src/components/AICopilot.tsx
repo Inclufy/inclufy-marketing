@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Message {
   id: string;
@@ -134,15 +134,17 @@ export default function AICopilot({ isOpen, onClose, initialContext, onContextCo
         .slice(-10)
         .map(m => ({ role: m.role, content: m.content }));
 
-      const res = await api.post('/copilot/chat', {
-        messages: history,
-        system_prompt: systemPrompt || customSystemPrompt || DEFAULT_SYSTEM_PROMPT,
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: history,
+          system_prompt: systemPrompt || customSystemPrompt || DEFAULT_SYSTEM_PROMPT,
+        },
       });
 
       const assistantMessage: Message = {
         id: generateId(),
         role: 'assistant',
-        content: res.data.response || res.data.content || 'Sorry, ik kon geen antwoord genereren.',
+        content: fnError ? 'AI is tijdelijk niet beschikbaar. Probeer het later opnieuw.' : (fnData?.response || fnData?.content || 'Sorry, ik kon geen antwoord genereren.'),
         timestamp: new Date(),
       };
 

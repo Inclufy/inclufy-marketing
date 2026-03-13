@@ -42,7 +42,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useCurrency } from '@/contexts/CurrencyContext';
 import { useAutonomousMarketing } from '@/hooks/useAutonomousMarketing';
@@ -211,17 +211,39 @@ export default function LuxuryDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [dashRes, campaignsRes, overviewRes] = await Promise.all([
-        api.get('/analytics/dashboard'),
-        api.get('/campaigns/'),
-        api.get('/analytics/overview').catch(() => ({ data: null })),
-      ]);
-      setStats(dashRes.data);
-      setCampaigns(Array.isArray(campaignsRes.data) ? campaignsRes.data : []);
-      setOverview(overviewRes.data);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError('Not authenticated'); setLoading(false); return; }
+
+      // Fetch campaigns from Supabase
+      const { data: campaignsData, error: campError } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (campError) throw campError;
+      const allCampaigns = campaignsData || [];
+      setCampaigns(allCampaigns as CampaignSummary[]);
+
+      // Fetch contacts count
+      const { count: contactsCount } = await supabase
+        .from('contacts')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id);
+
+      // Build stats from real data
+      const active = allCampaigns.filter((c: any) => c.status === 'active').length;
+      const draft = allCampaigns.filter((c: any) => c.status === 'draft').length;
+      setStats({
+        campaigns: { total: allCampaigns.length, active, draft },
+        contacts: { total: contactsCount || 0 },
+      });
+
+      setOverview(null);
     } catch (err: any) {
       console.error('Dashboard fetch error:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to load dashboard data');
+      setError(err.message || 'Failed to load dashboard data');
     } finally {
       setLoading(false);
     }
@@ -306,18 +328,9 @@ export default function LuxuryDashboard() {
                 </Button>
                 <Button
                   className="h-10 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
-                  onClick={async () => {
-                    try {
-                      const res = await api.get('/export/analytics/pdf', { responseType: 'blob' });
-                      const url = window.URL.createObjectURL(new Blob([res.data]));
-                      const a = document.createElement('a');
-                      a.href = url;
-                      a.download = `Analytics_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
-                      a.click();
-                      window.URL.revokeObjectURL(url);
-                    } catch (err) {
-                      console.error('Export failed:', err);
-                    }
+                  onClick={() => {
+                    // PDF export will be available via Supabase Edge Function
+                    console.log('PDF export: Feature coming soon');
                   }}
                 >
                   <Download className="h-4 w-4 mr-2" />
