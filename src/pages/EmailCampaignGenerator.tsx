@@ -59,10 +59,25 @@ const EmailCampaignGenerator = () => {
   const [emailProvider, setEmailProvider] = useState<{ configured: boolean; provider: string | null }>({ configured: false, provider: null });
 
   useEffect(() => {
-    // Email provider config — check via Supabase or default to unconfigured
-    supabase.functions.invoke('email-provider-status').then(({ data }) => {
-      if (data) setEmailProvider(data);
-    }).catch(() => {});
+    // Email provider config — check user's integration_configs for email providers
+    (async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase
+          .from('integration_configs')
+          .select('platform, status')
+          .eq('user_id', user.id)
+          .in('platform', ['sendgrid', 'mailchimp'])
+          .eq('status', 'connected')
+          .limit(1);
+        if (data && data.length > 0) {
+          setEmailProvider({ configured: true, provider: data[0].platform });
+        }
+      } catch {
+        // Default to unconfigured — no error shown
+      }
+    })();
   }, []);
 
   const campaignTypes = [

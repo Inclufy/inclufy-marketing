@@ -320,7 +320,7 @@ class LeadScoringService {
         name: 'Default Model',
         accuracy: 0,
         is_active: false,
-        category_weights: { engagement: 25, fit: 25, intent: 25, recency: 25 },
+        category_weights: { behavioral: 20, demographic: 20, firmographic: 20, engagement: 20, intent: 20 },
         threshold_mql: 40,
         threshold_sql: 70,
         last_trained: null,

@@ -816,6 +816,7 @@ export default function PredictiveLeadScoring() {
                 <div className="mt-3 grid grid-cols-5 gap-2">
                   {(Object.entries(scoringModel.category_weights) as [ScoreCategory, number][]).map(([cat, weight]) => {
                     const meta = CATEGORY_META[cat];
+                    if (!meta) return null;
                     return (
                       <div key={cat} className="text-center p-2 bg-white/60 dark:bg-white/5 rounded-lg">
                         <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground mb-1">
@@ -834,6 +835,7 @@ export default function PredictiveLeadScoring() {
           {(Object.entries(groupedRules) as [ScoreCategory, ScoringRule[]][]).map(([category, rules]) => {
             if (rules.length === 0) return null;
             const meta = CATEGORY_META[category];
+            if (!meta) return null;
             return (
               <div key={category}>
                 <div className="flex items-center gap-2 mb-3">
