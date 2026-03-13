@@ -55,6 +55,23 @@ export type Lead = LeadIntelligenceProfile;
 export type LeadSignal = IntentSignal;
 export type BestAction = { action: string; channel: string; timing: string; confidence: number };
 
+const DEFAULT_PREDICTED_ACTIONS = { buy_probability: 0, churn_risk: 0, upsell_potential: 0, best_channel: '—', best_time: '—', next_best_action: '—' };
+const DEFAULT_WEBSITE_BEHAVIOR = { total_visits: 0, pages_viewed: 0, avg_session_duration: 0, last_visit: '', top_pages: [], bounce_rate: 0 };
+const DEFAULT_SOCIAL_ACTIVITY = { linkedin_engagements: 0, twitter_mentions: 0, content_shares: 0, community_posts: 0 };
+const DEFAULT_COMPANY_INTEL = { size: '—', industry: '—', revenue: '—', tech_stack: [], recent_news: [], growth_signals: [] };
+
+function safeLeadProfile(raw: any): LeadIntelligenceProfile {
+  return {
+    ...raw,
+    signals: raw.signals || [],
+    engagement_timeline: raw.engagement_timeline || [],
+    predicted_actions: { ...DEFAULT_PREDICTED_ACTIONS, ...(raw.predicted_actions || {}) },
+    website_behavior: { ...DEFAULT_WEBSITE_BEHAVIOR, ...(raw.website_behavior || {}) },
+    social_activity: { ...DEFAULT_SOCIAL_ACTIVITY, ...(raw.social_activity || {}) },
+    company_intel: { ...DEFAULT_COMPANY_INTEL, ...(raw.company_intel || {}) },
+  };
+}
+
 class LeadIntelligenceService {
   private async getUserId(): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -80,7 +97,7 @@ class LeadIntelligenceService {
     if (leadsRes.error) throw leadsRes.error;
     if (signalsRes.error) throw signalsRes.error;
 
-    const leads = (leadsRes.data || []) as unknown as LeadIntelligenceProfile[];
+    const leads = (leadsRes.data || []).map(safeLeadProfile);
     const signals = (signalsRes.data || []) as unknown as IntentSignal[];
 
     const totalTracked = leads.length;
@@ -181,7 +198,7 @@ class LeadIntelligenceService {
       .eq('user_id', userId)
       .maybeSingle();
     if (error) throw error;
-    return data ? (data as unknown as LeadIntelligenceProfile) : null;
+    return data ? safeLeadProfile(data) : null;
   }
 
   async getTopIntentLeads(limit: number = 10): Promise<LeadIntelligenceProfile[]> {
@@ -193,7 +210,7 @@ class LeadIntelligenceService {
       .order('intent_score', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    return (data || []) as unknown as LeadIntelligenceProfile[];
+    return (data || []).map(safeLeadProfile);
   }
 
   async getRecentSignals(limit: number = 20): Promise<IntentSignal[]> {
@@ -224,7 +241,7 @@ class LeadIntelligenceService {
       .single();
     if (leadError) throw leadError;
 
-    const lead = leadData as unknown as LeadIntelligenceProfile;
+    const lead = safeLeadProfile(leadData);
 
     // Fetch recent signals for this lead
     const { data: signalData, error: signalError } = await supabase

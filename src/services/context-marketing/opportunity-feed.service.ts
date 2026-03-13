@@ -53,6 +53,18 @@ class OpportunityFeedService {
     return user.id;
   }
 
+  private safeFeedItem(raw: any): FeedItem {
+    return {
+      ...raw,
+      suggested_action: raw.suggested_action || { label: '—', action_type: 'monitor' },
+      related_entities: raw.related_entities || [],
+      impact_metrics: raw.impact_metrics || {},
+      tags: raw.tags || [],
+      estimated_value: raw.estimated_value ?? 0,
+      confidence: raw.confidence ?? 0,
+    };
+  }
+
   async getFeedItems(limit: number = 20): Promise<FeedItem[]> {
     const userId = await this.getUserId();
     const { data, error } = await supabase
@@ -62,7 +74,7 @@ class OpportunityFeedService {
       .order('created_at', { ascending: false })
       .limit(limit);
     if (error) throw error;
-    return (data || []) as unknown as FeedItem[];
+    return (data || []).map(d => this.safeFeedItem(d));
   }
 
   async getStats(): Promise<FeedStats> {
@@ -74,7 +86,7 @@ class OpportunityFeedService {
       .eq('user_id', userId);
     if (error) throw error;
 
-    const allItems = (items || []) as unknown as (FeedItem & { is_dismissed?: boolean; created_at?: string })[];
+    const allItems = (items || []).map(d => this.safeFeedItem(d)) as (FeedItem & { is_dismissed?: boolean; created_at?: string })[];
 
     const total = allItems.length;
     const unread = allItems.filter(i => !i.is_read).length;

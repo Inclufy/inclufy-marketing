@@ -498,15 +498,15 @@ export default function CampaignTriggering() {
                     </div>
 
                     {/* Performance metrics grid */}
-                    {(campaign.performance.impressions > 0 || campaign.status === 'completed') && (
+                    {((campaign.performance?.impressions ?? 0) > 0 || campaign.status === 'completed') && (
                       <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                         {[
-                          { label: 'Impressions', value: formatCompact(campaign.performance.impressions) },
-                          { label: 'Clicks', value: formatCompact(campaign.performance.clicks) },
-                          { label: 'Leads', value: campaign.performance.leads.toString() },
-                          { label: 'Conversions', value: campaign.performance.conversions.toString() },
-                          { label: nl ? 'Omzet' : fr ? 'Revenus' : 'Revenue', value: formatCurrency(campaign.performance.revenue) },
-                          { label: 'ROI', value: `${campaign.performance.roi}%` },
+                          { label: 'Impressions', value: formatCompact(campaign.performance?.impressions ?? 0) },
+                          { label: 'Clicks', value: formatCompact(campaign.performance?.clicks ?? 0) },
+                          { label: 'Leads', value: String(campaign.performance?.leads ?? 0) },
+                          { label: 'Conversions', value: String(campaign.performance?.conversions ?? 0) },
+                          { label: nl ? 'Omzet' : fr ? 'Revenus' : 'Revenue', value: formatCurrency(campaign.performance?.revenue ?? 0) },
+                          { label: 'ROI', value: `${campaign.performance?.roi ?? 0}%` },
                         ].map((metric) => (
                           <div key={metric.label} className="text-center">
                             <p className="text-[10px] text-muted-foreground uppercase tracking-wider">{metric.label}</p>

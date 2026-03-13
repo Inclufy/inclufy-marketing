@@ -54,6 +54,34 @@ export interface TriggeringDashboard {
 // Type alias for hook compatibility
 export type Trigger = CampaignTrigger;
 
+const DEFAULT_TRIGGER_PERF = { campaigns_launched: 0, total_reach: 0, leads_generated: 0, revenue_impact: 0, avg_roi: 0 };
+const DEFAULT_CAMPAIGN_PERF = { impressions: 0, clicks: 0, leads: 0, conversions: 0, revenue: 0, roi: 0 };
+
+function safeTrigger(raw: any): CampaignTrigger {
+  return {
+    ...raw,
+    channels: raw.channels || [],
+    actions: raw.actions || [],
+    budget_limit: raw.budget_limit ?? 0,
+    confidence_threshold: raw.confidence_threshold ?? 70,
+    times_triggered: raw.times_triggered ?? 0,
+    performance: { ...DEFAULT_TRIGGER_PERF, ...(raw.performance || {}) },
+  };
+}
+
+function safeCampaign(raw: any): TriggeredCampaign {
+  return {
+    ...raw,
+    channels: raw.channels || [],
+    budget_allocated: raw.budget_allocated ?? 0,
+    signal: raw.signal || '',
+    trigger_name: raw.trigger_name || '',
+    ai_reasoning: raw.ai_reasoning || '',
+    content_generated: raw.content_generated || [],
+    performance: { ...DEFAULT_CAMPAIGN_PERF, ...(raw.performance || {}) },
+  };
+}
+
 class CampaignTriggeringService {
   private async getUserId(): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -69,7 +97,7 @@ class CampaignTriggeringService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []) as unknown as CampaignTrigger[];
+    return (data || []).map(safeTrigger);
   }
 
   async getTriggeredCampaigns(): Promise<TriggeredCampaign[]> {
@@ -80,7 +108,7 @@ class CampaignTriggeringService {
       .eq('user_id', userId)
       .order('launched_at', { ascending: false });
     if (error) throw error;
-    return (data || []) as unknown as TriggeredCampaign[];
+    return (data || []).map(safeCampaign);
   }
 
   async getDashboard(): Promise<TriggeringDashboard> {
@@ -100,8 +128,8 @@ class CampaignTriggeringService {
     if (triggersRes.error) throw triggersRes.error;
     if (campaignsRes.error) throw campaignsRes.error;
 
-    const triggers = (triggersRes.data || []) as unknown as CampaignTrigger[];
-    const campaigns = (campaignsRes.data || []) as unknown as TriggeredCampaign[];
+    const triggers = (triggersRes.data || []).map(safeTrigger);
+    const campaigns = (campaignsRes.data || []).map(safeCampaign);
 
     const activeTriggers = triggers.filter(t => t.status === 'active').length;
     const totalTriggered = triggers.reduce((sum, t) => sum + (t.times_triggered || 0), 0);
