@@ -172,6 +172,8 @@ export type RootStackParamList = {
   Notifications: undefined;
   // Settings
   Settings: undefined;
+  // Demo
+  DemoEnvironment: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────
