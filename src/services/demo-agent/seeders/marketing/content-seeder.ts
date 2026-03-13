@@ -15,11 +15,11 @@ export async function seedContent(userId: string, template: IndustryTemplate): P
     user_id: userId,
     title: c.title,
     type: contentTypeMap[c.content_type] || 'other',
-    content_type: c.content_type,
     content: JSON.stringify({ markdown: c.body, summary: c.body?.substring(0, 150) }),
     status: c.status === 'published' ? 'published' : c.status === 'scheduled' ? 'scheduled' : 'draft',
     tags: c.tags || [],
     metadata: {
+      content_type: c.content_type,
       channels: c.channels,
       performance: c.performance || generateContentPerformance(c.status === 'published'),
       word_count: c.body ? c.body.split(' ').length : 0,

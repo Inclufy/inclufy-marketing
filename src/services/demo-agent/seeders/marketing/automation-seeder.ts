@@ -5,16 +5,20 @@ import { daysAgo, randomBetween } from '../../templates/base-template';
 
 export async function seedAutomation(userId: string, template: IndustryTemplate): Promise<void> {
   // Autonomous decisions — use valid type values and integer confidence (matching original schema)
+  // Note: live DB has `decision_type` NOT NULL column (pre-migration schema).
+  // Must include it even though migration schema doesn't define it.
   const decisions = [
     {
-      user_id: userId, type: 'budget_allocation', title: `Reallocate ad budget from Facebook to LinkedIn`,
+      user_id: userId, type: 'budget_allocation', decision_type: 'budget_allocation',
+      title: `Reallocate ad budget from Facebook to LinkedIn`,
       description: `LinkedIn campaigns show 34% higher conversion rate for ${template.industry} audience. Recommend shifting €2,000 from Facebook display to LinkedIn Sponsored Content.`,
       priority: 'high', confidence: 89, estimated_impact: '+€15K revenue, -€2K cost',
       risk_level: 'low', cost_estimate: 0, requires_approval: true, status: 'pending',
       decision_data: { from_channel: 'facebook', to_channel: 'linkedin', amount: 2000, reason: 'Higher B2B conversion rate' },
     },
     {
-      user_id: userId, type: 'campaign_creation', title: `Auto-publish trending ${template.industry} content`,
+      user_id: userId, type: 'campaign_creation', decision_type: 'campaign_creation',
+      title: `Auto-publish trending ${template.industry} content`,
       description: `AI detected surge in interest for "${template.content[0]?.tags?.[0] || 'industry topic'}". Publishing prepared content within optimal engagement window.`,
       priority: 'medium', confidence: 92, estimated_impact: '+25K impressions, 12 leads',
       risk_level: 'low', cost_estimate: 0, requires_approval: false, status: 'pending',

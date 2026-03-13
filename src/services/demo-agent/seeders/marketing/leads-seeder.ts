@@ -90,6 +90,8 @@ export async function seedLeads(userId: string, template: IndustryTemplate): Pro
   if (capturedError) console.error('captured_contacts seed error:', capturedError);
 
   // ── contacts table (used by Dashboard Analytics, ContactManager) ──
+  // Note: contacts table has organization_id schema but user_id was added via migration.
+  // Only insert columns that definitely exist in the live DB.
   const contacts = template.leads.map((lead) => {
     const nameParts = lead.name.split(' ');
     return {
@@ -98,10 +100,6 @@ export async function seedLeads(userId: string, template: IndustryTemplate): Pro
       first_name: nameParts[0] || lead.name,
       last_name: nameParts.slice(1).join(' ') || '',
       phone: '+31 6 ' + String(randomBetween(10000000, 99999999)),
-      company: lead.company,
-      title: lead.title,
-      source: lead.source,
-      tags: lead.tags,
     };
   });
   const { error: contactsError } = await marketingSupabase.from('contacts').insert(contacts);
