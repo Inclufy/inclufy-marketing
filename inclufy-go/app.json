@@ -90,8 +90,7 @@
           "photosPermission": "Inclufy GO slaat branded afbeeldingen op in je fotobibliotheek."
         }
       ],
-      "expo-router",
-      "react-native-nfc-manager"
+      "expo-router"
     ]
   }
 }
