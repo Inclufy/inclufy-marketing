@@ -9,6 +9,8 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -205,7 +207,8 @@ export default function LiveCaptureScreen() {
       await processCapture(uri, 'audio', transcript);
     } catch (error: any) {
       setProcessing(false);
-      Alert.alert(t.common.error, t.liveCapture.audioTranscriptionFailed);
+      console.error('[AudioCapture] transcription error:', error);
+      Alert.alert(t.common.error, error?.message || t.liveCapture.audioTranscriptionFailed);
     }
   };
 
@@ -232,8 +235,11 @@ export default function LiveCaptureScreen() {
   }
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      {/* Header overlay */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
           <Text style={styles.backText}>{'\u2039'} {t.common.back}</Text>
@@ -242,7 +248,7 @@ export default function LiveCaptureScreen() {
         <View style={{ width: 60 }} />
       </View>
 
-      {/* Camera / Audio / Quote View */}
+      {/* Camera / Audio / Quote View — flex:1, fills remaining space */}
       <View style={styles.captureArea}>
         {mode === 'photo' && <CameraCapture mode="photo" onCapture={handlePhotoCapture} />}
         {mode === 'video' && (
@@ -252,22 +258,21 @@ export default function LiveCaptureScreen() {
         {mode === 'quote' && <QuoteCapture onSubmit={handleQuoteSubmit} />}
       </View>
 
-      {/* Bottom controls (only for photo/video modes) */}
+      {/* Bottom controls — NOT absolute, sits between camera and mode tabs */}
       {(mode === 'photo' || mode === 'video') && (
         <View style={styles.bottomControls}>
           {/* Tags */}
           <TagSelector tags={tags} selected={selectedTags} onToggle={toggleTag} />
 
           {/* Note */}
-          <View style={styles.noteRow}>
-            <TextInput
-              style={styles.noteInput}
-              value={note}
-              onChangeText={setNote}
-              placeholder={t.liveCapture.notePlaceholder}
-              placeholderTextColor="rgba(255,255,255,0.4)"
-            />
-          </View>
+          <TextInput
+            style={styles.noteInput}
+            value={note}
+            onChangeText={setNote}
+            placeholder={t.liveCapture.notePlaceholder}
+            placeholderTextColor="rgba(255,255,255,0.4)"
+            returnKeyType="done"
+          />
         </View>
       )}
 
@@ -324,7 +329,7 @@ export default function LiveCaptureScreen() {
           ))}
         </ScrollView>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -355,20 +360,19 @@ const styles = StyleSheet.create({
   },
   captureArea: { flex: 1 },
   bottomControls: {
-    position: 'absolute',
-    bottom: 160,
-    left: 0,
-    right: 0,
-    gap: spacing.sm,
-  },
-  noteRow: {
+    backgroundColor: '#111',
     paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    gap: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.08)',
   },
   noteInput: {
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: borderRadius.md,
     paddingHorizontal: spacing.md,
-    paddingVertical: 10,
+    paddingVertical: 9,
     color: '#fff',
     fontSize: fontSize.sm,
   },
