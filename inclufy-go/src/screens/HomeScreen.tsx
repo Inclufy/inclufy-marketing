@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDashboardStats } from '../hooks/useAnalytics';
 import { useCampaigns } from '../hooks/useCampaigns';
+import { useUnreadNotificationCount } from '../hooks/useNotifications';
 import type { RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
@@ -54,6 +55,7 @@ export default function HomeScreen() {
   const { t } = useTranslation();
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useDashboardStats();
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useCampaigns();
+  const unreadNotifCount = useUnreadNotificationCount();
 
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
@@ -165,6 +167,13 @@ export default function HomeScreen() {
               onPress={() => navigation.navigate('Notifications' as any)}
             >
               <Ionicons name="notifications-outline" size={22} color={colors.text} />
+              {unreadNotifCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>
+                    {unreadNotifCount > 9 ? '9+' : String(unreadNotifCount)}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconBtn}
@@ -446,6 +455,26 @@ const styles = StyleSheet.create({
     backgroundColor: colors.borderLight,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5,
+    borderColor: colors.background,
+  },
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '800' as any,
+    letterSpacing: -0.2,
   },
   greeting: {
     fontSize: fontSize.xxl,

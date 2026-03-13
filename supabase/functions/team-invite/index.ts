@@ -306,7 +306,39 @@ serve(async (req) => {
       return jsonResp({ error: 'Fout bij het aanmaken van de uitnodiging' });
     }
 
-    // Send invitation email (non-blocking — don't fail if email fails)
+    // ── Create in-app notification for the invited user ─────────────
+    const roleLabels: Record<string, string> = {
+      editor:      'Editor',
+      contributor: 'Bijdrager',
+      viewer:      'Kijker',
+      owner:       'Eigenaar',
+    };
+    const roleName = roleLabels[role] || role;
+
+    const { error: notifError } = await adminClient
+      .from('go_notifications')
+      .insert({
+        user_id: targetUser.id,
+        type:    'team_invite',
+        title:   `Uitnodiging: ${eventName}`,
+        body:    `${user.email || 'Iemand'} heeft je uitgenodigd als ${roleName}`,
+        data: {
+          event_id,
+          member_id:   member.id,
+          event_name:  eventName,
+          invited_by:  user.email || user.id,
+          role,
+        },
+      });
+
+    if (notifError) {
+      // Non-fatal — the invite was created, notification failed
+      console.error('[team-invite] Notification insert error:', notifError.message);
+    } else {
+      console.log('[team-invite] In-app notification created for', targetUser.id);
+    }
+
+    // ── Send invitation email (non-blocking) ─────────────────────────
     await sendInviteEmail({
       to: email,
       inviterEmail: user.email || 'een teamlid',
@@ -318,6 +350,7 @@ serve(async (req) => {
       member,
       message: `Uitnodiging verstuurd naar ${email}`,
       email_sent: !!RESEND_API_KEY,
+      notification_created: !notifError,
     });
 
   } catch (err) {
