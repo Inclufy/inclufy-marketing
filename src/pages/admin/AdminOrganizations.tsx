@@ -30,7 +30,7 @@ import {
   X,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Organization {
@@ -63,10 +63,16 @@ export default function AdminOrganizations() {
   const fetchOrgs = async () => {
     try {
       setLoading(true);
-      const params: any = {};
-      if (search.trim()) params.search = search.trim();
-      const res = await api.get('/tenant-admin/organizations', { params });
-      setOrganizations(res.data || []);
+      let query = supabase.from('organizations').select('id, name, slug, created_at');
+      if (search.trim()) {
+        query = query.ilike('name', `%${search.trim()}%`);
+      }
+      const { data, error: fetchError } = await query.order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      setOrganizations((data || []).map((o: any) => ({
+        ...o,
+        member_count: 0,
+      })));
     } catch (err: any) {
       toast({ title: nl ? 'Laden mislukt' : fr ? 'Echec du chargement' : 'Loading failed', variant: 'destructive' });
     } finally {
@@ -80,10 +86,9 @@ export default function AdminOrganizations() {
     if (!newName.trim()) return;
     try {
       setCreateLoading(true);
-      await api.post('/tenant-admin/organizations', {
-        name: newName.trim(),
-        slug: newSlug.trim() || undefined,
-      });
+      const slug = newSlug.trim() || newName.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+      const { error: insertError } = await supabase.from('organizations').insert({ name: newName.trim(), slug });
+      if (insertError) throw insertError;
       toast({ title: nl ? 'Organisatie aangemaakt!' : fr ? 'Organisation creee !' : 'Organization created!' });
       setCreateOpen(false);
       setNewName('');
@@ -98,7 +103,8 @@ export default function AdminOrganizations() {
 
   const handleUpdate = async (orgId: string) => {
     try {
-      await api.patch(`/tenant-admin/organizations/${orgId}`, { name: editName });
+      const { error: updateError } = await supabase.from('organizations').update({ name: editName }).eq('id', orgId);
+      if (updateError) throw updateError;
       toast({ title: nl ? 'Bijgewerkt!' : fr ? 'Mis a jour !' : 'Updated!' });
       setEditingId(null);
       fetchOrgs();
@@ -115,7 +121,8 @@ export default function AdminOrganizations() {
       : `Are you sure you want to delete "${name}"? All members will be detached.`;
     if (!confirm(confirmMsg)) return;
     try {
-      await api.delete(`/tenant-admin/organizations/${orgId}`);
+      const { error: delError } = await supabase.from('organizations').delete().eq('id', orgId);
+      if (delError) throw delError;
       toast({ title: nl ? 'Organisatie verwijderd' : fr ? 'Organisation supprimee' : 'Organization deleted' });
       fetchOrgs();
     } catch (err: any) {

@@ -15,7 +15,7 @@ import {
   Video,
   BookOpen,
 } from 'lucide-react';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Training {
@@ -39,10 +39,14 @@ export default function AdminTrainings() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tenant-admin/trainings');
-      setTrainings(res.data || []);
+      const { data, error: fetchError } = await supabase
+        .from('trainings')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      setTrainings(data || []);
     } catch {
-      // Table may not exist
+      setTrainings([]);
     } finally {
       setLoading(false);
     }

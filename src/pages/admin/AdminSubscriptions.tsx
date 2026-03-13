@@ -16,7 +16,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Subscription {
@@ -54,8 +54,16 @@ export default function AdminSubscriptions() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tenant-admin/subscriptions');
-      setSubscriptions(res.data || []);
+      const { data } = await supabase.from('subscriptions').select('*').order('created_at', { ascending: false });
+      setSubscriptions((data || []).map((s: any) => ({
+        id: s.id,
+        organization_id: s.organization_id || '',
+        plan: s.plan || 'free',
+        status: s.status || 'active',
+        amount: s.amount || 0,
+        interval: s.interval || 'month',
+        created_at: s.created_at,
+      })));
     } catch {
       // Table may not exist
     } finally {

@@ -15,7 +15,7 @@ import {
   Mail,
   Clock,
 } from 'lucide-react';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface ActivityItem {
@@ -49,10 +49,28 @@ export default function AdminActivity() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tenant-admin/dashboard/activity?limit=50');
-      setActivities(res.data || []);
+      // Query recent campaigns and content as activity items
+      const { data: campaigns } = await supabase.from('campaigns').select('id, name, status, created_at').order('created_at', { ascending: false }).limit(25);
+      const { data: contents } = await supabase.from('content_items').select('id, title, content_type, created_at').order('created_at', { ascending: false }).limit(25);
+
+      const items: ActivityItem[] = [
+        ...(campaigns || []).map((c: any) => ({
+          type: 'campaign',
+          description: `Campaign: ${c.name || 'Untitled'}`,
+          status: c.status || 'draft',
+          timestamp: c.created_at,
+        })),
+        ...(contents || []).map((c: any) => ({
+          type: 'content',
+          description: `Content: ${c.title || 'Untitled'}`,
+          status: c.content_type || 'other',
+          timestamp: c.created_at,
+        })),
+      ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 50);
+
+      setActivities(items);
     } catch {
-      // May not exist
+      // Tables may not be accessible
     } finally {
       setLoading(false);
     }

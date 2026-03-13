@@ -40,7 +40,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface User {
@@ -100,13 +100,27 @@ export default function AdminUsers() {
     try {
       setLoading(true);
       setError(null);
-      const params: any = { page, per_page: perPage };
-      if (search.trim()) params.search = search.trim();
-      const res = await api.get('/tenant-admin/users', { params });
-      setUsers(res.data.users || []);
-      setTotal(res.data.total || 0);
+      let query = supabase.from('profiles').select('id, email, full_name, created_at, role', { count: 'exact' });
+      if (search.trim()) {
+        query = query.or(`email.ilike.%${search.trim()}%,full_name.ilike.%${search.trim()}%`);
+      }
+      const from = (page - 1) * perPage;
+      const to = from + perPage - 1;
+      const { data, count, error: fetchError } = await query.order('created_at', { ascending: false }).range(from, to);
+      if (fetchError) throw fetchError;
+      setUsers((data || []).map((p: any) => ({
+        id: p.id,
+        email: p.email || '',
+        full_name: p.full_name || '',
+        created_at: p.created_at,
+        role: p.role || 'member',
+        organization_name: '',
+        organization_id: '',
+        is_superadmin: p.role === 'superadmin',
+      })));
+      setTotal(count || 0);
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message);
+      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -123,16 +137,21 @@ export default function AdminUsers() {
     if (!newEmail.trim()) return;
     try {
       setCreateLoading(true);
-      const res = await api.post('/tenant-admin/users', {
-        email: newEmail.trim(),
-        full_name: newName.trim() || undefined,
-        role: newRole,
-        password: newPassword.trim() || undefined,
+      // Use Supabase edge function for user creation (requires admin privileges)
+      const { data: res, error: fnError } = await supabase.functions.invoke('admin-create-user', {
+        body: {
+          email: newEmail.trim(),
+          full_name: newName.trim() || undefined,
+          role: newRole,
+          password: newPassword.trim() || undefined,
+        },
       });
+      if (fnError) throw fnError;
+      const tempPassword = newPassword.trim() || res?.temporary_password || 'Temp123!';
       setCreateResult({
-        email: res.data.email,
-        password: res.data.temporary_password || newPassword,
-        role: res.data.role,
+        email: newEmail.trim(),
+        password: tempPassword,
+        role: newRole,
       });
       toast({
         title: nl
@@ -164,7 +183,8 @@ export default function AdminUsers() {
         : `Are you sure you want to delete ${email}?`;
     if (!confirm(confirmMsg)) return;
     try {
-      await api.delete(`/tenant-admin/users/${userId}`);
+      const { error: delError } = await supabase.functions.invoke('admin-delete-user', { body: { user_id: userId } });
+      if (delError) throw delError;
       toast({ title: nl ? 'Gebruiker verwijderd' : fr ? 'Utilisateur supprim\u00e9' : 'User deleted' });
       fetchUsers();
     } catch (err: any) {
@@ -178,7 +198,8 @@ export default function AdminUsers() {
 
   const handleRoleChange = async (userId: string, newRole: string) => {
     try {
-      await api.patch(`/tenant-admin/users/${userId}`, { role: newRole });
+      const { error: roleError } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId);
+      if (roleError) throw roleError;
       toast({ title: nl ? 'Rol bijgewerkt' : fr ? 'R\u00f4le mis \u00e0 jour' : 'Role updated' });
       fetchUsers();
     } catch (err: any) {

@@ -15,7 +15,7 @@ import {
   CheckCircle,
   Clock,
 } from 'lucide-react';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Registration {
@@ -38,8 +38,22 @@ export default function AdminRegistrations() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tenant-admin/registrations');
-      setRegistrations(res.data || []);
+      const { data, error: fetchError } = await supabase
+        .from('profiles')
+        .select('id, email, full_name, created_at')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      if (fetchError) throw fetchError;
+      const mapped: Registration[] = (data || []).map((p: any) => ({
+        id: p.id,
+        email: p.email || '',
+        full_name: p.full_name || '',
+        type: 'trial',
+        status: 'active',
+        source: 'direct',
+        created_at: p.created_at,
+      }));
+      setRegistrations(mapped);
     } catch {
       // May not exist
     } finally {

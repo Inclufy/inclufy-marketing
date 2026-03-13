@@ -21,7 +21,7 @@ import {
   BarChart3,
   Users,
 } from 'lucide-react';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Integration {
@@ -64,8 +64,12 @@ export default function AdminIntegrations() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tenant-admin/integrations');
-      setIntegrations(res.data || []);
+      const { data, error: fetchError } = await supabase
+        .from('integration_configs')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      setIntegrations(data || []);
     } catch {
       // Fallback
     } finally {

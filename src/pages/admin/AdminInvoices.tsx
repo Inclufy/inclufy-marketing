@@ -15,7 +15,7 @@ import {
   AlertTriangle,
   Euro,
 } from 'lucide-react';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Invoice {
@@ -46,10 +46,14 @@ export default function AdminInvoices() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/tenant-admin/invoices');
-      setInvoices(res.data || []);
+      const { data, error: fetchError } = await supabase
+        .from('invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (fetchError) throw fetchError;
+      setInvoices(data || []);
     } catch {
-      // Table may not exist
+      setInvoices([]);
     } finally {
       setLoading(false);
     }

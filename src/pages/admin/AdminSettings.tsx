@@ -31,7 +31,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SystemSettings {
   general: {
@@ -114,13 +114,17 @@ export default function AdminSettings() {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const [settingsRes, configRes] = await Promise.all([
-        api.get('/tenant-admin/settings'),
-        api.get('/admin/config'),
-      ]);
-      const s = settingsRes.data;
-      setSettings(s);
-      setApiConfig(configRes.data);
+      const { data: settingsData, error: settingsError } = await supabase
+        .from('admin_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+
+      if (settingsError) throw settingsError;
+
+      const s = settingsData || {};
+      setSettings(s as any);
+      setApiConfig(s as any);
 
       if (s.general) setGeneral(s.general);
       if (s.security) setSecurity({ session_timeout_minutes: s.security.session_timeout_minutes, max_login_attempts: s.security.max_login_attempts, password_min_length: s.security.password_min_length });
@@ -142,13 +146,16 @@ export default function AdminSettings() {
   const handleSaveAll = async () => {
     try {
       setSaving(true);
-      await Promise.all([
-        api.patch('/tenant-admin/settings', { category: 'general', settings: general }),
-        api.patch('/tenant-admin/settings', { category: 'security', settings: security }),
-        api.patch('/tenant-admin/settings', { category: 'email', settings: email }),
-        api.patch('/tenant-admin/settings', { category: 'features', settings: features }),
-        api.patch('/tenant-admin/settings', { category: 'billing', settings: billing }),
-      ]);
+      const { error: upsertError } = await supabase
+        .from('admin_settings')
+        .upsert({
+          general,
+          security,
+          email,
+          features,
+          billing,
+        });
+      if (upsertError) throw upsertError;
       toast({ title: nl ? 'Instellingen opgeslagen!' : fr ? 'Paramètres enregistrés !' : 'Settings saved!' });
     } catch {
       toast({

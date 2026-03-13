@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Member {
   id: string;
@@ -137,31 +137,65 @@ export default function SuperAdmin() {
       setLoading(true);
       setError(null);
 
-      // Eerst verificatie met whoami
-      const whoamiRes = await api.get('/admin/whoami');
-      console.log('[SuperAdmin] whoami:', whoamiRes.data);
-      setWhoami(whoamiRes.data);
-
-      const [membersRes, orgRes, configRes, statsRes] = await Promise.all([
-        api.get('/admin/members'),
-        api.get('/admin/organization'),
-        api.get('/admin/config'),
-        api.get('/admin/stats'),
-      ]);
-      setMembers(membersRes.data);
-      setOrg(orgRes.data);
-      setOrgName(orgRes.data?.name || '');
-      setConfig(configRes.data);
-      setStats(statsRes.data);
-    } catch (err: any) {
-      console.error('[SuperAdmin] Error:', err.response?.status, err.response?.data);
-      const msg = err.response?.data?.detail || err.message || (nl ? 'Kon admin data niet laden' : fr ? 'Impossible de charger les donn\u00e9es admin' : 'Could not load admin data');
-      setError(msg);
-      if (err.response?.status === 403) {
-        setError(nl ? 'Admin toegang vereist. Alleen organisatie-eigenaren en beheerders kunnen deze pagina bekijken.' : fr ? 'Acc\u00e8s admin requis. Seuls les propri\u00e9taires et administrateurs de l\'organisation peuvent voir cette page.' : 'Admin access required. Only organization owners and admins can view this page.');
-      } else if (err.response?.status === 401) {
+      // Get current user via supabase auth
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError || !user) {
         setError(nl ? 'Authenticatie verlopen. Log uit en log opnieuw in.' : fr ? 'Authentification expir\u00e9e. D\u00e9connectez-vous et reconnectez-vous.' : 'Authentication expired. Log out and log in again.');
+        return;
       }
+
+      // Get user profile for role info
+      const { data: profile } = await supabase.from('profiles').select('role, organization_id').eq('id', user.id).maybeSingle();
+      const whoamiData: WhoAmI = {
+        email: user.email || '',
+        role: profile?.role || 'member',
+        organization_id: profile?.organization_id || null,
+        is_superadmin: profile?.role === 'superadmin',
+        user_id: user.id,
+      };
+      console.log('[SuperAdmin] whoami:', whoamiData);
+      setWhoami(whoamiData);
+
+      // Fetch members, org, config, stats in parallel
+      const [membersResult, orgResult, configResult, campaignsCount, contactsCount, contentCount] = await Promise.all([
+        supabase.from('organization_members').select('*, profiles(email, full_name)').order('created_at'),
+        supabase.from('organizations').select('*').limit(1).maybeSingle(),
+        supabase.from('admin_settings').select('*').maybeSingle(),
+        supabase.from('campaigns').select('id', { count: 'exact', head: true }),
+        supabase.from('contacts').select('id', { count: 'exact', head: true }),
+        supabase.from('content_items').select('id', { count: 'exact', head: true }),
+      ]);
+
+      // Map members
+      const membersData: Member[] = (membersResult.data || []).map((m: any) => ({
+        id: m.id,
+        user_id: m.user_id,
+        role: m.role,
+        email: m.profiles?.email || '',
+        full_name: m.profiles?.full_name || '',
+        joined_at: m.created_at,
+      }));
+      setMembers(membersData);
+
+      // Organization
+      const orgData = orgResult.data;
+      setOrg(orgData as any);
+      setOrgName(orgData?.name || '');
+
+      // Config
+      setConfig(configResult.data as any);
+
+      // Stats
+      setStats({
+        campaigns: campaignsCount.count || 0,
+        contacts: contactsCount.count || 0,
+        members: membersData.length,
+        content: contentCount.count || 0,
+      });
+    } catch (err: any) {
+      console.error('[SuperAdmin] Error:', err);
+      const msg = err.message || (nl ? 'Kon admin data niet laden' : fr ? 'Impossible de charger les donn\u00e9es admin' : 'Could not load admin data');
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -171,33 +205,37 @@ export default function SuperAdmin() {
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     try {
-      await api.patch(`/admin/members/${memberId}/role`, { role: newRole });
+      const { error: updateError } = await supabase.from('organization_members').update({ role: newRole }).eq('id', memberId);
+      if (updateError) throw updateError;
       toast({ title: nl ? 'Rol bijgewerkt' : fr ? 'R\u00f4le mis \u00e0 jour' : 'Role updated' });
       fetchAll();
     } catch (err: any) {
-      toast({ title: nl ? 'Rol bijwerken mislukt' : fr ? 'Mise \u00e0 jour du r\u00f4le \u00e9chou\u00e9e' : 'Failed to update role', description: err.response?.data?.detail, variant: 'destructive' });
+      toast({ title: nl ? 'Rol bijwerken mislukt' : fr ? 'Mise \u00e0 jour du r\u00f4le \u00e9chou\u00e9e' : 'Failed to update role', description: err.message, variant: 'destructive' });
     }
   };
 
   const handleRemoveMember = async (memberId: string, email: string) => {
     if (!confirm(nl ? `${email} verwijderen uit de organisatie?` : fr ? `Supprimer ${email} de l'organisation ?` : `Remove ${email} from the organization?`)) return;
     try {
-      await api.delete(`/admin/members/${memberId}`);
+      const { error: deleteError } = await supabase.from('organization_members').delete().eq('id', memberId);
+      if (deleteError) throw deleteError;
       toast({ title: nl ? 'Lid verwijderd' : fr ? 'Membre supprim\u00e9' : 'Member removed' });
       fetchAll();
     } catch (err: any) {
-      toast({ title: nl ? 'Lid verwijderen mislukt' : fr ? 'Suppression du membre \u00e9chou\u00e9e' : 'Failed to remove member', description: err.response?.data?.detail, variant: 'destructive' });
+      toast({ title: nl ? 'Lid verwijderen mislukt' : fr ? 'Suppression du membre \u00e9chou\u00e9e' : 'Failed to remove member', description: err.message, variant: 'destructive' });
     }
   };
 
   const handleSaveOrgName = async () => {
     try {
-      await api.patch('/admin/organization', { name: orgName });
+      if (!org?.id) throw new Error('No organization found');
+      const { error: updateError } = await supabase.from('organizations').update({ name: orgName }).eq('id', org.id);
+      if (updateError) throw updateError;
       toast({ title: nl ? 'Organisatienaam bijgewerkt' : fr ? 'Nom de l\'organisation mis \u00e0 jour' : 'Organization name updated' });
       setEditingName(false);
       fetchAll();
     } catch (err: any) {
-      toast({ title: nl ? 'Bijwerken mislukt' : fr ? 'Mise \u00e0 jour \u00e9chou\u00e9e' : 'Update failed', description: err.response?.data?.detail, variant: 'destructive' });
+      toast({ title: nl ? 'Bijwerken mislukt' : fr ? 'Mise \u00e0 jour \u00e9chou\u00e9e' : 'Update failed', description: err.message, variant: 'destructive' });
     }
   };
 
@@ -208,18 +246,22 @@ export default function SuperAdmin() {
     }
     try {
       setInviteLoading(true);
-      const res = await api.post('/admin/invite', {
-        email: inviteEmail.trim(),
-        full_name: inviteName.trim() || undefined,
-        role: inviteRole,
-        password: invitePassword.trim() || undefined,
+      const { data: invokeData, error: invokeError } = await supabase.functions.invoke('admin-invite', {
+        body: {
+          email: inviteEmail.trim(),
+          full_name: inviteName.trim() || undefined,
+          role: inviteRole,
+          password: invitePassword.trim() || undefined,
+        },
       });
+      if (invokeError) throw invokeError;
+      const res = invokeData;
       setInviteResult({
-        email: res.data.email,
-        password: res.data.temporary_password || invitePassword,
-        role: res.data.role,
+        email: res.email,
+        password: res.temporary_password || invitePassword,
+        role: res.role,
       });
-      toast({ title: nl ? `Gebruiker ${res.data.email} aangemaakt!` : fr ? `Utilisateur ${res.data.email} cr\u00e9\u00e9 !` : `User ${res.data.email} created!` });
+      toast({ title: nl ? `Gebruiker ${res.email} aangemaakt!` : fr ? `Utilisateur ${res.email} cr\u00e9\u00e9 !` : `User ${res.email} created!` });
       // Reset form but keep dialog open to show credentials
       setInviteEmail('');
       setInviteName('');
@@ -228,7 +270,7 @@ export default function SuperAdmin() {
     } catch (err: any) {
       toast({
         title: nl ? 'Gebruiker aanmaken mislukt' : fr ? 'Cr\u00e9ation de l\'utilisateur \u00e9chou\u00e9e' : 'Failed to create user',
-        description: err.response?.data?.detail || err.message,
+        description: err.message,
         variant: 'destructive',
       });
     } finally {

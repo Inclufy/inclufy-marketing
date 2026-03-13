@@ -20,7 +20,7 @@ import {
   Upload,
   Download,
 } from 'lucide-react';
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface DashboardStats {
   total_users: number;
@@ -57,14 +57,48 @@ export default function AdminDashboard() {
     try {
       setLoading(true);
       setError(null);
-      const [statsRes, usersRes] = await Promise.all([
-        api.get('/tenant-admin/dashboard/stats'),
-        api.get('/tenant-admin/dashboard/recent-users?limit=8'),
+
+      // Query Supabase tables directly for admin stats
+      const [
+        { count: userCount },
+        { count: orgCount },
+        { count: subsCount },
+        { count: campaignCount },
+        { count: contactCount },
+        { count: contentCount },
+        { data: recentProfiles },
+      ] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('organizations').select('*', { count: 'exact', head: true }),
+        supabase.from('subscriptions').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+        supabase.from('campaigns').select('*', { count: 'exact', head: true }),
+        supabase.from('contacts').select('*', { count: 'exact', head: true }),
+        supabase.from('content_items').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('id, email, full_name, created_at').order('created_at', { ascending: false }).limit(8),
       ]);
-      setStats(statsRes.data);
-      setRecentUsers(usersRes.data);
+
+      setStats({
+        total_users: userCount || 0,
+        organizations: orgCount || 0,
+        active_subscriptions: subsCount || 0,
+        projects: campaignCount || 0,
+        mrr: (subsCount || 0) * 79,
+        arr: (subsCount || 0) * 79 * 12,
+        user_growth: 0,
+        contacts: contactCount || 0,
+        content_items: contentCount || 0,
+      });
+
+      setRecentUsers((recentProfiles || []).map((p: any) => ({
+        id: p.id,
+        email: p.email || '',
+        full_name: p.full_name || '',
+        created_at: p.created_at,
+        organization: '',
+        role: 'member',
+      })));
     } catch (err: any) {
-      setError(err.response?.data?.detail || err.message || (nl ? 'Laden mislukt' : fr ? 'Échec du chargement' : 'Failed to load'));
+      setError(err.message || (nl ? 'Laden mislukt' : fr ? 'Échec du chargement' : 'Failed to load'));
     } finally {
       setLoading(false);
     }
