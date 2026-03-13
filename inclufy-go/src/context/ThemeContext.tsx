@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ─── Light Colors ──────────────────────────────────────────────────────────
@@ -12,9 +12,9 @@ export const lightColors = {
   accent:        '#D97706',
   accentLight:   '#F59E0B',
 
-  background:    '#F5F4FF',
+  background:    '#F7F6FF',
   surface:       '#FFFFFF',
-  surfaceElevated:'#FAFAFF',
+  surfaceElevated:'#F0EEFF',
   surfaceDark:   '#EDE9FE',
   backgroundDark:'#EDE9FE',
 
@@ -45,7 +45,7 @@ export const lightColors = {
   in_review: '#D97706',
 };
 
-// ─── Dark Colors (existing luxury dark theme) ──────────────────────────────
+// ─── Dark Colors (luxury dark) ─────────────────────────────────────────────
 export const darkColors = {
   primary:       '#A855F7',
   primaryLight:  '#C084FC',
@@ -88,7 +88,7 @@ export const darkColors = {
   in_review: '#FBBF24',
 };
 
-// ─── Theme Context ─────────────────────────────────────────────────────────
+// ─── Context ───────────────────────────────────────────────────────────────
 
 type ColorScheme = 'light' | 'dark' | 'system';
 
@@ -96,6 +96,7 @@ interface ThemeContextValue {
   scheme: ColorScheme;
   isDark: boolean;
   colors: typeof darkColors;
+  themeKey: string;        // changes on every theme switch → use as key prop to force re-render
   setScheme: (s: ColorScheme) => void;
 }
 
@@ -103,6 +104,7 @@ const ThemeContext = createContext<ThemeContextValue>({
   scheme: 'dark',
   isDark: true,
   colors: darkColors,
+  themeKey: 'dark',
   setScheme: () => {},
 });
 
@@ -111,25 +113,43 @@ const STORAGE_KEY = '@inclufy_theme';
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const systemScheme = useColorScheme();
   const [scheme, setSchemeState] = useState<ColorScheme>('dark');
+  const [themeKey, setThemeKey] = useState('dark');
 
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(stored => {
       if (stored === 'light' || stored === 'dark' || stored === 'system') {
         setSchemeState(stored);
+        applyNativeScheme(stored, systemScheme ?? 'dark');
       }
     });
   }, []);
 
-  const setScheme = (s: ColorScheme) => {
-    setSchemeState(s);
-    AsyncStorage.setItem(STORAGE_KEY, s);
+  const applyNativeScheme = (s: ColorScheme, sys: 'light' | 'dark') => {
+    // Tell the OS which color scheme to use — this makes native components
+    // (status bar, keyboard, pickers, alerts) respect the theme immediately
+    if (s === 'system') {
+      Appearance.setColorScheme(null);      // follow system
+    } else {
+      Appearance.setColorScheme(s);         // force light or dark
+    }
   };
 
-  const resolvedDark = scheme === 'system' ? systemScheme === 'dark' : scheme === 'dark';
+  const setScheme = (s: ColorScheme) => {
+    setSchemeState(s);
+    applyNativeScheme(s, systemScheme ?? 'dark');
+    AsyncStorage.setItem(STORAGE_KEY, s);
+    // Bump themeKey to trigger NavigationContainer re-mount → all screens re-render
+    setThemeKey(`${s}-${Date.now()}`);
+  };
+
+  const resolvedDark = scheme === 'system'
+    ? systemScheme === 'dark'
+    : scheme === 'dark';
+
   const colors = resolvedDark ? darkColors : lightColors;
 
   return (
-    <ThemeContext.Provider value={{ scheme, isDark: resolvedDark, colors, setScheme }}>
+    <ThemeContext.Provider value={{ scheme, isDark: resolvedDark, colors, themeKey, setScheme }}>
       {children}
     </ThemeContext.Provider>
   );

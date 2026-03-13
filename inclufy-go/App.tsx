@@ -9,9 +9,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './src/services/supabase';
 import AppNavigator from './src/navigation/AppNavigator';
 import BiometricScreen from './src/screens/BiometricScreen';
-import { colors } from './src/theme';
 import { I18nContext, useI18nProvider } from './src/i18n';
-import { ThemeProvider } from './src/context/ThemeContext';
+import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +33,36 @@ async function checkBiometricAvailable(): Promise<boolean> {
   }
 }
 
+// ─── Inner App (has access to ThemeContext) ──────────────────────────
+function AppInner({ session, biometricPassed, showBiometric, onBiometricSuccess, onBiometricSkip }: {
+  session: Session | null;
+  biometricPassed: boolean;
+  showBiometric: boolean;
+  onBiometricSuccess: () => void;
+  onBiometricSkip: () => void;
+}) {
+  const { isDark, themeKey, colors } = useTheme();
+
+  if (session && showBiometric && !biometricPassed) {
+    return (
+      <BiometricScreen
+        onSuccess={onBiometricSuccess}
+        onSkip={onBiometricSkip}
+      />
+    );
+  }
+
+  return (
+    // key={themeKey} forces NavigationContainer + all screens to remount on theme change
+    // This makes ALL StyleSheet.create() calls pick up new colors immediately
+    <NavigationContainer key={themeKey}>
+      <AppNavigator isLoggedIn={!!session} />
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </NavigationContainer>
+  );
+}
+
+// ─── Root App ────────────────────────────────────────────────────────
 export default function App() {
   const i18n = useI18nProvider();
   const [session, setSession] = useState<Session | null>(null);
@@ -42,9 +71,7 @@ export default function App() {
   const [biometricPassed, setBiometricPassed] = useState(false);
 
   useEffect(() => {
-    const timeout = setTimeout(() => {
-      setLoading(false);
-    }, 5000);
+    const timeout = setTimeout(() => setLoading(false), 5000);
 
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
@@ -54,7 +81,6 @@ export default function App() {
         try {
           const biometricEnabled = await AsyncStorage.getItem(BIOMETRIC_ENABLED_KEY);
           const available = await checkBiometricAvailable();
-
           if (biometricEnabled === 'true' && available) {
             setShowBiometric(true);
           } else {
@@ -66,7 +92,6 @@ export default function App() {
       } else {
         setBiometricPassed(true);
       }
-
       setLoading(false);
     }).catch(() => {
       setLoading(false);
@@ -75,7 +100,6 @@ export default function App() {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
-
       if (session && _event === 'SIGNED_IN') {
         try {
           const available = await checkBiometricAvailable();
@@ -87,55 +111,23 @@ export default function App() {
               return;
             }
           }
-        } catch {
-          // Ignore biometric errors
-        }
+        } catch {}
         setBiometricPassed(true);
       }
-
       if (!session) {
         setBiometricPassed(false);
         setShowBiometric(false);
       }
     });
 
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(timeout);
-    };
+    return () => { subscription.unsubscribe(); clearTimeout(timeout); };
   }, []);
-
-  const handleBiometricSuccess = async () => {
-    try {
-      await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true');
-    } catch {}
-    setBiometricPassed(true);
-    setShowBiometric(false);
-  };
-
-  const handleBiometricSkip = async () => {
-    try {
-      await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'false');
-    } catch {}
-    setBiometricPassed(true);
-    setShowBiometric(false);
-  };
 
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.primary} />
+        <ActivityIndicator size="large" color="#A855F7" />
       </View>
-    );
-  }
-
-  // Show biometric screen if needed (only on native, after login)
-  if (session && showBiometric && !biometricPassed) {
-    return (
-      <BiometricScreen
-        onSuccess={handleBiometricSuccess}
-        onSkip={handleBiometricSkip}
-      />
     );
   }
 
@@ -143,10 +135,21 @@ export default function App() {
     <ThemeProvider>
       <I18nContext.Provider value={i18n}>
         <QueryClientProvider client={queryClient}>
-          <NavigationContainer>
-            <AppNavigator isLoggedIn={!!session} />
-            <StatusBar style="auto" />
-          </NavigationContainer>
+          <AppInner
+            session={session}
+            biometricPassed={biometricPassed}
+            showBiometric={showBiometric}
+            onBiometricSuccess={async () => {
+              try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true'); } catch {}
+              setBiometricPassed(true);
+              setShowBiometric(false);
+            }}
+            onBiometricSkip={async () => {
+              try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'false'); } catch {}
+              setBiometricPassed(true);
+              setShowBiometric(false);
+            }}
+          />
         </QueryClientProvider>
       </I18nContext.Provider>
     </ThemeProvider>
@@ -158,6 +161,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
+    backgroundColor: '#09090F',
   },
 });

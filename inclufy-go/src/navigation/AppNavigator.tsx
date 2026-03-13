@@ -86,7 +86,7 @@ function EventsStack() {
   );
 }
 
-// ─── AI Stack (for tab) ──────────────────────────────────────────────
+// ─── AI Stack (for tab) ─ starts at AMOSHubScreen (full hub) ────────
 function AIStack() {
   const { colors } = useTheme();
   return (
@@ -98,10 +98,12 @@ function AIStack() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name={'AIRoot' as any} component={AutonomousHubScreen} options={{ headerShown: false }} />
+      {/* Root = full AMOS Hub with ALL modules */}
+      <Stack.Screen name={'AIRoot' as any} component={AMOSHubScreen} options={{ headerShown: false }} />
+      {/* Sub-screens reachable from hub tiles */}
       <Stack.Screen name={'OpportunityFeedTab' as any} component={OpportunityFeedScreen} options={{ title: 'AI Opportunity Feed' }} />
       <Stack.Screen name={'CampaignListTab' as any} component={CampaignListScreen} options={{ title: 'Campagnes' }} />
-      <Stack.Screen name={'AMOSHubTab' as any} component={AMOSHubScreen} options={{ headerShown: false }} />
+      <Stack.Screen name={'AutonomousHubTab' as any} component={AutonomousHubScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
