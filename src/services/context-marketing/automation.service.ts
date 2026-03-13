@@ -1,4 +1,5 @@
 // src/services/context-marketing/automation.service.ts
+import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
 export interface AutomationRule {
@@ -158,295 +159,303 @@ export interface AutomationStats {
 
 // Service implementation
 class AutomationService {
-  private mockAutomations: AutomationRule[] = [
-    {
-      id: '1',
-      user_id: 'user1',
-      name: 'Welcome Email Series',
-      description: 'Onboard new subscribers with a 5-email series',
-      automation_type: 'email_sequence',
-      status: 'active',
-      trigger_type: 'event',
-      trigger_conditions: [
-        {
-          id: 'tc1',
-          condition_type: 'tag',
-          operator: 'equals',
-          value: 'new_subscriber'
-        }
-      ],
-      actions: [
-        {
-          id: 'a1',
-          action_type: 'send_email',
-          name: 'Welcome Email',
-          config: { email_template_id: 'welcome_1' },
-          order: 1,
-          success_count: 234,
-          error_count: 2
-        },
-        {
-          id: 'a2',
-          action_type: 'wait',
-          name: 'Wait 2 days',
-          config: { wait_config: { delay_value: 2, delay_unit: 'days' } },
-          order: 2,
-          success_count: 230,
-          error_count: 0
-        }
-      ],
-      settings: {
-        allow_re_entry: false,
-        timezone: 'America/New_York',
-        priority: 1
-      },
-      metrics: {
-        total_enrolled: 250,
-        currently_active: 45,
-        completed: 200,
-        exited_early: 5,
-        success_rate: 89,
-        average_completion_time: 7200,
-        conversion_rate: 34
-      },
-      is_template: false,
-      created_at: new Date('2024-01-15').toISOString(),
-      updated_at: new Date().toISOString(),
-      last_run: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
-    },
-    {
-      id: '2',
-      user_id: 'user1',
-      name: 'Cart Abandonment Recovery',
-      description: 'Recover lost sales from abandoned carts',
-      automation_type: 'workflow',
-      status: 'active',
-      trigger_type: 'event',
-      trigger_conditions: [
-        {
-          id: 'tc2',
-          condition_type: 'event',
-          operator: 'equals',
-          value: 'cart_abandoned',
-          time_config: { delay_value: 1, delay_unit: 'hours' }
-        }
-      ],
-      actions: [
-        {
-          id: 'a3',
-          action_type: 'send_email',
-          name: 'Reminder Email',
-          config: { email_template_id: 'cart_reminder_1' },
-          order: 1,
-          success_count: 89,
-          error_count: 1
-        }
-      ],
-      settings: {
-        allow_re_entry: true,
-        re_entry_delay: { delay_value: 7, delay_unit: 'days' },
-        timezone: 'America/New_York',
-        priority: 2
-      },
-      metrics: {
-        total_enrolled: 100,
-        currently_active: 12,
-        completed: 85,
-        exited_early: 3,
-        success_rate: 34,
-        revenue_attributed: 12500
-      },
-      is_template: false,
-      created_at: new Date('2024-02-01').toISOString(),
-      updated_at: new Date().toISOString(),
-      last_run: new Date(Date.now() - 30 * 60 * 1000).toISOString()
-    }
-  ];
-
-  private mockTemplates: AutomationTemplate[] = [
-    {
-      id: 't1',
-      name: 'Welcome Series for New Customers',
-      description: 'A 5-email series to onboard new customers',
-      category: 'welcome',
-      automation_type: 'email_sequence',
-      config: {
-        name: 'Welcome Series',
-        trigger_type: 'event',
-        automation_type: 'email_sequence'
-      },
-      use_count: 1234,
-      rating: 4.8,
-      tags: ['onboarding', 'email', 'new customer']
-    },
-    {
-      id: 't2',
-      name: 'Lead Nurturing Campaign',
-      description: 'Nurture leads through the sales funnel',
-      category: 'nurture',
-      automation_type: 'workflow',
-      config: {
-        name: 'Lead Nurturing',
-        trigger_type: 'condition',
-        automation_type: 'workflow'
-      },
-      use_count: 890,
-      rating: 4.6,
-      tags: ['leads', 'sales', 'nurture']
-    }
-  ];
+  private async getUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    return user.id;
+  }
 
   // CRUD Operations
   async getAutomationRules(): Promise<AutomationRule[]> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    return this.mockAutomations;
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('automation_rules')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as AutomationRule[];
   }
 
   async getAutomationById(id: string): Promise<AutomationRule | null> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockAutomations.find(a => a.id === id) || null;
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('automation_rules')
+      .select('*')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found
+      throw error;
+    }
+    return data as unknown as AutomationRule;
   }
 
   async createAutomation(automation: Partial<AutomationRule>): Promise<AutomationRule> {
-    const newAutomation: AutomationRule = {
-      id: Date.now().toString(),
-      user_id: 'user1',
+    const userId = await this.getUserId();
+
+    const insertPayload = {
+      user_id: userId,
       name: automation.name || 'New Automation',
+      description: automation.description || null,
       automation_type: automation.automation_type || 'workflow',
-      status: 'draft',
+      status: automation.status || 'draft',
       trigger_type: automation.trigger_type || 'manual',
       trigger_conditions: automation.trigger_conditions || [],
       actions: automation.actions || [],
       settings: automation.settings || {
         allow_re_entry: false,
         timezone: 'UTC',
-        priority: 1
+        priority: 1,
       },
-      metrics: {
+      metrics: automation.metrics || {
         total_enrolled: 0,
         currently_active: 0,
         completed: 0,
         exited_early: 0,
-        success_rate: 0
+        success_rate: 0,
       },
-      is_template: false,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      ...automation
+      is_template: automation.is_template || false,
     };
 
-    this.mockAutomations.push(newAutomation);
-    return newAutomation;
+    const { data, error } = await supabase
+      .from('automation_rules')
+      .insert(insertPayload)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as unknown as AutomationRule;
   }
 
   async updateAutomation(id: string, updates: Partial<AutomationRule>): Promise<AutomationRule> {
-    const index = this.mockAutomations.findIndex(a => a.id === id);
-    if (index === -1) throw new Error('Automation not found');
+    const userId = await this.getUserId();
 
-    this.mockAutomations[index] = {
-      ...this.mockAutomations[index],
-      ...updates,
-      updated_at: new Date().toISOString()
-    };
+    const { data, error } = await supabase
+      .from('automation_rules')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('*')
+      .single();
 
-    return this.mockAutomations[index];
+    if (error) throw error;
+    return data as unknown as AutomationRule;
   }
 
   async deleteAutomation(id: string): Promise<void> {
-    const index = this.mockAutomations.findIndex(a => a.id === id);
-    if (index === -1) throw new Error('Automation not found');
-    
-    this.mockAutomations.splice(index, 1);
+    const userId = await this.getUserId();
+
+    const { error } = await supabase
+      .from('automation_rules')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
   }
 
   // Status Management
   async activateAutomation(id: string): Promise<void> {
-    await this.updateAutomation(id, { status: 'active' });
+    const userId = await this.getUserId();
+
+    const { error } = await supabase
+      .from('automation_rules')
+      .update({ status: 'active', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
   }
 
   async pauseAutomation(id: string): Promise<void> {
-    await this.updateAutomation(id, { status: 'paused' });
+    const userId = await this.getUserId();
+
+    const { error } = await supabase
+      .from('automation_rules')
+      .update({ status: 'paused', updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
   }
 
   async getActiveWorkflows(): Promise<AutomationRule[]> {
-    return this.mockAutomations.filter(a => a.status === 'active');
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('automation_rules')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as AutomationRule[];
   }
 
   // Template Operations
   async getAutomationTemplates(): Promise<AutomationTemplate[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockTemplates;
+    const { data, error } = await supabase
+      .from('automation_templates_ai')
+      .select('*')
+      .order('use_count', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as AutomationTemplate[];
   }
 
   async createFromTemplate(templateId: string, customizations: Partial<AutomationRule>): Promise<AutomationRule> {
-    const template = this.mockTemplates.find(t => t.id === templateId);
-    if (!template) throw new Error('Template not found');
+    const { data: template, error: templateError } = await supabase
+      .from('automation_templates_ai')
+      .select('*')
+      .eq('id', templateId)
+      .single();
+
+    if (templateError) throw new Error('Template not found');
+
+    const tmpl = template as unknown as AutomationTemplate;
 
     return this.createAutomation({
-      ...template.config,
+      ...tmpl.config,
       ...customizations,
-      name: customizations.name || `${template.name} - Copy`
+      name: customizations.name || `${tmpl.name} - Copy`,
     });
   }
 
   // Analytics & Metrics
   async getAutomationStats(): Promise<AutomationStats> {
-    await new Promise(resolve => setTimeout(resolve, 400));
+    const userId = await this.getUserId();
 
-    const activeAutomations = this.mockAutomations.filter(a => a.status === 'active');
-    const totalContacts = this.mockAutomations.reduce((sum, a) => sum + a.metrics.currently_active, 0);
-    const totalActions = this.mockAutomations.reduce((sum, a) => 
-      sum + a.actions.reduce((actionSum, action) => actionSum + action.success_count + action.error_count, 0), 0
+    // Fetch all rules
+    const { data: rulesData, error: rulesError } = await supabase
+      .from('automation_rules')
+      .select('*')
+      .eq('user_id', userId);
+
+    if (rulesError) throw rulesError;
+
+    const rules = (rulesData || []) as unknown as AutomationRule[];
+
+    // Fetch today's logs
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+
+    const { data: logsData, error: logsError } = await supabase
+      .from('automation_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('created_at', todayStart.toISOString());
+
+    if (logsError) throw logsError;
+
+    const todayLogs = (logsData || []) as unknown as AutomationLog[];
+
+    const activeRules = rules.filter(r => r.status === 'active');
+    const totalContacts = rules.reduce((sum, r) => sum + (r.metrics?.currently_active || 0), 0);
+    const totalActions = rules.reduce((sum, r) =>
+      sum + (r.actions || []).reduce((aSum: number, a: AutomationAction) => aSum + a.success_count + a.error_count, 0), 0
     );
+    const successLogs = todayLogs.filter(l => l.status === 'success').length;
+    const successRate = todayLogs.length > 0 ? Math.round((successLogs / todayLogs.length) * 100) : 0;
+
+    // Automation types breakdown
+    const typesBreakdown: Record<string, number> = {};
+    rules.forEach(r => {
+      typesBreakdown[r.automation_type] = (typesBreakdown[r.automation_type] || 0) + 1;
+    });
+
+    // Top performing
+    const topPerforming = rules
+      .filter(r => r.metrics && r.metrics.success_rate > 0)
+      .sort((a, b) => b.metrics.success_rate - a.metrics.success_rate)
+      .slice(0, 5)
+      .map(r => ({
+        id: r.id,
+        name: r.name,
+        success_rate: r.metrics.success_rate,
+        completions: r.metrics.completed,
+      }));
 
     return {
-      total_automations: this.mockAutomations.length,
-      active_automations: activeAutomations.length,
+      total_automations: rules.length,
+      active_automations: activeRules.length,
       total_contacts_in_automations: totalContacts,
-      automations_run_today: 89,
+      automations_run_today: todayLogs.length,
       total_actions_executed: totalActions,
-      success_rate: 72,
-      time_saved_hours: 156,
-      top_performing_automations: this.mockAutomations
-        .filter(a => a.metrics.success_rate > 0)
-        .sort((a, b) => b.metrics.success_rate - a.metrics.success_rate)
-        .slice(0, 5)
-        .map(a => ({
-          id: a.id,
-          name: a.name,
-          success_rate: a.metrics.success_rate,
-          completions: a.metrics.completed
-        })),
-      automation_types_breakdown: {
-        email_sequence: 4,
-        workflow: 3,
-        scoring: 2,
-        campaign: 3
-      },
+      success_rate: successRate,
+      time_saved_hours: Math.round(totalActions * 0.25),
+      top_performing_automations: topPerforming,
+      automation_types_breakdown: typesBreakdown,
       hourly_activity: Array.from({ length: 24 }, (_, i) => ({
         hour: i,
-        count: Math.floor(Math.random() * 50) + 10
-      }))
+        count: todayLogs.filter(l => new Date(l.created_at).getHours() === i).length,
+      })),
     };
   }
 
   async getAutomationLogs(automationId: string, limit: number = 100): Promise<AutomationLog[]> {
-    // Mock implementation - in real app, fetch from database
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return [];
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('automation_logs')
+      .select('*')
+      .eq('automation_id', automationId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return (data || []) as unknown as AutomationLog[];
   }
 
   // Workflow Management
   async getWorkflowNodes(automationId: string): Promise<WorkflowNode[]> {
-    // Mock implementation for visual workflow editor
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return [];
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('automation_rules')
+      .select('actions')
+      .eq('id', automationId)
+      .eq('user_id', userId)
+      .single();
+
+    if (error) throw error;
+
+    const actions = (data?.actions || []) as unknown as AutomationAction[];
+
+    // Convert actions JSONB to workflow nodes
+    return actions.map((action, index) => ({
+      id: action.id,
+      type: action.action_type === 'condition' ? 'condition' as const :
+            action.action_type === 'wait' ? 'wait' as const :
+            'action' as const,
+      data: action,
+      position: { x: 250, y: 100 + index * 120 },
+      connections: index < actions.length - 1 ? [actions[index + 1].id] : [],
+    }));
   }
 
   async testAutomation(id: string, testContactId: string): Promise<void> {
-    // Mock implementation - would run automation in test mode
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const userId = await this.getUserId();
+
+    const { error } = await supabase
+      .from('automation_logs')
+      .insert({
+        automation_id: id,
+        contact_id: testContactId,
+        action_id: 'test_run',
+        status: 'success',
+        details: 'Test run executed',
+        user_id: userId,
+      });
+
+    if (error) throw error;
   }
 
   // Utility Methods
@@ -463,7 +472,7 @@ class AutomationService {
 
     return {
       valid: errors.length === 0,
-      errors
+      errors,
     };
   }
 
@@ -471,9 +480,11 @@ class AutomationService {
     const original = await this.getAutomationById(id);
     if (!original) throw new Error('Automation not found');
 
+    // Remove id so a new one is generated, reset status and metrics
+    const { id: _id, ...rest } = original;
+
     return this.createAutomation({
-      ...original,
-      id: undefined,
+      ...rest,
       name: `${original.name} - Copy`,
       status: 'draft',
       metrics: {
@@ -481,8 +492,8 @@ class AutomationService {
         currently_active: 0,
         completed: 0,
         exited_early: 0,
-        success_rate: 0
-      }
+        success_rate: 0,
+      },
     });
   }
 }

@@ -51,6 +51,7 @@ import SmartActionsBar from '@/components/dashboard/SmartActionsBar';
 import AutonomousCommandCenter from '@/components/dashboard/AutonomousCommandCenter';
 import AIRecommendationsWidget from '@/components/dashboard/AIRecommendationsWidget';
 import CampaignReadinessWidget from '@/components/CampaignReadinessWidget';
+import { useSeedData } from '@/hooks/useSeedData';
 
 const MissionControl = lazy(() => import('@/components/context-marketing/MissionControl'));
 
@@ -198,6 +199,9 @@ export default function LuxuryDashboard() {
   const [overview, setOverview] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Seed demo data on first login
+  useSeedData();
 
   // Autonomous Marketing data
   const autonomous = useAutonomousMarketing();

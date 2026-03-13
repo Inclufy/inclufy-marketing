@@ -1,6 +1,8 @@
 // src/services/context-marketing/campaign-triggering.service.ts
 // Autonomous Campaign Triggering — AI detects signals and auto-starts campaigns
 
+import { supabase } from '@/integrations/supabase/client';
+
 export type TriggerType = 'trend_detected' | 'competitor_move' | 'audience_signal' | 'performance_threshold' | 'seasonal' | 'event_based' | 'lead_behavior';
 export type TriggerStatus = 'active' | 'paused' | 'triggered' | 'completed' | 'failed';
 export type CampaignAction = 'linkedin_posts' | 'blog_article' | 'email_sequence' | 'google_ads' | 'social_ads' | 'landing_page' | 'webinar' | 'multi_channel';
@@ -52,66 +54,171 @@ export interface TriggeringDashboard {
 // Type alias for hook compatibility
 export type Trigger = CampaignTrigger;
 
-const mockTriggers: CampaignTrigger[] = [
-  { id: 'trg-001', name: 'Trending Topic Detector', type: 'trend_detected', description: 'Detecteert trending topics in de industrie en start automatisch thought leadership content', condition: 'trend_velocity > 150% AND relevance_score > 80', status: 'active', actions: ['linkedin_posts', 'blog_article', 'email_sequence'], channels: ['LinkedIn', 'Blog', 'Email'], budget_limit: 5000, confidence_threshold: 85, requires_approval: false, times_triggered: 12, last_triggered: '2026-03-11T08:00:00Z', created_at: '2026-01-15', performance: { campaigns_launched: 12, total_reach: 890000, leads_generated: 234, revenue_impact: 156000, avg_roi: 340 } },
-  { id: 'trg-002', name: 'Competitor Gap Exploiter', type: 'competitor_move', description: 'Detecteert zwakheden bij concurrenten en lanceert vergelijkings-campagnes', condition: 'competitor_negative_reviews > 10 AND our_feature_available = true', status: 'active', actions: ['google_ads', 'landing_page', 'social_ads'], channels: ['Google Ads', 'Landing Page', 'Facebook'], budget_limit: 8000, confidence_threshold: 80, requires_approval: true, times_triggered: 5, last_triggered: '2026-03-09T16:00:00Z', created_at: '2026-02-01', performance: { campaigns_launched: 5, total_reach: 450000, leads_generated: 89, revenue_impact: 234000, avg_roi: 480 } },
-  { id: 'trg-003', name: 'High-Intent Lead Accelerator', type: 'lead_behavior', description: 'Detecteert leads met hoge koopintentie en triggert personalized nurture', condition: 'lead_score > 80 AND pricing_page_views >= 3 AND days_since_last_visit < 3', status: 'active', actions: ['email_sequence', 'linkedin_posts'], channels: ['Email', 'LinkedIn'], budget_limit: 2000, confidence_threshold: 75, requires_approval: false, times_triggered: 34, last_triggered: '2026-03-11T09:15:00Z', created_at: '2026-01-20', performance: { campaigns_launched: 34, total_reach: 12000, leads_generated: 34, revenue_impact: 890000, avg_roi: 1200 } },
-  { id: 'trg-004', name: 'Performance Threshold Optimizer', type: 'performance_threshold', description: 'Pauzeert underperforming campagnes en herverdelt budget automatisch', condition: 'campaign_roas < 1.5 AND running_days > 7', status: 'active', actions: ['multi_channel'], channels: ['All Active'], budget_limit: 0, confidence_threshold: 90, requires_approval: false, times_triggered: 18, last_triggered: '2026-03-10T09:30:00Z', created_at: '2026-02-10', performance: { campaigns_launched: 0, total_reach: 0, leads_generated: 0, revenue_impact: 67000, avg_roi: 0 } },
-  { id: 'trg-005', name: 'Seasonal Campaign Launcher', type: 'seasonal', description: 'Lanceert seizoensgebonden campagnes op basis van kalender en historische data', condition: 'season_event_approaching AND days_until_event <= 30', status: 'active', actions: ['multi_channel'], channels: ['LinkedIn', 'Email', 'Google Ads', 'Blog'], budget_limit: 15000, confidence_threshold: 70, requires_approval: true, times_triggered: 4, last_triggered: '2026-03-01T00:00:00Z', created_at: '2025-12-01', performance: { campaigns_launched: 4, total_reach: 560000, leads_generated: 145, revenue_impact: 189000, avg_roi: 280 } },
-  { id: 'trg-006', name: 'Event Buzz Amplifier', type: 'event_based', description: 'Detecteert aankomende events en start pre-event awareness campagnes', condition: 'registered_event AND days_until_event <= 14', status: 'active', actions: ['linkedin_posts', 'email_sequence', 'social_ads'], channels: ['LinkedIn', 'Email', 'Instagram'], budget_limit: 3000, confidence_threshold: 75, requires_approval: false, times_triggered: 8, last_triggered: '2026-03-08T00:00:00Z', created_at: '2026-01-10', performance: { campaigns_launched: 8, total_reach: 234000, leads_generated: 67, revenue_impact: 78000, avg_roi: 320 } },
-];
-
-const mockTriggeredCampaigns: TriggeredCampaign[] = [
-  { id: 'tc-001', trigger_id: 'trg-001', trigger_name: 'Trending Topic Detector', campaign_name: 'AI Governance Thought Leadership', signal: 'AI Governance zoekvolume +240%', channels: ['LinkedIn', 'Blog', 'Email'], budget_allocated: 4500, status: 'active', launched_at: '2026-03-11T08:30:00Z', performance: { impressions: 12000, clicks: 890, leads: 23, conversions: 5, revenue: 12000, roi: 167 }, ai_reasoning: 'Explosieve groei in AI governance interesse gedetecteerd. Geen concurrenten met Nederlandstalige content. First-mover advantage window: ~14 dagen.', content_generated: [{ type: 'LinkedIn Post', title: 'AI Governance: Wat elke marketeer moet weten', status: 'published' }, { type: 'Blog Article', title: 'Complete Gids: AI Governance voor Marketing Teams', status: 'writing' }, { type: 'Email Sequence', title: '5-delige AI Governance serie', status: 'scheduled' }] },
-  { id: 'tc-002', trigger_id: 'trg-003', trigger_name: 'High-Intent Lead Accelerator', campaign_name: 'Enterprise Demo Push — Sophie Van den Berg', signal: 'Lead score 86→94, pricing page 5x bezocht', channels: ['Email', 'LinkedIn'], budget_allocated: 500, status: 'active', launched_at: '2026-03-11T09:20:00Z', performance: { impressions: 15, clicks: 3, leads: 1, conversions: 0, revenue: 0, roi: 0 }, ai_reasoning: 'Hoge koopintentie gedetecteerd: 5 pricing page visits, ROI whitepaper download, en API docs bekeken. Estimated deal value: EUR 45.000.', content_generated: [{ type: 'Email', title: 'Personalized enterprise demo invite', status: 'sent' }, { type: 'LinkedIn InMail', title: 'Connection request + value proposition', status: 'sent' }] },
-  { id: 'tc-003', trigger_id: 'trg-002', trigger_name: 'Competitor Gap Exploiter', campaign_name: 'Switch from ActiveCampaign', signal: '23 negatieve G2 reviews over ontbrekende attribution', channels: ['Google Ads', 'Landing Page'], budget_allocated: 6000, status: 'pending_approval', launched_at: '2026-03-10T10:00:00Z', performance: { impressions: 0, clicks: 0, leads: 0, conversions: 0, revenue: 0, roi: 0 }, ai_reasoning: 'ActiveCampaign gebruikers uiten ontevredenheid over ontbrekende AI attribution en lead scoring. Inclufy biedt deze features. Verwachte CPA: EUR 45, verwachte deal value: EUR 8.500.', content_generated: [{ type: 'Landing Page', title: 'Inclufy vs ActiveCampaign: Complete vergelijking', status: 'ready' }, { type: 'Google Ad Set', title: '3 ad varianten targeting AC keywords', status: 'ready' }] },
-  { id: 'tc-004', trigger_id: 'trg-006', trigger_name: 'Event Buzz Amplifier', campaign_name: 'Pre-SaaS Summit Awareness', signal: 'SaaS Growth Summit in 5 dagen', channels: ['LinkedIn', 'Email', 'Instagram'], budget_allocated: 2500, status: 'completed', launched_at: '2026-03-05T08:00:00Z', performance: { impressions: 89000, clicks: 4500, leads: 45, conversions: 12, revenue: 34000, roi: 1260 }, ai_reasoning: 'SaaS Growth Summit Benelux nadert. Pre-event campagne maximaliseert booth traffic en meeting bookings.', content_generated: [{ type: 'LinkedIn Posts', title: '5 posts: countdown to SaaS Summit', status: 'published' }, { type: 'Email', title: 'Meet us at SaaS Summit booth #42', status: 'sent' }] },
-];
-
 class CampaignTriggeringService {
+  private async getUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    return user.id;
+  }
+
   async getTriggers(): Promise<CampaignTrigger[]> {
-    return new Promise(r => setTimeout(() => r([...mockTriggers]), 500));
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('campaign_triggers')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as CampaignTrigger[];
   }
 
   async getTriggeredCampaigns(): Promise<TriggeredCampaign[]> {
-    return new Promise(r => setTimeout(() => r([...mockTriggeredCampaigns]), 500));
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('triggered_campaigns')
+      .select('*')
+      .eq('user_id', userId)
+      .order('launched_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as TriggeredCampaign[];
   }
 
   async getDashboard(): Promise<TriggeringDashboard> {
-    return new Promise(r => setTimeout(() => r({
-      active_triggers: mockTriggers.filter(t => t.status === 'active').length,
-      total_triggered: mockTriggers.reduce((s, t) => s + t.times_triggered, 0),
-      campaigns_launched: mockTriggeredCampaigns.length + 12,
-      total_revenue: 1614000,
-      avg_roi: 520,
-      auto_vs_manual: { auto: 67, manual: 33 },
-      trigger_timeline: [
-        { date: '2026-03-05', triggers: 3, campaigns: 2, revenue: 34000 },
-        { date: '2026-03-06', triggers: 1, campaigns: 1, revenue: 12000 },
-        { date: '2026-03-07', triggers: 4, campaigns: 3, revenue: 56000 },
-        { date: '2026-03-08', triggers: 2, campaigns: 2, revenue: 23000 },
-        { date: '2026-03-09', triggers: 3, campaigns: 2, revenue: 45000 },
-        { date: '2026-03-10', triggers: 5, campaigns: 4, revenue: 78000 },
-        { date: '2026-03-11', triggers: 3, campaigns: 2, revenue: 12000 },
-      ],
-      top_performing: mockTriggeredCampaigns.filter(tc => tc.performance.roi > 100),
-    }), 600));
+    const userId = await this.getUserId();
+
+    const [triggersRes, campaignsRes] = await Promise.all([
+      supabase
+        .from('campaign_triggers')
+        .select('*')
+        .eq('user_id', userId),
+      supabase
+        .from('triggered_campaigns')
+        .select('*')
+        .eq('user_id', userId),
+    ]);
+
+    if (triggersRes.error) throw triggersRes.error;
+    if (campaignsRes.error) throw campaignsRes.error;
+
+    const triggers = (triggersRes.data || []) as unknown as CampaignTrigger[];
+    const campaigns = (campaignsRes.data || []) as unknown as TriggeredCampaign[];
+
+    const activeTriggers = triggers.filter(t => t.status === 'active').length;
+    const totalTriggered = triggers.reduce((sum, t) => sum + (t.times_triggered || 0), 0);
+    const campaignsLaunched = campaigns.length;
+    const totalRevenue = campaigns.reduce((sum, c) => sum + (c.performance?.revenue || 0), 0);
+
+    const roiValues = campaigns.filter(c => c.performance?.roi > 0).map(c => c.performance.roi);
+    const avgRoi = roiValues.length > 0
+      ? Math.round(roiValues.reduce((sum, r) => sum + r, 0) / roiValues.length)
+      : 0;
+
+    const autoCount = campaigns.filter(c => {
+      const trigger = triggers.find(t => t.id === c.trigger_id);
+      return trigger && !trigger.requires_approval;
+    }).length;
+    const manualCount = campaigns.length - autoCount;
+    const total = autoCount + manualCount || 1;
+
+    // Build timeline from campaigns grouped by date
+    const timelineMap = new Map<string, { triggers: number; campaigns: number; revenue: number }>();
+    campaigns.forEach(c => {
+      const date = c.launched_at ? c.launched_at.substring(0, 10) : '';
+      if (!date) return;
+      const entry = timelineMap.get(date) || { triggers: 0, campaigns: 0, revenue: 0 };
+      entry.campaigns += 1;
+      entry.triggers += 1;
+      entry.revenue += c.performance?.revenue || 0;
+      timelineMap.set(date, entry);
+    });
+    const triggerTimeline = Array.from(timelineMap.entries())
+      .map(([date, vals]) => ({ date, ...vals }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const topPerforming = campaigns
+      .filter(c => c.performance?.roi > 100)
+      .sort((a, b) => (b.performance?.roi || 0) - (a.performance?.roi || 0));
+
+    return {
+      active_triggers: activeTriggers,
+      total_triggered: totalTriggered,
+      campaigns_launched: campaignsLaunched,
+      total_revenue: totalRevenue,
+      avg_roi: avgRoi,
+      auto_vs_manual: {
+        auto: Math.round((autoCount / total) * 100),
+        manual: Math.round((manualCount / total) * 100),
+      },
+      trigger_timeline: triggerTimeline,
+      top_performing: topPerforming,
+    };
   }
 
   async approveCampaign(id: string): Promise<void> {
-    return new Promise(r => setTimeout(r, 800));
+    const userId = await this.getUserId();
+    const { error } = await supabase
+      .from('triggered_campaigns')
+      .update({ status: 'approved' })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 
   async cancelCampaign(id: string): Promise<void> {
-    return new Promise(r => setTimeout(r, 500));
+    const userId = await this.getUserId();
+    const { error } = await supabase
+      .from('triggered_campaigns')
+      .update({ status: 'cancelled' })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 
   async toggleTrigger(id: string): Promise<void> {
-    return new Promise(r => setTimeout(r, 500));
+    const userId = await this.getUserId();
+
+    // First fetch the current trigger to read its enabled state
+    const { data, error: fetchError } = await supabase
+      .from('campaign_triggers')
+      .select('enabled')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single();
+    if (fetchError) throw fetchError;
+
+    const currentEnabled = (data as unknown as { enabled: boolean }).enabled;
+
+    const { error } = await supabase
+      .from('campaign_triggers')
+      .update({ enabled: !currentEnabled })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 
   async createTrigger(trigger: Partial<CampaignTrigger>): Promise<CampaignTrigger> {
-    return new Promise(r => setTimeout(() => r({ ...trigger, id: `trg-${Date.now()}`, status: 'active', times_triggered: 0, created_at: new Date().toISOString(), performance: { campaigns_launched: 0, total_reach: 0, leads_generated: 0, revenue_impact: 0, avg_roi: 0 } } as CampaignTrigger), 800));
+    const userId = await this.getUserId();
+    const newTrigger = {
+      ...trigger,
+      user_id: userId,
+      status: 'active',
+      times_triggered: 0,
+      performance: {
+        campaigns_launched: 0,
+        total_reach: 0,
+        leads_generated: 0,
+        revenue_impact: 0,
+        avg_roi: 0,
+      },
+    };
+
+    const { data, error } = await supabase
+      .from('campaign_triggers')
+      .insert(newTrigger)
+      .select()
+      .single();
+    if (error) throw error;
+    return data as unknown as CampaignTrigger;
   }
 }
 

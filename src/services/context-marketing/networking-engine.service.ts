@@ -1,6 +1,8 @@
 // src/services/context-marketing/networking-engine.service.ts
 // Networking Engine — Lead capture via QR, NFC, LinkedIn scanning, AI enrichment & follow-up
 
+import { supabase } from '@/integrations/supabase/client';
+
 export type CaptureMethod = 'qr_code' | 'business_card' | 'nfc' | 'linkedin_scan' | 'manual' | 'event_badge';
 export type ContactStatus = 'captured' | 'enriched' | 'synced_crm' | 'follow_up_sent' | 'meeting_booked' | 'converted';
 
@@ -73,100 +75,196 @@ export interface QRCodeConfig {
 export type Contact = CapturedContact;
 export type QRCode = QRCodeConfig;
 
-const mockContacts: CapturedContact[] = [
-  {
-    id: 'nc-001', name: 'Marc Van Hoeck', email: 'marc@techventures.be', phone: '+32 476 123 456', company: 'TechVentures Belgium', title: 'CTO', linkedin_url: 'linkedin.com/in/marcvanhoeck', capture_method: 'qr_code', captured_at: '2026-03-10T14:30:00Z', event_id: 'evt-001', event_name: 'SaaS Growth Summit Benelux', status: 'enriched',
-    enrichment: { company_size: '50-200', industry: 'Technology', revenue_range: '5M-20M', location: 'Antwerpen', technologies: ['React', 'AWS', 'HubSpot'], social_profiles: ['linkedin', 'twitter'], score: 87 },
-    ai_insights: { intent_score: 82, best_channel: 'LinkedIn', best_time: 'Dinsdag 10:00', suggested_follow_up: 'Stuur case study over tech sector + demo uitnodiging', talking_points: ['Besproken: AI attribution uitdagingen', 'Gebruikt momenteel HubSpot', 'Zoekt betere lead scoring'], mutual_connections: 4 },
-    follow_up: { template: 'tech-sector-intro', scheduled_at: '2026-03-12T10:00:00Z', sent: false, opened: false, replied: false },
-    notes: 'Zeer geinteresseerd in multi-touch attribution. Huidige tool mist AI capabilities.', tags: ['hot-lead', 'tech', 'SaaS Summit'],
-  },
-  {
-    id: 'nc-002', name: 'Isabelle Claessens', email: 'isabelle@brandcraft.nl', company: 'BrandCraft Agency', title: 'Managing Partner', linkedin_url: 'linkedin.com/in/isabelleclaessens', capture_method: 'linkedin_scan', captured_at: '2026-03-10T15:45:00Z', event_id: 'evt-001', event_name: 'SaaS Growth Summit Benelux', status: 'follow_up_sent',
-    enrichment: { company_size: '10-50', industry: 'Marketing Agency', revenue_range: '2M-5M', location: 'Rotterdam', technologies: ['Adobe', 'Salesforce'], social_profiles: ['linkedin'], score: 78 },
-    ai_insights: { intent_score: 75, best_channel: 'Email', best_time: 'Woensdag 09:00', suggested_follow_up: 'Agency partnership voorstel + white-label demo', talking_points: ['Zoekt AI tools voor klanten', 'Overweegt white-label oplossing', 'Budget approved voor Q2'], mutual_connections: 2 },
-    follow_up: { template: 'agency-partnership', scheduled_at: '2026-03-11T09:00:00Z', sent: true, opened: true, replied: false },
-    notes: 'Agency met 40+ klanten. Zoekt white-label marketing AI platform.', tags: ['agency', 'partnership', 'white-label'],
-  },
-  {
-    id: 'nc-003', name: 'Thomas Schneider', email: 'tschneider@globalretail.de', company: 'GlobalRetail GmbH', title: 'Head of Digital', capture_method: 'business_card', captured_at: '2026-03-09T11:00:00Z', event_name: 'Digital Meetup Berlin', status: 'synced_crm',
-    enrichment: { company_size: '1000+', industry: 'Retail', revenue_range: '100M+', location: 'Berlin', technologies: ['SAP', 'Salesforce', 'Google Analytics'], social_profiles: ['linkedin', 'xing'], score: 92 },
-    ai_insights: { intent_score: 68, best_channel: 'Email', best_time: 'Maandag 08:00', suggested_follow_up: 'Enterprise demo + retail case studies + ROI calculator', talking_points: ['Pain point: attribution across 200+ stores', 'Groot marketing team (45 mensen)', 'Budget cyclus start april'], mutual_connections: 1 },
-    follow_up: { template: 'enterprise-retail', sent: false, opened: false, replied: false },
-    notes: 'Enterprise account. Enorm potentieel. Zoekt enterprise-grade attribution.', tags: ['enterprise', 'retail', 'high-value', 'Germany'],
-  },
-  {
-    id: 'nc-004', name: 'Aisha Rahman', email: 'aisha@startupboost.io', company: 'StartupBoost', title: 'Founder', capture_method: 'nfc', captured_at: '2026-03-08T16:20:00Z', event_name: 'Startup Drinks Brussels', status: 'meeting_booked',
-    enrichment: { company_size: '1-10', industry: 'Startup Accelerator', revenue_range: '<1M', location: 'Brussels', technologies: ['No-code tools', 'Zapier'], social_profiles: ['linkedin', 'twitter', 'instagram'], score: 65 },
-    ai_insights: { intent_score: 88, best_channel: 'WhatsApp', best_time: 'Vrijdag 14:00', suggested_follow_up: 'Startup plan demo + portfolio integratie mogelijkheden', talking_points: ['Accelerator met 20 startups in portfolio', 'Wil marketing tool aanbieden aan portfolio', 'Snelle beslisser'], mutual_connections: 6 },
-    follow_up: { template: 'startup-accelerator', scheduled_at: '2026-03-11T14:00:00Z', sent: true, opened: true, replied: true },
-    notes: 'Meeting gepland voor vrijdag. Wil Inclufy als standaard tool voor haar portfolio startups.', tags: ['startup', 'accelerator', 'partnership', 'meeting-booked'],
-  },
-  {
-    id: 'nc-005', name: 'Jan-Willem de Boer', email: 'jw@mediagroep.nl', company: 'Nederlandse MediaGroep', title: 'Marketing Director', capture_method: 'event_badge', captured_at: '2026-03-07T10:15:00Z', event_name: 'MarTech Day Netherlands', status: 'converted',
-    enrichment: { company_size: '200-500', industry: 'Media', revenue_range: '20M-50M', location: 'Hilversum', technologies: ['Google Marketing Platform', 'DV360'], social_profiles: ['linkedin'], score: 88 },
-    ai_insights: { intent_score: 95, best_channel: 'Phone', best_time: 'Dinsdag 11:00', suggested_follow_up: 'Contract voorstel + onboarding plan', talking_points: ['Deal gesloten: Enterprise plan', 'Implementatie start volgende week', 'Wil alle 3 business units onboarden'], mutual_connections: 3 },
-    follow_up: { template: 'onboarding', sent: true, opened: true, replied: true },
-    notes: 'GEWONNEN! Enterprise deal. EUR 78,000/jaar. Start onboarding 17 maart.', tags: ['customer', 'enterprise', 'media', 'won'],
-  },
-];
-
-const mockQRCodes: QRCodeConfig[] = [
-  { id: 'qr-001', name: 'SaaS Summit Booth QR', url: 'https://inclufy.com/connect/saas-summit', scans: 234, leads_captured: 67, event_id: 'evt-001', created_at: '2026-03-01', active: true },
-  { id: 'qr-002', name: 'General Contact Card', url: 'https://inclufy.com/connect/team', scans: 89, leads_captured: 34, created_at: '2026-02-15', active: true },
-  { id: 'qr-003', name: 'Product Demo Link', url: 'https://inclufy.com/demo', scans: 456, leads_captured: 123, created_at: '2026-01-10', active: true },
-];
+const METHOD_COLORS: Record<CaptureMethod, string> = {
+  qr_code: '#8b5cf6',
+  linkedin_scan: '#3b82f6',
+  business_card: '#10b981',
+  event_badge: '#f59e0b',
+  nfc: '#ec4899',
+  manual: '#6b7280',
+};
 
 class NetworkingEngineService {
+  private async getUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    return user.id;
+  }
+
   async getContacts(status?: ContactStatus): Promise<CapturedContact[]> {
-    return new Promise(r => setTimeout(() => {
-      if (status) r(mockContacts.filter(c => c.status === status));
-      else r([...mockContacts].sort((a, b) => new Date(b.captured_at).getTime() - new Date(a.captured_at).getTime()));
-    }, 500));
+    const userId = await this.getUserId();
+    let query = supabase
+      .from('captured_contacts')
+      .select('*')
+      .eq('user_id', userId)
+      .order('captured_at', { ascending: false });
+
+    if (status) {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return (data || []) as unknown as CapturedContact[];
   }
 
   async getMetrics(): Promise<NetworkingMetrics> {
-    return new Promise(r => setTimeout(() => r({
-      total_contacts: 456, contacts_this_month: 67, enrichment_rate: 94.2, crm_sync_rate: 88.5, follow_up_sent_rate: 76.3, reply_rate: 34.8, meetings_booked: 23, conversion_rate: 12.4,
-      capture_by_method: [
-        { method: 'qr_code', count: 167, color: '#8b5cf6' },
-        { method: 'linkedin_scan', count: 123, color: '#3b82f6' },
-        { method: 'business_card', count: 89, color: '#10b981' },
-        { method: 'event_badge', count: 45, color: '#f59e0b' },
-        { method: 'nfc', count: 22, color: '#ec4899' },
-        { method: 'manual', count: 10, color: '#6b7280' },
-      ],
-      weekly_captures: [
-        { week: 'W7', contacts: 12, enriched: 11, converted: 1 },
-        { week: 'W8', contacts: 18, enriched: 17, converted: 2 },
-        { week: 'W9', contacts: 34, enriched: 32, converted: 4 },
-        { week: 'W10', contacts: 45, enriched: 43, converted: 6 },
-      ],
-    }), 500));
+    const userId = await this.getUserId();
+
+    const { data: contacts, error } = await supabase
+      .from('captured_contacts')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) throw error;
+
+    const all = (contacts || []) as unknown as CapturedContact[];
+    const total = all.length;
+
+    // Contacts this month
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const thisMonth = all.filter(c => c.captured_at >= monthStart).length;
+
+    // Status counts
+    const enriched = all.filter(c => c.status !== 'captured').length;
+    const synced = all.filter(c => ['synced_crm', 'follow_up_sent', 'meeting_booked', 'converted'].includes(c.status)).length;
+    const followUpSent = all.filter(c => ['follow_up_sent', 'meeting_booked', 'converted'].includes(c.status)).length;
+    const replied = all.filter(c => c.follow_up?.replied).length;
+    const meetingsBooked = all.filter(c => c.status === 'meeting_booked' || c.status === 'converted').length;
+    const converted = all.filter(c => c.status === 'converted').length;
+
+    const enrichmentRate = total > 0 ? (enriched / total) * 100 : 0;
+    const crmSyncRate = total > 0 ? (synced / total) * 100 : 0;
+    const followUpSentRate = total > 0 ? (followUpSent / total) * 100 : 0;
+    const replyRate = followUpSent > 0 ? (replied / followUpSent) * 100 : 0;
+    const conversionRate = total > 0 ? (converted / total) * 100 : 0;
+
+    // Group by capture method
+    const methodCounts = new Map<CaptureMethod, number>();
+    for (const c of all) {
+      methodCounts.set(c.capture_method, (methodCounts.get(c.capture_method) || 0) + 1);
+    }
+    const captureByMethod = Object.entries(METHOD_COLORS).map(([method, color]) => ({
+      method: method as CaptureMethod,
+      count: methodCounts.get(method as CaptureMethod) || 0,
+      color,
+    }));
+
+    // Build weekly captures for last 4 weeks
+    const weeklyCaps: Array<{ week: string; contacts: number; enriched: number; converted: number }> = [];
+    for (let i = 3; i >= 0; i--) {
+      const weekStart = new Date();
+      weekStart.setDate(weekStart.getDate() - (i + 1) * 7);
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - i * 7);
+      const weekStartStr = weekStart.toISOString();
+      const weekEndStr = weekEnd.toISOString();
+      const weekContacts = all.filter(c => c.captured_at >= weekStartStr && c.captured_at < weekEndStr);
+      const weekNum = Math.ceil((now.getDate() - i * 7) / 7);
+      weeklyCaps.push({
+        week: `W${weekNum > 0 ? weekNum : 1}`,
+        contacts: weekContacts.length,
+        enriched: weekContacts.filter(c => c.status !== 'captured').length,
+        converted: weekContacts.filter(c => c.status === 'converted').length,
+      });
+    }
+
+    return {
+      total_contacts: total,
+      contacts_this_month: thisMonth,
+      enrichment_rate: Math.round(enrichmentRate * 10) / 10,
+      crm_sync_rate: Math.round(crmSyncRate * 10) / 10,
+      follow_up_sent_rate: Math.round(followUpSentRate * 10) / 10,
+      reply_rate: Math.round(replyRate * 10) / 10,
+      meetings_booked: meetingsBooked,
+      conversion_rate: Math.round(conversionRate * 10) / 10,
+      capture_by_method: captureByMethod,
+      weekly_captures: weeklyCaps,
+    };
   }
 
   async getQRCodes(): Promise<QRCodeConfig[]> {
-    return new Promise(r => setTimeout(() => r([...mockQRCodes]), 300));
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('qr_codes')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as QRCodeConfig[];
   }
 
   async enrichContact(id: string): Promise<void> {
-    return new Promise(r => setTimeout(r, 1500));
+    const userId = await this.getUserId();
+    const { error } = await supabase
+      .from('captured_contacts')
+      .update({
+        status: 'enriched',
+        enrichment: {
+          score: 0,
+        },
+      })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 
   async syncToCRM(id: string): Promise<void> {
-    return new Promise(r => setTimeout(r, 800));
+    const userId = await this.getUserId();
+    const { error } = await supabase
+      .from('captured_contacts')
+      .update({ status: 'synced_crm' })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 
   async sendFollowUp(id: string): Promise<void> {
-    return new Promise(r => setTimeout(r, 1000));
+    const userId = await this.getUserId();
+    const { error } = await supabase
+      .from('captured_contacts')
+      .update({
+        status: 'follow_up_sent',
+        follow_up: {
+          sent: true,
+          opened: false,
+          replied: false,
+          scheduled_at: new Date().toISOString(),
+        },
+      })
+      .eq('id', id)
+      .eq('user_id', userId);
+    if (error) throw error;
   }
 
   async generateQRCode(name: string, url: string = `https://inclufy.com/connect/${name}`): Promise<QRCodeConfig> {
-    return new Promise(r => setTimeout(() => r({ id: `qr-${Date.now()}`, name, url, scans: 0, leads_captured: 0, created_at: new Date().toISOString(), active: true }), 800));
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('qr_codes')
+      .insert({
+        name,
+        url,
+        scans: 0,
+        leads_captured: 0,
+        active: true,
+        user_id: userId,
+      })
+      .select('*')
+      .single();
+    if (error) throw error;
+    return data as unknown as QRCodeConfig;
   }
 
   async scanBusinessCard(imageData: string): Promise<Partial<CapturedContact>> {
-    return new Promise(r => setTimeout(() => r({ name: 'Scanned Contact', email: 'contact@example.com', company: 'Company', title: 'Title', capture_method: 'business_card' as CaptureMethod }), 2000));
+    // Business card scanning remains a client-side AI operation;
+    // the parsed result would be inserted via getContacts / a separate insert call.
+    return {
+      name: 'Scanned Contact',
+      email: 'contact@example.com',
+      company: 'Company',
+      title: 'Title',
+      capture_method: 'business_card' as CaptureMethod,
+    };
   }
 }
 

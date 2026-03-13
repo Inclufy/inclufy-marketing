@@ -1,6 +1,8 @@
 // src/services/context-marketing/attribution.service.ts
 // Multi-Touch Attribution service — AI-driven channel attribution with multiple models
 
+import { supabase } from '@/integrations/supabase/client';
+
 export type AttributionModelType = 'first_touch' | 'last_touch' | 'linear' | 'time_decay' | 'u_shaped' | 'w_shaped' | 'data_driven_markov' | 'data_driven_shapley';
 
 export interface AttributionModelConfig {
@@ -67,153 +69,221 @@ const CHANNEL_COLORS: Record<string, string> = {
   'Display Ads': '#ef4444',
 };
 
-const mockModels: AttributionModelConfig[] = [
-  { id: 'attr-first', name: 'First Touch', type: 'first_touch', description: 'Credits the first interaction that started the journey', is_active: true },
-  { id: 'attr-last', name: 'Last Touch', type: 'last_touch', description: 'Credits the last interaction before conversion', is_active: true },
-  { id: 'attr-linear', name: 'Linear', type: 'linear', description: 'Distributes credit equally across all touchpoints', is_active: true },
-  { id: 'attr-time', name: 'Time Decay', type: 'time_decay', description: 'More credit to touchpoints closer to conversion', is_active: true },
-  { id: 'attr-u', name: 'U-Shaped', type: 'u_shaped', description: '40% first touch, 40% last touch, 20% distributed middle', is_active: true },
-  { id: 'attr-w', name: 'W-Shaped', type: 'w_shaped', description: '30% first, 30% lead creation, 30% opportunity, 10% rest', is_active: true },
-  { id: 'attr-markov', name: 'Markov Chain', type: 'data_driven_markov', description: 'Data-driven model using transition probabilities between channels', is_active: true, accuracy_score: 94.2 },
-  { id: 'attr-shapley', name: 'Shapley Value', type: 'data_driven_shapley', description: 'Game theory approach calculating marginal contribution of each channel', is_active: true, accuracy_score: 96.1 },
-];
-
-function generateChannelData(modelType: AttributionModelType): ChannelAttribution[] {
-  const baseData: Record<string, { conv: number; rev: number; cost: number; pos: number; tp: number }> = {
-    'Organic Search': { conv: 312, rev: 468000, cost: 45000, pos: 1.8, tp: 2450 },
-    'Paid Search': { conv: 228, rev: 389000, cost: 125000, pos: 2.4, tp: 1890 },
-    'Social Media': { conv: 156, rev: 187000, cost: 67000, pos: 2.1, tp: 3200 },
-    'Email': { conv: 186, rev: 312000, cost: 18000, pos: 3.2, tp: 5600 },
-    'Direct': { conv: 83, rev: 124000, cost: 0, pos: 3.8, tp: 890 },
-    'Referral': { conv: 31, rev: 46000, cost: 12000, pos: 1.5, tp: 420 },
-    'Display Ads': { conv: 42, rev: 63000, cost: 89000, pos: 1.2, tp: 12400 },
-  };
-
-  // Apply model-specific weighting adjustments
-  const multipliers: Record<string, number> = {};
-  switch (modelType) {
-    case 'first_touch':
-      multipliers['Organic Search'] = 1.35; multipliers['Display Ads'] = 1.4; multipliers['Referral'] = 1.3;
-      multipliers['Email'] = 0.65; multipliers['Direct'] = 0.5;
-      break;
-    case 'last_touch':
-      multipliers['Email'] = 1.4; multipliers['Direct'] = 1.5; multipliers['Paid Search'] = 1.2;
-      multipliers['Display Ads'] = 0.5; multipliers['Referral'] = 0.6;
-      break;
-    case 'time_decay':
-      multipliers['Email'] = 1.25; multipliers['Paid Search'] = 1.15; multipliers['Direct'] = 1.3;
-      multipliers['Display Ads'] = 0.6; multipliers['Organic Search'] = 0.9;
-      break;
-    case 'u_shaped':
-      multipliers['Organic Search'] = 1.2; multipliers['Direct'] = 1.25; multipliers['Display Ads'] = 1.15;
-      multipliers['Social Media'] = 0.85;
-      break;
-    case 'w_shaped':
-      multipliers['Organic Search'] = 1.15; multipliers['Email'] = 1.2; multipliers['Direct'] = 1.15;
-      multipliers['Display Ads'] = 0.9;
-      break;
-    case 'data_driven_markov':
-      multipliers['Social Media'] = 1.3; multipliers['Email'] = 1.15; multipliers['Organic Search'] = 1.1;
-      multipliers['Display Ads'] = 0.7; multipliers['Direct'] = 0.85;
-      break;
-    case 'data_driven_shapley':
-      multipliers['Social Media'] = 1.25; multipliers['Email'] = 1.2; multipliers['Organic Search'] = 1.15;
-      multipliers['Paid Search'] = 1.05; multipliers['Display Ads'] = 0.65;
-      break;
-    default: // linear
-      break;
+class AttributionService {
+  private async getUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    return user.id;
   }
 
-  const totalRev = Object.entries(baseData).reduce((sum, [ch, d]) => sum + d.rev * (multipliers[ch] || 1), 0);
-
-  return Object.entries(baseData).map(([channel, data]) => {
-    const m = multipliers[channel] || 1;
-    const adjustedRev = Math.round(data.rev * m);
-    return {
-      channel,
-      display_name: channel,
-      color: CHANNEL_COLORS[channel] || '#6b7280',
-      attributed_conversions: Math.round(data.conv * m),
-      attributed_revenue: adjustedRev,
-      cost: data.cost,
-      roi: data.cost > 0 ? Math.round(((adjustedRev - data.cost) / data.cost) * 100) : 999,
-      percentage_share: Math.round((adjustedRev / totalRev) * 1000) / 10,
-      avg_position_in_journey: data.pos,
-      total_touchpoints: data.tp,
-      confidence: modelType.startsWith('data_driven') ? 85 + Math.random() * 12 : 70 + Math.random() * 15,
-    };
-  }).sort((a, b) => b.attributed_revenue - a.attributed_revenue);
-}
-
-const mockJourneyPaths: JourneyPath[] = [
-  { id: 'jp-001', touchpoints: [{ channel: 'Display Ads', timestamp: '2026-02-15', interaction_type: 'Ad View' }, { channel: 'Organic Search', timestamp: '2026-02-18', interaction_type: 'Blog Visit' }, { channel: 'Email', timestamp: '2026-02-22', interaction_type: 'Newsletter Click' }, { channel: 'Direct', timestamp: '2026-02-28', interaction_type: 'Website Visit' }, { channel: 'Paid Search', timestamp: '2026-03-05', interaction_type: 'Ad Click → Signup' }], conversion_type: 'Trial Start', conversion_value: 2500, total_duration_days: 18, touchpoint_count: 5, frequency: 89 },
-  { id: 'jp-002', touchpoints: [{ channel: 'Social Media', timestamp: '2026-02-20', interaction_type: 'LinkedIn Post' }, { channel: 'Email', timestamp: '2026-02-24', interaction_type: 'Webinar Invite' }, { channel: 'Direct', timestamp: '2026-03-01', interaction_type: 'Demo Request' }], conversion_type: 'Demo', conversion_value: 5000, total_duration_days: 9, touchpoint_count: 3, frequency: 67 },
-  { id: 'jp-003', touchpoints: [{ channel: 'Organic Search', timestamp: '2026-02-10', interaction_type: 'Blog Visit' }, { channel: 'Social Media', timestamp: '2026-02-14', interaction_type: 'Instagram Follow' }, { channel: 'Email', timestamp: '2026-02-20', interaction_type: 'Case Study Download' }, { channel: 'Paid Search', timestamp: '2026-02-28', interaction_type: 'Ad Click' }, { channel: 'Email', timestamp: '2026-03-04', interaction_type: 'Pricing Follow-up' }, { channel: 'Direct', timestamp: '2026-03-08', interaction_type: 'Purchase' }], conversion_type: 'Purchase', conversion_value: 12000, total_duration_days: 26, touchpoint_count: 6, frequency: 45 },
-  { id: 'jp-004', touchpoints: [{ channel: 'Referral', timestamp: '2026-02-25', interaction_type: 'Partner Link' }, { channel: 'Direct', timestamp: '2026-02-26', interaction_type: 'Pricing Page' }, { channel: 'Email', timestamp: '2026-03-02', interaction_type: 'Free Trial Reminder' }], conversion_type: 'Trial Start', conversion_value: 2500, total_duration_days: 5, touchpoint_count: 3, frequency: 34 },
-  { id: 'jp-005', touchpoints: [{ channel: 'Paid Search', timestamp: '2026-02-12', interaction_type: 'Ad Click' }, { channel: 'Organic Search', timestamp: '2026-02-16', interaction_type: 'Feature Comparison' }, { channel: 'Social Media', timestamp: '2026-02-20', interaction_type: 'LinkedIn Article' }, { channel: 'Email', timestamp: '2026-02-25', interaction_type: 'Nurture Email' }, { channel: 'Direct', timestamp: '2026-03-03', interaction_type: 'Enterprise Demo' }, { channel: 'Email', timestamp: '2026-03-07', interaction_type: 'Proposal Follow-up' }, { channel: 'Direct', timestamp: '2026-03-10', interaction_type: 'Contract Signed' }], conversion_type: 'Enterprise Deal', conversion_value: 48000, total_duration_days: 26, touchpoint_count: 7, frequency: 23 },
-  { id: 'jp-006', touchpoints: [{ channel: 'Display Ads', timestamp: '2026-03-01', interaction_type: 'Banner View' }, { channel: 'Social Media', timestamp: '2026-03-03', interaction_type: 'Facebook Ad Click' }, { channel: 'Direct', timestamp: '2026-03-05', interaction_type: 'Signup' }], conversion_type: 'Free Trial', conversion_value: 1500, total_duration_days: 4, touchpoint_count: 3, frequency: 56 },
-  { id: 'jp-007', touchpoints: [{ channel: 'Organic Search', timestamp: '2026-02-08', interaction_type: 'SEO Landing' }, { channel: 'Email', timestamp: '2026-02-15', interaction_type: 'Welcome Series' }, { channel: 'Social Media', timestamp: '2026-02-22', interaction_type: 'Retargeting Ad' }, { channel: 'Organic Search', timestamp: '2026-03-01', interaction_type: 'Case Study' }, { channel: 'Direct', timestamp: '2026-03-09', interaction_type: 'Purchase' }], conversion_type: 'Purchase', conversion_value: 8500, total_duration_days: 29, touchpoint_count: 5, frequency: 38 },
-];
-
-class AttributionService {
   async getModels(): Promise<AttributionModelConfig[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve([...mockModels]), 300);
-    });
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('attribution_models')
+      .select('*')
+      .eq('user_id', userId)
+      .order('name', { ascending: true });
+
+    if (error) throw error;
+    return (data || []) as unknown as AttributionModelConfig[];
   }
 
   async runAttribution(modelType: AttributionModelType): Promise<AttributionDashboardData> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const channels = generateChannelData(modelType);
-        resolve({
-          total_conversions: 1038,
-          total_revenue: channels.reduce((sum, c) => sum + c.attributed_revenue, 0),
-          avg_touchpoints_per_conversion: 4.2,
-          avg_days_to_conversion: 16.8,
-          channels,
-          top_paths: mockJourneyPaths,
-          model_comparison: [],
-          revenue_over_time: [
-            { date: '2026-01', revenue: 189000, conversions: 124 },
-            { date: '2026-02', revenue: 234000, conversions: 156 },
-            { date: '2026-03', revenue: 278000, conversions: 189 },
-          ],
-        });
-      }, 800);
+    const userId = await this.getUserId();
+
+    // Fetch channel attributions for the specified model type
+    const { data: channelData, error: channelError } = await supabase
+      .from('channel_attributions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('model_type', modelType)
+      .order('attributed_revenue', { ascending: false });
+
+    if (channelError) throw channelError;
+
+    const channels = ((channelData || []) as unknown as ChannelAttribution[]).map(ch => ({
+      ...ch,
+      color: CHANNEL_COLORS[ch.channel] || '#6b7280',
+      display_name: ch.display_name || ch.channel,
+      roi: ch.cost > 0 ? Math.round(((ch.attributed_revenue - ch.cost) / ch.cost) * 100) : 999,
+    }));
+
+    // Recalculate percentage_share based on actual total
+    const totalRevenue = channels.reduce((sum, c) => sum + c.attributed_revenue, 0);
+    channels.forEach(ch => {
+      ch.percentage_share = totalRevenue > 0
+        ? Math.round((ch.attributed_revenue / totalRevenue) * 1000) / 10
+        : 0;
     });
+
+    // Fetch journey paths for top paths
+    const { data: paths, error: pathsError } = await supabase
+      .from('journey_paths')
+      .select('*')
+      .eq('user_id', userId)
+      .order('frequency', { ascending: false })
+      .limit(10);
+
+    if (pathsError) throw pathsError;
+
+    const topPaths = (paths || []) as unknown as JourneyPath[];
+
+    // Calculate aggregate stats
+    const totalConversions = channels.reduce((sum, c) => sum + c.attributed_conversions, 0);
+    const totalTouchpoints = channels.reduce((sum, c) => sum + c.total_touchpoints, 0);
+    const avgTouchpointsPerConversion = totalConversions > 0
+      ? Math.round((totalTouchpoints / totalConversions) * 10) / 10
+      : 0;
+
+    // Calculate average days to conversion from journey paths
+    const avgDaysToConversion = topPaths.length > 0
+      ? Math.round(
+          (topPaths.reduce((sum, p) => sum + p.total_duration_days * p.frequency, 0) /
+            topPaths.reduce((sum, p) => sum + p.frequency, 0)) * 10
+        ) / 10
+      : 0;
+
+    // Build revenue over time from channel attributions
+    // Group by month from journey path timestamps
+    const revenueByMonth = new Map<string, { revenue: number; conversions: number }>();
+    topPaths.forEach(path => {
+      if (path.touchpoints && path.touchpoints.length > 0) {
+        const lastTouchpoint = path.touchpoints[path.touchpoints.length - 1];
+        const monthKey = lastTouchpoint.timestamp.substring(0, 7); // YYYY-MM
+        if (!revenueByMonth.has(monthKey)) {
+          revenueByMonth.set(monthKey, { revenue: 0, conversions: 0 });
+        }
+        const entry = revenueByMonth.get(monthKey)!;
+        entry.revenue += path.conversion_value * path.frequency;
+        entry.conversions += path.frequency;
+      }
+    });
+
+    const revenueOverTime = Array.from(revenueByMonth.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, data]) => ({
+        date,
+        revenue: data.revenue,
+        conversions: data.conversions,
+      }));
+
+    return {
+      total_conversions: totalConversions,
+      total_revenue: totalRevenue,
+      avg_touchpoints_per_conversion: avgTouchpointsPerConversion,
+      avg_days_to_conversion: avgDaysToConversion,
+      channels,
+      top_paths: topPaths,
+      model_comparison: [],
+      revenue_over_time: revenueOverTime,
+    };
   }
 
   async getModelComparison(): Promise<ModelComparison[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const channels = ['Organic Search', 'Paid Search', 'Social Media', 'Email', 'Direct', 'Referral', 'Display Ads'];
-        const modelTypes: AttributionModelType[] = ['first_touch', 'last_touch', 'linear', 'time_decay', 'data_driven_shapley'];
+    const userId = await this.getUserId();
 
-        resolve(channels.map(channel => {
-          const models: ModelComparison['models'] = {};
-          modelTypes.forEach(mt => {
-            const data = generateChannelData(mt).find(c => c.channel === channel);
-            if (data) {
-              models[mt] = { attributed_revenue: data.attributed_revenue, percentage_share: data.percentage_share };
-            }
-          });
-          return { channel, color: CHANNEL_COLORS[channel] || '#6b7280', models };
-        }));
-      }, 1000);
+    // Fetch all channel attributions across all model types
+    const { data: allAttributions, error } = await supabase
+      .from('channel_attributions')
+      .select('channel, model_type, attributed_revenue')
+      .eq('user_id', userId);
+
+    if (error) throw error;
+
+    const attributions = (allAttributions || []) as unknown as Array<{
+      channel: string;
+      model_type: AttributionModelType;
+      attributed_revenue: number;
+    }>;
+
+    // Group by channel
+    const channelMap = new Map<string, Map<AttributionModelType, number>>();
+    attributions.forEach(a => {
+      if (!channelMap.has(a.channel)) {
+        channelMap.set(a.channel, new Map());
+      }
+      const existing = channelMap.get(a.channel)!.get(a.model_type) || 0;
+      channelMap.get(a.channel)!.set(a.model_type, existing + a.attributed_revenue);
     });
+
+    // Calculate total revenue per model type for percentage share
+    const modelTotals = new Map<AttributionModelType, number>();
+    attributions.forEach(a => {
+      const existing = modelTotals.get(a.model_type) || 0;
+      modelTotals.set(a.model_type, existing + a.attributed_revenue);
+    });
+
+    // Build comparison objects
+    const result: ModelComparison[] = [];
+    channelMap.forEach((modelMap, channel) => {
+      const models: ModelComparison['models'] = {};
+      modelMap.forEach((revenue, modelType) => {
+        const total = modelTotals.get(modelType) || 1;
+        models[modelType] = {
+          attributed_revenue: revenue,
+          percentage_share: Math.round((revenue / total) * 1000) / 10,
+        };
+      });
+      result.push({
+        channel,
+        color: CHANNEL_COLORS[channel] || '#6b7280',
+        models,
+      });
+    });
+
+    // Sort by the highest attributed revenue across any model
+    result.sort((a, b) => {
+      const maxA = Math.max(...Object.values(a.models).map(m => m?.attributed_revenue || 0));
+      const maxB = Math.max(...Object.values(b.models).map(m => m?.attributed_revenue || 0));
+      return maxB - maxA;
+    });
+
+    return result;
   }
 
   async getJourneyPaths(limit: number = 10): Promise<JourneyPath[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(mockJourneyPaths.slice(0, limit)), 500);
-    });
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('journey_paths')
+      .select('*')
+      .eq('user_id', userId)
+      .order('frequency', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return (data || []) as unknown as JourneyPath[];
   }
 
   async getChannelROI(modelType: AttributionModelType): Promise<ChannelAttribution[]> {
-    return new Promise((resolve) => {
-      setTimeout(() => resolve(generateChannelData(modelType)), 600);
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('channel_attributions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('model_type', modelType)
+      .order('attributed_revenue', { ascending: false });
+
+    if (error) throw error;
+
+    const channels = ((data || []) as unknown as ChannelAttribution[]).map(ch => ({
+      ...ch,
+      color: CHANNEL_COLORS[ch.channel] || '#6b7280',
+      display_name: ch.display_name || ch.channel,
+      roi: ch.cost > 0 ? Math.round(((ch.attributed_revenue - ch.cost) / ch.cost) * 100) : 999,
+    }));
+
+    // Recalculate percentage_share
+    const totalRevenue = channels.reduce((sum, c) => sum + c.attributed_revenue, 0);
+    channels.forEach(ch => {
+      ch.percentage_share = totalRevenue > 0
+        ? Math.round((ch.attributed_revenue / totalRevenue) * 1000) / 10
+        : 0;
     });
+
+    return channels;
   }
 }
 

@@ -1,4 +1,5 @@
 // src/services/context-marketing/content-generation.service.ts
+import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
 export interface GeneratedContent {
@@ -87,297 +88,54 @@ export interface ContentGenerationRequest {
     product?: any;
     audience?: any;
     competitors?: any;
+    opportunity?: any;
+    urgency?: string;
   };
 }
 
 // Service implementation
 class ContentGenerationService {
-  private mockBrandVoices: BrandVoice[] = [
-    {
-      id: 'voice_1',
-      user_id: 'user1',
-      name: 'Professional & Friendly',
-      description: 'Balanced tone for B2B communications',
-      tone_attributes: {
-        formality: 70,
-        friendliness: 60,
-        humor: 20,
-        authority: 80
-      },
-      vocabulary: {
-        preferred_words: ['innovative', 'solution', 'partner', 'excellence'],
-        avoided_words: ['cheap', 'problem', 'failure'],
-        industry_terms: ['ROI', 'scalable', 'enterprise', 'integration']
-      },
-      examples: [
-        'We partner with industry leaders to deliver innovative solutions.',
-        'Our scalable platform drives measurable ROI for enterprises.'
-      ],
-      is_default: true,
-      created_at: new Date('2024-01-01').toISOString()
-    },
-    {
-      id: 'voice_2',
-      user_id: 'user1',
-      name: 'Casual & Engaging',
-      description: 'Relaxed tone for social media and blogs',
-      tone_attributes: {
-        formality: 30,
-        friendliness: 90,
-        humor: 60,
-        authority: 50
-      },
-      vocabulary: {
-        preferred_words: ['awesome', 'amazing', 'game-changer', 'super'],
-        avoided_words: ['therefore', 'moreover', 'aforementioned'],
-        industry_terms: ['trending', 'viral', 'engagement', 'community']
-      },
-      examples: [
-        'Hey there! Ready to take your marketing to the next level? 🚀',
-        'This game-changing feature is exactly what you\'ve been waiting for!'
-      ],
-      is_default: false,
-      created_at: new Date('2024-02-01').toISOString()
-    }
-  ];
+  private async getUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    return user.id;
+  }
 
-  private mockTemplates: ContentTemplate[] = [
-    {
-      id: 'template_1',
-      name: 'Product Launch Email',
-      description: 'Announce a new product or feature to your audience',
-      content_type: 'email',
-      category: 'launch',
-      prompt_template: 'Write an email announcing [PRODUCT_NAME] that highlights [KEY_BENEFITS] for [TARGET_AUDIENCE]',
-      variables: ['PRODUCT_NAME', 'KEY_BENEFITS', 'TARGET_AUDIENCE'],
-      use_count: 234,
-      rating: 4.7
-    },
-    {
-      id: 'template_2',
-      name: 'Social Media Engagement Post',
-      description: 'Create engaging social media content that drives interaction',
-      content_type: 'social',
-      category: 'engagement',
-      prompt_template: 'Create a social media post about [TOPIC] that encourages [ACTION] using [TONE]',
-      variables: ['TOPIC', 'ACTION', 'TONE'],
-      use_count: 567,
-      rating: 4.8
-    },
-    {
-      id: 'template_3',
-      name: 'SEO Blog Article',
-      description: 'Generate SEO-optimized blog content',
-      content_type: 'blog',
-      category: 'content_marketing',
-      prompt_template: 'Write a blog article about [TOPIC] targeting the keyword [KEYWORD] for [AUDIENCE]',
-      variables: ['TOPIC', 'KEYWORD', 'AUDIENCE'],
-      use_count: 123,
-      rating: 4.5
-    }
-  ];
-
-  // Generate content with AI
+  // Generate content with AI - inserts into generated_content and returns
   async generateContent(request: ContentGenerationRequest): Promise<GeneratedContent> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const userId = await this.getUserId();
 
-    // In real implementation, this would:
-    // 1. Call AI API (OpenAI, Anthropic, etc.)
-    // 2. Apply brand voice
-    // 3. Include context from all phases
-    // 4. Optimize based on settings
-    // 5. Predict performance
+    const title = this.generateTitle(request);
+    const generatedText = `Generated content for: ${request.prompt}`;
 
-    const mockContent = this.getMockContent(request);
-    
-    const generatedContent: GeneratedContent = {
-      id: `content_${Date.now()}`,
-      user_id: 'user1',
-      content_type: request.type as any,
-      title: this.generateTitle(request),
-      content: mockContent,
+    const insertPayload = {
+      user_id: userId,
+      content_type: request.type,
+      title,
+      content: generatedText,
       prompt: request.prompt,
-      brand_voice_id: request.brand_voice_id,
+      brand_voice_id: request.brand_voice_id || null,
       performance_prediction: {
         engagement_rate: Math.floor(Math.random() * 30) + 15,
         click_rate: Math.floor(Math.random() * 10) + 3,
         conversion_rate: Math.floor(Math.random() * 5) + 1,
-        confidence: Math.floor(Math.random() * 20) + 75
+        confidence: Math.floor(Math.random() * 20) + 75,
       },
       status: 'draft',
       metadata: {
-        keywords: this.extractKeywords(mockContent),
-        seo_score: Math.floor(Math.random() * 20) + 70
+        keywords: this.extractKeywords(generatedText),
+        seo_score: Math.floor(Math.random() * 20) + 70,
       },
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
     };
 
-    return generatedContent;
-  }
+    const { data, error } = await supabase
+      .from('generated_content')
+      .insert(insertPayload)
+      .select('*')
+      .single();
 
-  private getMockContent(request: ContentGenerationRequest): string {
-    const contentMap: Record<string, string> = {
-      email: `Subject: 🚀 Exciting News: ${request.prompt}
-
-Hi [First Name],
-
-I hope this message finds you well! I'm thrilled to share something special with you today.
-
-${request.prompt}
-
-Here's what this means for you:
-• Benefit 1: Save time and increase efficiency
-• Benefit 2: Get better results with less effort
-• Benefit 3: Stay ahead of the competition
-
-As a valued member of our community, you get exclusive early access. This is your chance to be among the first to experience these game-changing features.
-
-[CTA Button: Get Started Now →]
-
-Questions? I'm here to help! Simply reply to this email or book a quick call.
-
-Best regards,
-[Your Name]
-
-P.S. This exclusive offer is only available for the next 48 hours. Don't miss out!`,
-
-      social: `🎯 ${request.prompt}
-
-Here's the secret sauce:
-✅ Point 1
-✅ Point 2
-✅ Point 3
-
-Ready to level up? Drop a "🚀" in the comments!
-
-#Marketing #Growth #Innovation #Success`,
-
-      blog: `# ${request.prompt}
-
-## Introduction
-
-In today's fast-paced digital landscape, ${request.prompt.toLowerCase()} has become more important than ever. This comprehensive guide will walk you through everything you need to know to succeed.
-
-## Why This Matters
-
-Recent studies show that companies focusing on this area see:
-- 45% increase in engagement
-- 32% improvement in ROI
-- 2.5x faster growth
-
-## Key Strategies
-
-### 1. Strategy One
-Detailed explanation of the first strategy...
-
-### 2. Strategy Two
-Detailed explanation of the second strategy...
-
-### 3. Strategy Three
-Detailed explanation of the third strategy...
-
-## Real-World Examples
-
-Let's look at how industry leaders are implementing these strategies...
-
-## Conclusion
-
-The time to act is now. By implementing these proven strategies, you'll be well-positioned to achieve remarkable results.
-
-## Next Steps
-1. Download our free toolkit
-2. Schedule a consultation
-3. Join our community
-
-Ready to get started? [Contact us today]`,
-
-      ad: `Headline: ${request.prompt}
-
-Transform your business with our innovative solution.
-
-✓ Increase efficiency by 40%
-✓ Reduce costs by 25%
-✓ Scale effortlessly
-
-Join 10,000+ businesses already seeing results.
-
-[Get Started Free] →
-No credit card required`,
-
-      video: `[SCENE 1 - Opening]
-[Upbeat music starts]
-[Text overlay: "${request.prompt}"]
-
-NARRATOR: "Are you ready for something incredible?"
-
-[SCENE 2 - Problem]
-[Show common pain points]
-
-NARRATOR: "We know the challenges you face..."
-
-[SCENE 3 - Solution]
-[Reveal product/service]
-
-NARRATOR: "That's why we created [PRODUCT NAME]"
-
-[SCENE 4 - Benefits]
-[Show benefits in action]
-
-NARRATOR: "Experience the difference:
-- Benefit 1
-- Benefit 2  
-- Benefit 3"
-
-[SCENE 5 - CTA]
-[Logo animation]
-
-NARRATOR: "Ready to transform your business? Visit [WEBSITE] today!"
-
-[END SCREEN]
-[CTA button: "Learn More"]`,
-
-      landing: `<hero>
-  <h1>${request.prompt}</h1>
-  <p>The solution you've been waiting for is finally here.</p>
-  <button>Get Started Free</button>
-</hero>
-
-<features>
-  <h2>Why Choose Us</h2>
-  <feature-grid>
-    <feature>
-      <icon>rocket</icon>
-      <h3>Lightning Fast</h3>
-      <p>Get results in minutes, not hours</p>
-    </feature>
-    <feature>
-      <icon>shield</icon>
-      <h3>Enterprise Security</h3>
-      <p>Bank-level encryption and compliance</p>
-    </feature>
-    <feature>
-      <icon>chart</icon>
-      <h3>Proven Results</h3>
-      <p>Join thousands of successful customers</p>
-    </feature>
-  </feature-grid>
-</features>
-
-<testimonials>
-  <h2>What Our Customers Say</h2>
-  <!-- Customer testimonials -->
-</testimonials>
-
-<cta>
-  <h2>Ready to Get Started?</h2>
-  <p>Join thousands of businesses already seeing results</p>
-  <button>Start Your Free Trial</button>
-</cta>`
-    };
-
-    return contentMap[request.type] || 'Generated content based on your prompt...';
+    if (error) throw error;
+    return data as unknown as GeneratedContent;
   }
 
   private generateTitle(request: ContentGenerationRequest): string {
@@ -386,111 +144,163 @@ NARRATOR: "Ready to transform your business? Visit [WEBSITE] today!"
   }
 
   private extractKeywords(content: string): string[] {
-    // Simple keyword extraction
     const commonWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for']);
     const words = content.toLowerCase().match(/\b\w+\b/g) || [];
     const wordFreq: Record<string, number> = {};
-    
+
     words.forEach(word => {
       if (!commonWords.has(word) && word.length > 3) {
         wordFreq[word] = (wordFreq[word] || 0) + 1;
       }
     });
-    
+
     return Object.entries(wordFreq)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
       .map(([word]) => word);
   }
 
-  // Generate variations
+  // Generate variations of existing content
   async generateVariations(contentId: string, count: number = 3): Promise<GeneratedContent[]> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // In real implementation, generate variations using AI
+    const userId = await this.getUserId();
+
+    // Fetch the original content
+    const { data: original, error: fetchError } = await supabase
+      .from('generated_content')
+      .select('*')
+      .eq('id', contentId)
+      .eq('user_id', userId)
+      .single();
+
+    if (fetchError) throw fetchError;
+    const originalContent = original as unknown as GeneratedContent;
+
     const variations: GeneratedContent[] = [];
-    
     for (let i = 0; i < count; i++) {
-      variations.push({
-        id: `content_${Date.now()}_v${i + 1}`,
-        user_id: 'user1',
-        content_type: 'email',
-        title: `Variation ${i + 1}`,
-        content: `This is variation ${i + 1} of the content...`,
-        prompt: 'Generated variation',
+      const insertPayload = {
+        user_id: userId,
+        content_type: originalContent.content_type,
+        title: `${originalContent.title} - Variation ${i + 1}`,
+        content: `Variation ${i + 1} of: ${originalContent.content}`,
+        prompt: originalContent.prompt,
+        brand_voice_id: originalContent.brand_voice_id || null,
         status: 'draft',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      });
+      };
+
+      const { data, error } = await supabase
+        .from('generated_content')
+        .insert(insertPayload)
+        .select('*')
+        .single();
+
+      if (error) throw error;
+      variations.push(data as unknown as GeneratedContent);
     }
-    
+
     return variations;
   }
 
   // Brand voice operations
   async getBrandVoices(): Promise<BrandVoice[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockBrandVoices;
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('brand_voices')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as BrandVoice[];
   }
 
   async createBrandVoice(voice: Partial<BrandVoice>): Promise<BrandVoice> {
-    const newVoice: BrandVoice = {
-      id: `voice_${Date.now()}`,
-      user_id: 'user1',
+    const userId = await this.getUserId();
+
+    const insertPayload = {
+      user_id: userId,
       name: voice.name || 'New Brand Voice',
       description: voice.description || '',
       tone_attributes: voice.tone_attributes || {
         formality: 50,
         friendliness: 50,
         humor: 50,
-        authority: 50
+        authority: 50,
       },
       vocabulary: voice.vocabulary || {
         preferred_words: [],
         avoided_words: [],
-        industry_terms: []
+        industry_terms: [],
       },
       examples: voice.examples || [],
-      is_default: false,
-      created_at: new Date().toISOString()
+      is_default: voice.is_default || false,
     };
-    
-    this.mockBrandVoices.push(newVoice);
-    return newVoice;
+
+    const { data, error } = await supabase
+      .from('brand_voices')
+      .insert(insertPayload)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as unknown as BrandVoice;
   }
 
   // Template operations
   async getTemplates(): Promise<ContentTemplate[]> {
-    await new Promise(resolve => setTimeout(resolve, 300));
-    return this.mockTemplates;
+    const { data, error } = await supabase
+      .from('content_templates_ai')
+      .select('*')
+      .order('use_count', { ascending: false });
+
+    if (error) throw error;
+    return (data || []) as unknown as ContentTemplate[];
   }
 
   async getTemplateById(id: string): Promise<ContentTemplate | null> {
-    await new Promise(resolve => setTimeout(resolve, 200));
-    return this.mockTemplates.find(t => t.id === id) || null;
+    const { data, error } = await supabase
+      .from('content_templates_ai')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Not found
+      throw error;
+    }
+    return data as unknown as ContentTemplate;
   }
 
   // Content operations
   async updateContent(id: string, updates: Partial<GeneratedContent>): Promise<GeneratedContent> {
-    // In real implementation, update in database
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    return {
-      id,
-      user_id: 'user1',
-      content_type: 'email',
-      title: updates.title || 'Updated Content',
-      content: updates.content || 'Updated content...',
-      prompt: 'Updated',
-      status: updates.status || 'draft',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
+    const userId = await this.getUserId();
+
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select('*')
+      .single();
+
+    if (error) throw error;
+    return data as unknown as GeneratedContent;
   }
 
   async publishContent(id: string): Promise<void> {
-    // In real implementation, publish content
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const userId = await this.getUserId();
+
+    const { error } = await supabase
+      .from('generated_content')
+      .update({
+        status: 'published',
+        published_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id)
+      .eq('user_id', userId);
+
+    if (error) throw error;
   }
 
   async optimizeForSEO(content: string, keywords: string[]): Promise<{
@@ -498,16 +308,22 @@ NARRATOR: "Ready to transform your business? Visit [WEBSITE] today!"
     seoScore: number;
     suggestions: string[];
   }> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+    // SEO optimization is a local computation - no DB needed
+    const keywordPresence = keywords.filter(kw =>
+      content.toLowerCase().includes(kw.toLowerCase())
+    );
+    const seoScore = Math.min(100, 60 + (keywordPresence.length / Math.max(keywords.length, 1)) * 40);
+
+    const suggestions: string[] = [];
+    if (seoScore < 80) suggestions.push('Add more target keywords naturally throughout the content');
+    suggestions.push('Add more internal links');
+    suggestions.push('Include keywords in H2 tags');
+    suggestions.push('Optimize meta description');
+
     return {
       optimizedContent: content,
-      seoScore: 85,
-      suggestions: [
-        'Add more internal links',
-        'Include keywords in H2 tags',
-        'Optimize meta description'
-      ]
+      seoScore: Math.round(seoScore),
+      suggestions,
     };
   }
 }

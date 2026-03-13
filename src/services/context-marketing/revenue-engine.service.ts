@@ -1,6 +1,5 @@
 // src/services/context-marketing/revenue-engine.service.ts
-import autonomousService from './autonomous.service';
-import analyticsService from './analytics.service';
+import { supabase } from '@/integrations/supabase/client';
 
 // Type definitions
 export interface RevenuePrediction {
@@ -65,183 +64,112 @@ export interface PriceOptimization {
 
 // Service implementation
 class RevenueEngineService {
-  private predictiveModel: any = null; // ML model placeholder
   private optimizationRunning: boolean = false;
 
-  // Mock revenue predictions
-  private mockPredictions: RevenuePrediction[] = [
-    {
-      id: 'pred_1',
-      entity_type: 'channel',
-      entity_id: 'email_marketing',
-      predicted_value: 250000,
-      confidence: 92,
-      time_horizon: 30,
-      factors: ['Seasonal trends', 'Historical performance', 'Campaign schedule'],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: 'pred_2',
-      entity_type: 'customer',
-      entity_id: 'enterprise_segment',
-      predicted_value: 1250000,
-      confidence: 87,
-      time_horizon: 90,
-      factors: ['Contract renewals', 'Upsell opportunities', 'Product adoption'],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    },
-    {
-      id: 'pred_3',
-      entity_type: 'campaign',
-      entity_id: 'black_friday_2024',
-      predicted_value: 450000,
-      confidence: 95,
-      time_horizon: 7,
-      factors: ['Past year performance', 'Market conditions', 'Inventory levels'],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  ];
+  private async getUserId(): Promise<string> {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+    return user.id;
+  }
 
-  // Mock opportunities
-  private mockOpportunities: RevenueOpportunity[] = [
-    {
-      id: 'opp_1',
-      title: 'Implement Dynamic Pricing for High-Demand Products',
-      description: 'AI detected price elasticity opportunity. Customers willing to pay 15-20% more for premium features.',
-      opportunity_type: 'pricing',
-      estimated_value: 325000,
-      priority: 'critical',
-      effort_required: 'low',
-      time_to_value: 7,
-      success_probability: 89,
-      impact: 'high',
-      status: 'identified',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 'opp_2',
-      title: 'Win-Back Campaign for Churned Enterprise Customers',
-      description: '47 high-value customers churned in last 6 months. AI suggests personalized win-back offers.',
-      opportunity_type: 'retention',
-      estimated_value: 180000,
-      priority: 'high',
-      effort_required: 'medium',
-      time_to_value: 30,
-      success_probability: 65,
-      impact: 'high',
-      status: 'identified',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 'opp_3',
-      title: 'Cross-Sell Analytics Package to Existing Customers',
-      description: '230 customers show high engagement with reports. Perfect candidates for analytics upgrade.',
-      opportunity_type: 'cross_sell',
-      estimated_value: 145000,
-      priority: 'medium',
-      effort_required: 'low',
-      time_to_value: 14,
-      success_probability: 78,
-      impact: 'medium',
-      status: 'identified',
-      created_at: new Date().toISOString()
-    },
-    {
-      id: 'opp_4',
-      title: 'Expand to Adjacent Market Segment',
-      description: 'Healthcare vertical shows 3x average engagement. Opportunity to create targeted offering.',
-      opportunity_type: 'expansion',
-      estimated_value: 500000,
-      priority: 'high',
-      effort_required: 'high',
-      time_to_value: 90,
-      success_probability: 72,
-      impact: 'high',
-      status: 'identified',
-      created_at: new Date().toISOString()
-    }
-  ];
-
-  // Get revenue metrics
+  // Get revenue metrics computed from predictions and opportunities
   async getRevenueMetrics(timeRange: string): Promise<RevenueMetrics> {
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const userId = await this.getUserId();
 
-    // In real implementation, would fetch from analytics
-    const baseRevenue = 2500000;
-    const multiplier = timeRange === '7d' ? 0.25 : 
-                      timeRange === '30d' ? 1 : 
+    const multiplier = timeRange === '7d' ? 0.25 :
+                      timeRange === '30d' ? 1 :
                       timeRange === '90d' ? 3 : 12;
 
-    const metrics: RevenueMetrics = {
-      currentRevenue: baseRevenue * multiplier,
-      predictedRevenue: baseRevenue * multiplier * 1.15, // 15% growth
-      growthRate: 15 + Math.random() * 10,
-      avgCustomerValue: 2500 + Math.random() * 500,
-      conversionRate: 3.2 + Math.random() * 1,
-      churnRate: 5.8 + Math.random() * 2
-    };
+    // Fetch predictions to compute current/predicted revenue
+    const { data: predictions, error: predError } = await supabase
+      .from('revenue_predictions')
+      .select('*')
+      .eq('user_id', userId);
+    if (predError) throw predError;
 
-    return metrics;
+    // Fetch opportunities to compute conversion and churn
+    const { data: opportunities, error: oppError } = await supabase
+      .from('revenue_opportunities')
+      .select('*')
+      .eq('user_id', userId);
+    if (oppError) throw oppError;
+
+    const preds = (predictions || []) as unknown as RevenuePrediction[];
+    const opps = (opportunities || []) as unknown as RevenueOpportunity[];
+
+    const totalPredictedValue = preds.reduce((sum, p) => sum + p.predicted_value, 0);
+    const avgConfidence = preds.length > 0
+      ? preds.reduce((sum, p) => sum + p.confidence, 0) / preds.length
+      : 85;
+
+    const currentRevenue = totalPredictedValue > 0
+      ? totalPredictedValue * multiplier * (avgConfidence / 100)
+      : 2500000 * multiplier;
+
+    const identifiedOpps = opps.filter(o => o.status === 'identified' || o.status === 'in_progress');
+    const totalOppValue = identifiedOpps.reduce((sum, o) => sum + o.estimated_value, 0);
+    const predictedRevenue = currentRevenue + totalOppValue * (avgConfidence / 100);
+
+    const growthRate = currentRevenue > 0
+      ? ((predictedRevenue - currentRevenue) / currentRevenue) * 100
+      : 15;
+
+    const avgSuccessProb = opps.length > 0
+      ? opps.reduce((sum, o) => sum + o.success_probability, 0) / opps.length
+      : 3.5;
+
+    const retentionOpps = opps.filter(o => o.opportunity_type === 'retention');
+    const churnRate = retentionOpps.length > 0
+      ? 100 - retentionOpps.reduce((sum, o) => sum + o.success_probability, 0) / retentionOpps.length
+      : 5.8;
+
+    return {
+      currentRevenue,
+      predictedRevenue,
+      growthRate,
+      avgCustomerValue: preds.length > 0
+        ? totalPredictedValue / preds.length
+        : 2500,
+      conversionRate: avgSuccessProb > 10 ? avgSuccessProb / 10 : avgSuccessProb,
+      churnRate
+    };
   }
 
   // Get revenue predictions
   async getRevenuePredictions(): Promise<RevenuePrediction[]> {
-    await new Promise(resolve => setTimeout(resolve, 700));
-    
-    // In real implementation, ML model would generate these
-    return this.mockPredictions.map(pred => ({
-      ...pred,
-      predicted_value: pred.predicted_value * (0.9 + Math.random() * 0.2),
-      confidence: Math.min(100, pred.confidence + Math.random() * 5)
-    }));
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('revenue_predictions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as RevenuePrediction[];
   }
 
   // Get revenue opportunities
   async getRevenueOpportunities(): Promise<RevenueOpportunity[]> {
-    await new Promise(resolve => setTimeout(resolve, 600));
-    
-    // AI would analyze all data to find opportunities
-    return this.mockOpportunities.filter(opp => opp.status === 'identified');
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('revenue_opportunities')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('status', 'identified')
+      .order('estimated_value', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as RevenueOpportunity[];
   }
 
   // Get customer lifetime value analysis
   async getCustomerLTV(): Promise<CustomerLifetimeValue[]> {
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const segments: CustomerLifetimeValue[] = [
-      {
-        segment_name: 'Enterprise',
-        avg_ltv: 125000,
-        predicted_ltv: 145000,
-        churn_probability: 12,
-        expansion_potential: 85,
-        customer_count: 47,
-        key_characteristics: ['Multi-year contracts', 'High engagement', 'Multiple products']
-      },
-      {
-        segment_name: 'Mid-Market',
-        avg_ltv: 35000,
-        predicted_ltv: 42000,
-        churn_probability: 18,
-        expansion_potential: 65,
-        customer_count: 234,
-        key_characteristics: ['Annual contracts', 'Growing usage', 'Price sensitive']
-      },
-      {
-        segment_name: 'Small Business',
-        avg_ltv: 8500,
-        predicted_ltv: 9200,
-        churn_probability: 28,
-        expansion_potential: 45,
-        customer_count: 1847,
-        key_characteristics: ['Monthly billing', 'Single product', 'High support needs']
-      }
-    ];
-
-    return segments;
+    const userId = await this.getUserId();
+    const { data, error } = await supabase
+      .from('customer_ltv')
+      .select('*')
+      .eq('user_id', userId)
+      .order('avg_ltv', { ascending: false });
+    if (error) throw error;
+    return (data || []) as unknown as CustomerLifetimeValue[];
   }
 
   // Predict customer value
@@ -252,19 +180,59 @@ class RevenueEngineService {
     churn_risk: number;
     expansion_opportunities: string[];
   }> {
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const userId = await this.getUserId();
 
-    // ML model would analyze customer behavior
+    // Fetch customer LTV data for this customer
+    const { data, error } = await supabase
+      .from('customer_ltv')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('customer_id', customerId)
+      .maybeSingle();
+    if (error) throw error;
+
+    if (data) {
+      const record = data as unknown as CustomerLifetimeValue;
+      const horizonMultiplier = timeHorizon / 365;
+      return {
+        predicted_ltv: record.predicted_ltv * horizonMultiplier,
+        confidence: Math.max(50, 95 - (timeHorizon / 30)),
+        key_factors: record.key_characteristics || [
+          'Product usage patterns',
+          'Engagement metrics',
+          'Historical spend'
+        ],
+        churn_risk: record.churn_probability,
+        expansion_opportunities: record.expansion_potential > 60
+          ? ['Analytics package upgrade', 'Additional user seats', 'Premium support tier']
+          : ['Feature adoption improvement', 'Engagement programs']
+      };
+    }
+
+    // Fallback: compute from segment averages
+    const { data: segments, error: segError } = await supabase
+      .from('customer_ltv')
+      .select('*')
+      .eq('user_id', userId);
+    if (segError) throw segError;
+
+    const allSegments = (segments || []) as unknown as CustomerLifetimeValue[];
+    const avgLtv = allSegments.length > 0
+      ? allSegments.reduce((sum, s) => sum + s.predicted_ltv, 0) / allSegments.length
+      : 45000;
+    const avgChurn = allSegments.length > 0
+      ? allSegments.reduce((sum, s) => sum + s.churn_probability, 0) / allSegments.length
+      : 20;
+
     return {
-      predicted_ltv: 45000 + Math.random() * 20000,
-      confidence: 85 + Math.random() * 10,
+      predicted_ltv: avgLtv * (timeHorizon / 365),
+      confidence: 70,
       key_factors: [
-        'Product usage increasing',
-        'Multiple team members active',
-        'High feature adoption',
-        'Positive support interactions'
+        'Segment average estimation',
+        'Historical patterns',
+        'Market benchmarks'
       ],
-      churn_risk: 15 + Math.random() * 10,
+      churn_risk: avgChurn,
       expansion_opportunities: [
         'Analytics package upgrade',
         'Additional user seats',
@@ -275,23 +243,42 @@ class RevenueEngineService {
 
   // Optimize pricing
   async optimizePricing(productId: string): Promise<PriceOptimization> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const userId = await this.getUserId();
 
-    // Price elasticity modeling
-    const currentPrice = 99;
-    const optimalPrice = currentPrice * (1 + (Math.random() * 0.3 - 0.1)); // -10% to +20%
+    // Pull revenue data to inform pricing suggestions
+    const { data: predictions, error } = await supabase
+      .from('revenue_predictions')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('entity_type', 'product')
+      .eq('entity_id', productId);
+    if (error) throw error;
+
+    const preds = (predictions || []) as unknown as RevenuePrediction[];
+
+    const avgPredictedValue = preds.length > 0
+      ? preds.reduce((sum, p) => sum + p.predicted_value, 0) / preds.length
+      : 99;
+
+    const avgConfidence = preds.length > 0
+      ? preds.reduce((sum, p) => sum + p.confidence, 0) / preds.length
+      : 80;
+
+    const currentPrice = avgPredictedValue > 1000 ? avgPredictedValue / 100 : avgPredictedValue;
+    const elasticity = -1.2 + (avgConfidence / 200);
+    const optimalPrice = currentPrice * (1 + (1 / Math.abs(elasticity) - 1) * 0.1);
 
     return {
       product_id: productId,
-      current_price: currentPrice,
-      optimal_price: Math.round(optimalPrice),
-      elasticity: -1.2 + Math.random() * 0.4,
+      current_price: Math.round(currentPrice * 100) / 100,
+      optimal_price: Math.round(optimalPrice * 100) / 100,
+      elasticity,
       projected_impact: {
-        revenue: optimalPrice > currentPrice ? 15000 : -5000,
+        revenue: Math.round((optimalPrice - currentPrice) * 1000),
         volume: optimalPrice > currentPrice ? -50 : 100,
-        profit: optimalPrice > currentPrice ? 12000 : -2000
+        profit: Math.round((optimalPrice - currentPrice) * 800)
       },
-      confidence: 78 + Math.random() * 15
+      confidence: avgConfidence
     };
   }
 
@@ -306,27 +293,43 @@ class RevenueEngineService {
     }
 
     this.optimizationRunning = true;
-    
+
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const userId = await this.getUserId();
 
-      // In real implementation, this would:
-      // 1. Analyze all revenue streams
-      // 2. Identify optimization opportunities
-      // 3. Apply changes automatically
-      // 4. Set up tracking
+      // Fetch identified opportunities
+      const { data: opportunities, error } = await supabase
+        .from('revenue_opportunities')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('status', 'identified')
+        .order('estimated_value', { ascending: false });
+      if (error) throw error;
 
-      const actions = [
-        'Adjusted pricing for 3 high-demand products',
-        'Launched retention campaign for at-risk segment',
-        'Reallocated budget to high-ROI channels',
-        'Activated upsell sequences for qualified customers',
-        'Optimized checkout flow for mobile users'
-      ];
+      const opps = (opportunities || []) as unknown as RevenueOpportunity[];
+      const actions: string[] = [];
+      let projectedImpact = 0;
+
+      // Move top opportunities to in_progress
+      for (const opp of opps.slice(0, 5)) {
+        const { error: updateError } = await supabase
+          .from('revenue_opportunities')
+          .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+          .eq('id', opp.id)
+          .eq('user_id', userId);
+        if (!updateError) {
+          actions.push(`Activated: ${opp.title}`);
+          projectedImpact += opp.estimated_value * (opp.success_probability / 100);
+        }
+      }
+
+      if (actions.length === 0) {
+        actions.push('No new opportunities to optimize at this time');
+      }
 
       return {
         optimizations_applied: actions.length,
-        projected_impact: 187500,
+        projected_impact: Math.round(projectedImpact),
         actions_taken: actions
       };
     } finally {
@@ -336,20 +339,23 @@ class RevenueEngineService {
 
   // Implement specific opportunity
   async implementOpportunity(opportunityId: string): Promise<void> {
-    const opportunity = this.mockOpportunities.find(o => o.id === opportunityId);
-    if (!opportunity) throw new Error('Opportunity not found');
+    const userId = await this.getUserId();
 
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const { data, error: fetchError } = await supabase
+      .from('revenue_opportunities')
+      .select('*')
+      .eq('id', opportunityId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (fetchError) throw fetchError;
+    if (!data) throw new Error('Opportunity not found');
 
-    // Update opportunity status
-    opportunity.status = 'in_progress';
-
-    // In real implementation:
-    // 1. Create implementation plan
-    // 2. Allocate resources
-    // 3. Set up tracking
-    // 4. Launch campaigns/changes
-    // 5. Monitor results
+    const { error: updateError } = await supabase
+      .from('revenue_opportunities')
+      .update({ status: 'implemented', updated_at: new Date().toISOString() })
+      .eq('id', opportunityId)
+      .eq('user_id', userId);
+    if (updateError) throw updateError;
   }
 
   // Forecast revenue
@@ -360,24 +366,52 @@ class RevenueEngineService {
     most_likely: number;
     confidence_intervals: any;
   }> {
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const userId = await this.getUserId();
 
-    const baseRevenue = 2500000;
-    
+    // Pull historical predictions to build forecast
+    const { data: predictions, error } = await supabase
+      .from('revenue_predictions')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const preds = (predictions || []) as unknown as RevenuePrediction[];
+
+    const baseRevenue = preds.length > 0
+      ? preds.reduce((sum, p) => sum + p.predicted_value, 0)
+      : 2500000;
+
+    const avgConfidence = preds.length > 0
+      ? preds.reduce((sum, p) => sum + p.confidence, 0) / preds.length
+      : 85;
+
+    const confidenceFactor = avgConfidence / 100;
+    const varianceMultiplier = 1 - confidenceFactor + 0.5;
+
     return {
-      base_case: baseRevenue,
-      best_case: baseRevenue * 1.35,
-      worst_case: baseRevenue * 0.85,
-      most_likely: baseRevenue * 1.15,
+      base_case: Math.round(baseRevenue),
+      best_case: Math.round(baseRevenue * (1 + varianceMultiplier * 0.35)),
+      worst_case: Math.round(baseRevenue * (1 - varianceMultiplier * 0.15)),
+      most_likely: Math.round(baseRevenue * (1 + varianceMultiplier * 0.15)),
       confidence_intervals: {
-        '95': [baseRevenue * 0.8, baseRevenue * 1.4],
-        '80': [baseRevenue * 0.9, baseRevenue * 1.25],
-        '50': [baseRevenue * 1.05, baseRevenue * 1.15]
+        '95': [
+          Math.round(baseRevenue * (1 - varianceMultiplier * 0.2)),
+          Math.round(baseRevenue * (1 + varianceMultiplier * 0.4))
+        ],
+        '80': [
+          Math.round(baseRevenue * (1 - varianceMultiplier * 0.1)),
+          Math.round(baseRevenue * (1 + varianceMultiplier * 0.25))
+        ],
+        '50': [
+          Math.round(baseRevenue * (1 + varianceMultiplier * 0.05)),
+          Math.round(baseRevenue * (1 + varianceMultiplier * 0.15))
+        ]
       }
     };
   }
 
-  // Churn prevention
+  // Churn prevention - identify at-risk customers from customer_ltv
   async identifyChurnRisks(): Promise<{
     at_risk_customers: Array<{
       customer_id: string;
@@ -388,42 +422,43 @@ class RevenueEngineService {
     }>;
     total_revenue_at_risk: number;
   }> {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const userId = await this.getUserId();
 
-    const atRiskCustomers = [
-      {
-        customer_id: 'cust_ent_001',
-        churn_probability: 78,
-        value_at_risk: 125000,
-        key_indicators: [
-          'Login frequency decreased 60%',
-          'Support tickets increased 200%',
-          'Key user left company',
-          'Contract renewal in 30 days'
-        ],
-        recommended_actions: [
-          'Schedule executive business review',
-          'Offer dedicated success manager',
-          'Provide platform training for new team',
-          'Consider contract incentives'
-        ]
-      },
-      {
-        customer_id: 'cust_mid_047',
-        churn_probability: 65,
-        value_at_risk: 35000,
-        key_indicators: [
-          'Feature adoption stalled',
-          'Decision maker unresponsive',
-          'Competitor evaluation detected'
-        ],
-        recommended_actions: [
-          'Send personalized re-engagement campaign',
-          'Offer product roadmap preview',
-          'Provide competitive comparison'
-        ]
-      }
-    ];
+    // Query customer_ltv for high churn probability
+    const { data, error } = await supabase
+      .from('customer_ltv')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('churn_probability', 50)
+      .order('churn_probability', { ascending: false });
+    if (error) throw error;
+
+    const records = (data || []) as unknown as CustomerLifetimeValue[];
+
+    const atRiskCustomers = records.map(record => ({
+      customer_id: record.customer_id || record.segment_name,
+      churn_probability: record.churn_probability,
+      value_at_risk: record.predicted_ltv,
+      key_indicators: record.key_characteristics.length > 0
+        ? record.key_characteristics
+        : [
+            'Engagement declining',
+            'Usage metrics below average',
+            'Support interactions increasing'
+          ],
+      recommended_actions: record.churn_probability >= 70
+        ? [
+            'Schedule executive business review',
+            'Offer dedicated success manager',
+            'Provide platform training',
+            'Consider contract incentives'
+          ]
+        : [
+            'Send personalized re-engagement campaign',
+            'Offer product roadmap preview',
+            'Provide competitive comparison'
+          ]
+    }));
 
     return {
       at_risk_customers: atRiskCustomers,
@@ -431,36 +466,56 @@ class RevenueEngineService {
     };
   }
 
-  // Revenue attribution
+  // Revenue attribution - compute from revenue data
   async analyzeRevenueAttribution(): Promise<{
     by_channel: Record<string, number>;
     by_campaign: Record<string, number>;
     by_touchpoint: Record<string, number>;
     multi_touch_impact: number;
   }> {
-    await new Promise(resolve => setTimeout(resolve, 600));
+    const userId = await this.getUserId();
+
+    // Pull predictions by entity type to build attribution
+    const { data: predictions, error } = await supabase
+      .from('revenue_predictions')
+      .select('*')
+      .eq('user_id', userId);
+    if (error) throw error;
+
+    const preds = (predictions || []) as unknown as RevenuePrediction[];
+
+    const byChannel: Record<string, number> = {};
+    const byCampaign: Record<string, number> = {};
+    const byTouchpoint: Record<string, number> = {};
+
+    for (const pred of preds) {
+      if (pred.entity_type === 'channel') {
+        byChannel[pred.entity_id] = (byChannel[pred.entity_id] || 0) + pred.predicted_value;
+      } else if (pred.entity_type === 'campaign') {
+        byCampaign[pred.entity_id] = (byCampaign[pred.entity_id] || 0) + pred.predicted_value;
+      }
+    }
+
+    // Compute touchpoint attribution from channel data
+    const totalChannelRevenue = Object.values(byChannel).reduce((sum, v) => sum + v, 0);
+    if (totalChannelRevenue > 0) {
+      byTouchpoint['first_touch'] = Math.round(totalChannelRevenue * 0.32);
+      byTouchpoint['last_touch'] = Math.round(totalChannelRevenue * 0.48);
+      byTouchpoint['assisted'] = Math.round(totalChannelRevenue * 0.20);
+    }
+
+    // Multi-touch impact: percentage of predictions that involve multiple entities
+    const campaignCount = preds.filter(p => p.entity_type === 'campaign').length;
+    const channelCount = preds.filter(p => p.entity_type === 'channel').length;
+    const multiTouchImpact = (campaignCount > 0 && channelCount > 0)
+      ? Math.round((Math.min(campaignCount, channelCount) / Math.max(campaignCount, channelCount)) * 50)
+      : 35;
 
     return {
-      by_channel: {
-        'organic_search': 850000,
-        'paid_search': 620000,
-        'email': 450000,
-        'social': 280000,
-        'direct': 300000
-      },
-      by_campaign: {
-        'brand_awareness_q4': 320000,
-        'product_launch_fall': 580000,
-        'black_friday': 750000,
-        'retention_program': 425000,
-        'partner_referral': 425000
-      },
-      by_touchpoint: {
-        'first_touch': 800000,
-        'last_touch': 1200000,
-        'assisted': 500000
-      },
-      multi_touch_impact: 35 // 35% of revenue from multi-touch journeys
+      by_channel: byChannel,
+      by_campaign: byCampaign,
+      by_touchpoint: byTouchpoint,
+      multi_touch_impact: multiTouchImpact
     };
   }
 }
