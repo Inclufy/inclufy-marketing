@@ -19,6 +19,7 @@ const fr: Translations = {
     comingSoonMsg: 'Cette fonctionnalit\u00E9 sera ajout\u00E9e prochainement.',
     noLocation: 'Pas de lieu',
     required: 'Obligatoire',
+    goBack: 'Retour',
   },
 
   // ─── Navigation / Tabs ─────────────────────────────────────────────

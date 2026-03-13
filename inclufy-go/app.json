@@ -22,6 +22,7 @@
         "NSMicrophoneUsageDescription": "Inclufy GO needs microphone access for video and audio recording.",
         "NSPhotoLibraryUsageDescription": "Inclufy GO saves branded content to your photo library.",
         "NSFaceIDUsageDescription": "Inclufy GO uses Face ID for secure app access.",
+        "NFCReaderUsageDescription": "Inclufy GO uses NFC to instantly share and receive contact cards.",
         "CFBundleLocalizations": [
           "nl",
           "en",
@@ -29,6 +30,9 @@
         ],
         "CFBundleDevelopmentRegion": "nl",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.nfc.readersession.formats": ["NDEF"]
       }
     },
     "android": {
@@ -86,7 +90,8 @@
           "photosPermission": "Inclufy GO slaat branded afbeeldingen op in je fotobibliotheek."
         }
       ],
-      "expo-router"
+      "expo-router",
+      "react-native-nfc-manager"
     ]
   }
 }

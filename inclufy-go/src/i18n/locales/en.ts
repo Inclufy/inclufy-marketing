@@ -19,6 +19,7 @@ const en: Translations = {
     comingSoonMsg: 'This feature will be added soon.',
     noLocation: 'No location',
     required: 'Required',
+    goBack: 'Go back',
   },
 
   // ─── Navigation / Tabs ─────────────────────────────────────────────

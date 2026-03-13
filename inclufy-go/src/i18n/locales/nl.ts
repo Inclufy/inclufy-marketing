@@ -17,6 +17,7 @@ const nl = {
     comingSoonMsg: 'Deze functie wordt binnenkort toegevoegd.',
     noLocation: 'Geen locatie',
     required: 'Verplicht',
+    goBack: 'Terug',
   },
 
   // ─── Navigation / Tabs ─────────────────────────────────────────────
