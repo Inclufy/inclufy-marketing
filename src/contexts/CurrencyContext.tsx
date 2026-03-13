@@ -57,6 +57,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   // Full formatting: €1.234,56
   const formatCurrency = useCallback((value: number, options?: FormatOptions) => {
+    if (value == null || isNaN(value)) value = 0;
     const { decimals = 2, compact = false, showSymbol = true } = options || {};
 
     if (compact) {
@@ -87,6 +88,7 @@ export function CurrencyProvider({ children }: { children: ReactNode }) {
 
   // Compact formatting: €12,5K or €1,2M
   const formatCompact = useCallback((value: number) => {
+    if (value == null || isNaN(value)) value = 0;
     const config = CURRENCIES[currency];
     if (Math.abs(value) >= 1_000_000) {
       return `${config.symbol}${(value / 1_000_000).toFixed(1)}M`;
