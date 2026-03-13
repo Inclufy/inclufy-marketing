@@ -151,15 +151,27 @@ export type RootStackParamList = {
   TeamManage: { eventId: string };
   // Campaigns
   CampaignList: undefined;
+  CampaignCreate: undefined;
   CampaignDetail: { campaignId: string };
   // AI & Content
   ContentCreator: undefined;
   AICommand: undefined;
-  // Leads & Budget
+  // Leads & Smart Contact
   LeadCapture: undefined;
+  SmartLead: undefined;
+  QRScan: undefined;
+  CardScan: undefined;
+  MyDigitalCard: undefined;
+  NFCShare: undefined;
+  // Budget
   BudgetMonitor: undefined;
+  // Opportunities & Automation
+  OpportunityRadar: undefined;
+  MarketingAutomation: undefined;
   // Notifications
   Notifications: undefined;
+  // Settings
+  Settings: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────

@@ -7,6 +7,7 @@ import {
   ScrollView,
   RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDashboardStats } from '../hooks/useAnalytics';
@@ -14,6 +15,7 @@ import { useCampaigns } from '../hooks/useCampaigns';
 import type { RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -21,7 +23,7 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 interface AIAlert {
   id: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   title: string;
   description: string;
   type: 'budget' | 'engagement' | 'leads';
@@ -30,57 +32,12 @@ interface AIAlert {
 
 interface QuickAction {
   label: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
   route: string;
   color: string;
 }
 
-// ─── Mock Data ──────────────────────────────────────────────────────────────
-
-const MOCK_AI_ALERTS: AIAlert[] = [
-  {
-    id: '1',
-    icon: '\u{1F4B0}',
-    title: 'Budget optimalisatie',
-    description:
-      'Verplaats \u20AC1.200 budget van Facebook naar Google Ads. Verwachte ROI: +18%',
-    type: 'budget',
-    color: colors.warning,
-  },
-  {
-    id: '2',
-    icon: '\u{1F4C8}',
-    title: 'Engagement piek',
-    description: 'Je Instagram engagement is 40% hoger dan vorige week!',
-    type: 'engagement',
-    color: colors.success,
-  },
-  {
-    id: '3',
-    icon: '\u{1F465}',
-    title: 'Nieuwe leads',
-    description: '3 nieuwe leads via LinkedIn campagne',
-    type: 'leads',
-    color: colors.info,
-  },
-];
-
-const QUICK_ACTIONS: QuickAction[] = [
-  { label: 'Campagne', icon: '\u{1F680}', route: 'CampaignList', color: colors.primary },
-  { label: 'Content', icon: '\u{270D}\uFE0F', route: 'ContentCreator', color: colors.secondary },
-  { label: 'Lead', icon: '\u{1F465}', route: 'LeadCapture', color: colors.success },
-  { label: 'Budget', icon: '\u{1F4B3}', route: 'BudgetMonitor', color: colors.warning },
-];
-
 // ─── Status Helpers ─────────────────────────────────────────────────────────
-
-const statusLabel: Record<string, string> = {
-  draft: 'Concept',
-  active: 'Actief',
-  paused: 'Gepauzeerd',
-  completed: 'Voltooid',
-  scheduled: 'Gepland',
-};
 
 const statusColor: Record<string, string> = {
   draft: colors.draft,
@@ -94,11 +51,54 @@ const statusColor: Record<string, string> = {
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
+  const { t } = useTranslation();
   const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useDashboardStats();
   const { data: campaigns = [], isLoading: campaignsLoading, refetch: refetchCampaigns } = useCampaigns();
 
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
+
+  const MOCK_AI_ALERTS: AIAlert[] = [
+    {
+      id: '1',
+      icon: 'cash-outline',
+      title: t.home.budgetOptimization,
+      description: t.home.budgetOptimizationDesc,
+      type: 'budget',
+      color: colors.warning,
+    },
+    {
+      id: '2',
+      icon: 'trending-up-outline',
+      title: t.home.engagementPeak,
+      description: t.home.engagementPeakDesc,
+      type: 'engagement',
+      color: colors.success,
+    },
+    {
+      id: '3',
+      icon: 'people-outline',
+      title: t.home.newLeads,
+      description: t.home.newLeadsDesc,
+      type: 'leads',
+      color: colors.info,
+    },
+  ];
+
+  const QUICK_ACTIONS: QuickAction[] = [
+    { label: t.home.campaignAction, icon: 'rocket-outline', route: 'CampaignsTab', color: colors.primary },
+    { label: t.home.contentAction, icon: 'create-outline', route: 'ContentCreator', color: colors.secondary },
+    { label: t.home.leadAction, icon: 'qr-code-outline', route: 'SmartLead', color: colors.success },
+    { label: t.home.budgetAction, icon: 'card-outline', route: 'BudgetMonitor', color: colors.warning },
+  ];
+
+  const statusLabel: Record<string, string> = {
+    draft: t.status.draft,
+    active: t.status.active,
+    paused: t.status.paused,
+    completed: t.status.completed,
+    scheduled: t.status.scheduled,
+  };
 
   const visibleAlerts = MOCK_AI_ALERTS.filter((a) => !dismissedAlerts.has(a.id));
 
@@ -154,13 +154,24 @@ export default function HomeScreen() {
         {/* ── Welcome Header ─────────────────────────────────────────── */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Welkom terug!</Text>
+            <Text style={styles.greeting}>{t.home.greeting}</Text>
             <Text style={styles.headerSubtitle}>
-              Hier is je marketing overzicht
+              {t.home.subtitle}
             </Text>
           </View>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>IM</Text>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => navigation.navigate('Notifications' as any)}
+            >
+              <Ionicons name="notifications-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.headerIconBtn}
+              onPress={() => navigation.navigate('Settings' as any)}
+            >
+              <Ionicons name="settings-outline" size={22} color={colors.text} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -170,11 +181,12 @@ export default function HomeScreen() {
             <Text style={styles.statValue}>
               {statsLoading ? '-' : formatNumber(stats?.active_campaigns)}
             </Text>
-            <Text style={styles.statLabel}>Actieve Campagnes</Text>
+            <Text style={styles.statLabel}>{t.home.activeCampaigns}</Text>
             <View style={[styles.statIndicator, { backgroundColor: colors.primary + '20' }]}>
-              <Text style={[styles.statIndicatorText, { color: colors.primary }]}>
-                {'\u{1F680}'} Live
-              </Text>
+              <View style={styles.statIndicatorRow}>
+                <Ionicons name="rocket-outline" size={12} color={colors.primary} />
+                <Text style={[styles.statIndicatorText, { color: colors.primary }]}> {t.home.live}</Text>
+              </View>
             </View>
           </View>
 
@@ -182,21 +194,23 @@ export default function HomeScreen() {
             <Text style={styles.statValue}>
               {statsLoading ? '-' : formatNumber(stats?.total_contacts)}
             </Text>
-            <Text style={styles.statLabel}>Totaal Contacten</Text>
+            <Text style={styles.statLabel}>{t.home.totalContacts}</Text>
             <View style={[styles.statIndicator, { backgroundColor: colors.info + '20' }]}>
-              <Text style={[styles.statIndicatorText, { color: colors.info }]}>
-                {'\u{1F465}'} Database
-              </Text>
+              <View style={styles.statIndicatorRow}>
+                <Ionicons name="people-outline" size={12} color={colors.info} />
+                <Text style={[styles.statIndicatorText, { color: colors.info }]}> {t.home.database}</Text>
+              </View>
             </View>
           </View>
 
           <View style={[styles.statCard, styles.statCardHalf]}>
             <Text style={styles.statValue}>24.8%</Text>
-            <Text style={styles.statLabel}>Open Rate</Text>
+            <Text style={styles.statLabel}>{t.home.openRate}</Text>
             <View style={[styles.statIndicator, { backgroundColor: colors.success + '20' }]}>
-              <Text style={[styles.statIndicatorText, { color: colors.success }]}>
-                {'\u{2191}'} +3.2%
-              </Text>
+              <View style={styles.statIndicatorRow}>
+                <Ionicons name="arrow-up" size={12} color={colors.success} />
+                <Text style={[styles.statIndicatorText, { color: colors.success }]}> +3.2%</Text>
+              </View>
             </View>
           </View>
 
@@ -204,11 +218,12 @@ export default function HomeScreen() {
             <Text style={styles.statValue}>
               {statsLoading ? '-' : formatCurrency(stats?.total_revenue)}
             </Text>
-            <Text style={styles.statLabel}>Omzet</Text>
+            <Text style={styles.statLabel}>{t.home.revenue}</Text>
             <View style={[styles.statIndicator, { backgroundColor: colors.success + '20' }]}>
-              <Text style={[styles.statIndicatorText, { color: colors.success }]}>
-                {'\u{2191}'} +12%
-              </Text>
+              <View style={styles.statIndicatorRow}>
+                <Ionicons name="arrow-up" size={12} color={colors.success} />
+                <Text style={[styles.statIndicatorText, { color: colors.success }]}> +12%</Text>
+              </View>
             </View>
           </View>
         </View>
@@ -217,7 +232,10 @@ export default function HomeScreen() {
         {visibleAlerts.length > 0 && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{'\u{1F916}'} AI Aanbevelingen</Text>
+              <View style={styles.sectionTitleRow}>
+                <Ionicons name="sparkles" size={18} color={colors.primary} />
+                <Text style={styles.sectionTitle}> {t.home.aiRecommendations}</Text>
+              </View>
               <Text style={styles.sectionBadge}>{visibleAlerts.length}</Text>
             </View>
 
@@ -234,7 +252,7 @@ export default function HomeScreen() {
 
                   <View style={styles.alertContent}>
                     <View style={styles.alertHeader}>
-                      <Text style={styles.alertIcon}>{alert.icon}</Text>
+                      <Ionicons name={alert.icon} size={20} color={alert.color} />
                       <Text style={styles.alertTitle} numberOfLines={1}>
                         {alert.title}
                       </Text>
@@ -249,13 +267,13 @@ export default function HomeScreen() {
                         style={[styles.alertBtn, styles.alertBtnAccept]}
                         onPress={() => acceptAlert(alert)}
                       >
-                        <Text style={styles.alertBtnAcceptText}>Accepteer</Text>
+                        <Text style={styles.alertBtnAcceptText}>{t.common.accept}</Text>
                       </TouchableOpacity>
                       <TouchableOpacity
                         style={[styles.alertBtn, styles.alertBtnDismiss]}
                         onPress={() => dismissAlert(alert.id)}
                       >
-                        <Text style={styles.alertBtnDismissText}>Negeer</Text>
+                        <Text style={styles.alertBtnDismissText}>{t.common.dismiss}</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -265,9 +283,45 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* ── Opportunity Radar Banner ───────────────────────────────── */}
+        <TouchableOpacity
+          style={styles.radarBanner}
+          onPress={() => navigation.navigate('OpportunityRadar' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.radarBannerLeft}>
+            <View style={styles.radarPulse}>
+              <Ionicons name="radio-outline" size={22} color={colors.primary} />
+            </View>
+            <View>
+              <Text style={styles.radarBannerTitle}>{t.home.radarTitle}</Text>
+              <Text style={styles.radarBannerSub}>{t.home.radarSub}</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+        </TouchableOpacity>
+
+        {/* ── Marketing Automation Banner ────────────────────────────── */}
+        <TouchableOpacity
+          style={styles.automationBanner}
+          onPress={() => navigation.navigate('MarketingAutomation' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.radarBannerLeft}>
+            <View style={styles.automationPulse}>
+              <Ionicons name="rocket-outline" size={22} color="#9333EA" />
+            </View>
+            <View>
+              <Text style={styles.radarBannerTitle}>{t.home.automationTitle}</Text>
+              <Text style={styles.radarBannerSub}>{t.home.automationSub}</Text>
+            </View>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color="#9333EA" />
+        </TouchableOpacity>
+
         {/* ── Quick Actions ──────────────────────────────────────────── */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Snelle acties</Text>
+          <Text style={styles.sectionTitle}>{t.home.quickActions}</Text>
 
           <View style={styles.actionsRow}>
             {QUICK_ACTIONS.map((action) => (
@@ -278,7 +332,7 @@ export default function HomeScreen() {
                 activeOpacity={0.7}
               >
                 <View style={[styles.actionIconWrap, { backgroundColor: action.color + '15' }]}>
-                  <Text style={styles.actionIcon}>{action.icon}</Text>
+                  <Ionicons name={action.icon} size={24} color={action.color} />
                 </View>
                 <Text style={styles.actionLabel}>{action.label}</Text>
               </TouchableOpacity>
@@ -289,24 +343,24 @@ export default function HomeScreen() {
         {/* ── Recent Activity ────────────────────────────────────────── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recente campagnes</Text>
+            <Text style={styles.sectionTitle}>{t.home.recentCampaigns}</Text>
             {campaigns.length > 3 && (
-              <TouchableOpacity onPress={() => navigation.navigate('CampaignList' as any)}>
-                <Text style={styles.seeAllText}>Bekijk alles</Text>
+              <TouchableOpacity onPress={() => navigation.navigate('CampaignsTab' as any)}>
+                <Text style={styles.seeAllText}>{t.home.viewAll}</Text>
               </TouchableOpacity>
             )}
           </View>
 
           {campaignsLoading ? (
             <View style={styles.loadingPlaceholder}>
-              <Text style={styles.loadingText}>Laden...</Text>
+              <Text style={styles.loadingText}>{t.common.loading}</Text>
             </View>
           ) : recentCampaigns.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyIcon}>{'\u{1F4CB}'}</Text>
-              <Text style={styles.emptyTitle}>Nog geen campagnes</Text>
+              <Ionicons name="clipboard-outline" size={36} color={colors.textSecondary} />
+              <Text style={styles.emptyTitle}>{t.home.noCampaigns}</Text>
               <Text style={styles.emptyDescription}>
-                Start je eerste campagne om hier resultaten te zien
+                {t.home.noCampaignsDesc}
               </Text>
             </View>
           ) : (
@@ -380,6 +434,19 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     backgroundColor: colors.surface,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
+  headerIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.borderLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   greeting: {
     fontSize: fontSize.xxl,
     fontWeight: fontWeight.bold,
@@ -439,6 +506,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     marginTop: spacing.sm,
   },
+  statIndicatorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   statIndicatorText: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
@@ -454,6 +525,77 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.sm,
+  },
+  radarBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    borderColor: colors.primary + '30',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  radarBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  radarPulse: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary + '15',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  automationBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    borderColor: '#9333EA30',
+    shadowColor: '#9333EA',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  automationPulse: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3E8FF',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  radarBannerTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.text,
+  },
+  radarBannerSub: {
+    fontSize: fontSize.xs,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
   },
   sectionTitle: {
     fontSize: fontSize.lg,
@@ -505,9 +647,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-  },
-  alertIcon: {
-    fontSize: 20,
   },
   alertTitle: {
     fontSize: fontSize.md,
@@ -566,9 +705,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  actionIcon: {
-    fontSize: 24,
   },
   actionLabel: {
     fontSize: fontSize.xs,
@@ -643,14 +779,11 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     ...subtleShadow,
   },
-  emptyIcon: {
-    fontSize: 36,
-    marginBottom: spacing.sm,
-  },
   emptyTitle: {
     fontSize: fontSize.md,
     fontWeight: fontWeight.semibold,
     color: colors.text,
+    marginTop: spacing.sm,
   },
   emptyDescription: {
     fontSize: fontSize.sm,

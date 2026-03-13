@@ -12,10 +12,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../services/supabase';
 import { colors, brandGradient, spacing, borderRadius, fontSize, fontWeight } from '../theme';
+import { useTranslation } from '../i18n';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +26,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Vul email en wachtwoord in');
+      Alert.alert(t.login.fillEmailPassword);
       return;
     }
 
@@ -32,26 +35,26 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Login mislukt', error.message);
+      Alert.alert(t.login.loginFailed, error.message);
     }
   };
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert('Vul eerst je email in', 'We sturen je een reset link.');
+      Alert.alert(t.login.fillEmailFirst, t.login.resetLinkSent);
       return;
     }
     const { error } = await supabase.auth.resetPasswordForEmail(email);
     if (error) {
-      Alert.alert('Fout', error.message);
+      Alert.alert(t.common.error, error.message);
     } else {
-      Alert.alert('Check je email', 'We hebben een wachtwoord reset link verstuurd.');
+      Alert.alert(t.login.checkEmail, t.login.resetLinkSentMsg);
     }
   };
 
   const handleSignUp = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Vul email en wachtwoord in om een account aan te maken');
+      Alert.alert(t.login.fillEmailPasswordSignUp);
       return;
     }
 
@@ -60,9 +63,9 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Registratie mislukt', error.message);
+      Alert.alert(t.login.signUpFailed, error.message);
     } else {
-      Alert.alert('Account aangemaakt!', 'Check je email om je account te bevestigen.');
+      Alert.alert(t.login.accountCreated, t.login.confirmEmail);
     }
   };
 
@@ -104,7 +107,7 @@ export default function LoginScreen() {
         <View style={styles.form}>
           {/* Email field */}
           <View style={styles.fieldGroup}>
-            <Text style={styles.label}>E-mail</Text>
+            <Text style={styles.label}>{t.login.email}</Text>
             <View style={styles.inputWrapper}>
               <View style={styles.inputIcon}>
                 <Text style={styles.iconText}>{'\u2709'}</Text>
@@ -112,7 +115,7 @@ export default function LoginScreen() {
               <View style={styles.inputSeparator} />
               <TextInput
                 style={styles.input}
-                placeholder="naam@bedrijf.nl"
+                placeholder={t.login.emailPlaceholder}
                 placeholderTextColor={colors.textTertiary}
                 value={email}
                 onChangeText={setEmail}
@@ -126,19 +129,19 @@ export default function LoginScreen() {
           {/* Password field */}
           <View style={styles.fieldGroup}>
             <View style={styles.labelRow}>
-              <Text style={styles.label}>Wachtwoord</Text>
+              <Text style={styles.label}>{t.login.password}</Text>
               <TouchableOpacity onPress={handleForgotPassword}>
-                <Text style={styles.forgotText}>Vergeten?</Text>
+                <Text style={styles.forgotText}>{t.login.forgot}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.inputWrapper}>
               <View style={styles.inputIcon}>
-                <Text style={styles.iconText}>{'\u{1F512}'}</Text>
+                <Ionicons name="lock-closed-outline" size={18} color={colors.textSecondary} />
               </View>
               <View style={styles.inputSeparator} />
               <TextInput
                 style={styles.input}
-                placeholder="Wachtwoord"
+                placeholder={t.login.passwordPlaceholder}
                 placeholderTextColor={colors.textTertiary}
                 value={password}
                 onChangeText={setPassword}
@@ -149,9 +152,7 @@ export default function LoginScreen() {
                 style={styles.eyeButton}
                 onPress={() => setShowPassword(!showPassword)}
               >
-                <Text style={styles.eyeIcon}>
-                  {showPassword ? '\u{1F441}' : '\u{1F441}\u200D\u{1F5E8}'}
-                </Text>
+                <Ionicons name={showPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -171,7 +172,7 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color={colors.textOnPrimary} />
               ) : (
-                <Text style={styles.loginButtonText}>Inloggen</Text>
+                <Text style={styles.loginButtonText}>{t.login.loginButton}</Text>
               )}
             </TouchableOpacity>
           </LinearGradient>
@@ -179,13 +180,13 @@ export default function LoginScreen() {
           {/* Divider */}
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>of</Text>
+            <Text style={styles.dividerText}>{t.common.or}</Text>
             <View style={styles.dividerLine} />
           </View>
 
           {/* Sign Up Button */}
           <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-            <Text style={styles.signUpText}>Account aanmaken</Text>
+            <Text style={styles.signUpText}>{t.login.signUp}</Text>
             <Text style={styles.signUpArrow}>{'\u2192'}</Text>
           </TouchableOpacity>
         </View>
@@ -193,15 +194,15 @@ export default function LoginScreen() {
         {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Door in te loggen ga je akkoord met onze{' '}
+            {t.login.termsPrefix}
           </Text>
           <View style={styles.footerLinks}>
             <TouchableOpacity>
-              <Text style={styles.footerLink}>Voorwaarden</Text>
+              <Text style={styles.footerLink}>{t.login.terms}</Text>
             </TouchableOpacity>
-            <Text style={styles.footerText}> en </Text>
+            <Text style={styles.footerText}>{t.login.and}</Text>
             <TouchableOpacity>
-              <Text style={styles.footerLink}>Privacybeleid</Text>
+              <Text style={styles.footerLink}>{t.login.privacy}</Text>
             </TouchableOpacity>
           </View>
         </View>

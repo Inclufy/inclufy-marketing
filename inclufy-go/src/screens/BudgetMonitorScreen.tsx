@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useAnalyticsOverview } from '../hooks/useAnalytics';
 import { useCampaigns } from '../hooks/useCampaigns';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 // Channel config for budget breakdown
 const CHANNELS = [
@@ -16,25 +18,27 @@ const CHANNELS = [
 
 // Alert severity levels
 const ALERT_LEVELS = {
-  warning: { bg: colors.warning + '15', text: colors.warning, icon: '\u26A0' },
-  danger: { bg: colors.error + '15', text: colors.error, icon: '\u26D4' },
-  info: { bg: colors.info + '15', text: colors.info, icon: '\u2139' },
+  warning: { bg: colors.warning + '15', text: colors.warning, icon: 'warning-outline' as const },
+  danger: { bg: colors.error + '15', text: colors.error, icon: 'alert-circle-outline' as const },
+  info: { bg: colors.info + '15', text: colors.info, icon: 'information-circle-outline' as const },
 };
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('nl-NL', {
-    style: 'currency',
-    currency: 'EUR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(value);
-}
 
 function formatPercent(value: number): string {
   return `${Math.round(value)}%`;
 }
 
 export default function BudgetMonitorScreen() {
+  const { t, locale } = useTranslation();
+
+  const formatCurrency = (value: number) => {
+    const loc = locale === 'nl' ? 'nl-NL' : locale === 'fr' ? 'fr-FR' : 'en-US';
+    return new Intl.NumberFormat(loc, {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(value);
+  };
   const {
     data: overview,
     isLoading: loadingOverview,
@@ -92,12 +96,12 @@ export default function BudgetMonitorScreen() {
   if (spentPercent > 85) {
     alerts.push({
       level: 'danger',
-      message: `Budgetlimiet bijna bereikt: ${formatPercent(spentPercent)} besteed van het totale budget.`,
+      message: `${t.budget.budgetLimitNear}: ${formatPercent(spentPercent)} ${t.budget.spentPercent}.`,
     });
   } else if (spentPercent > 70) {
     alerts.push({
       level: 'warning',
-      message: `${formatPercent(spentPercent)} van het totale budget is besteed. Houd de uitgaven in de gaten.`,
+      message: `${formatPercent(spentPercent)} ${t.budget.spentPercent}. ${t.budget.budgetWatchSpending}`,
     });
   }
 
@@ -105,7 +109,7 @@ export default function BudgetMonitorScreen() {
   if (unallocated > totalBudget * 0.3 && totalBudget > 0) {
     alerts.push({
       level: 'info',
-      message: `${formatCurrency(unallocated)} is nog niet toegewezen aan een kanaal.`,
+      message: `${formatCurrency(unallocated)} ${t.budget.unallocated}`,
     });
   }
 
@@ -113,7 +117,7 @@ export default function BudgetMonitorScreen() {
   if (activeCampaigns.length === 0 && totalBudget > 0) {
     alerts.push({
       level: 'info',
-      message: 'Geen actieve campagnes. Budget wordt momenteel niet ingezet.',
+      message: t.budget.noActiveCampaigns,
     });
   }
 
@@ -121,9 +125,9 @@ export default function BudgetMonitorScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Marketing Budget</Text>
+        <Text style={styles.title}>{t.budget.title}</Text>
         <Text style={styles.subtitle}>
-          {overview?.campaigns?.total ?? 0} campagnes actief
+          {overview?.campaigns?.total ?? 0} {t.budget.campaignsActive}
         </Text>
       </View>
 
@@ -140,7 +144,7 @@ export default function BudgetMonitorScreen() {
       >
         {/* Total Budget Card */}
         <View style={styles.budgetCard}>
-          <Text style={styles.budgetCardLabel}>Totaal Budget</Text>
+          <Text style={styles.budgetCardLabel}>{t.budget.totalBudget}</Text>
           <Text style={styles.budgetCardValue}>
             {isLoading ? '...' : formatCurrency(totalBudget)}
           </Text>
@@ -161,7 +165,7 @@ export default function BudgetMonitorScreen() {
                 ]}
               />
             </View>
-            <Text style={styles.progressText}>{formatPercent(spentPercent)} besteed</Text>
+            <Text style={styles.progressText}>{formatPercent(spentPercent)} {t.budget.spentPercent}</Text>
           </View>
 
           {/* Spent vs Remaining */}
@@ -169,14 +173,14 @@ export default function BudgetMonitorScreen() {
             <View style={styles.budgetSplitItem}>
               <View style={[styles.budgetDot, { backgroundColor: colors.primary }]} />
               <View>
-                <Text style={styles.budgetSplitLabel}>Besteed</Text>
+                <Text style={styles.budgetSplitLabel}>{t.budget.spent}</Text>
                 <Text style={styles.budgetSplitValue}>{formatCurrency(spentEstimate)}</Text>
               </View>
             </View>
             <View style={styles.budgetSplitItem}>
               <View style={[styles.budgetDot, { backgroundColor: colors.success }]} />
               <View>
-                <Text style={styles.budgetSplitLabel}>Resterend</Text>
+                <Text style={styles.budgetSplitLabel}>{t.budget.remaining}</Text>
                 <Text style={[styles.budgetSplitValue, { color: colors.success }]}>
                   {formatCurrency(remaining)}
                 </Text>
@@ -188,12 +192,12 @@ export default function BudgetMonitorScreen() {
         {/* Budget Alerts */}
         {alerts.length > 0 && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Meldingen</Text>
+            <Text style={styles.sectionTitle}>{t.budget.alerts}</Text>
             {alerts.map((alert, i) => {
               const config = ALERT_LEVELS[alert.level];
               return (
                 <View key={i} style={[styles.alertCard, { backgroundColor: config.bg }]}>
-                  <Text style={styles.alertIcon}>{config.icon}</Text>
+                  <Ionicons name={config.icon as any} size={16} color={config.text} />
                   <Text style={[styles.alertText, { color: config.text }]}>
                     {alert.message}
                   </Text>
@@ -205,7 +209,7 @@ export default function BudgetMonitorScreen() {
 
         {/* Channel Breakdown */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Budget per kanaal</Text>
+          <Text style={styles.sectionTitle}>{t.budget.budgetPerChannel}</Text>
           {CHANNELS.map((ch) => {
             const data = channelBudgets.find((c) => c.key === ch.key);
             const budget = data?.budget ?? 0;
@@ -236,10 +240,10 @@ export default function BudgetMonitorScreen() {
 
         {/* Top Spending Campaigns */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Top campagnes (budget)</Text>
+          <Text style={styles.sectionTitle}>{t.budget.topCampaigns}</Text>
           {topCampaigns.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>Geen campagnes met budget gevonden</Text>
+              <Text style={styles.emptyText}>{t.budget.noCampaignsBudget}</Text>
             </View>
           ) : (
             topCampaigns.map((campaign, index) => {
@@ -299,22 +303,22 @@ export default function BudgetMonitorScreen() {
         {/* Summary Footer */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Totaal campagnes</Text>
+            <Text style={styles.summaryLabel}>{t.budget.totalCampaigns}</Text>
             <Text style={styles.summaryValue}>{overview?.campaigns?.total ?? 0}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Actieve campagnes</Text>
+            <Text style={styles.summaryLabel}>{t.budget.activeCampaigns}</Text>
             <Text style={styles.summaryValue}>{activeCampaigns.length}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>Totaal contacten</Text>
+            <Text style={styles.summaryLabel}>{t.budget.totalContacts}</Text>
             <Text style={styles.summaryValue}>{overview?.contacts?.total ?? 0}</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryRow}>
-            <Text style={styles.summaryLabel}>E-mail open rate</Text>
+            <Text style={styles.summaryLabel}>{t.budget.emailOpenRate}</Text>
             <Text style={[styles.summaryValue, { color: colors.success }]}>
               {overview?.email?.open_rate != null
                 ? formatPercent(overview.email.open_rate)

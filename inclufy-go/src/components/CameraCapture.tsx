@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { View, TouchableOpacity, StyleSheet, Text, Alert } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import { Ionicons } from '@expo/vector-icons';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { colors, spacing, borderRadius } from '../theme';
 
@@ -83,7 +84,7 @@ export default function CameraCapture({ onCapture, onVideoStart, onVideoEnd, mod
           style={styles.flipBtn}
           onPress={() => setFacing((prev) => (prev === 'back' ? 'front' : 'back'))}
         >
-          <Text style={styles.flipText}>{'\u{1F504}'}</Text>
+          <Ionicons name="camera-reverse-outline" size={24} color="#fff" />
         </TouchableOpacity>
 
         {/* Capture button */}

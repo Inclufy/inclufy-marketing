@@ -10,6 +10,7 @@ import { supabase } from './src/services/supabase';
 import AppNavigator from './src/navigation/AppNavigator';
 import BiometricScreen from './src/screens/BiometricScreen';
 import { colors } from './src/theme';
+import { I18nContext, useI18nProvider } from './src/i18n';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -33,6 +34,7 @@ async function checkBiometricAvailable(): Promise<boolean> {
 }
 
 export default function App() {
+  const i18n = useI18nProvider();
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [showBiometric, setShowBiometric] = useState(false);
@@ -137,12 +139,14 @@ export default function App() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <NavigationContainer>
-        <AppNavigator isLoggedIn={!!session} />
-        <StatusBar style="dark" />
-      </NavigationContainer>
-    </QueryClientProvider>
+    <I18nContext.Provider value={i18n}>
+      <QueryClientProvider client={queryClient}>
+        <NavigationContainer>
+          <AppNavigator isLoggedIn={!!session} />
+          <StatusBar style="dark" />
+        </NavigationContainer>
+      </QueryClientProvider>
+    </I18nContext.Provider>
   );
 }
 

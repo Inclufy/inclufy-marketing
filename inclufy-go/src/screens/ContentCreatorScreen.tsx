@@ -9,21 +9,16 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import api from '../services/api';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 type ContentType = 'social' | 'caption' | 'blog' | 'email';
 type Platform = 'linkedin' | 'instagram' | 'x' | 'facebook';
 type Tone = 'professional' | 'casual' | 'community' | 'inspirerend';
-
-const CONTENT_TYPES: { key: ContentType; label: string; icon: string }[] = [
-  { key: 'social', label: 'Social Post', icon: '\u{1F4F1}' },
-  { key: 'caption', label: 'Caption', icon: '\u{1F4DD}' },
-  { key: 'blog', label: 'Blog', icon: '\u{1F4D6}' },
-  { key: 'email', label: 'Email', icon: '\u{2709}\u{FE0F}' },
-];
 
 const PLATFORMS: { key: Platform; label: string; color: string }[] = [
   { key: 'linkedin', label: 'LinkedIn', color: colors.linkedin },
@@ -32,14 +27,22 @@ const PLATFORMS: { key: Platform; label: string; color: string }[] = [
   { key: 'facebook', label: 'Facebook', color: colors.facebook },
 ];
 
-const TONES: { key: Tone; label: string }[] = [
-  { key: 'professional', label: 'Professional' },
-  { key: 'casual', label: 'Casual' },
-  { key: 'community', label: 'Community' },
-  { key: 'inspirerend', label: 'Inspirerend' },
-];
-
 export default function ContentCreatorScreen() {
+  const { t } = useTranslation();
+
+  const CONTENT_TYPES: { key: ContentType; label: string; icon: string }[] = [
+    { key: 'social', label: t.contentCreator.socialPost, icon: 'phone-portrait-outline' },
+    { key: 'caption', label: t.contentCreator.caption, icon: 'document-text-outline' },
+    { key: 'blog', label: t.contentCreator.blog, icon: 'book-outline' },
+    { key: 'email', label: t.contentCreator.email, icon: 'mail-outline' },
+  ];
+
+  const TONES: { key: Tone; label: string }[] = [
+    { key: 'professional', label: t.contentCreator.professional },
+    { key: 'casual', label: t.contentCreator.casual },
+    { key: 'community', label: t.contentCreator.community },
+    { key: 'inspirerend', label: t.contentCreator.inspiring },
+  ];
   const [contentType, setContentType] = useState<ContentType>('social');
   const [platform, setPlatform] = useState<Platform>('linkedin');
   const [topic, setTopic] = useState('');
@@ -50,7 +53,7 @@ export default function ContentCreatorScreen() {
   const handleGenerate = async () => {
     const trimmedTopic = topic.trim();
     if (!trimmedTopic) {
-      Alert.alert('Onderwerp vereist', 'Voer een onderwerp of prompt in.');
+      Alert.alert(t.contentCreator.topicRequired, t.contentCreator.topicRequiredMsg);
       return;
     }
 
@@ -78,7 +81,7 @@ export default function ContentCreatorScreen() {
         );
       }
     } catch {
-      Alert.alert('Fout', 'Content genereren mislukt. Probeer het opnieuw.');
+      Alert.alert(t.common.error, t.contentCreator.generateError);
     } finally {
       setLoading(false);
     }
@@ -87,15 +90,15 @@ export default function ContentCreatorScreen() {
   const handleCopy = async () => {
     if (!generatedContent) return;
     await Clipboard.setStringAsync(generatedContent);
-    Alert.alert('Gekopieerd!', 'Content is naar je klembord gekopieerd.');
+    Alert.alert(t.contentCreator.copied, t.contentCreator.copiedMsg);
   };
 
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Content Creator</Text>
-        <Text style={styles.headerSubtitle}>AI-gegenereerde marketing content</Text>
+        <Text style={styles.headerTitle}>{t.contentCreator.title}</Text>
+        <Text style={styles.headerSubtitle}>{t.contentCreator.subtitle}</Text>
       </View>
 
       <ScrollView
@@ -104,7 +107,7 @@ export default function ContentCreatorScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Content Type Selector */}
-        <Text style={styles.sectionLabel}>Type content</Text>
+        <Text style={styles.sectionLabel}>{t.contentCreator.contentType}</Text>
         <View style={styles.typeRow}>
           {CONTENT_TYPES.map((type) => {
             const isActive = contentType === type.key;
@@ -114,7 +117,7 @@ export default function ContentCreatorScreen() {
                 style={[styles.typeCard, isActive && styles.typeCardActive]}
                 onPress={() => setContentType(type.key)}
               >
-                <Text style={styles.typeIcon}>{type.icon}</Text>
+                <Ionicons name={type.icon as any} size={20} color={isActive ? colors.primary : colors.textSecondary} />
                 <Text
                   style={[
                     styles.typeLabel,
@@ -131,7 +134,7 @@ export default function ContentCreatorScreen() {
         {/* Platform Selector (social only) */}
         {contentType === 'social' && (
           <>
-            <Text style={styles.sectionLabel}>Platform</Text>
+            <Text style={styles.sectionLabel}>{t.contentCreator.platform}</Text>
             <View style={styles.platformRow}>
               {PLATFORMS.map((p) => {
                 const isActive = platform === p.key;
@@ -163,12 +166,12 @@ export default function ContentCreatorScreen() {
         )}
 
         {/* Topic Input */}
-        <Text style={styles.sectionLabel}>Onderwerp / Prompt</Text>
+        <Text style={styles.sectionLabel}>{t.contentCreator.topicLabel}</Text>
         <TextInput
           style={styles.topicInput}
           value={topic}
           onChangeText={setTopic}
-          placeholder="Bijv. 'Lancering nieuwe collectie duurzame mode...'"
+          placeholder={t.contentCreator.topicPlaceholder}
           placeholderTextColor={colors.textTertiary}
           multiline
           numberOfLines={4}
@@ -177,15 +180,15 @@ export default function ContentCreatorScreen() {
         />
 
         {/* Tone Selector */}
-        <Text style={styles.sectionLabel}>Toon</Text>
+        <Text style={styles.sectionLabel}>{t.contentCreator.tone}</Text>
         <View style={styles.toneRow}>
-          {TONES.map((t) => {
-            const isActive = tone === t.key;
+          {TONES.map((tn) => {
+            const isActive = tone === tn.key;
             return (
               <TouchableOpacity
-                key={t.key}
+                key={tn.key}
                 style={[styles.toneChip, isActive && styles.toneChipActive]}
-                onPress={() => setTone(t.key)}
+                onPress={() => setTone(tn.key)}
               >
                 <Text
                   style={[
@@ -193,7 +196,7 @@ export default function ContentCreatorScreen() {
                     isActive && styles.toneTextActive,
                   ]}
                 >
-                  {t.label}
+                  {tn.label}
                 </Text>
               </TouchableOpacity>
             );
@@ -209,7 +212,7 @@ export default function ContentCreatorScreen() {
           {loading ? (
             <ActivityIndicator color={colors.textOnPrimary} />
           ) : (
-            <Text style={styles.generateBtnText}>Genereer</Text>
+            <Text style={styles.generateBtnText}>{t.contentCreator.generate}</Text>
           )}
         </TouchableOpacity>
 
@@ -217,9 +220,12 @@ export default function ContentCreatorScreen() {
         {generatedContent !== '' && (
           <View style={styles.resultCard}>
             <View style={styles.resultHeader}>
-              <Text style={styles.resultTitle}>Gegenereerde content</Text>
+              <Text style={styles.resultTitle}>{t.contentCreator.generatedContent}</Text>
               <TouchableOpacity style={styles.copyBtn} onPress={handleCopy}>
-                <Text style={styles.copyBtnText}>{'\u{1F4CB}'} Kopieer</Text>
+                <View style={styles.copyBtnInner}>
+                  <Ionicons name="copy-outline" size={14} color={colors.primary} />
+                  <Text style={styles.copyBtnText}> {t.contentCreator.copy}</Text>
+                </View>
               </TouchableOpacity>
             </View>
             <Text style={styles.resultContent} selectable>
@@ -394,6 +400,10 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.sm,
     backgroundColor: colors.primary + '12',
+  },
+  copyBtnInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   copyBtnText: {
     fontSize: fontSize.sm,

@@ -14,8 +14,10 @@ import { useEvent, useUpdateEvent } from '../hooks/useEvents';
 import { useCaptures } from '../hooks/useCaptures';
 import { useEventPosts } from '../hooks/useEventPosts';
 import type { RootStackParamList, EventCapture, EventPost, EventStatus } from '../types';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow, fabShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'EventDashboard'>;
@@ -28,6 +30,7 @@ const statusColors: Record<EventStatus, string> = {
 };
 
 export default function EventDashboardScreen() {
+  const { t, locale } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { eventId } = route.params;
@@ -68,16 +71,18 @@ export default function EventDashboardScreen() {
             <Image source={{ uri: item.thumbnail_url }} style={styles.thumbnail} />
           ) : (
             <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
-              <Text style={{ fontSize: 24 }}>
-                {item.media_type === 'video' ? '\u{1F3A5}' : item.media_type === 'audio' ? '\u{1F3A4}' : '\u{1F4DD}'}
-              </Text>
+              <Ionicons
+                name={item.media_type === 'video' ? 'videocam-outline' : item.media_type === 'audio' ? 'mic-outline' : 'document-text-outline'}
+                size={24}
+                color={colors.textSecondary}
+              />
             </View>
           )}
 
           {/* Info */}
           <View style={styles.captureInfo}>
             <Text style={styles.captureTime}>
-              {new Date(item.captured_at).toLocaleTimeString('nl-NL', {
+              {new Date(item.captured_at).toLocaleTimeString(locale === 'nl' ? 'nl-NL' : locale === 'fr' ? 'fr-FR' : 'en-US', {
                 hour: '2-digit',
                 minute: '2-digit',
               })}
@@ -89,9 +94,12 @@ export default function EventDashboardScreen() {
             )}
             {/* AI-detected tags */}
             {(item as any).ai_tags?.length > 0 && (
-              <Text style={styles.aiTags} numberOfLines={1}>
-                {'\u{1F916}'} {(item as any).ai_tags.slice(0, 3).map((t: any) => t.label).join(' \u2022 ')}
-              </Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="sparkles" size={12} color={colors.info} />
+                <Text style={styles.aiTags} numberOfLines={1}>
+                  {(item as any).ai_tags.slice(0, 3).map((t: any) => t.label).join(' \u2022 ')}
+                </Text>
+              </View>
             )}
             {item.note ? (
               <Text style={styles.captureNote} numberOfLines={1}>{item.note}</Text>
@@ -134,26 +142,34 @@ export default function EventDashboardScreen() {
         <View style={styles.headerTop}>
           <Text style={styles.eventName}>{event.name}</Text>
           <TouchableOpacity onPress={() => navigation.navigate('EventSetup', { eventId })}>
-            <Text style={styles.editBtn}>Bewerk</Text>
+            <Text style={styles.editBtn}>{t.common.edit}</Text>
           </TouchableOpacity>
         </View>
 
         <View style={styles.metaRow}>
-          <Text style={styles.metaText}>
-            {'\u{1F4CD}'} {event.location || 'Geen locatie'}
-          </Text>
-          <Text style={styles.metaText}>
-            {'\u{1F4C5}'} {new Date(event.event_date).toLocaleDateString('nl-NL')}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="location-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{event.location || t.common.noLocation}</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Ionicons name="calendar-outline" size={14} color={colors.textSecondary} />
+            <Text style={styles.metaText}>{new Date(event.event_date).toLocaleDateString(locale === 'nl' ? 'nl-NL' : locale === 'fr' ? 'fr-FR' : 'en-US')}</Text>
+          </View>
         </View>
 
         <TouchableOpacity
           style={[styles.statusBadge, { backgroundColor: statusColors[event.status] + '20' }]}
           onPress={toggleStatus}
         >
-          <Text style={[styles.statusText, { color: statusColors[event.status] }]}>
-            {event.status} {'\u2192'} tap to change
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <Text style={[styles.statusText, { color: statusColors[event.status] }]}>
+              {event.status}
+            </Text>
+            <Ionicons name="arrow-forward" size={14} color={statusColors[event.status]} />
+            <Text style={[styles.statusText, { color: statusColors[event.status] }]}>
+              {t.eventDashboard.tapToChange}
+            </Text>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -161,23 +177,23 @@ export default function EventDashboardScreen() {
       <View style={styles.stats}>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{captures.length}</Text>
-          <Text style={styles.statLabel}>Captures</Text>
+          <Text style={styles.statLabel}>{t.eventDashboard.captures}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={styles.statValue}>{posts.length}</Text>
-          <Text style={styles.statLabel}>Posts</Text>
+          <Text style={styles.statLabel}>{t.eventDashboard.posts}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.success }]}>{publishedCount}</Text>
-          <Text style={styles.statLabel}>Published</Text>
+          <Text style={styles.statLabel}>{t.eventDashboard.published}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.info }]}>{scheduledCount}</Text>
-          <Text style={styles.statLabel}>Scheduled</Text>
+          <Text style={styles.statLabel}>{t.eventDashboard.scheduled}</Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statValue, { color: colors.draft }]}>{draftCount}</Text>
-          <Text style={styles.statLabel}>Drafts</Text>
+          <Text style={styles.statLabel}>{t.eventDashboard.drafts}</Text>
         </View>
       </View>
 
@@ -187,34 +203,34 @@ export default function EventDashboardScreen() {
           style={styles.quickActionBtn}
           onPress={() => navigation.navigate('StoryArc', { eventId })}
         >
-          <Text style={styles.quickActionIcon}>{'\u{1F4C5}'}</Text>
-          <Text style={styles.quickActionLabel}>Story Arc</Text>
+          <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickActionLabel}>{t.eventDashboard.storyArc}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionBtn}
           onPress={() => navigation.navigate('EventRecap', { eventId })}
         >
-          <Text style={styles.quickActionIcon}>{'\u{1F4DD}'}</Text>
-          <Text style={styles.quickActionLabel}>Recap</Text>
+          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickActionLabel}>{t.eventDashboard.recap}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionBtn}
           onPress={() => navigation.navigate('TeamManage', { eventId })}
         >
-          <Text style={styles.quickActionIcon}>{'\u{1F465}'}</Text>
-          <Text style={styles.quickActionLabel}>Team</Text>
+          <Ionicons name="people-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickActionLabel}>{t.eventDashboard.team}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.quickActionBtn}
           onPress={() => navigation.navigate('LiveCapture', { eventId })}
         >
-          <Text style={styles.quickActionIcon}>{'\u{1F4F8}'}</Text>
-          <Text style={styles.quickActionLabel}>Capture</Text>
+          <Ionicons name="camera-outline" size={20} color={colors.primary} />
+          <Text style={styles.quickActionLabel}>{t.eventDashboard.capture}</Text>
         </TouchableOpacity>
       </View>
 
       {/* Timeline */}
-      <Text style={styles.sectionTitle}>Timeline</Text>
+      <Text style={styles.sectionTitle}>{t.eventDashboard.timeline}</Text>
       <FlatList
         data={captures}
         keyExtractor={(item) => item.id}
@@ -222,8 +238,8 @@ export default function EventDashboardScreen() {
         contentContainerStyle={styles.timeline}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>Nog geen captures</Text>
-            <Text style={styles.emptySubtext}>Start met content maken!</Text>
+            <Text style={styles.emptyText}>{t.eventDashboard.noCaptures}</Text>
+            <Text style={styles.emptySubtext}>{t.eventDashboard.startCapturing}</Text>
           </View>
         }
       />
@@ -233,7 +249,10 @@ export default function EventDashboardScreen() {
         style={styles.captureFab}
         onPress={() => navigation.navigate('LiveCapture', { eventId })}
       >
-        <Text style={styles.captureFabText}>{'\u{1F4F8}'} Start Capture</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <Ionicons name="camera" size={20} color={colors.textOnPrimary} />
+          <Text style={styles.captureFabText}>{t.eventDashboard.startCapture}</Text>
+        </View>
       </TouchableOpacity>
     </View>
   );

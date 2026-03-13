@@ -9,6 +9,7 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import {
@@ -19,6 +20,7 @@ import {
   type TeamMember,
 } from '../hooks/useTeamMembers';
 import { useEvent } from '../hooks/useEvents';
+import { useTranslation } from '../i18n';
 import type { RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
@@ -26,16 +28,10 @@ import { subtleShadow } from '../utils/shadows';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'TeamManage'>;
 
-const ROLE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
-  owner: { label: 'Eigenaar', icon: '\u{1F451}', color: '#D97706' },
-  editor: { label: 'Editor', icon: '\u{270F}\u{FE0F}', color: colors.info },
-  contributor: { label: 'Bijdrager', icon: '\u{1F4F8}', color: colors.success },
-  viewer: { label: 'Kijker', icon: '\u{1F441}', color: colors.textSecondary },
-};
-
 const ROLE_OPTIONS = ['editor', 'contributor', 'viewer'];
 
 export default function TeamManageScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { eventId } = route.params;
@@ -46,13 +42,20 @@ export default function TeamManageScreen() {
   const updateMember = useUpdateTeamMember();
   const removeMember = useRemoveTeamMember();
 
+  const ROLE_LABELS: Record<string, { label: string; icon: string; color: string }> = {
+    owner: { label: t.teamManage.owner, icon: 'shield', color: '#D97706' },
+    editor: { label: t.teamManage.editor, icon: 'create-outline', color: colors.info },
+    contributor: { label: t.teamManage.contributor, icon: 'camera-outline', color: colors.success },
+    viewer: { label: t.teamManage.viewer, icon: 'eye-outline', color: colors.textSecondary },
+  };
+
   const [inviteEmail, setInviteEmail] = useState('');
   const [selectedRole, setSelectedRole] = useState('contributor');
 
   const handleInvite = async () => {
     const email = inviteEmail.trim().toLowerCase();
     if (!email || !email.includes('@')) {
-      Alert.alert('Ongeldig', 'Voer een geldig e-mailadres in');
+      Alert.alert(t.teamManage.invalidEmail, t.teamManage.invalidEmailMsg);
       return;
     }
 
@@ -63,18 +66,18 @@ export default function TeamManageScreen() {
         role: selectedRole,
       });
       setInviteEmail('');
-      Alert.alert('Uitgenodigd!', `${email} is uitgenodigd als ${ROLE_LABELS[selectedRole]?.label || selectedRole}`);
+      Alert.alert(t.teamManage.invited, `${email} ${t.teamManage.invitedAs} ${ROLE_LABELS[selectedRole]?.label || selectedRole}`);
     } catch (error: any) {
-      const detail = error?.response?.data?.detail || 'Uitnodiging mislukt';
-      Alert.alert('Fout', detail);
+      const detail = error?.response?.data?.detail || t.teamManage.inviteFailed;
+      Alert.alert(t.common.error, detail);
     }
   };
 
   const handleChangeRole = (member: TeamMember) => {
     const options = ROLE_OPTIONS.filter((r) => r !== member.role);
     Alert.alert(
-      'Rol wijzigen',
-      `Huidige rol: ${ROLE_LABELS[member.role]?.label || member.role}`,
+      t.teamManage.changeRole,
+      `${t.teamManage.currentRole}: ${ROLE_LABELS[member.role]?.label || member.role}`,
       [
         ...options.map((role) => ({
           text: ROLE_LABELS[role]?.label || role,
@@ -86,19 +89,19 @@ export default function TeamManageScreen() {
             });
           },
         })),
-        { text: 'Annuleren', style: 'cancel' as const },
+        { text: t.common.cancel, style: 'cancel' as const },
       ],
     );
   };
 
   const handleRemove = (member: TeamMember) => {
     Alert.alert(
-      'Teamlid verwijderen?',
-      `${member.email || 'Dit teamlid'} wordt verwijderd van het event.`,
+      t.teamManage.removeTitle,
+      `${member.email || member.user_id.slice(0, 8)} ${t.teamManage.removeMsg}`,
       [
-        { text: 'Annuleren', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Verwijderen',
+          text: t.common.delete,
           style: 'destructive',
           onPress: () => removeMember.mutate({ eventId, memberId: member.id }),
         },
@@ -115,9 +118,9 @@ export default function TeamManageScreen() {
       <View style={styles.memberCard}>
         <View style={styles.memberInfo}>
           <View style={styles.memberHeader}>
-            <Text style={styles.memberIcon}>{roleConfig.icon}</Text>
+            <Ionicons name={roleConfig.icon as any} size={18} color={roleConfig.color} />
             <Text style={styles.memberEmail} numberOfLines={1}>
-              {item.email || `Gebruiker ${item.user_id.slice(0, 8)}...`}
+              {item.email || `${item.user_id.slice(0, 8)}...`}
             </Text>
           </View>
 
@@ -131,7 +134,7 @@ export default function TeamManageScreen() {
             {isPending && (
               <View style={[styles.statusBadge, { backgroundColor: colors.warning + '20' }]}>
                 <Text style={[styles.statusBadgeText, { color: colors.warning }]}>
-                  Wacht op acceptatie
+                  {t.teamManage.pendingAcceptance}
                 </Text>
               </View>
             )}
@@ -139,7 +142,7 @@ export default function TeamManageScreen() {
             {isDeclined && (
               <View style={[styles.statusBadge, { backgroundColor: colors.error + '20' }]}>
                 <Text style={[styles.statusBadgeText, { color: colors.error }]}>
-                  Afgewezen
+                  {t.teamManage.declined}
                 </Text>
               </View>
             )}
@@ -152,13 +155,13 @@ export default function TeamManageScreen() {
             style={styles.memberActionBtn}
             onPress={() => handleChangeRole(item)}
           >
-            <Text style={styles.memberActionText}>Rol</Text>
+            <Text style={styles.memberActionText}>{t.teamManage.role}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.memberActionBtn, styles.removeBtn]}
             onPress={() => handleRemove(item)}
           >
-            <Text style={[styles.memberActionText, styles.removeText]}>{'\u2715'}</Text>
+            <Ionicons name="close" size={14} color={colors.error} />
           </TouchableOpacity>
         </View>
       </View>
@@ -169,20 +172,20 @@ export default function TeamManageScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Team beheren</Text>
+        <Text style={styles.title}>{t.teamManage.title}</Text>
         <Text style={styles.subtitle}>{event?.name || 'Event'}</Text>
       </View>
 
       {/* Invite Section */}
       <View style={styles.inviteSection}>
-        <Text style={styles.sectionTitle}>Teamlid uitnodigen</Text>
+        <Text style={styles.sectionTitle}>{t.teamManage.inviteTitle}</Text>
 
         <View style={styles.inviteRow}>
           <TextInput
             style={styles.emailInput}
             value={inviteEmail}
             onChangeText={setInviteEmail}
-            placeholder="naam@bedrijf.nl"
+            placeholder={t.teamManage.emailPlaceholder}
             placeholderTextColor={colors.textTertiary}
             keyboardType="email-address"
             autoCapitalize="none"
@@ -201,7 +204,7 @@ export default function TeamManageScreen() {
                 style={[styles.roleOption, isSelected && styles.roleOptionSelected]}
                 onPress={() => setSelectedRole(role)}
               >
-                <Text style={styles.roleOptionIcon}>{config?.icon}</Text>
+                <Ionicons name={config?.icon as any} size={14} color={isSelected ? colors.primary : colors.textSecondary} />
                 <Text
                   style={[
                     styles.roleOptionText,
@@ -223,14 +226,14 @@ export default function TeamManageScreen() {
           {inviteMember.isPending ? (
             <ActivityIndicator color={colors.textOnPrimary} size="small" />
           ) : (
-            <Text style={styles.inviteBtnText}>Uitnodigen</Text>
+            <Text style={styles.inviteBtnText}>{t.teamManage.invite}</Text>
           )}
         </TouchableOpacity>
       </View>
 
       {/* Members List */}
       <Text style={[styles.sectionTitle, { paddingHorizontal: spacing.md }]}>
-        Teamleden ({members.length})
+        {t.teamManage.teamMembers} ({members.length})
       </Text>
 
       {isLoading ? (
@@ -245,10 +248,10 @@ export default function TeamManageScreen() {
           contentContainerStyle={styles.membersList}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>{'\u{1F465}'}</Text>
-              <Text style={styles.emptyText}>Nog geen teamleden</Text>
+              <Ionicons name="people-outline" size={48} color={colors.textSecondary} />
+              <Text style={styles.emptyText}>{t.teamManage.noMembers}</Text>
               <Text style={styles.emptySubtext}>
-                Nodig collega's uit om samen content te maken!
+                {t.teamManage.noMembersDesc}
               </Text>
             </View>
           }

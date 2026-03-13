@@ -7,6 +7,7 @@ import {
   ScrollView,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
 import { useCampaign, useUpdateCampaign, useCampaignMetrics } from '../hooks/useCampaigns';
 import type { RootStackParamList } from '../types';
@@ -32,10 +33,10 @@ const statusLabels: Record<string, string> = {
 };
 
 const typeIcons: Record<string, string> = {
-  email: '\u{1F48C}',
-  sms: '\u{1F4AC}',
-  push: '\u{1F514}',
-  'multi-channel': '\u{1F4E1}',
+  email: 'mail-outline',
+  sms: 'chatbubble-outline',
+  push: 'notifications-outline',
+  'multi-channel': 'radio-outline',
 };
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -89,7 +90,7 @@ export default function CampaignDetailScreen() {
 
   const statusColor = statusColors[campaign.status] || colors.textSecondary;
   const statusLabel = statusLabels[campaign.status] || campaign.status;
-  const typeIcon = typeIcons[campaign.type] || '\u{1F4E8}';
+  const typeIcon = typeIcons[campaign.type] || 'mail-outline';
 
   // Metrics with safe defaults
   const sent = metrics?.sent ?? 0;
@@ -173,7 +174,7 @@ export default function CampaignDetailScreen() {
       {/* Campaign Header */}
       <View style={styles.headerCard}>
         <View style={styles.headerRow}>
-          <Text style={styles.typeIcon}>{typeIcon}</Text>
+          <Ionicons name={typeIcon as any} size={28} color={colors.primary} />
           <View style={styles.headerInfo}>
             <Text style={styles.campaignName}>{campaign.name}</Text>
             <Text style={styles.dateRange}>
@@ -252,9 +253,11 @@ export default function CampaignDetailScreen() {
             onPress={handlePause}
             activeOpacity={0.7}
           >
-            <Text style={styles.actionIcon}>
-              {campaign.status === 'paused' ? '\u{25B6}\u{FE0F}' : '\u{23F8}\u{FE0F}'}
-            </Text>
+            <Ionicons
+              name={campaign.status === 'paused' ? 'play-outline' : 'pause-outline'}
+              size={22}
+              color={colors.primary}
+            />
             <Text style={styles.actionLabel}>
               {campaign.status === 'paused' ? 'Hervatten' : 'Pauzeren'}
             </Text>
@@ -265,7 +268,7 @@ export default function CampaignDetailScreen() {
             onPress={handleEdit}
             activeOpacity={0.7}
           >
-            <Text style={styles.actionIcon}>{'\u{270F}\u{FE0F}'}</Text>
+            <Ionicons name="create-outline" size={22} color={colors.primary} />
             <Text style={styles.actionLabel}>Bewerken</Text>
           </TouchableOpacity>
 
@@ -274,7 +277,7 @@ export default function CampaignDetailScreen() {
             onPress={handleReport}
             activeOpacity={0.7}
           >
-            <Text style={styles.actionIcon}>{'\u{1F4CA}'}</Text>
+            <Ionicons name="bar-chart-outline" size={22} color={colors.primary} />
             <Text style={styles.actionLabel}>Rapport</Text>
           </TouchableOpacity>
         </View>
@@ -324,7 +327,7 @@ export default function CampaignDetailScreen() {
 
         <View style={styles.audienceStats}>
           <View style={styles.audienceStatItem}>
-            <Text style={styles.audienceIcon}>{'\u{1F465}'}</Text>
+            <Ionicons name="people-outline" size={24} color={colors.primary} />
             <View>
               <Text style={styles.audienceValue}>
                 {formatNumber(audienceSize)}
@@ -334,7 +337,7 @@ export default function CampaignDetailScreen() {
           </View>
 
           <View style={styles.audienceStatItem}>
-            <Text style={styles.audienceIcon}>{'\u{1F3AF}'}</Text>
+            <Ionicons name="locate-outline" size={24} color={colors.primary} />
             <View>
               <Text style={styles.audienceValue}>{segmentCount}</Text>
               <Text style={styles.audienceLabel}>

@@ -56,6 +56,31 @@ export function useUpdateCampaign() {
   });
 }
 
+export interface CampaignCreateInput {
+  name: string;
+  type: 'email' | 'sms' | 'push' | 'multi-channel';
+  description?: string;
+  starts_at?: string | null;
+  ends_at?: string | null;
+  budget_amount?: number | null;
+  audience_filters?: Record<string, unknown>;
+  content?: Record<string, unknown>;
+  settings?: Record<string, unknown>;
+}
+
+export function useCreateCampaign() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: CampaignCreateInput) => {
+      const response = await api.post('/campaigns', input);
+      return response.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+    },
+  });
+}
+
 export function useCampaignMetrics(campaignId: string | undefined) {
   return useQuery({
     queryKey: ['campaign-metrics', campaignId],

@@ -13,18 +13,20 @@ import { useNavigation } from '@react-navigation/native';
 import { useCreateContact } from '../hooks/useContacts';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
-
-const SOURCE_OPTIONS = [
-  { key: 'event', label: 'Event' },
-  { key: 'website', label: 'Website' },
-  { key: 'referral', label: 'Referral' },
-  { key: 'linkedin', label: 'LinkedIn' },
-  { key: 'cold', label: 'Cold' },
-] as const;
+import { useTranslation } from '../i18n';
 
 export default function LeadCaptureScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation();
   const createContact = useCreateContact();
+
+  const SOURCE_OPTIONS = [
+    { key: 'event', label: t.sources.event },
+    { key: 'website', label: t.sources.website },
+    { key: 'referral', label: t.sources.referral },
+    { key: 'linkedin', label: t.sources.linkedin },
+    { key: 'cold', label: t.sources.cold },
+  ] as const;
 
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -52,13 +54,13 @@ export default function LeadCaptureScreen() {
 
   const handleSave = async () => {
     if (!firstName.trim() && !email.trim()) {
-      Alert.alert('Verplicht', 'Vul minimaal een voornaam of e-mailadres in.');
+      Alert.alert(t.common.required, t.leadCapture.requiredMsg);
       return;
     }
 
     const tagList = tags
       .split(',')
-      .map((t) => t.trim())
+      .map((tag) => tag.trim())
       .filter(Boolean);
 
     try {
@@ -79,21 +81,21 @@ export default function LeadCaptureScreen() {
 
       setSaved(true);
     } catch (error: any) {
-      const detail = error?.response?.data?.detail || 'Er is iets misgegaan bij het opslaan.';
-      Alert.alert('Fout', detail);
+      const detail = error?.response?.data?.detail || t.leadCapture.saveError;
+      Alert.alert(t.common.error, detail);
     }
   };
 
   const handleFollowUp = () => {
     Alert.alert(
-      'Follow-up campagne',
-      'Wil je een geautomatiseerde follow-up campagne starten voor deze lead?',
+      t.leadCapture.followUpTitle,
+      t.leadCapture.followUpMsg,
       [
-        { text: 'Later', style: 'cancel' },
+        { text: t.leadCapture.later, style: 'cancel' },
         {
-          text: 'Start campagne',
+          text: t.leadCapture.startCampaign,
           onPress: () => {
-            Alert.alert('Binnenkort beschikbaar', 'De follow-up campagne module wordt binnenkort toegevoegd.');
+            Alert.alert(t.common.comingSoon, t.leadCapture.followUpComingSoon);
           },
         },
       ],
@@ -108,25 +110,25 @@ export default function LeadCaptureScreen() {
           <View style={styles.successIcon}>
             <Text style={styles.successIconText}>{'\u2713'}</Text>
           </View>
-          <Text style={styles.successTitle}>Lead opgeslagen!</Text>
+          <Text style={styles.successTitle}>{t.leadCapture.leadSaved}</Text>
           <Text style={styles.successSubtitle}>
-            {firstName} {lastName} is toegevoegd aan je contacten.
+            {firstName} {lastName} {t.leadCapture.addedToContacts}
           </Text>
 
           <View style={styles.successActions}>
             <TouchableOpacity style={styles.followUpBtn} onPress={handleFollowUp}>
-              <Text style={styles.followUpBtnText}>Start follow-up campagne</Text>
+              <Text style={styles.followUpBtnText}>{t.leadCapture.startFollowUp}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.newLeadBtn} onPress={resetForm}>
-              <Text style={styles.newLeadBtnText}>Nieuwe lead vastleggen</Text>
+              <Text style={styles.newLeadBtnText}>{t.leadCapture.newLead}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.backBtn}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.backBtnText}>Terug naar overzicht</Text>
+              <Text style={styles.backBtnText}>{t.leadCapture.backToOverview}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -138,8 +140,8 @@ export default function LeadCaptureScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Lead Vastleggen</Text>
-        <Text style={styles.subtitle}>Leg snel een nieuw contact vast vanuit het veld</Text>
+        <Text style={styles.title}>{t.leadCapture.title}</Text>
+        <Text style={styles.subtitle}>{t.leadCapture.subtitle}</Text>
       </View>
 
       <ScrollView
@@ -149,28 +151,28 @@ export default function LeadCaptureScreen() {
       >
         {/* Personal Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Persoonlijke gegevens</Text>
+          <Text style={styles.sectionTitle}>{t.leadCapture.personalInfo}</Text>
 
           <View style={styles.row}>
             <View style={styles.halfField}>
-              <Text style={styles.label}>Voornaam</Text>
+              <Text style={styles.label}>{t.leadCapture.firstName}</Text>
               <TextInput
                 style={styles.input}
                 value={firstName}
                 onChangeText={setFirstName}
-                placeholder="Jan"
+                placeholder={t.leadCapture.firstNamePlaceholder}
                 placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
                 autoCorrect={false}
               />
             </View>
             <View style={styles.halfField}>
-              <Text style={styles.label}>Achternaam</Text>
+              <Text style={styles.label}>{t.leadCapture.lastName}</Text>
               <TextInput
                 style={styles.input}
                 value={lastName}
                 onChangeText={setLastName}
-                placeholder="de Vries"
+                placeholder={t.leadCapture.lastNamePlaceholder}
                 placeholderTextColor={colors.textTertiary}
                 autoCapitalize="words"
                 autoCorrect={false}
@@ -179,12 +181,12 @@ export default function LeadCaptureScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>E-mail</Text>
+            <Text style={styles.label}>{t.leadCapture.email}</Text>
             <TextInput
               style={styles.input}
               value={email}
               onChangeText={setEmail}
-              placeholder="jan@bedrijf.nl"
+              placeholder={t.leadCapture.emailPlaceholder}
               placeholderTextColor={colors.textTertiary}
               keyboardType="email-address"
               autoCapitalize="none"
@@ -193,12 +195,12 @@ export default function LeadCaptureScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Telefoon</Text>
+            <Text style={styles.label}>{t.leadCapture.phone}</Text>
             <TextInput
               style={styles.input}
               value={phone}
               onChangeText={setPhone}
-              placeholder="+31 6 12345678"
+              placeholder={t.leadCapture.phonePlaceholder}
               placeholderTextColor={colors.textTertiary}
               keyboardType="phone-pad"
             />
@@ -207,39 +209,39 @@ export default function LeadCaptureScreen() {
 
         {/* Company Info */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bedrijfsgegevens</Text>
+          <Text style={styles.sectionTitle}>{t.leadCapture.companyInfo}</Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Bedrijf</Text>
+            <Text style={styles.label}>{t.leadCapture.company}</Text>
             <TextInput
               style={styles.input}
               value={company}
               onChangeText={setCompany}
-              placeholder="Bedrijfsnaam"
+              placeholder={t.leadCapture.companyPlaceholder}
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="words"
             />
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Stad</Text>
+            <Text style={styles.label}>{t.leadCapture.city}</Text>
             <TextInput
               style={styles.input}
               value={city}
               onChangeText={setCity}
-              placeholder="Amsterdam"
+              placeholder={t.leadCapture.cityPlaceholder}
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="words"
             />
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>Tags</Text>
+            <Text style={styles.label}>{t.leadCapture.tags}</Text>
             <TextInput
               style={styles.input}
               value={tags}
               onChangeText={setTags}
-              placeholder="vip, spreker, sponsor (komma-gescheiden)"
+              placeholder={t.leadCapture.tagsPlaceholder}
               placeholderTextColor={colors.textTertiary}
               autoCapitalize="none"
             />
@@ -248,7 +250,7 @@ export default function LeadCaptureScreen() {
 
         {/* Source */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Bron</Text>
+          <Text style={styles.sectionTitle}>{t.leadCapture.source}</Text>
           <View style={styles.chipRow}>
             {SOURCE_OPTIONS.map((opt) => {
               const isSelected = source === opt.key;
@@ -269,12 +271,12 @@ export default function LeadCaptureScreen() {
 
         {/* Notes */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Notities</Text>
+          <Text style={styles.sectionTitle}>{t.leadCapture.notes}</Text>
           <TextInput
             style={[styles.input, styles.notesInput]}
             value={notes}
             onChangeText={setNotes}
-            placeholder="Gesprekspunten, interesses, afspraken..."
+            placeholder={t.leadCapture.notesPlaceholder}
             placeholderTextColor={colors.textTertiary}
             multiline
             numberOfLines={4}
@@ -292,7 +294,7 @@ export default function LeadCaptureScreen() {
           {createContact.isPending ? (
             <ActivityIndicator color={colors.textOnPrimary} size="small" />
           ) : (
-            <Text style={styles.saveBtnText}>Opslaan</Text>
+            <Text style={styles.saveBtnText}>{t.common.save}</Text>
           )}
         </TouchableOpacity>
 

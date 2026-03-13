@@ -16,6 +16,7 @@ import { useBrandKits } from '../hooks/useBrandMemory';
 import type { RootStackParamList, Channel, EventInsert } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { CAPTURE_TAG_PRESETS } from '../types';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'EventSetup'>;
@@ -28,6 +29,7 @@ const CHANNELS: { key: Channel; label: string; color: string }[] = [
 ];
 
 export default function EventSetupScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const eventId = route.params?.eventId;
@@ -75,15 +77,15 @@ export default function EventSetupScreen() {
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Vul een event naam in');
+      Alert.alert(t.eventSetup.fillEventName);
       return;
     }
     if (!eventDate.trim()) {
-      Alert.alert('Vul een datum in (YYYY-MM-DD)');
+      Alert.alert(t.eventSetup.fillDate);
       return;
     }
     if (selectedChannels.length === 0) {
-      Alert.alert('Selecteer minstens 1 kanaal');
+      Alert.alert(t.eventSetup.selectChannel);
       return;
     }
 
@@ -112,24 +114,24 @@ export default function EventSetupScreen() {
       }
       navigation.goBack();
     } catch (error: any) {
-      Alert.alert('Fout', error.message || 'Kon event niet opslaan');
+      Alert.alert(t.common.error, error.message || t.eventSetup.saveError);
     }
   };
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Event Name */}
-      <Text style={styles.label}>Event naam *</Text>
+      <Text style={styles.label}>{t.eventSetup.eventName}</Text>
       <TextInput
         style={styles.input}
         value={name}
         onChangeText={setName}
-        placeholder="bijv. Tech Summit Amsterdam 2026"
+        placeholder={t.eventSetup.eventNamePlaceholder}
         placeholderTextColor={colors.textTertiary}
       />
 
       {/* Date */}
-      <Text style={styles.label}>Datum * (YYYY-MM-DD)</Text>
+      <Text style={styles.label}>{t.eventSetup.date}</Text>
       <TextInput
         style={styles.input}
         value={eventDate}
@@ -139,29 +141,29 @@ export default function EventSetupScreen() {
       />
 
       {/* Location */}
-      <Text style={styles.label}>Locatie</Text>
+      <Text style={styles.label}>{t.eventSetup.location}</Text>
       <TextInput
         style={styles.input}
         value={location}
         onChangeText={setLocation}
-        placeholder="bijv. RAI Amsterdam"
+        placeholder={t.eventSetup.locationPlaceholder}
         placeholderTextColor={colors.textTertiary}
       />
 
       {/* Description */}
-      <Text style={styles.label}>Beschrijving</Text>
+      <Text style={styles.label}>{t.eventSetup.description}</Text>
       <TextInput
         style={[styles.input, styles.textArea]}
         value={description}
         onChangeText={setDescription}
-        placeholder="Waar gaat het event over?"
+        placeholder={t.eventSetup.descriptionPlaceholder}
         placeholderTextColor={colors.textTertiary}
         multiline
         numberOfLines={3}
       />
 
       {/* Channels */}
-      <Text style={styles.label}>Kanalen *</Text>
+      <Text style={styles.label}>{t.eventSetup.channels}</Text>
       <View style={styles.chipRow}>
         {CHANNELS.map((ch) => {
           const selected = selectedChannels.includes(ch.key);
@@ -181,7 +183,7 @@ export default function EventSetupScreen() {
       </View>
 
       {/* Hashtags */}
-      <Text style={styles.label}>Hashtags</Text>
+      <Text style={styles.label}>{t.eventSetup.hashtags}</Text>
       <TextInput
         style={styles.input}
         value={hashtags}
@@ -191,7 +193,7 @@ export default function EventSetupScreen() {
       />
 
       {/* Default Tags */}
-      <Text style={styles.label}>Standaard capture tags</Text>
+      <Text style={styles.label}>{t.eventSetup.defaultTags}</Text>
       <View style={styles.chipRow}>
         {CAPTURE_TAG_PRESETS.map((tag) => {
           const selected = selectedTags.includes(tag);
@@ -210,7 +212,7 @@ export default function EventSetupScreen() {
       {/* Brand Kit */}
       {brandKits.length > 0 && (
         <>
-          <Text style={styles.label}>Brand Kit</Text>
+          <Text style={styles.label}>{t.eventSetup.brandKit}</Text>
           <View style={styles.chipRow}>
             {brandKits.map((kit: any) => {
               const selected = selectedBrandKit === kit.id;
@@ -240,7 +242,7 @@ export default function EventSetupScreen() {
         disabled={createEvent.isPending || updateEvent.isPending}
       >
         <Text style={styles.saveButtonText}>
-          {isEditing ? 'Event Bijwerken' : 'Event Aanmaken'}
+          {isEditing ? t.eventSetup.updateEvent : t.eventSetup.createEvent}
         </Text>
       </TouchableOpacity>
     </ScrollView>

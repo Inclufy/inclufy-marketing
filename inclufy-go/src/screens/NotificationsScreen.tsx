@@ -7,11 +7,13 @@ import {
   FlatList,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -26,11 +28,11 @@ interface Notification {
 }
 
 const ICON_MAP: Record<string, string> = {
-  ai_suggestion: '\u{1F916}',
-  campaign_alert: '\u{1F4E3}',
-  lead_alert: '\u{1F465}',
-  performance: '\u{1F4C8}',
-  system: '\u{1F514}',
+  ai_suggestion: 'sparkles',
+  campaign_alert: 'megaphone',
+  lead_alert: 'people',
+  performance: 'trending-up',
+  system: 'notifications',
 };
 
 const COLOR_MAP: Record<string, string> = {
@@ -41,81 +43,83 @@ const COLOR_MAP: Record<string, string> = {
   system: colors.textSecondary,
 };
 
-// Mock notifications - will be replaced by real push notifications / backend
-const MOCK_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'ai_suggestion',
-    title: 'Budget Optimalisatie',
-    message: 'Verplaats \u20AC1.200 budget van Facebook naar Google Ads. Verwachte ROI: +18%.',
-    action: 'accept',
-    timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    read: false,
-  },
-  {
-    id: '2',
-    type: 'performance',
-    title: 'Engagement Piek',
-    message: 'Je Instagram engagement is 40% hoger dan vorige week! Overweeg meer content te plaatsen.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    read: false,
-  },
-  {
-    id: '3',
-    type: 'lead_alert',
-    title: 'Nieuwe Leads',
-    message: '3 nieuwe leads binnengekomen via je LinkedIn campagne "Tech Summit 2026".',
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    read: false,
-  },
-  {
-    id: '4',
-    type: 'campaign_alert',
-    title: 'Budget Waarschuwing',
-    message: 'Campagne "Ramadan Promo" heeft 85% van het budget verbruikt met nog 5 dagen te gaan.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
-    read: true,
-  },
-  {
-    id: '5',
-    type: 'ai_suggestion',
-    title: 'Content Suggestie',
-    message: 'Op basis van trending topics: maak een post over "AI in Marketing" voor LinkedIn. Verwachte bereik: +25%.',
-    action: 'create',
-    timestamp: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
-    read: true,
-  },
-  {
-    id: '6',
-    type: 'performance',
-    title: 'Email Open Rate',
-    message: 'Je nieuwsbrief "Weekly Update #12" heeft een open rate van 38% - 12% boven gemiddeld!',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    read: true,
-  },
-  {
-    id: '7',
-    type: 'system',
-    title: 'Nieuwe Feature',
-    message: 'AI Content Creator is nu beschikbaar! Genereer automatisch social posts, captions en meer.',
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    read: true,
-  },
-];
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'Zojuist';
-  if (mins < 60) return `${mins}m geleden`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}u geleden`;
-  const days = Math.floor(hours / 24);
-  return `${days}d geleden`;
-}
-
 export default function NotificationsScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
+
+  // Mock notifications - will be replaced by real push notifications / backend
+  const MOCK_NOTIFICATIONS: Notification[] = [
+    {
+      id: '1',
+      type: 'ai_suggestion',
+      title: 'Budget Optimalisatie',
+      message: 'Verplaats \u20AC1.200 budget van Facebook naar Google Ads. Verwachte ROI: +18%.',
+      action: 'accept',
+      timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
+      read: false,
+    },
+    {
+      id: '2',
+      type: 'performance',
+      title: 'Engagement Piek',
+      message: 'Je Instagram engagement is 40% hoger dan vorige week! Overweeg meer content te plaatsen.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
+      read: false,
+    },
+    {
+      id: '3',
+      type: 'lead_alert',
+      title: 'Nieuwe Leads',
+      message: '3 nieuwe leads binnengekomen via je LinkedIn campagne "Tech Summit 2026".',
+      timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+      read: false,
+    },
+    {
+      id: '4',
+      type: 'campaign_alert',
+      title: 'Budget Waarschuwing',
+      message: 'Campagne "Ramadan Promo" heeft 85% van het budget verbruikt met nog 5 dagen te gaan.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 180).toISOString(),
+      read: true,
+    },
+    {
+      id: '5',
+      type: 'ai_suggestion',
+      title: 'Content Suggestie',
+      message: 'Op basis van trending topics: maak een post over "AI in Marketing" voor LinkedIn. Verwachte bereik: +25%.',
+      action: 'create',
+      timestamp: new Date(Date.now() - 1000 * 60 * 300).toISOString(),
+      read: true,
+    },
+    {
+      id: '6',
+      type: 'performance',
+      title: 'Email Open Rate',
+      message: 'Je nieuwsbrief "Weekly Update #12" heeft een open rate van 38% - 12% boven gemiddeld!',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
+      read: true,
+    },
+    {
+      id: '7',
+      type: 'system',
+      title: 'Nieuwe Feature',
+      message: 'AI Content Creator is nu beschikbaar! Genereer automatisch social posts, captions en meer.',
+      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
+      read: true,
+    },
+  ];
+
+  function timeAgo(dateStr: string): string {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return t.notifications.justNow;
+    if (mins < 60) return `${mins}${t.notifications.minutesAgo}`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}${t.notifications.hoursAgo}`;
+    const days = Math.floor(hours / 24);
+    return `${days}${t.notifications.daysAgo}`;
+  }
+
   const [notifications, setNotifications] = useState(MOCK_NOTIFICATIONS);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -134,13 +138,13 @@ export default function NotificationsScreen() {
     markAsRead(notification.id);
     if (notification.action === 'accept') {
       Alert.alert(
-        'AI Aanbeveling',
+        t.notifications.aiRecommendation,
         notification.message,
         [
-          { text: 'Negeer', style: 'cancel' },
+          { text: t.common.dismiss, style: 'cancel' },
           {
-            text: 'Accepteer',
-            onPress: () => Alert.alert('Geaccepteerd', 'De wijziging wordt doorgevoerd.'),
+            text: t.common.accept,
+            onPress: () => Alert.alert(t.notifications.accepted, t.notifications.acceptedMsg),
           },
         ],
       );
@@ -150,7 +154,7 @@ export default function NotificationsScreen() {
   };
 
   const renderNotification = ({ item }: { item: Notification }) => {
-    const icon = ICON_MAP[item.type] || '\u{1F514}';
+    const icon = ICON_MAP[item.type] || 'notifications';
     const accentColor = COLOR_MAP[item.type] || colors.textSecondary;
 
     return (
@@ -165,7 +169,7 @@ export default function NotificationsScreen() {
         <View style={styles.notifContent}>
           <View style={styles.notifHeader}>
             <View style={[styles.iconCircle, { backgroundColor: accentColor + '15' }]}>
-              <Text style={styles.notifIcon}>{icon}</Text>
+              <Ionicons name={icon as any} size={18} color={accentColor} />
             </View>
             <View style={styles.notifTitleRow}>
               <Text style={[styles.notifTitle, !item.read && styles.notifTitleUnread]}>
@@ -184,14 +188,14 @@ export default function NotificationsScreen() {
                 onPress={() => handleAction(item)}
               >
                 <Text style={styles.actionBtnText}>
-                  {item.action === 'accept' ? 'Accepteer' : 'Maak content'}
+                  {item.action === 'accept' ? t.common.accept : t.notifications.createContent}
                 </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.dismissBtn}
                 onPress={() => markAsRead(item.id)}
               >
-                <Text style={styles.dismissBtnText}>Negeer</Text>
+                <Text style={styles.dismissBtnText}>{t.common.dismiss}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -209,16 +213,16 @@ export default function NotificationsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Meldingen</Text>
+          <Text style={styles.headerTitle}>{t.notifications.title}</Text>
           {unreadCount > 0 && (
             <Text style={styles.headerSubtitle}>
-              {unreadCount} ongelezen
+              {unreadCount} {t.notifications.unread}
             </Text>
           )}
         </View>
         {unreadCount > 0 && (
           <TouchableOpacity onPress={markAllRead}>
-            <Text style={styles.markAllRead}>Alles gelezen</Text>
+            <Text style={styles.markAllRead}>{t.notifications.markAllRead}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -231,10 +235,10 @@ export default function NotificationsScreen() {
         contentContainerStyle={styles.list}
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>{'\u{1F514}'}</Text>
-            <Text style={styles.emptyText}>Geen meldingen</Text>
+            <Ionicons name="notifications-off-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyText}>{t.notifications.noNotifications}</Text>
             <Text style={styles.emptySubtext}>
-              Je bent helemaal bij!
+              {t.notifications.allCaughtUp}
             </Text>
           </View>
         }

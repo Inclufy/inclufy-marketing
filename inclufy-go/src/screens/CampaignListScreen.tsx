@@ -8,25 +8,20 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCampaigns, type Campaign } from '../hooks/useCampaigns';
 import type { RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 // ─── Filter Tabs ────────────────────────────────────────────────────
 
 type FilterKey = 'all' | 'active' | 'draft' | 'completed';
-
-const FILTER_TABS: { key: FilterKey; label: string }[] = [
-  { key: 'all', label: 'Alle' },
-  { key: 'active', label: 'Actief' },
-  { key: 'draft', label: 'Concept' },
-  { key: 'completed', label: 'Voltooid' },
-];
 
 // ─── Status & Type Maps ─────────────────────────────────────────────
 
@@ -37,51 +32,59 @@ const statusColors: Record<string, string> = {
   paused: colors.warning,
 };
 
-const statusLabels: Record<string, string> = {
-  active: 'Actief',
-  draft: 'Concept',
-  completed: 'Voltooid',
-  paused: 'Gepauzeerd',
-};
-
 const typeIcons: Record<Campaign['type'], string> = {
-  email: '\u{1F48C}',
-  sms: '\u{1F4AC}',
-  push: '\u{1F514}',
-  'multi-channel': '\u{1F4E1}',
+  email: 'mail-outline',
+  sms: 'chatbubble-outline',
+  push: 'notifications-outline',
+  'multi-channel': 'radio-outline',
 };
-
-const typeLabels: Record<Campaign['type'], string> = {
-  email: 'E-mail',
-  sms: 'SMS',
-  push: 'Push',
-  'multi-channel': 'Multi-channel',
-};
-
-// ─── Helpers ────────────────────────────────────────────────────────
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '\u2014';
-  return new Date(iso).toLocaleDateString('nl-NL', {
-    day: 'numeric',
-    month: 'short',
-  });
-}
-
-function formatBudget(amount: number | null): string {
-  if (amount == null) return '\u2014';
-  return new Intl.NumberFormat('nl-NL', {
-    style: 'currency',
-    currency: 'EUR',
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
 
 // ─── Component ──────────────────────────────────────────────────────
 
 export default function CampaignListScreen() {
   const navigation = useNavigation<Nav>();
+  const { t, locale } = useTranslation();
   const [activeTab, setActiveTab] = useState<FilterKey>('all');
+
+  const FILTER_TABS: { key: FilterKey; label: string }[] = [
+    { key: 'all', label: t.campaignList.all },
+    { key: 'active', label: t.status.active },
+    { key: 'draft', label: t.status.draft },
+    { key: 'completed', label: t.status.completed },
+  ];
+
+  const statusLabels: Record<string, string> = {
+    active: t.status.active,
+    draft: t.status.draft,
+    completed: t.status.completed,
+    paused: t.status.paused,
+  };
+
+  const typeLabels: Record<Campaign['type'], string> = {
+    email: t.channelTypes.email,
+    sms: t.channelTypes.sms,
+    push: t.channelTypes.push,
+    'multi-channel': t.channelTypes.multiChannel,
+  };
+
+  const dateLocale = locale === 'nl' ? 'nl-NL' : locale === 'fr' ? 'fr-FR' : 'en-US';
+
+  function formatDate(iso: string | null): string {
+    if (!iso) return '\u2014';
+    return new Date(iso).toLocaleDateString(dateLocale, {
+      day: 'numeric',
+      month: 'short',
+    });
+  }
+
+  function formatBudget(amount: number | null): string {
+    if (amount == null) return '\u2014';
+    return new Intl.NumberFormat(dateLocale, {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    }).format(amount);
+  }
 
   // Pass status filter to API when not "all"
   const statusParam = activeTab === 'all' ? undefined : activeTab;
@@ -94,11 +97,7 @@ export default function CampaignListScreen() {
       : campaigns.filter((c) => c.status === activeTab);
 
   const handleNewCampaign = () => {
-    Alert.alert(
-      'Nieuwe Campagne',
-      'Campagne aanmaken wordt binnenkort beschikbaar.',
-      [{ text: 'OK' }],
-    );
+    navigation.navigate('CampaignCreate');
   };
 
   // ─── Card Renderer ──────────────────────────────────────────────
@@ -106,7 +105,7 @@ export default function CampaignListScreen() {
   const renderCampaign = ({ item }: { item: Campaign }) => {
     const statusColor = statusColors[item.status] || colors.textSecondary;
     const statusLabel = statusLabels[item.status] || item.status;
-    const typeIcon = typeIcons[item.type] || '\u{1F4E8}';
+    const typeIcon = typeIcons[item.type] || 'mail-outline';
     const typeLabel = typeLabels[item.type] || item.type;
 
     return (
@@ -139,7 +138,7 @@ export default function CampaignListScreen() {
 
         {/* Type badge */}
         <View style={styles.typeBadge}>
-          <Text style={styles.typeIcon}>{typeIcon}</Text>
+          <Ionicons name={typeIcon as any} size={14} color={colors.primary} />
           <Text style={styles.typeLabel}>{typeLabel}</Text>
         </View>
 
@@ -149,13 +148,13 @@ export default function CampaignListScreen() {
         {/* Bottom row: budget + date range */}
         <View style={styles.cardFooter}>
           <View style={styles.footerItem}>
-            <Text style={styles.footerIcon}>{'\u{1F4B0}'}</Text>
+            <Ionicons name="cash-outline" size={13} color={colors.textSecondary} />
             <Text style={styles.footerText}>
               {formatBudget(item.budget_amount)}
             </Text>
           </View>
           <View style={styles.footerItem}>
-            <Text style={styles.footerIcon}>{'\u{1F4C5}'}</Text>
+            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
             <Text style={styles.footerText}>
               {formatDate(item.start_date)}
               {item.end_date ? ` \u2013 ${formatDate(item.end_date)}` : ''}
@@ -172,7 +171,7 @@ export default function CampaignListScreen() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.title}>Campagnes</Text>
+        <Text style={styles.title}>{t.campaignList.title}</Text>
         <Text style={styles.subtitle}>Inclufy GO</Text>
       </View>
 
@@ -211,12 +210,12 @@ export default function CampaignListScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>{'\u{1F4E3}'}</Text>
-            <Text style={styles.emptyTitle}>Geen campagnes gevonden</Text>
+            <Ionicons name="megaphone-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyTitle}>{t.campaignList.noCampaignsFound}</Text>
             <Text style={styles.emptyText}>
               {activeTab === 'all'
-                ? 'Maak je eerste campagne aan om te starten'
-                : `Geen campagnes met status "${FILTER_TABS.find((t) => t.key === activeTab)?.label}"`}
+                ? t.campaignList.noCampaignsAll
+                : `${t.campaignList.noCampaignsStatus} ${FILTER_TABS.find((tab) => tab.key === activeTab)?.label}`}
             </Text>
           </View>
         }
@@ -228,8 +227,8 @@ export default function CampaignListScreen() {
         activeOpacity={0.85}
         onPress={handleNewCampaign}
       >
-        <Text style={styles.fabPlus}>+</Text>
-        <Text style={styles.fabLabel}>Nieuwe Campagne</Text>
+        <Ionicons name="add" size={22} color={colors.textOnPrimary} />
+        <Text style={styles.fabLabel}>{t.campaignList.newCampaign}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -349,9 +348,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     backgroundColor: colors.primaryLight + '15',
   },
-  typeIcon: {
-    fontSize: 14,
-  },
   typeLabel: {
     fontSize: fontSize.xs,
     fontWeight: fontWeight.medium,
@@ -374,9 +370,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
   },
-  footerIcon: {
-    fontSize: 13,
-  },
   footerText: {
     fontSize: fontSize.sm,
     color: colors.textSecondary,
@@ -387,14 +380,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 80,
   },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
   emptyTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
     color: colors.text,
+    marginTop: spacing.md,
   },
   emptyText: {
     fontSize: fontSize.sm,
@@ -421,12 +411,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.35,
     shadowRadius: 10,
     elevation: 8,
-  },
-  fabPlus: {
-    color: colors.textOnPrimary,
-    fontSize: 22,
-    fontWeight: fontWeight.bold,
-    marginTop: -1,
   },
   fabLabel: {
     color: colors.textOnPrimary,

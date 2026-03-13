@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 
 interface Props {
@@ -75,9 +76,7 @@ export default function BiometricScreen({ onSuccess, onSkip }: Props) {
       {/* Biometric Icon */}
       <View style={styles.iconContainer}>
         <View style={styles.iconCircle}>
-          <Text style={styles.biometricIcon}>
-            {isFaceId ? '\u{1F9D1}' : '\u{1F91A}'}
-          </Text>
+          <Ionicons name={isFaceId ? 'scan-outline' : 'finger-print-outline'} size={48} color={colors.primary} />
         </View>
       </View>
 

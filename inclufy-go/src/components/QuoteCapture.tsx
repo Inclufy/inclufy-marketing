@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 
 interface Props {
@@ -19,7 +20,7 @@ export default function QuoteCapture({ onSubmit }: Props) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.icon}>{'\u{1F4DD}'}</Text>
+      <Ionicons name="document-text-outline" size={32} color={colors.primary} />
       <Text style={styles.title}>Quote Capture</Text>
       <Text style={styles.subtitle}>Typ een quote en AI maakt er een branded post van</Text>
 

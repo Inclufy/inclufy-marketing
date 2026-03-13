@@ -10,19 +10,26 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import api from '../services/api';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../services/supabase';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
+import { useTranslation } from '../i18n';
+
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
-const SUGGESTED_PROMPTS = [
-  'Hoe presteren mijn campagnes?',
-  'Genereer een Ramadan campagne',
-  'Welk kanaal heeft de beste ROI?',
-  'Maak een social media strategie',
-];
-
 export default function AICommandScreen() {
+  const { t } = useTranslation();
+
+  const SUGGESTED_PROMPTS = [
+    t.aiCommand.prompt1,
+    t.aiCommand.prompt2,
+    t.aiCommand.prompt3,
+    t.aiCommand.prompt4,
+  ];
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -40,26 +47,33 @@ export default function AICommandScreen() {
       setLoading(true);
 
       try {
-        const { data } = await api.post('/copilot/chat', {
-          messages: updatedMessages,
+        // Call Supabase Edge Function — works everywhere, no backend server needed
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token ?? SUPABASE_ANON_KEY;
+
+        const res = await fetch(`${SUPABASE_URL}/functions/v1/copilot-chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+            'apikey': SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({ messages: updatedMessages }),
         });
 
-        const assistantContent =
-          data?.response ?? data?.content ?? data?.message ?? 'Geen antwoord ontvangen.';
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
 
-        const assistantMessage: Message = {
-          role: 'assistant',
-          content: assistantContent,
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: 'Er ging iets mis. Probeer het opnieuw.',
-          },
-        ]);
+        const assistantContent = data?.response ?? data?.content ?? t.aiCommand.noResponse;
+        setMessages((prev) => [...prev, { role: 'assistant', content: assistantContent }]);
+      } catch (err: any) {
+        const msg = err?.message ?? '';
+        const friendly = msg.includes('OpenAI')
+          ? 'De AI-service is tijdelijk niet beschikbaar. Probeer later opnieuw.'
+          : msg.includes('network') || msg.includes('fetch') || msg.includes('Failed')
+          ? 'Geen verbinding. Controleer je internet.'
+          : t.aiCommand.errorMessage;
+        setMessages((prev) => [...prev, { role: 'assistant', content: friendly }]);
       } finally {
         setLoading(false);
       }
@@ -104,10 +118,10 @@ export default function AICommandScreen() {
   const renderEmpty = useCallback(
     () => (
       <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>{'\u{1F916}'}</Text>
-        <Text style={styles.emptyTitle}>Inclufy AI Copilot</Text>
+        <Ionicons name="sparkles" size={48} color={colors.primary} />
+        <Text style={styles.emptyTitle}>{t.aiCommand.emptyTitle}</Text>
         <Text style={styles.emptySubtitle}>
-          Stel een vraag of kies een suggestie
+          {t.aiCommand.emptySubtitle}
         </Text>
 
         <View style={styles.suggestionsGrid}>
@@ -139,8 +153,8 @@ export default function AICommandScreen() {
     >
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>AI Copilot</Text>
-        <Text style={styles.headerSubtitle}>Jouw marketing assistent</Text>
+        <Text style={styles.headerTitle}>{t.aiCommand.title}</Text>
+        <Text style={styles.headerSubtitle}>{t.aiCommand.subtitle}</Text>
       </View>
 
       {/* Messages */}
@@ -162,7 +176,7 @@ export default function AICommandScreen() {
       {loading && (
         <View style={styles.loadingRow}>
           <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={styles.loadingText}>AI denkt na...</Text>
+          <Text style={styles.loadingText}>{t.aiCommand.thinking}</Text>
         </View>
       )}
 
@@ -172,7 +186,7 @@ export default function AICommandScreen() {
           style={styles.textInput}
           value={input}
           onChangeText={setInput}
-          placeholder="Stel een vraag..."
+          placeholder={t.aiCommand.inputPlaceholder}
           placeholderTextColor={colors.textTertiary}
           multiline
           maxLength={2000}
@@ -188,7 +202,7 @@ export default function AICommandScreen() {
           onPress={() => sendMessage(input)}
           disabled={!input.trim() || loading}
         >
-          <Text style={styles.sendButtonText}>{'\u{2191}'}</Text>
+          <Ionicons name="arrow-up" size={20} color={colors.textOnPrimary} />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>

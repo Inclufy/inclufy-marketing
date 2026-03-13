@@ -17,7 +17,9 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCapturePosts, useUpdatePost, usePublishPost, useBatchPublish } from '../hooks/useEventPosts';
 import { aiService } from '../services/ai.service';
 import type { RootStackParamList, EventPost, Channel } from '../types';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'PostReview'>;
@@ -25,13 +27,14 @@ type Route = RouteProp<RootStackParamList, 'PostReview'>;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const channelConfig: Record<Channel, { label: string; color: string; icon: string }> = {
-  linkedin: { label: 'LinkedIn', color: colors.linkedin, icon: '\u{1F4BC}' },
-  instagram: { label: 'Instagram', color: colors.instagram, icon: '\u{1F4F8}' },
-  x: { label: 'X', color: colors.x, icon: '\u{1D54F}' },
-  facebook: { label: 'Facebook', color: colors.facebook, icon: '\u{1F30D}' },
+  linkedin: { label: 'LinkedIn', color: colors.linkedin, icon: 'logo-linkedin' },
+  instagram: { label: 'Instagram', color: colors.instagram, icon: 'logo-instagram' },
+  x: { label: 'X', color: colors.x, icon: 'logo-twitter' },
+  facebook: { label: 'Facebook', color: colors.facebook, icon: 'logo-facebook' },
 };
 
 export default function PostReviewScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { captureId, eventId } = route.params;
@@ -59,20 +62,20 @@ export default function PostReviewScreen() {
 
     try {
       await updatePost.mutateAsync({ id: post.id, text_content: newText });
-      Alert.alert('Opgeslagen');
+      Alert.alert(t.postReview.saved);
     } catch {
-      Alert.alert('Fout', 'Kon tekst niet opslaan');
+      Alert.alert(t.common.error, t.postReview.saveError);
     }
   };
 
   const handlePublish = async (post: EventPost) => {
     Alert.alert(
-      `Publiceer op ${channelConfig[post.channel]?.label}?`,
-      'De post wordt direct gepubliceerd.',
+      `${t.postReview.publishOn} ${channelConfig[post.channel]?.label}?`,
+      t.postReview.publishConfirm,
       [
-        { text: 'Annuleren', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Publiceer',
+          text: t.postReview.publishButton,
           onPress: async () => {
             try {
               // Save any pending text changes first
@@ -80,9 +83,9 @@ export default function PostReviewScreen() {
                 await updatePost.mutateAsync({ id: post.id, text_content: editingText[post.id] });
               }
               await publishPost.mutateAsync(post.id);
-              Alert.alert('Gepubliceerd!');
+              Alert.alert(t.postReview.publishSuccess);
             } catch {
-              Alert.alert('Fout', 'Publicatie mislukt');
+              Alert.alert(t.common.error, t.postReview.publishError);
             }
           },
         },
@@ -93,23 +96,23 @@ export default function PostReviewScreen() {
   const handlePublishAll = () => {
     const draftPosts = posts.filter((p) => p.status === 'draft');
     if (draftPosts.length === 0) {
-      Alert.alert('Geen drafts om te publiceren');
+      Alert.alert(t.postReview.noDrafts);
       return;
     }
 
     Alert.alert(
-      `Publiceer alle ${draftPosts.length} posts?`,
-      'Alle kanalen worden direct gepubliceerd.',
+      `${t.postReview.publishAll} ${draftPosts.length} posts?`,
+      t.postReview.publishAllConfirm,
       [
-        { text: 'Annuleren', style: 'cancel' },
+        { text: t.common.cancel, style: 'cancel' },
         {
-          text: 'Publiceer alles',
+          text: t.postReview.publishAll,
           onPress: async () => {
             try {
               await batchPublish.mutateAsync(draftPosts.map((p) => p.id));
-              Alert.alert('Alle posts gepubliceerd!');
+              Alert.alert(t.postReview.publishAllSuccess);
             } catch {
-              Alert.alert('Fout', 'Sommige publicaties zijn mislukt');
+              Alert.alert(t.common.error, t.postReview.publishAllError);
             }
           },
         },
@@ -133,7 +136,7 @@ export default function PostReviewScreen() {
   if (posts.length === 0) {
     return (
       <View style={styles.loading}>
-        <Text style={styles.emptyText}>Geen posts gevonden voor deze capture</Text>
+        <Text style={styles.emptyText}>{t.postReview.noPostsFound}</Text>
       </View>
     );
   }
@@ -154,7 +157,7 @@ export default function PostReviewScreen() {
               ]}
               onPress={() => scrollToIndex(index)}
             >
-              <Text style={styles.channelIcon}>{config?.icon}</Text>
+              <Ionicons name={config?.icon as any} size={18} color={config?.color || colors.textSecondary} />
               <Text
                 style={[
                   styles.channelLabel,
@@ -220,7 +223,7 @@ export default function PostReviewScreen() {
                 onChangeText={(text) => handleTextChange(post.id, text)}
                 onBlur={() => handleSaveText(post)}
                 multiline
-                placeholder="Post tekst..."
+                placeholder={t.postReview.postTextPlaceholder}
                 placeholderTextColor={colors.textTertiary}
               />
 
@@ -237,7 +240,7 @@ export default function PostReviewScreen() {
                   disabled={post.status === 'published'}
                 >
                   <Text style={styles.actionBtnText}>
-                    {post.status === 'published' ? 'Gepubliceerd' : `Publiceer op ${config?.label}`}
+                    {post.status === 'published' ? t.status.published : `${t.postReview.publishOn} ${config?.label}`}
                   </Text>
                 </TouchableOpacity>
 
@@ -253,16 +256,19 @@ export default function PostReviewScreen() {
                         platform: post.channel,
                       });
                       const langs = Object.entries(result.translations || {});
-                      const msg = langs.map(([lang, t]) =>
-                        `${lang.toUpperCase()}:\n${t.text}`
+                      const msg = langs.map(([lang, tr]) =>
+                        `${lang.toUpperCase()}:\n${tr.text}`
                       ).join('\n\n');
-                      Alert.alert('Vertalingen', msg || 'Geen vertalingen ontvangen');
+                      Alert.alert(t.postReview.translations, msg || t.postReview.noTranslations);
                     } catch {
-                      Alert.alert('Fout', 'Vertaling mislukt');
+                      Alert.alert(t.common.error, t.postReview.translationError);
                     }
                   }}
                 >
-                  <Text style={styles.translateBtnText}>{'\u{1F30D}'} Vertaal (EN/DE/FR)</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="globe-outline" size={14} color={colors.primary} />
+                    <Text style={styles.translateBtnText}>{t.postReview.translate}</Text>
+                  </View>
                 </TouchableOpacity>
 
                 {/* Audience Targeting button */}
@@ -276,22 +282,25 @@ export default function PostReviewScreen() {
                         hashtags: post.hashtags,
                       });
                       const msg = [
-                        `\u{1F3AF} Primair: ${result.primary}`,
-                        `\u{1F465} Secundair: ${result.secondary}`,
+                        `${t.postReview.primary}: ${result.primary}`,
+                        `${t.postReview.secondary}: ${result.secondary}`,
                         `\n${result.reasoning}`,
-                        `\n\u{1F4CA} Demografie: ${result.demographics}`,
-                        `\u{23F0} Optimale tijd: ${result.optimal_time}`,
+                        `\n${t.postReview.demographics}: ${result.demographics}`,
+                        `${t.postReview.optimalTime}: ${result.optimal_time}`,
                         result.engagement_tips?.length
-                          ? `\n\u{1F4A1} Tips:\n${result.engagement_tips.map((t) => `  \u2022 ${t}`).join('\n')}`
+                          ? `\n${t.postReview.tips}:\n${result.engagement_tips.map((tip) => `  - ${tip}`).join('\n')}`
                           : '',
                       ].filter(Boolean).join('\n');
-                      Alert.alert('Doelgroep Analyse', msg);
+                      Alert.alert(t.postReview.audienceAnalysis, msg);
                     } catch {
-                      Alert.alert('Fout', 'Doelgroep analyse mislukt');
+                      Alert.alert(t.common.error, t.postReview.audienceError);
                     }
                   }}
                 >
-                  <Text style={styles.audienceBtnText}>{'\u{1F3AF}'} Doelgroep Analyse</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="locate-outline" size={14} color={colors.info} />
+                    <Text style={styles.audienceBtnText}>{t.postReview.audienceAnalysis}</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -308,9 +317,12 @@ export default function PostReviewScreen() {
         {batchPublish.isPending ? (
           <ActivityIndicator color={colors.textOnPrimary} />
         ) : (
-          <Text style={styles.publishAllText}>
-            {'\u{1F680}'} Publiceer Alles ({posts.filter((p) => p.status === 'draft').length} kanalen)
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="rocket-outline" size={18} color={colors.textOnPrimary} />
+            <Text style={styles.publishAllText}>
+              {t.postReview.publishAllButton} ({posts.filter((p) => p.status === 'draft').length} {t.postReview.channels})
+            </Text>
+          </View>
         )}
       </TouchableOpacity>
     </View>

@@ -26,23 +26,27 @@ import { useBrandMemory, toBrandContext } from '../hooks/useBrandMemory';
 import { aiService } from '../services/ai.service';
 import { supabase } from '../services/supabase';
 
+import { Ionicons } from '@expo/vector-icons';
 import type { RootStackParamList, MediaType } from '../types';
 import { CAPTURE_TAG_PRESETS } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'LiveCapture'>;
 
 type CaptureMode = 'photo' | 'video' | 'audio' | 'quote';
 
-const MODE_TABS: { key: CaptureMode; label: string; icon: string }[] = [
-  { key: 'photo', label: 'Foto', icon: '\u{1F4F7}' },
-  { key: 'video', label: 'Video', icon: '\u{1F3A5}' },
-  { key: 'audio', label: 'Audio', icon: '\u{1F3A4}' },
-  { key: 'quote', label: 'Quote', icon: '\u{1F4DD}' },
-];
-
 export default function LiveCaptureScreen() {
+  const { t } = useTranslation();
+
+  const MODE_TABS: { key: CaptureMode; label: string; icon: string }[] = [
+    { key: 'photo', label: t.liveCapture.photo, icon: 'camera-outline' },
+    { key: 'video', label: t.liveCapture.video, icon: 'videocam-outline' },
+    { key: 'audio', label: t.liveCapture.audio, icon: 'mic-outline' },
+    { key: 'quote', label: t.liveCapture.quote, icon: 'document-text-outline' },
+  ];
+
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
   const { eventId } = route.params;
@@ -178,7 +182,7 @@ export default function LiveCaptureScreen() {
         setSelectedTags([]);
         navigation.navigate('PostReview', { captureId: capture.id, eventId });
       } catch (error: any) {
-        Alert.alert('Fout', error.message || 'Er ging iets mis bij het verwerken');
+        Alert.alert(t.common.error, error.message || t.liveCapture.processingError);
       } finally {
         setProcessing(false);
       }
@@ -201,7 +205,7 @@ export default function LiveCaptureScreen() {
       await processCapture(uri, 'audio', transcript);
     } catch (error: any) {
       setProcessing(false);
-      Alert.alert('Fout', 'Audio transcriptie mislukt');
+      Alert.alert(t.common.error, t.liveCapture.audioTranscriptionFailed);
     }
   };
 
@@ -219,9 +223,9 @@ export default function LiveCaptureScreen() {
     return (
       <View style={styles.processingOverlay}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.processingText}>AI genereert posts...</Text>
+        <Text style={styles.processingText}>{t.liveCapture.aiGenerating}</Text>
         <Text style={styles.processingSubtext}>
-          Foto wordt geanalyseerd en tekst per kanaal gegenereerd
+          {t.liveCapture.aiGeneratingSubtext}
         </Text>
       </View>
     );
@@ -232,7 +236,7 @@ export default function LiveCaptureScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>{'\u2039'} Terug</Text>
+          <Text style={styles.backText}>{'\u2039'} {t.common.back}</Text>
         </TouchableOpacity>
         <Text style={styles.eventName} numberOfLines={1}>{event?.name || 'Event'}</Text>
         <View style={{ width: 60 }} />
@@ -260,7 +264,7 @@ export default function LiveCaptureScreen() {
               style={styles.noteInput}
               value={note}
               onChangeText={setNote}
-              placeholder="Korte notitie voor context..."
+              placeholder={t.liveCapture.notePlaceholder}
               placeholderTextColor="rgba(255,255,255,0.4)"
             />
           </View>
@@ -275,7 +279,7 @@ export default function LiveCaptureScreen() {
             style={[styles.modeTab, mode === tab.key && styles.modeTabActive]}
             onPress={() => setMode(tab.key)}
           >
-            <Text style={styles.modeIcon}>{tab.icon}</Text>
+            <Ionicons name={tab.icon as any} size={20} color={mode === tab.key ? colors.textOnPrimary : colors.textSecondary} />
             <Text
               style={[styles.modeLabel, mode === tab.key && styles.modeLabelActive]}
             >
@@ -304,14 +308,16 @@ export default function LiveCaptureScreen() {
                 <Image source={{ uri: cap.thumbnail_url }} style={styles.thumbnail} />
               ) : (
                 <View style={[styles.thumbnail, styles.thumbnailPlaceholder]}>
-                  <Text style={{ fontSize: 16 }}>
-                    {cap.media_type === 'video' ? '\u{1F3A5}' : cap.media_type === 'audio' ? '\u{1F3A4}' : '\u{1F4DD}'}
-                  </Text>
+                  <Ionicons
+                    name={cap.media_type === 'video' ? 'videocam-outline' : cap.media_type === 'audio' ? 'mic-outline' : 'document-text-outline'}
+                    size={16}
+                    color={colors.textSecondary}
+                  />
                 </View>
               )}
               {cap.ai_status === 'completed' && (
                 <View style={styles.thumbnailBadge}>
-                  <Text style={{ fontSize: 8, color: '#fff' }}>{'\u2713'}</Text>
+                  <Ionicons name="checkmark" size={8} color="#fff" />
                 </View>
               )}
             </TouchableOpacity>

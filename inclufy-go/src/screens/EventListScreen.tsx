@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Alert,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useEvents, useDeleteEvent } from '../hooks/useEvents';
@@ -15,15 +16,9 @@ import { supabase } from '../services/supabase';
 import type { Event, EventStatus, RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { cardShadow, fabShadow } from '../utils/shadows';
+import { useTranslation } from '../i18n';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
-
-const STATUS_TABS: { key: EventStatus | 'all'; label: string }[] = [
-  { key: 'all', label: 'Alles' },
-  { key: 'upcoming', label: 'Upcoming' },
-  { key: 'active', label: 'Actief' },
-  { key: 'completed', label: 'Voltooid' },
-];
 
 const statusColors: Record<EventStatus, string> = {
   upcoming: colors.info,
@@ -34,25 +29,35 @@ const statusColors: Record<EventStatus, string> = {
 
 export default function EventListScreen() {
   const navigation = useNavigation<Nav>();
+  const { t, locale } = useTranslation();
   const { data: events = [], isLoading, refetch } = useEvents();
   const deleteEvent = useDeleteEvent();
   const [activeTab, setActiveTab] = useState<EventStatus | 'all'>('all');
+
+  const STATUS_TABS: { key: EventStatus | 'all'; label: string }[] = [
+    { key: 'all', label: t.eventList.all },
+    { key: 'upcoming', label: t.status.upcoming },
+    { key: 'active', label: t.status.active },
+    { key: 'completed', label: t.status.completed },
+  ];
+
+  const dateLocale = locale === 'nl' ? 'nl-NL' : locale === 'fr' ? 'fr-FR' : 'en-US';
 
   const filtered = activeTab === 'all'
     ? events
     : events.filter((e) => e.status === activeTab);
 
   const handleLogout = () => {
-    Alert.alert('Uitloggen', 'Weet je het zeker?', [
-      { text: 'Annuleren', style: 'cancel' },
-      { text: 'Uitloggen', style: 'destructive', onPress: () => supabase.auth.signOut() },
+    Alert.alert(t.settings.logout, t.eventList.logoutConfirm, [
+      { text: t.common.cancel, style: 'cancel' },
+      { text: t.eventList.logout, style: 'destructive', onPress: () => supabase.auth.signOut() },
     ]);
   };
 
   const handleDelete = (event: Event) => {
-    Alert.alert(`"${event.name}" verwijderen?`, 'Dit kan niet ongedaan worden.', [
-      { text: 'Annuleren', style: 'cancel' },
-      { text: 'Verwijderen', style: 'destructive', onPress: () => deleteEvent.mutate(event.id) },
+    Alert.alert(`"${event.name}" ${t.eventList.deleteConfirm}`, t.eventList.deleteWarning, [
+      { text: t.common.cancel, style: 'cancel' },
+      { text: t.common.delete, style: 'destructive', onPress: () => deleteEvent.mutate(event.id) },
     ]);
   };
 
@@ -73,10 +78,10 @@ export default function EventListScreen() {
 
       <View style={styles.eventMeta}>
         <Text style={styles.metaText}>
-          {'\u{1F4CD}'} {item.location || 'Geen locatie'}
+          <Ionicons name="location-outline" size={12} color={colors.textSecondary} /> {item.location || t.common.noLocation}
         </Text>
         <Text style={styles.metaText}>
-          {'\u{1F4C5}'} {new Date(item.event_date).toLocaleDateString('nl-NL', {
+          <Ionicons name="calendar-outline" size={12} color={colors.textSecondary} /> {new Date(item.event_date).toLocaleDateString(dateLocale, {
             day: 'numeric', month: 'short', year: 'numeric',
           })}
         </Text>
@@ -99,11 +104,11 @@ export default function EventListScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.title}>Inclufy GO</Text>
-          <Text style={styles.subtitle}>Event Marketing</Text>
+          <Text style={styles.title}>{t.eventList.title}</Text>
+          <Text style={styles.subtitle}>{t.eventList.subtitle}</Text>
         </View>
         <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={styles.logoutText}>{t.eventList.logout}</Text>
         </TouchableOpacity>
       </View>
 
@@ -131,9 +136,9 @@ export default function EventListScreen() {
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyIcon}>{'\u{1F4F8}'}</Text>
-            <Text style={styles.emptyTitle}>Nog geen events</Text>
-            <Text style={styles.emptyText}>Maak je eerste event aan om te starten</Text>
+            <Ionicons name="camera-outline" size={48} color={colors.textSecondary} />
+            <Text style={styles.emptyTitle}>{t.eventList.noEvents}</Text>
+            <Text style={styles.emptyText}>{t.eventList.noEventsDesc}</Text>
           </View>
         }
       />
@@ -143,7 +148,7 @@ export default function EventListScreen() {
         style={styles.fab}
         onPress={() => navigation.navigate('EventSetup', {})}
       >
-        <Text style={styles.fabText}>+</Text>
+        <Ionicons name="add" size={28} color={colors.textOnPrimary} />
       </TouchableOpacity>
     </View>
   );
