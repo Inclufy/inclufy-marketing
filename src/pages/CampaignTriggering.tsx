@@ -315,7 +315,7 @@ export default function CampaignTriggering() {
         <TabsContent value="triggers" className="mt-6 space-y-4">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {triggers.map((trigger) => {
-              const typeMeta = TRIGGER_TYPE_META[trigger.type];
+              const typeMeta = TRIGGER_TYPE_META[trigger.type] || { icon: <Zap className="h-3.5 w-3.5" />, label: trigger.type, labelNl: trigger.type, labelFr: trigger.type, color: 'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300' };
               const statusBadge = getStatusBadge(trigger.status, nl, fr);
               const isProcessing = processingIds.has(trigger.id);
 

@@ -249,7 +249,7 @@ export default function ContentCalendar() {
                     <div className="space-y-0.5">
                       {dayEvents.slice(0, 3).map(e => (
                         <div key={e.id} className="flex items-center gap-1">
-                          <div className={`w-1.5 h-1.5 rounded-full ${TYPE_COLORS[e.type]}`} />
+                          <div className={`w-1.5 h-1.5 rounded-full ${TYPE_COLORS[e.type] || 'bg-gray-400'}`} />
                           <span className="text-[10px] text-muted-foreground truncate">
                             {e.title}
                           </span>
@@ -333,7 +333,7 @@ export default function ContentCalendar() {
                   .slice(0, 5)
                   .map(e => (
                     <div key={e.id} className="flex items-center gap-2 text-sm">
-                      <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[e.type]}`} />
+                      <div className={`w-2 h-2 rounded-full ${TYPE_COLORS[e.type] || 'bg-gray-400'}`} />
                       <span className="font-medium text-xs">
                         {new Date(e.date).getDate()}
                       </span>

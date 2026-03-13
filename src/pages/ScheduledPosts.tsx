@@ -244,7 +244,7 @@ const ScheduledPosts = () => {
                               {/* Platform & Status */}
                               <div className="flex items-center gap-3 mb-2">
                                 <div className="flex items-center gap-2 text-foreground">
-                                  {platformIcons[post.platform]}
+                                  {platformIcons[post.platform] || <Send className="h-4 w-4" />}
                                   <span className="font-medium capitalize">{post.platform}</span>
                                 </div>
                                 <span className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${status.color}`}>
