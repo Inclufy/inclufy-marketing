@@ -88,6 +88,7 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('general');
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [apiConfig, setApiConfig] = useState<Record<string, any> | null>(null);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -123,6 +124,7 @@ export default function AdminSettings() {
       if (settingsError) throw settingsError;
 
       const s = settingsData || {};
+      if ((s as any).id) setSettingsId((s as any).id);
       setSettings(s as any);
       setApiConfig(s as any);
 
@@ -146,15 +148,11 @@ export default function AdminSettings() {
   const handleSaveAll = async () => {
     try {
       setSaving(true);
+      const payload: Record<string, any> = { general, security, email, features, billing };
+      if (settingsId) payload.id = settingsId;
       const { error: upsertError } = await supabase
         .from('admin_settings')
-        .upsert({
-          general,
-          security,
-          email,
-          features,
-          billing,
-        });
+        .upsert(payload);
       if (upsertError) throw upsertError;
       toast({ title: nl ? 'Instellingen opgeslagen!' : fr ? 'Paramètres enregistrés !' : 'Settings saved!' });
     } catch {
