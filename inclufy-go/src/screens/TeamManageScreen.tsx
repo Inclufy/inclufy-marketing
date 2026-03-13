@@ -68,7 +68,7 @@ export default function TeamManageScreen() {
       setInviteEmail('');
       Alert.alert(t.teamManage.invited, `${email} ${t.teamManage.invitedAs} ${ROLE_LABELS[selectedRole]?.label || selectedRole}`);
     } catch (error: any) {
-      const detail = error?.response?.data?.detail || t.teamManage.inviteFailed;
+      const detail = error?.message || t.teamManage.inviteFailed;
       Alert.alert(t.common.error, detail);
     }
   };

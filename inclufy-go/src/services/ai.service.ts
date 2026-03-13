@@ -195,6 +195,7 @@ class AIService {
 
   /**
    * Generate an event recap (blog, newsletter, or LinkedIn article).
+   * Supports language (nl/en/fr) and tone (compact/standard/detailed).
    */
   async generateEventRecap(params: {
     event_name: string;
@@ -204,6 +205,8 @@ class AIService {
     captures_count: number;
     published_count: number;
     output_format: 'blog' | 'newsletter' | 'linkedin_article';
+    language?: 'nl' | 'en' | 'fr';
+    tone?: 'compact' | 'standard' | 'detailed';
   }): Promise<EventRecapResponse> {
     return this.invoke('event-recap', params, {
       title: '',

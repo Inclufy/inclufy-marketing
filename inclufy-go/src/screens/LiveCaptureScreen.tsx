@@ -101,7 +101,7 @@ export default function LiveCaptureScreen() {
         let imageBase64: string | undefined;
         if (mediaType === 'photo') {
           const base64 = await FileSystem.readAsStringAsync(mediaUri, {
-            encoding: FileSystem.EncodingType.Base64,
+            encoding: 'base64' as any,
           });
           imageBase64 = base64;
         }
@@ -199,7 +199,7 @@ export default function LiveCaptureScreen() {
     try {
       setProcessing(true);
       const base64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
+        encoding: 'base64' as any,
       });
       const { transcript } = await aiService.transcribeAudio(base64);
       await processCapture(uri, 'audio', transcript);

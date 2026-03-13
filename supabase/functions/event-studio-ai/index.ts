@@ -133,17 +133,41 @@ Each arc item: time (HH:MM), phase (string), theme (string), channel (from list)
 
 // ─── Action: event-recap ───────────────────────────────────────────
 async function handleEventRecap(body: Record<string, unknown>) {
-  const { event_name, event_date, location, posts, captures_count, published_count, output_format, brand_context } = body;
+  const {
+    event_name, event_date, location, posts, captures_count, published_count,
+    output_format, brand_context, language = 'en', tone = 'standard',
+  } = body;
 
+  // Language mapping
+  const languageMap: Record<string, string> = {
+    nl: 'Dutch (Nederlands). All output — title, content, highlights, CTA, teaser — must be in Dutch.',
+    en: 'English. All output must be in English.',
+    fr: 'French (Français). All output — title, content, highlights, CTA, teaser — must be in French.',
+  };
+  const langInstruction = languageMap[language as string] || languageMap.en;
+
+  // Tone / length mapping
+  const toneMap: Record<string, string> = {
+    compact:  'Keep it concise and punchy. Aim for approximately 250-350 words of content.',
+    standard: 'Standard length. Aim for approximately 500-700 words of content.',
+    detailed: 'Be thorough and elaborate. Aim for approximately 800-1000 words of content.',
+  };
+  const toneInstruction = toneMap[tone as string] || toneMap.standard;
+
+  // Format instructions (in English — AI adapts to output language)
   const formatInstructions: Record<string, string> = {
-    blog: 'Write a detailed blog post (600-800 words) with intro, highlights, and conclusion.',
-    newsletter: 'Write a newsletter-style recap (400-600 words), conversational and engaging.',
-    linkedin_article: 'Write a professional LinkedIn article (500-700 words), thought leadership style.',
+    blog: 'Structure as a blog post with a strong intro, main body with sections, and a conclusion.',
+    newsletter: 'Structure as a newsletter recap: conversational, energetic, with a clear subject line feel.',
+    linkedin_article: 'Structure as a professional LinkedIn article with thought leadership angle. Start with a hook.',
   };
 
   const systemPrompt = buildBrandPrompt(
     `You are a content strategist creating post-event content.
-Always respond with valid JSON: {"title": string, "content": string, "key_highlights": string[], "suggested_cta": string, "social_teaser": string}`,
+Language: Write ENTIRELY in ${langInstruction}
+Tone: ${toneInstruction}
+Always respond with valid JSON: {"title": string, "content": string, "key_highlights": string[], "suggested_cta": string, "social_teaser": string}
+The "key_highlights" should be 3-5 bullet point strings.
+The "social_teaser" should be 1-2 sentences max.`,
     brand_context as Record<string, unknown>,
   );
 
@@ -159,15 +183,15 @@ Total captures: ${captures_count || 0}
 Published posts: ${published_count || 0}
 
 Sample posts from the day:
-${postsSummary || 'No posts yet'}
+${postsSummary || 'No posts captured yet'}
 
 ${formatInstructions[output_format as string] || formatInstructions.blog}
-Include key highlights (3-5 bullet points), a social teaser (max 2 sentences), and a CTA.`;
+Include 3-5 key highlights, a 1-2 sentence social teaser, and a call-to-action.`;
 
   const result = await callOpenAI(
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
     'gpt-4o-mini',
-    1500,
+    1800,
     true,
   );
 
