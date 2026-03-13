@@ -36,6 +36,9 @@ import MarketingAutomationScreen from '../screens/MarketingAutomationScreen';
 import BudgetMonitorScreen from '../screens/BudgetMonitorScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import DemoEnvironmentScreen from '../screens/DemoEnvironmentScreen';
+import AMOSHubScreen from '../screens/AMOSHubScreen';
+import EventScannerScreen from '../screens/EventScannerScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -143,9 +146,9 @@ function MainTabs() {
       />
       <Tab.Screen
         name="AITab"
-        component={AICommandScreen}
+        component={AMOSHubScreen}
         options={{
-          tabBarLabel: t.nav.ai,
+          tabBarLabel: 'AMOS',
           tabBarIcon: ({ focused, color }) => (
             <MaterialCommunityIcons
               name={focused ? 'robot' : 'robot-outline'}
@@ -315,6 +318,27 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
             name="Notifications"
             component={NotificationsScreen}
             options={{ title: t.screenTitles.notifications }}
+          />
+
+          {/* ─── Demo Environment ─── */}
+          <Stack.Screen
+            name="DemoEnvironment"
+            component={DemoEnvironmentScreen}
+            options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }}
+          />
+
+          {/* ─── AMOS Hub ─── */}
+          <Stack.Screen
+            name="AMOSHub"
+            component={AMOSHubScreen}
+            options={{ headerShown: false }}
+          />
+
+          {/* ─── Event Scanner ─── */}
+          <Stack.Screen
+            name="EventScanner"
+            component={EventScannerScreen}
+            options={{ title: 'Event Scanner' }}
           />
         </>
       )}

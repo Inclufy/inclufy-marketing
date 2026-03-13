@@ -227,6 +227,13 @@ export default function EventDashboardScreen() {
           <Ionicons name="camera-outline" size={20} color={colors.primary} />
           <Text style={styles.quickActionLabel}>{t.eventDashboard.capture}</Text>
         </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.quickActionBtn}
+          onPress={() => navigation.navigate('EventScanner', { eventId })}
+        >
+          <Ionicons name="scan-outline" size={20} color={colors.success} />
+          <Text style={[styles.quickActionLabel, { color: colors.success }]}>Scan</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Timeline */}

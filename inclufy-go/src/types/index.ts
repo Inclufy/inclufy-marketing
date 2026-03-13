@@ -174,6 +174,10 @@ export type RootStackParamList = {
   Settings: undefined;
   // Demo
   DemoEnvironment: undefined;
+  // AMOS Hub
+  AMOSHub: undefined;
+  // Event Scanner (attendee QR scanning)
+  EventScanner: { eventId: string };
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────
