@@ -1,48 +1,36 @@
-import { Platform, ViewStyle } from 'react-native';
+// shadows.ts — Dark theme shadow utilities
+// In dark themes, shadows use purple glow instead of dark drops
 
-/**
- * Cross-platform shadow utility.
- * Uses boxShadow on web (avoids deprecation warnings) and native shadow props on iOS/Android.
- */
-export function shadow(
-  color: string,
-  offsetX: number,
-  offsetY: number,
-  opacity: number,
-  radius: number,
-  elevation: number = 2,
-): ViewStyle {
-  if (Platform.OS === 'web') {
-    // Convert opacity + color to rgba for web boxShadow
-    const hexToRgba = (hex: string, alpha: number): string => {
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    };
-    const rgba = hexToRgba(color.startsWith('#') ? color : '#000000', opacity);
-    return {
-      // @ts-ignore - boxShadow is valid on web
-      boxShadow: `${offsetX}px ${offsetY}px ${radius}px ${rgba}`,
-    };
-  }
+import { ViewStyle } from 'react-native';
 
-  return {
-    shadowColor: color,
-    shadowOffset: { width: offsetX, height: offsetY },
-    shadowOpacity: opacity,
-    shadowRadius: radius,
-    elevation,
-  };
-}
+export const subtleShadow: ViewStyle = {
+  shadowColor: '#A855F7',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.12,
+  shadowRadius: 8,
+  elevation: 3,
+};
 
-/** Light card shadow */
-export const cardShadow = shadow('#000000', 0, 1, 0.05, 4, 2);
+export const cardShadow: ViewStyle = {
+  shadowColor: '#A855F7',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.18,
+  shadowRadius: 16,
+  elevation: 6,
+};
 
-/** Subtle card shadow */
-export const subtleShadow = shadow('#000000', 0, 1, 0.03, 3, 1);
+export const fabShadow = (color: string = '#A855F7'): ViewStyle => ({
+  shadowColor: color,
+  shadowOffset: { width: 0, height: 6 },
+  shadowOpacity: 0.45,
+  shadowRadius: 20,
+  elevation: 10,
+});
 
-/** FAB / elevated button shadow */
-export function fabShadow(color: string = '#9333EA') {
-  return shadow(color, 0, 4, 0.3, 8, 8);
-}
+export const glowShadow = (color: string = '#A855F7'): ViewStyle => ({
+  shadowColor: color,
+  shadowOffset: { width: 0, height: 0 },
+  shadowOpacity: 0.35,
+  shadowRadius: 12,
+  elevation: 8,
+});

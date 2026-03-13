@@ -147,8 +147,10 @@ function getUrgencyBadge(urgency: FeedItemUrgency, nl: boolean, fr: boolean): { 
 }
 
 function formatRelativeTime(iso: string, nl: boolean, fr: boolean): string {
+  if (!iso) return nl ? 'Onbekend' : fr ? 'Inconnu' : 'Unknown';
   const now = new Date();
   const d = new Date(iso);
+  if (isNaN(d.getTime())) return nl ? 'Onbekend' : fr ? 'Inconnu' : 'Unknown';
   const diffMs = now.getTime() - d.getTime();
   const diffMins = Math.floor(diffMs / 60000);
   const diffHours = Math.floor(diffMins / 60);

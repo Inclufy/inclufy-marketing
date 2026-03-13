@@ -1,99 +1,96 @@
 // ============================================================
-// Inclufy Brand Colors
-// Based on official Inclufy logo gradient: purple → pink → gold
+// Inclufy GO — Luxury Dark Theme
+// Deep purple-black premium aesthetic
+// Logo gradient: purple → pink → gold
 // ============================================================
 
-// Logo gradient stops
 export const brandGradient = {
-  // Light variant (for dark backgrounds)
   light: ['#C084FC', '#F472B6', '#FCD34D'],
-  // Deep variant (for light backgrounds)
-  deep: ['#9333EA', '#DB2777', '#D97706'],
+  deep:  ['#9333EA', '#DB2777', '#D97706'],
+  dark:  ['#1E0A4E', '#4C1D95', '#7C3AED'],
 };
 
 export const colors = {
-  // Brand primary — deep purple from the Inclufy palette
-  primary: '#9333EA',
+  // ─── Brand ──────────────────────────────────────────────
+  primary:      '#A855F7',   // Vibrant purple (lighter for dark bg)
   primaryLight: '#C084FC',
-  primaryDark: '#7928CA',
+  primaryDark:  '#7928CA',
 
-  // Brand accent — pink/magenta from the gradient
-  secondary: '#DB2777',
+  secondary:      '#EC4899',  // Hot pink
   secondaryLight: '#F472B6',
 
-  // Brand accent warm — gold/amber from the gradient
-  accent: '#D97706',
+  accent:      '#F59E0B',    // Gold
   accentLight: '#FCD34D',
 
-  // Backgrounds
-  background: '#f9fafb',
-  surface: '#ffffff',
-  surfaceElevated: '#ffffff',
-  surfaceDark: '#1a1a2e',
-  backgroundDark: '#0a0a0f',
+  // ─── Backgrounds (Dark) ──────────────────────────────────
+  background:     '#09090F',   // Deep black with purple tint
+  surface:        '#111120',   // Card/sheet surface
+  surfaceElevated:'#1A1A2E',  // Modals, elevated cards
+  surfaceDark:    '#050508',   // Darkest
+  backgroundDark: '#050508',
 
-  // Text
-  text: '#18181b',
-  textSecondary: '#6b7280',
-  textTertiary: '#9ca3af',
+  // ─── Text ────────────────────────────────────────────────
+  text:          '#F0EEFF',   // Warm white with purple hint
+  textSecondary: '#8A88A8',   // Muted purple-gray
+  textTertiary:  '#55536E',   // Very muted
   textOnPrimary: '#ffffff',
-  textOnDark: '#fafafa',
+  textOnDark:    '#F0EEFF',
 
-  // Borders
-  border: '#e5e7eb',
-  borderLight: '#f3f4f6',
+  // ─── Borders ─────────────────────────────────────────────
+  border:      '#252338',    // Subtle purple border
+  borderLight: '#1A1830',    // Even subtler
 
-  // Semantic
-  success: '#10b981',
-  warning: '#f59e0b',
-  error: '#ef4444',
-  info: '#3b82f6',
+  // ─── Semantic ────────────────────────────────────────────
+  success: '#10D9A0',   // Bright teal-green for dark bg
+  warning: '#FBBF24',
+  error:   '#F87171',
+  info:    '#60A5FA',
 
-  // Channel colors
-  linkedin: '#0077b5',
-  instagram: '#e4405f',
-  x: '#000000',
-  facebook: '#1877f2',
+  // ─── Channels ────────────────────────────────────────────
+  linkedin:  '#0A8FC7',
+  instagram: '#E4405F',
+  x:         '#E7E7E7',
+  facebook:  '#4267D1',
 
-  // Status colors
-  draft: '#6b7280',
-  approved: '#10b981',
-  scheduled: '#3b82f6',
-  published: '#9333EA',
-  failed: '#ef4444',
-  in_review: '#f59e0b',
+  // ─── Status ──────────────────────────────────────────────
+  draft:     '#6B7280',
+  approved:  '#10D9A0',
+  scheduled: '#60A5FA',
+  published: '#A855F7',
+  failed:    '#F87171',
+  in_review: '#FBBF24',
 };
 
 export const spacing = {
-  xs: 4,
-  sm: 8,
-  md: 16,
-  lg: 24,
-  xl: 32,
-  xxl: 48,
+  xs:  4,
+  sm:  10,
+  md:  18,
+  lg:  28,
+  xl:  40,
+  xxl: 56,
 };
 
 export const borderRadius = {
-  sm: 6,
-  md: 12,
-  lg: 16,
-  xl: 24,
+  sm:  8,
+  md:  16,
+  lg:  20,
+  xl:  28,
   full: 9999,
 };
 
 export const fontSize = {
-  xs: 11,
-  sm: 13,
-  md: 15,
-  lg: 17,
-  xl: 20,
-  xxl: 24,
-  hero: 32,
+  xs:   12,
+  sm:   14,
+  md:   16,
+  lg:   19,
+  xl:   23,
+  xxl:  28,
+  hero: 36,
 };
 
 export const fontWeight = {
-  normal: '400' as '400',
-  medium: '500' as '500',
+  normal:   '400' as '400',
+  medium:   '500' as '500',
   semibold: '600' as '600',
-  bold: '700' as '700',
+  bold:     '700' as '700',
 } as const;

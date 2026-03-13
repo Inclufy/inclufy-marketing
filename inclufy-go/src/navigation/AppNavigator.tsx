@@ -39,6 +39,10 @@ import NotificationsScreen from '../screens/NotificationsScreen';
 import DemoEnvironmentScreen from '../screens/DemoEnvironmentScreen';
 import AMOSHubScreen from '../screens/AMOSHubScreen';
 import EventScannerScreen from '../screens/EventScannerScreen';
+import EventIntelligenceScreen from '../screens/EventIntelligenceScreen';
+import OpportunityFeedScreen from '../screens/OpportunityFeedScreen';
+import AutonomousHubScreen from '../screens/AutonomousHubScreen';
+import NetworkingEngineScreen from '../screens/NetworkingEngineScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -77,8 +81,8 @@ function MainTabs() {
           marginTop: -2,
         },
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          backgroundColor: '#111120',
+          borderTopColor: '#252338',
           borderTopWidth: 1,
           height: 85,
           paddingBottom: 24,
@@ -168,7 +172,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
+        headerStyle: { backgroundColor: '#111120' },
         headerTintColor: colors.text,
         headerTitleStyle: { fontWeight: fw.semibold },
         headerShadowVisible: false,
@@ -339,6 +343,28 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
             name="EventScanner"
             component={EventScannerScreen}
             options={{ title: 'Event Scanner' }}
+          />
+
+          {/* ─── AMOS Intelligence Screens ─── */}
+          <Stack.Screen
+            name="EventIntelligence"
+            component={EventIntelligenceScreen}
+            options={{ title: 'Event Intelligence' }}
+          />
+          <Stack.Screen
+            name="OpportunityFeed"
+            component={OpportunityFeedScreen}
+            options={{ title: 'AI Opportunity Feed' }}
+          />
+          <Stack.Screen
+            name="AutonomousHub"
+            component={AutonomousHubScreen}
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="NetworkingEngine"
+            component={NetworkingEngineScreen}
+            options={{ title: 'Networking Engine' }}
           />
         </>
       )}

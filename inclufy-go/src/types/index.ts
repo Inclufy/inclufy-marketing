@@ -178,6 +178,11 @@ export type RootStackParamList = {
   AMOSHub: undefined;
   // Event Scanner (attendee QR scanning)
   EventScanner: { eventId: string };
+  // AMOS Intelligence Screens
+  EventIntelligence: undefined;
+  OpportunityFeed: undefined;
+  AutonomousHub: undefined;
+  NetworkingEngine: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────
