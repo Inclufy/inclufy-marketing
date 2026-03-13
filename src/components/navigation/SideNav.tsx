@@ -31,6 +31,11 @@ import {
   CreditCard,
   Plug,
   Send,
+  Lightbulb,
+  CalendarDays,
+  Rss,
+  Zap,
+  Eye,
   User as UserIcon,
   PanelLeftClose,
   PanelLeft,
@@ -96,6 +101,13 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
       badge: 'NEW',
     },
     {
+      key: 'opportunity-feed',
+      label: nl ? 'Opportunity Feed' : fr ? 'Flux d\'Opportunités' : 'Opportunity Feed',
+      href: '/app/opportunity-feed',
+      icon: Rss,
+      badge: 'AI',
+    },
+    {
       key: 'setup',
       label: nl ? 'Configuratie' : 'Configuration',
       icon: Building,
@@ -116,6 +128,8 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         { label: nl ? 'Marktinzichten' : fr ? 'Insights Marché' : 'Market Insights', href: '/app/intelligence/market', icon: TrendingUp },
         { label: nl ? 'Concurrentieanalyse' : fr ? 'Analyse Concurrentielle' : 'Competitor Analysis', href: '/app/intelligence/competitors', icon: Users },
         { label: nl ? 'Content Studio' : fr ? 'Studio de Contenu' : 'Content Studio', href: '/app/content-studio', icon: Sparkles, badge: 'NEW' },
+        { label: nl ? 'Opportunity Intelligence' : fr ? 'Intelligence des Opportunités' : 'Opportunity Intelligence', href: '/app/opportunity-intelligence', icon: Lightbulb, badge: 'AI' },
+        { label: nl ? 'Event Intelligence' : fr ? 'Intelligence Événementielle' : 'Event Intelligence', href: '/app/event-intelligence', icon: CalendarDays },
       ],
     },
     {
@@ -154,6 +168,7 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         { label: nl ? 'Klantreis' : fr ? 'Parcours Client' : 'Customer Journey', href: '/app/automation/journeys', icon: Activity },
         { label: nl ? 'Multi-Agent Systeem' : fr ? 'Système Multi-Agent' : 'Multi-Agent System', href: '/app/automation/agents', icon: Bot, badge: 'AI' },
         { label: nl ? 'Slimme Triggers' : fr ? 'Déclencheurs Intelligents' : 'Smart Triggers', href: '/app/automation/triggers', icon: Sparkles },
+        { label: nl ? 'Campaign Triggering' : fr ? 'Déclenchement de Campagnes' : 'Campaign Triggering', href: '/app/campaign-triggering', icon: Zap, badge: 'AI' },
       ],
     },
     {
@@ -166,7 +181,15 @@ export default function SideNav({ collapsed, onToggle }: SideNavProps) {
         { label: nl ? 'Contacten' : 'Contacts', href: '/app/contacts', icon: Contact },
         { label: nl ? 'Lead Scoring' : fr ? 'Scoring de Leads' : 'Lead Scoring', href: '/app/lead-scoring', icon: Target, badge: 'AI' },
         { label: nl ? 'Attributie' : fr ? 'Attribution' : 'Attribution', href: '/app/attribution', icon: GitBranch },
+        { label: nl ? 'Lead Intelligence' : fr ? 'Intelligence des Leads' : 'Lead Intelligence', href: '/app/lead-intelligence', icon: Eye, badge: 'AI' },
       ],
+    },
+    {
+      key: 'networking',
+      label: nl ? 'Networking Engine' : fr ? 'Moteur de Networking' : 'Networking Engine',
+      href: '/app/networking',
+      icon: Users,
+      badge: 'NEW',
     },
   ];
 

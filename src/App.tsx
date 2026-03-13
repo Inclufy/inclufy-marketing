@@ -79,6 +79,14 @@ const PredictiveLeadScoring = lazy(() => import("./pages/PredictiveLeadScoring")
 const MultiTouchAttribution = lazy(() => import("./pages/MultiTouchAttribution"));
 const MultiAgentSystem = lazy(() => import("./pages/MultiAgentSystem"));
 
+// Strategic Intelligence Features
+const OpportunityIntelligence = lazy(() => import("./pages/OpportunityIntelligence"));
+const EventIntelligence = lazy(() => import("./pages/EventIntelligence"));
+const NetworkingEngine = lazy(() => import("./pages/NetworkingEngine"));
+const OpportunityFeed = lazy(() => import("./pages/OpportunityFeed"));
+const CampaignTriggering = lazy(() => import("./pages/CampaignTriggering"));
+const LeadIntelligence = lazy(() => import("./pages/LeadIntelligence"));
+
 // Tenant Admin Portal pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -154,6 +162,12 @@ export default function App() {
                       <Route path="publish" element={<PublicationEngine />} />
                       <Route path="lead-scoring" element={<PredictiveLeadScoring />} />
                       <Route path="attribution" element={<MultiTouchAttribution />} />
+                      <Route path="opportunity-intelligence" element={<OpportunityIntelligence />} />
+                      <Route path="event-intelligence" element={<EventIntelligence />} />
+                      <Route path="networking" element={<NetworkingEngine />} />
+                      <Route path="opportunity-feed" element={<OpportunityFeed />} />
+                      <Route path="campaign-triggering" element={<CampaignTriggering />} />
+                      <Route path="lead-intelligence" element={<LeadIntelligence />} />
                       <Route path="content-hub" element={<ContentHub />} />
                       <Route path="analytics" element={<Analytics />} />
                       <Route path="reports" element={<Reports />} />
