@@ -350,7 +350,7 @@ export default function LuxuryDashboard() {
             <div className="flex-1">
               <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
               <p className="text-xs text-red-600 dark:text-red-400 mt-1">
-                {nl ? 'Zorg dat de backend draait op localhost:8000 en je bent ingelogd.' : fr ? 'Assurez-vous que le backend tourne sur localhost:8000 et que vous êtes connecté.' : 'Make sure the backend is running at localhost:8000 and you are logged in.'}
+                {nl ? 'Controleer je internetverbinding en probeer opnieuw.' : fr ? 'Vérifiez votre connexion Internet et réessayez.' : 'Check your internet connection and try again.'}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={fetchDashboardData}>

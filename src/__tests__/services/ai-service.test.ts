@@ -1,13 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock the api module (ai.service now proxies through backend)
-const mockPost = vi.fn();
-const mockGet = vi.fn();
+// Mock supabase.functions.invoke (ai.service now uses Supabase Edge Functions)
+const mockInvoke = vi.fn();
 
-vi.mock('@/lib/api', () => ({
-  default: {
-    post: (...args: any[]) => mockPost(...args),
-    get: (...args: any[]) => mockGet(...args),
+vi.mock('@/integrations/supabase/client', () => ({
+  supabase: {
+    functions: {
+      invoke: (...args: any[]) => mockInvoke(...args),
+    },
+    auth: {
+      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user' } } }),
+    },
   },
 }));
 
@@ -33,9 +36,10 @@ describe('AIService', () => {
   });
 
   describe('generateContent', () => {
-    it('calls backend API and returns content', async () => {
-      mockPost.mockResolvedValueOnce({
+    it('calls Supabase edge function and returns content', async () => {
+      mockInvoke.mockResolvedValueOnce({
         data: { variants: [{ body_html: 'Generated content here' }] },
+        error: null,
       });
 
       const result = await aiService.generateContent({
@@ -45,15 +49,20 @@ describe('AIService', () => {
         brandContext: { brand_name: 'TestBrand' },
       });
 
-      expect(mockPost).toHaveBeenCalledWith('/content/email', expect.objectContaining({
-        product: 'TestBrand',
+      expect(mockInvoke).toHaveBeenCalledWith('content-email', expect.objectContaining({
+        body: expect.objectContaining({
+          product: 'TestBrand',
+        }),
       }));
       expect(result).toHaveProperty('content');
       expect(result.content).toBe('Generated content here');
     });
 
     it('falls back to mock content on API error', async () => {
-      mockPost.mockRejectedValueOnce(new Error('Backend unavailable'));
+      mockInvoke.mockResolvedValueOnce({
+        data: null,
+        error: new Error('Backend unavailable'),
+      });
 
       const result = await aiService.generateContent({
         prompt: 'Write about marketing',
@@ -67,7 +76,7 @@ describe('AIService', () => {
     });
 
     it('falls back to mock content on network error', async () => {
-      mockPost.mockRejectedValueOnce(new Error('Network error'));
+      mockInvoke.mockRejectedValueOnce(new Error('Network error'));
 
       const result = await aiService.generateContent({
         prompt: 'Test prompt',
@@ -82,8 +91,9 @@ describe('AIService', () => {
 
   describe('generateContentClaude', () => {
     it('delegates to generateContent (same backend)', async () => {
-      mockPost.mockResolvedValueOnce({
+      mockInvoke.mockResolvedValueOnce({
         data: { variants: [{ body_html: 'Claude generated content' }] },
+        error: null,
       });
 
       const result = await aiService.generateContentClaude({
@@ -94,7 +104,7 @@ describe('AIService', () => {
       });
 
       expect(result.content).toBe('Claude generated content');
-      expect(mockPost).toHaveBeenCalledTimes(1);
+      expect(mockInvoke).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -153,48 +163,56 @@ describe('AIService', () => {
 
   describe('convenience methods', () => {
     beforeEach(() => {
-      // All convenience methods call api.post which is mocked
-      mockPost.mockResolvedValue({
+      // All convenience methods call supabase.functions.invoke which is mocked
+      mockInvoke.mockResolvedValue({
         data: { variants: [{ body_html: '{"title": "Test", "steps": []}' }] },
+        error: null,
       });
     });
 
-    it('generateTutorial calls backend', async () => {
+    it('generateTutorial calls edge function', async () => {
       const result = await aiService.generateTutorial('React hooks', 3);
-      expect(mockPost).toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalled();
     });
 
-    it('generateCommercialScript calls backend', async () => {
+    it('generateCommercialScript calls edge function', async () => {
       await aiService.generateCommercialScript('Product X', '30s', 'upbeat');
-      expect(mockPost).toHaveBeenCalled();
+      expect(mockInvoke).toHaveBeenCalled();
     });
 
-    it('generateSocialPost calls social endpoint', async () => {
-      mockPost.mockResolvedValueOnce({
+    it('generateSocialPost calls social edge function', async () => {
+      mockInvoke.mockResolvedValueOnce({
         data: { text: 'Hello!', hashtags: [] },
+        error: null,
       });
 
       const result = await aiService.generateSocialPost('AI trends', 'twitter', 'casual');
-      expect(mockPost).toHaveBeenCalledWith('/content/social', expect.objectContaining({
-        platform: 'twitter',
+      expect(mockInvoke).toHaveBeenCalledWith('content-social', expect.objectContaining({
+        body: expect.objectContaining({
+          platform: 'twitter',
+        }),
       }));
     });
 
-    it('improveContent calls improve endpoint', async () => {
-      mockPost.mockResolvedValueOnce({
+    it('improveContent calls improve edge function', async () => {
+      mockInvoke.mockResolvedValueOnce({
         data: { improved_content: 'Better content', score_after: 85 },
+        error: null,
       });
 
       const result = await aiService.improveContent('Some content', 'clarity');
-      expect(mockPost).toHaveBeenCalledWith('/content/improve', expect.objectContaining({
-        content: 'Some content',
-        goal: 'clarity',
+      expect(mockInvoke).toHaveBeenCalledWith('content-improve', expect.objectContaining({
+        body: expect.objectContaining({
+          content: 'Some content',
+          goal: 'clarity',
+        }),
       }));
     });
 
-    it('generateEmailCampaign calls email endpoint', async () => {
-      mockPost.mockResolvedValueOnce({
+    it('generateEmailCampaign calls email edge function', async () => {
+      mockInvoke.mockResolvedValueOnce({
         data: { variants: [{ subject: 'Hi' }] },
+        error: null,
       });
 
       const result = await aiService.generateEmailCampaign({
@@ -204,9 +222,11 @@ describe('AIService', () => {
         goal: 'onboarding',
         variants: 2,
       });
-      expect(mockPost).toHaveBeenCalledWith('/content/email', expect.objectContaining({
-        type: 'welcome',
-        product: 'SaaS tool',
+      expect(mockInvoke).toHaveBeenCalledWith('content-email', expect.objectContaining({
+        body: expect.objectContaining({
+          type: 'welcome',
+          product: 'SaaS tool',
+        }),
       }));
     });
   });

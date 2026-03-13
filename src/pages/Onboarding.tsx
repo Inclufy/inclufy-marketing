@@ -23,7 +23,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabase/client';
 import { brandMemoryService } from '@/services/brand/brand-memory.service';
-import api from '@/lib/api';
 import { cn } from '@/lib/utils';
 import BrandStylePreview from '@/components/BrandStylePreview';
 
@@ -237,25 +236,30 @@ export default function Onboarding() {
     setScanProgress(0);
 
     try {
-      const res = await api.post('/growth-blueprint', {
-        company_name: data.companyName,
-        website_url: data.website || `https://${data.companyName.toLowerCase().replace(/\s+/g, '')}.com`,
-        industry: data.industry || 'General',
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { simulateScan(); return; }
+
+      // Create a new strategic plan (growth blueprint) via edge function or direct insert
+      const { data: fnData, error: fnError } = await supabase.functions.invoke('growth-blueprint', {
+        body: {
+          company_name: data.companyName,
+          website_url: data.website || `https://${data.companyName.toLowerCase().replace(/\s+/g, '')}.com`,
+          industry: data.industry || 'General',
+        },
       });
 
-      const blueprintId = res?.data?.id || res?.data?.data?.id;
-      if (!blueprintId) { simulateScan(); return; }
+      const blueprintId = fnData?.id || fnData?.data?.id;
+      if (fnError || !blueprintId) { simulateScan(); return; }
 
       let attempts = 0;
       const poll = setInterval(async () => {
         attempts++;
         setScanProgress(Math.min(95, attempts * 5));
         try {
-          const check = await api.get(`/growth-blueprint/${blueprintId}`);
-          const blueprint = check?.data?.data || check?.data;
+          const { data: blueprint } = await supabase.from('strategic_plans').select('*').eq('id', blueprintId).single();
           if (blueprint?.status === 'completed' && blueprint?.results) {
             clearInterval(poll);
-            const r = blueprint.results;
+            const r = blueprint.results as any;
             update({
               scanScore: r.overall_score ?? 72,
               scanSeo: r.seo_score ?? 65,

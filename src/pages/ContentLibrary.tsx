@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { api } from "@/lib/api";
+import { supabase } from '@/integrations/supabase/client';
 import { useContentLibrary } from "@/hooks/queries/useContentLibrary";
 import { LoadingSpinner, EmptyState } from "@/components/DataState";
 import {
@@ -79,7 +79,8 @@ const ContentLibrary = () => {
 
   async function deleteItem(id: string) {
     try {
-      await api.delete(`/content-library/${id}`);
+      const { error } = await supabase.from('content_items').delete().eq('id', id);
+      if (error) throw error;
       queryClient.invalidateQueries({ queryKey: ['content-library'] });
       toast.success(nl ? "Item verwijderd" : fr ? "Élément supprimé" : "Item deleted");
     } catch {

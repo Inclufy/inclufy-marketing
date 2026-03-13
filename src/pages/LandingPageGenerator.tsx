@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useAI } from "@/hooks/use-ai";
-import { api } from "@/lib/api";
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { 
   Globe, 
@@ -165,13 +165,17 @@ const LandingPageGenerator = () => {
   const saveToLibrary = async () => {
     setSaving(true);
     try {
-      await api.post("/content-library/", {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase.from('content_items').insert({
+        user_id: user.id,
         title: `Landing Page: ${product}`,
         content_type: "landing_page",
         content: { pageType, product, targetAudience, uniqueValue, goals, sections },
         metadata: { page_type: pageType },
         tags: ["landing-page", pageType],
       });
+      if (error) throw error;
       toast.success(nl ? "Opgeslagen in contentbibliotheek!" : fr ? "Enregistré dans la bibliothèque de contenu !" : "Saved to content library!");
     } catch {
       toast.error(nl ? "Kan niet opslaan in bibliotheek" : fr ? "Échec de l'enregistrement dans la bibliothèque" : "Failed to save to library");

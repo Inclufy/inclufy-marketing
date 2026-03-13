@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useAI } from "@/hooks/use-ai";
-import { api } from "@/lib/api";
+import { supabase } from '@/integrations/supabase/client';
 import {
   Mail,
   Sparkles,
@@ -59,7 +59,10 @@ const EmailCampaignGenerator = () => {
   const [emailProvider, setEmailProvider] = useState<{ configured: boolean; provider: string | null }>({ configured: false, provider: null });
 
   useEffect(() => {
-    api.get("/email/provider").then(r => setEmailProvider(r.data)).catch(() => {});
+    // Email provider config — check via Supabase or default to unconfigured
+    supabase.functions.invoke('email-provider-status').then(({ data }) => {
+      if (data) setEmailProvider(data);
+    }).catch(() => {});
   }, []);
 
   const campaignTypes = [
@@ -164,29 +167,35 @@ const EmailCampaignGenerator = () => {
 
     setSending(true);
     try {
-      // First save as a campaign
-      const campaignRes = await api.post("/campaigns/", {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Save as a campaign in Supabase
+      const { data: campaign, error: insertErr } = await supabase.from('campaigns').insert({
+        user_id: user.id,
         name: `Email: ${variant.subject}`,
-        type: "email",
+        type: 'email',
         description: `${campaignType} email for ${product}`,
-        status: "draft",
+        status: 'active',
         content: { subject: variant.subject, preheader: variant.preheader, body: variant.body, cta: variant.cta },
         settings: { ab_testing: enableAB, audience: targetAudience, goal },
-      });
+      }).select().single();
 
-      const campaignId = campaignRes.data?.id;
+      if (insertErr) throw insertErr;
 
-      // Then send the campaign
-      await api.post("/email/send-campaign", {
-        campaign_id: campaignId,
-        subject: variant.subject,
-        html_body: `<div>${variant.body.replace(/\n/g, "<br/>")}</div>`,
-        text_body: variant.body,
+      // Send via edge function
+      await supabase.functions.invoke('email-send-campaign', {
+        body: {
+          campaign_id: campaign.id,
+          subject: variant.subject,
+          html_body: `<div>${variant.body.replace(/\n/g, "<br/>")}</div>`,
+          text_body: variant.body,
+        },
       });
 
       toast.success(nl ? "Campagne opgeslagen en e-mails verzonden naar alle contacten!" : fr ? "Campagne enregistrée et e-mails envoyés à tous les contacts !" : "Campaign saved and emails sent to all contacts!");
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || (nl ? "Kan campagne niet verzenden" : fr ? "Échec de l'envoi de la campagne" : "Failed to send campaign"));
+      toast.error(err?.message || (nl ? "Kan campagne niet verzenden" : fr ? "Échec de l'envoi de la campagne" : "Failed to send campaign"));
     } finally {
       setSending(false);
     }
@@ -198,17 +207,22 @@ const EmailCampaignGenerator = () => {
 
     setSaving(true);
     try {
-      await api.post("/campaigns/", {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error: insertErr } = await supabase.from('campaigns').insert({
+        user_id: user.id,
         name: `Email: ${variant.subject}`,
-        type: "email",
+        type: 'email',
         description: `${campaignType} email for ${product}`,
-        status: "draft",
+        status: 'draft',
         content: { subject: variant.subject, preheader: variant.preheader, body: variant.body, cta: variant.cta },
         settings: { ab_testing: enableAB, audience: targetAudience, goal },
       });
+      if (insertErr) throw insertErr;
       toast.success(nl ? "Campagne opgeslagen als concept!" : fr ? "Campagne enregistrée comme brouillon !" : "Campaign saved as draft!");
     } catch (err: any) {
-      toast.error(err?.response?.data?.detail || (nl ? "Kan campagne niet opslaan" : fr ? "Échec de l'enregistrement de la campagne" : "Failed to save campaign"));
+      toast.error(err?.message || (nl ? "Kan campagne niet opslaan" : fr ? "Échec de l'enregistrement de la campagne" : "Failed to save campaign"));
     } finally {
       setSaving(false);
     }

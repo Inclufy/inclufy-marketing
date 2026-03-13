@@ -81,7 +81,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.contactGrowth': 'Contact Groei',
     'dashboard.budgetUtilization': 'Budget Benutting',
     'dashboard.networkError': 'Netwerk Fout',
-    'dashboard.networkErrorDesc': 'Zorg ervoor dat de backend draait op localhost:8000 en dat je bent ingelogd.',
+    'dashboard.networkErrorDesc': 'Controleer je internetverbinding en probeer het opnieuw.',
     'dashboard.retry': 'Opnieuw',
 
     // Common
@@ -369,7 +369,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.contactGrowth': 'Contact Growth',
     'dashboard.budgetUtilization': 'Budget Utilization',
     'dashboard.networkError': 'Network Error',
-    'dashboard.networkErrorDesc': 'Make sure the backend is running at localhost:8000 and you are logged in.',
+    'dashboard.networkErrorDesc': 'Check your internet connection and try again.',
     'dashboard.retry': 'Retry',
 
     // Common
@@ -657,7 +657,7 @@ const translations: Record<Language, Record<string, string>> = {
     'dashboard.contactGrowth': 'Croissance des Contacts',
     'dashboard.budgetUtilization': 'Utilisation du Budget',
     'dashboard.networkError': 'Erreur Réseau',
-    'dashboard.networkErrorDesc': 'Assurez-vous que le backend fonctionne sur localhost:8000 et que vous êtes connecté.',
+    'dashboard.networkErrorDesc': 'Vérifiez votre connexion internet et réessayez.',
     'dashboard.retry': 'Réessayer',
 
     // Common

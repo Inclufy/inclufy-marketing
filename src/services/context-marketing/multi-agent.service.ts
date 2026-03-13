@@ -35,7 +35,7 @@ export interface AgentMessage {
   message_type: 'request' | 'response' | 'alert' | 'handoff' | 'conflict' | 'resolution';
   content: string;
   priority: 'high' | 'medium' | 'low';
-  timestamp: string;
+  created_at: string;
   resolved: boolean;
 }
 
@@ -104,7 +104,7 @@ class MultiAgentService {
       .from('agent_messages')
       .select('*')
       .eq('user_id', userId)
-      .order('timestamp', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) throw error;
@@ -166,7 +166,7 @@ class MultiAgentService {
       .eq('user_id', userId)
       .eq('message_type', 'resolution')
       .eq('resolved', true)
-      .gte('timestamp', todayStart.toISOString());
+      .gte('created_at', todayStart.toISOString());
 
     if (messagesError) throw messagesError;
 

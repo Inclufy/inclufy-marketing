@@ -308,12 +308,24 @@ class LeadScoringService {
       .select('*')
       .eq('user_id', userId)
       .eq('is_active', true)
-      .order('last_trained', { ascending: false })
+      .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (error) throw error;
-    if (!data) throw new Error('No active scoring model found');
+    if (!data) {
+      // Return a sensible default model when none exists yet
+      return {
+        id: '',
+        name: 'Default Model',
+        accuracy: 0,
+        is_active: false,
+        category_weights: { engagement: 25, fit: 25, intent: 25, recency: 25 },
+        threshold_mql: 40,
+        threshold_sql: 70,
+        last_trained: null,
+      } as unknown as ScoringModel;
+    }
     return data as unknown as ScoringModel;
   }
 

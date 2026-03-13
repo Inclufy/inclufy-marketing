@@ -1,7 +1,7 @@
 // src/services/ai.service.ts
-// All AI requests are proxied through the backend at /api/content/*
+// All AI requests go through Supabase Edge Functions.
 // No API keys are stored or used in the frontend.
-import api from '@/lib/api';
+import { supabase } from '@/integrations/supabase/client';
 
 interface BrandContext {
   brand_name: string;
@@ -44,23 +44,26 @@ class AIService {
     maxTokens = 1000,
   }: ContentGenerationRequest): Promise<{ content: string }> {
     try {
-      const response = await api.post('/content/email', {
-        type: type === 'email' ? 'promotional' : type,
-        product: brandContext.brand_name,
-        audience: targetAudience || 'general',
-        goal: tone || 'engagement',
-        variants: 1,
-        brand_context: this.getBrandContextPayload(),
+      const { data: responseData, error } = await supabase.functions.invoke('content-email', {
+        body: {
+          type: type === 'email' ? 'promotional' : type,
+          product: brandContext.brand_name,
+          audience: targetAudience || 'general',
+          goal: tone || 'engagement',
+          variants: 1,
+          brand_context: this.getBrandContextPayload(),
+        },
       });
+      if (error) throw error;
 
       // Backend returns { variants: [...] }
-      const variants = response.data?.variants;
+      const variants = responseData?.variants;
       if (variants && variants.length > 0) {
         const v = variants[0];
         return { content: v.body_html || v.body || JSON.stringify(v) };
       }
 
-      return { content: response.data?.content || JSON.stringify(response.data) };
+      return { content: responseData?.content || JSON.stringify(responseData) };
     } catch (error) {
       console.error('AI content generation error:', error);
       return this.generateMockContent(prompt, type, brandContext);
@@ -215,14 +218,17 @@ class AIService {
 
   async generateSocialPost(topic: string, platform: string, style?: string) {
     try {
-      const response = await api.post('/content/social', {
-        platform,
-        topic,
-        tone: style || 'professional',
-        count: 1,
-        brand_context: this.getBrandContextPayload(),
+      const { data: responseData, error } = await supabase.functions.invoke('content-social', {
+        body: {
+          platform,
+          topic,
+          tone: style || 'professional',
+          count: 1,
+          brand_context: this.getBrandContextPayload(),
+        },
       });
-      return response.data;
+      if (error) throw error;
+      return responseData;
     } catch {
       const type = platform === 'twitter' ? 'social-twitter' : 'social-linkedin';
       const result = await this.generateContent({
@@ -237,12 +243,15 @@ class AIService {
 
   async improveContent(content: string, goal: 'clarity' | 'engagement' | 'seo' | 'conversion') {
     try {
-      const response = await api.post('/content/improve', {
-        content,
-        goal,
-        brand_context: this.getBrandContextPayload(),
+      const { data: responseData, error } = await supabase.functions.invoke('content-improve', {
+        body: {
+          content,
+          goal,
+          brand_context: this.getBrandContextPayload(),
+        },
       });
-      return response.data;
+      if (error) throw error;
+      return responseData;
     } catch {
       return { improved_content: content, changes_made: [], score_before: 50, score_after: 50 };
     }
@@ -271,8 +280,11 @@ class AIService {
 
   async fetchWebsiteContent(url: string): Promise<string> {
     try {
-      const response = await api.post('/content/analyze-url', { url });
-      return response.data?.content || '';
+      const { data: responseData, error } = await supabase.functions.invoke('content-analyze-url', {
+        body: { url },
+      });
+      if (error) throw error;
+      return responseData?.content || '';
     } catch {
       return `Website content for ${url} (fetch unavailable)`;
     }
@@ -338,15 +350,18 @@ class AIService {
 
   async generateEmailCampaign(params: { type: string; product: string; audience: string; goal: string; variants?: number }) {
     try {
-      const response = await api.post('/content/email', {
-        type: params.type,
-        product: params.product,
-        audience: params.audience,
-        goal: params.goal,
-        variants: params.variants || 1,
-        brand_context: this.getBrandContextPayload(),
+      const { data: responseData, error } = await supabase.functions.invoke('content-email', {
+        body: {
+          type: params.type,
+          product: params.product,
+          audience: params.audience,
+          goal: params.goal,
+          variants: params.variants || 1,
+          brand_context: this.getBrandContextPayload(),
+        },
       });
-      return response.data;
+      if (error) throw error;
+      return responseData;
     } catch {
       return this.generateMockContent(
         `${params.type} email for ${params.product}`,

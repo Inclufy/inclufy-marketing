@@ -7,7 +7,7 @@ import { useContentLibrary } from '@/hooks/queries/useContentLibrary';
 import { useSocialAccounts } from '@/hooks/queries/useSocialAccounts';
 import { useContacts } from '@/hooks/queries/useContacts';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { supabase } from '@/integrations/supabase/client';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -76,13 +76,15 @@ export function useCampaignReadiness(): ReadinessResult {
   const { data: socialAccounts, isLoading: loadingSocial } = useSocialAccounts();
   const { data: contactsData, isLoading: loadingContacts } = useContacts({ limit: 1 });
 
-  // Blueprint check via direct query
+  // Blueprint check via Supabase (strategic_plans or recommendations table)
   const { data: blueprintData, isLoading: loadingBlueprint } = useQuery<any[]>({
     queryKey: ['growth-blueprint-list'],
     queryFn: async () => {
       try {
-        const resp = await axios.get('/api/growth-blueprint');
-        return Array.isArray(resp.data) ? resp.data : [];
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+        const { data } = await supabase.from('strategic_plans').select('id').eq('user_id', user.id).limit(1);
+        return data || [];
       } catch {
         return [];
       }

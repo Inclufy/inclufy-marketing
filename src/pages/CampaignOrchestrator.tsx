@@ -28,7 +28,7 @@ import {
   AlertCircle,
   RefreshCw
 } from "lucide-react";
-import api from "@/lib/api";
+import { supabase } from '@/integrations/supabase/client';
 
 interface Campaign {
   id: string;
@@ -78,20 +78,29 @@ export default function CampaignOrchestrator() {
     }
   });
 
-  // Fetch campaigns from API
+  // Fetch campaigns from Supabase
   const fetchCampaigns = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const res = await api.get('/campaigns/');
-      const data = Array.isArray(res.data) ? res.data : [];
-      setCampaigns(data);
-      if (data.length > 0 && !activeCampaignId) {
-        setActiveCampaignId(data[0].id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError('Not authenticated'); setLoading(false); return; }
+
+      const { data, error: fetchErr } = await supabase
+        .from('campaigns')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (fetchErr) throw fetchErr;
+      const rows = data || [];
+      setCampaigns(rows as Campaign[]);
+      if (rows.length > 0 && !activeCampaignId) {
+        setActiveCampaignId(rows[0].id);
       }
     } catch (err: any) {
       console.error('Failed to fetch campaigns:', err);
-      setError(err.response?.data?.detail || err.message || 'Failed to load campaigns');
+      setError(err.message || 'Failed to load campaigns');
     } finally {
       setLoading(false);
     }
@@ -101,31 +110,38 @@ export default function CampaignOrchestrator() {
     fetchCampaigns();
   }, []);
 
-  // Create campaign via API
+  // Create campaign via Supabase
   const handleCreateCampaign = async () => {
     if (!newCampaign.name.trim()) return;
 
     try {
       setSaving(true);
-      const payload = {
-        name: newCampaign.name.trim(),
-        type: newCampaign.type,
-        description: newCampaign.description || null,
-        budget_amount: newCampaign.budget_amount || null,
-        starts_at: newCampaign.starts_at || null,
-        ends_at: newCampaign.ends_at || null,
-        content: newCampaign.content,
-        settings: newCampaign.settings,
-      };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
 
-      const res = await api.post('/campaigns/', payload);
-      const created = res.data;
+      const { data: created, error: insertErr } = await supabase
+        .from('campaigns')
+        .insert({
+          user_id: user.id,
+          name: newCampaign.name.trim(),
+          type: newCampaign.type,
+          description: newCampaign.description || null,
+          budget_amount: newCampaign.budget_amount || null,
+          starts_at: newCampaign.starts_at || null,
+          ends_at: newCampaign.ends_at || null,
+          content: newCampaign.content,
+          settings: newCampaign.settings,
+          status: 'draft',
+        })
+        .select()
+        .single();
 
-      setCampaigns(prev => [created, ...prev]);
+      if (insertErr) throw insertErr;
+
+      setCampaigns(prev => [created as Campaign, ...prev]);
       setActiveCampaignId(created.id);
       setIsCreateDialogOpen(false);
 
-      // Reset form
       setNewCampaign({
         name: '',
         type: 'email',
@@ -138,33 +154,53 @@ export default function CampaignOrchestrator() {
       });
     } catch (err: any) {
       console.error('Failed to create campaign:', err);
-      setError(err.response?.data?.detail || 'Failed to create campaign');
+      setError(err.message || 'Failed to create campaign');
     } finally {
       setSaving(false);
     }
   };
 
-  // Update campaign status via API
+  // Update campaign status via Supabase
   const updateCampaignStatus = async (id: string, newStatus: string) => {
     try {
       setSaving(true);
-      const res = await api.patch(`/campaigns/${id}`, { status: newStatus });
-      setCampaigns(prev => prev.map(c => c.id === id ? res.data : c));
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { data: updated, error: updateErr } = await supabase
+        .from('campaigns')
+        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (updateErr) throw updateErr;
+      setCampaigns(prev => prev.map(c => c.id === id ? (updated as Campaign) : c));
     } catch (err: any) {
       console.error('Failed to update campaign:', err);
-      setError(err.response?.data?.detail || 'Failed to update campaign');
+      setError(err.message || 'Failed to update campaign');
     } finally {
       setSaving(false);
     }
   };
 
-  // Delete campaign via API
+  // Delete campaign via Supabase
   const handleDeleteCampaign = async (id: string) => {
     if (!confirm(nl ? 'Weet je zeker dat je deze campagne wilt verwijderen?' : fr ? 'Êtes-vous sûr de vouloir supprimer cette campagne ?' : 'Are you sure you want to delete this campaign?')) return;
 
     try {
       setSaving(true);
-      await api.delete(`/campaigns/${id}`);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error: deleteErr } = await supabase
+        .from('campaigns')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (deleteErr) throw deleteErr;
       setCampaigns(prev => prev.filter(c => c.id !== id));
       if (activeCampaignId === id) {
         const remaining = campaigns.filter(c => c.id !== id);

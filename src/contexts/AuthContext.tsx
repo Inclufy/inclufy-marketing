@@ -80,34 +80,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error;
 
-    // Check if user has an organization
+    // Check if user has an organization (non-blocking — don't let org errors break login)
     if (data.user) {
-      const { data: member } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .eq('user_id', data.user.id)
-        .single();
+      try {
+        const { data: member } = await supabase
+          .from('organization_members')
+          .select('organization_id')
+          .eq('user_id', data.user.id)
+          .maybeSingle();
 
-      if (!member) {
-        // Create default organization for new user
-        const { data: org } = await supabase
-          .from('organizations')
-          .insert({
-            name: 'My Organization',
-            slug: `org-${Date.now()}`,
-          })
-          .select()
-          .single();
-
-        if (org) {
-          await supabase
-            .from('organization_members')
+        if (!member) {
+          const { data: org } = await supabase
+            .from('organizations')
             .insert({
-              organization_id: org.id,
-              user_id: data.user.id,
-              role: 'owner',
-            });
+              name: 'My Organization',
+              slug: `org-${Date.now()}`,
+            })
+            .select()
+            .single();
+
+          if (org) {
+            await supabase
+              .from('organization_members')
+              .insert({
+                organization_id: org.id,
+                user_id: data.user.id,
+                role: 'owner',
+              });
+          }
         }
+      } catch (orgError) {
+        console.warn('[Auth] Organization setup skipped:', orgError);
       }
     }
 

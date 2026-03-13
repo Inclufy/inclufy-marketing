@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { supabase } from '@/integrations/supabase/client';
 import {
   ArrowRight,
   Check,
@@ -88,8 +88,9 @@ export default function PricingPage() {
 
   async function fetchPlans() {
     try {
-      const response = await api.get("/payments/plans");
-      setPlans(response.data.plans || []);
+      const { data, error } = await supabase.functions.invoke('payments-plans');
+      if (error) throw error;
+      setPlans(data?.plans || []);
     } catch {
       setPlans([
         {
@@ -143,13 +144,13 @@ export default function PricingPage() {
   async function handleSubscribe(planId: string) {
     setLoadingPlan(planId);
     try {
-      const response = await api.post("/payments/create-checkout", {
-        plan: planId,
-        billing_cycle: billingCycle,
+      const { data, error } = await supabase.functions.invoke('create-checkout', {
+        body: { plan: planId, billing_cycle: billingCycle },
       });
-      window.location.href = response.data.checkout_url;
+      if (error) throw error;
+      window.location.href = data.checkout_url;
     } catch (err: any) {
-      const status = err?.response?.status;
+      const status = err?.status || err?.response?.status;
       if (status === 401) {
         navigate("/signup?redirect=pricing");
         return;

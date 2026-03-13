@@ -23,7 +23,7 @@ import {
   Download,
   UserPlus
 } from "lucide-react";
-import api from "@/lib/api";
+import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Contact {
@@ -80,18 +80,28 @@ export default function ContactManager() {
     try {
       setLoading(true);
       setError(null);
-      const params: Record<string, string> = {};
-      if (searchQuery) params.search = searchQuery;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setError('Not authenticated'); setLoading(false); return; }
 
-      const [contactsRes, statsRes] = await Promise.all([
-        api.get('/contacts/', { params }),
-        api.get('/contacts/stats/overview'),
-      ]);
-      setContacts(Array.isArray(contactsRes.data) ? contactsRes.data : []);
-      setStats(statsRes.data);
+      let query = supabase
+        .from('contacts')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (searchQuery) {
+        query = query.or(`email.ilike.%${searchQuery}%,first_name.ilike.%${searchQuery}%,last_name.ilike.%${searchQuery}%`);
+      }
+
+      const { data, error: fetchErr, count } = await query;
+      if (fetchErr) throw fetchErr;
+      const rows = (data || []) as Contact[];
+      setContacts(rows);
+      const withEmail = rows.filter(c => c.email).length;
+      setStats({ total: count || rows.length, with_email: withEmail, with_consent: withEmail });
     } catch (err: any) {
       console.error('Failed to fetch contacts:', err);
-      setError(err.response?.data?.detail || err.message || (nl ? 'Contacten laden mislukt' : fr ? 'Échec du chargement des contacts' : 'Failed to load contacts'));
+      setError(err.message || (nl ? 'Contacten laden mislukt' : fr ? 'Échec du chargement des contacts' : 'Failed to load contacts'));
     } finally {
       setLoading(false);
     }
@@ -115,14 +125,17 @@ export default function ContactManager() {
 
     try {
       setSaving(true);
-      await api.post('/contacts/', {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error: insertErr } = await supabase.from('contacts').insert({
+        user_id: user.id,
         email: newContact.email,
         first_name: newContact.first_name || null,
         last_name: newContact.last_name || null,
         phone: newContact.phone || null,
-        city: newContact.city || null,
-        country: newContact.country || null,
       });
+      if (insertErr) throw insertErr;
       setIsAddDialogOpen(false);
       setNewContact({ email: '', first_name: '', last_name: '', phone: '', city: '', country: '' });
       fetchContacts();
@@ -138,11 +151,12 @@ export default function ContactManager() {
     if (!confirm(nl ? 'Dit contact verwijderen?' : fr ? 'Supprimer ce contact ?' : 'Delete this contact?')) return;
 
     try {
-      await api.delete(`/contacts/${id}`);
+      const { error: deleteErr } = await supabase.from('contacts').delete().eq('id', id);
+      if (deleteErr) throw deleteErr;
       setContacts(prev => prev.filter(c => c.id !== id));
       setStats(prev => ({ ...prev, total: prev.total - 1 }));
     } catch (err: any) {
-      setError(err.response?.data?.detail || (nl ? 'Contact verwijderen mislukt' : fr ? 'Échec de la suppression du contact' : 'Failed to delete contact'));
+      setError(err.message || (nl ? 'Contact verwijderen mislukt' : fr ? 'Échec de la suppression du contact' : 'Failed to delete contact'));
     }
   };
 
@@ -156,14 +170,14 @@ export default function ContactManager() {
       setImportResult(null);
       setError(null);
 
+      // CSV import via Supabase Edge Function
       const formData = new FormData();
       formData.append('file', file);
 
-      const res = await api.post('/contacts/import', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data: importData, error: importErr } = await supabase.functions.invoke('contacts-import', { body: formData });
+      if (importErr) throw importErr;
 
-      setImportResult(res.data);
+      setImportResult(importData || { success: true, imported: 0, skipped: 0, total_rows: 0, errors: ['Import via edge function not yet configured'] });
 
       // Refresh contacts list
       fetchContacts();
