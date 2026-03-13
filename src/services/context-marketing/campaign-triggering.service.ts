@@ -57,28 +57,56 @@ export type Trigger = CampaignTrigger;
 const DEFAULT_TRIGGER_PERF = { campaigns_launched: 0, total_reach: 0, leads_generated: 0, revenue_impact: 0, avg_roi: 0 };
 const DEFAULT_CAMPAIGN_PERF = { impressions: 0, clicks: 0, leads: 0, conversions: 0, revenue: 0, roi: 0 };
 
+// Ensure any value rendered in JSX is a primitive, not an object
+function str(val: any): string {
+  if (val == null) return '';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
+
 function safeTrigger(raw: any): CampaignTrigger {
+  const perf = raw.performance || {};
   return {
     ...raw,
-    channels: raw.channels || [],
-    actions: raw.actions || [],
-    budget_limit: raw.budget_limit ?? 0,
-    confidence_threshold: raw.confidence_threshold ?? 70,
-    times_triggered: raw.times_triggered ?? 0,
-    performance: { ...DEFAULT_TRIGGER_PERF, ...(raw.performance || {}) },
+    name: str(raw.name),
+    description: str(raw.description),
+    condition: str(raw.condition),
+    type: raw.type || 'trend_detected',
+    status: raw.status || 'active',
+    channels: Array.isArray(raw.channels) ? raw.channels.map(str) : [],
+    actions: Array.isArray(raw.actions) ? raw.actions.map(str) : [],
+    budget_limit: Number(raw.budget_limit) || 0,
+    confidence_threshold: Number(raw.confidence_threshold) || 70,
+    times_triggered: Number(raw.times_triggered) || 0,
+    performance: {
+      campaigns_launched: Number(perf.campaigns_launched) || 0,
+      total_reach: Number(perf.total_reach) || 0,
+      leads_generated: Number(perf.leads_generated) || 0,
+      revenue_impact: Number(perf.revenue_impact ?? perf.revenue_generated) || 0,
+      avg_roi: Number(perf.avg_roi ?? perf.success_rate ?? 0) || 0,
+    },
   };
 }
 
 function safeCampaign(raw: any): TriggeredCampaign {
+  const perf = raw.performance || {};
   return {
     ...raw,
-    channels: raw.channels || [],
-    budget_allocated: raw.budget_allocated ?? 0,
-    signal: raw.signal || '',
-    trigger_name: raw.trigger_name || '',
-    ai_reasoning: raw.ai_reasoning || '',
-    content_generated: raw.content_generated || [],
-    performance: { ...DEFAULT_CAMPAIGN_PERF, ...(raw.performance || {}) },
+    campaign_name: str(raw.campaign_name),
+    trigger_name: str(raw.trigger_name),
+    signal: str(raw.signal),
+    ai_reasoning: str(raw.ai_reasoning),
+    channels: Array.isArray(raw.channels) ? raw.channels.map(str) : [],
+    budget_allocated: Number(raw.budget_allocated) || 0,
+    content_generated: Array.isArray(raw.content_generated) ? raw.content_generated : [],
+    performance: {
+      impressions: Number(perf.impressions ?? perf.emails_sent) || 0,
+      clicks: Number(perf.clicks ?? perf.click_rate) || 0,
+      leads: Number(perf.leads ?? perf.meetings_booked) || 0,
+      conversions: Number(perf.conversions) || 0,
+      revenue: Number(perf.revenue) || 0,
+      roi: Number(perf.roi ?? perf.open_rate) || 0,
+    },
   };
 }
 
