@@ -11,6 +11,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import BiometricScreen from './src/screens/BiometricScreen';
 import { colors } from './src/theme';
 import { I18nContext, useI18nProvider } from './src/i18n';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -139,14 +140,16 @@ export default function App() {
   }
 
   return (
-    <I18nContext.Provider value={i18n}>
-      <QueryClientProvider client={queryClient}>
-        <NavigationContainer>
-          <AppNavigator isLoggedIn={!!session} />
-          <StatusBar style="dark" />
-        </NavigationContainer>
-      </QueryClientProvider>
-    </I18nContext.Provider>
+    <ThemeProvider>
+      <I18nContext.Provider value={i18n}>
+        <QueryClientProvider client={queryClient}>
+          <NavigationContainer>
+            <AppNavigator isLoggedIn={!!session} />
+            <StatusBar style="auto" />
+          </NavigationContainer>
+        </QueryClientProvider>
+      </I18nContext.Provider>
+    </ThemeProvider>
   );
 }
 

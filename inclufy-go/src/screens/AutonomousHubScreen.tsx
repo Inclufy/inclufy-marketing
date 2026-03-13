@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Switch, ActivityIndicator, RefreshControl,
+  Switch, ActivityIndicator, RefreshControl, Platform, StatusBar,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -105,14 +105,12 @@ export default function AutonomousHubScreen() {
         start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={styles.header}
       >
-        <View style={styles.headerTop}>
-          <View style={styles.headerIcon}>
-            <MaterialCommunityIcons name="brain" size={24} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>Autonoom Marketing Hub</Text>
-            <Text style={styles.headerSub}>Je AI marketing brein — 24/7</Text>
-          </View>
+        {/* Back button row */}
+        <View style={styles.navRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+            <Ionicons name="chevron-back" size={20} color="#fff" />
+            <Text style={styles.backLabel}>Terug</Text>
+          </TouchableOpacity>
           <View style={styles.systemToggle}>
             <Text style={styles.systemLabel}>{systemActive ? 'Actief' : 'Uit'}</Text>
             <Switch
@@ -124,23 +122,33 @@ export default function AutonomousHubScreen() {
           </View>
         </View>
 
-        {/* Stats */}
+        <View style={styles.headerTop}>
+          <View style={styles.headerIcon}>
+            <MaterialCommunityIcons name="brain" size={24} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.headerTitle}>Autonoom Marketing Hub</Text>
+            <Text style={styles.headerSub}>Je AI marketing brein — 24/7</Text>
+          </View>
+        </View>
+
+        {/* Stats — shortened labels to prevent wrapping */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>89%</Text>
-            <Text style={styles.statLabel}>Systeemgezondheid</Text>
+            <Text style={styles.statLabel}>Gezondheid</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{feedItems.length}</Text>
-            <Text style={styles.statLabel}>Wachtende Acties</Text>
+            <Text style={styles.statLabel}>Acties</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>{activeCampaigns}</Text>
-            <Text style={styles.statLabel}>AI Campagnes</Text>
+            <Text style={styles.statLabel}>Campagnes</Text>
           </View>
           <View style={styles.statItem}>
             <Text style={styles.statValue}>60%</Text>
-            <Text style={styles.statLabel}>Slagingspercentage</Text>
+            <Text style={styles.statLabel}>Slagings%</Text>
           </View>
         </View>
       </LinearGradient>
@@ -283,7 +291,7 @@ export default function AutonomousHubScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: { padding: spacing.md, gap: spacing.md, paddingTop: spacing.lg },
+  header: { padding: spacing.md, gap: spacing.sm, paddingTop: 0 },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   headerIcon: {
     width: 44, height: 44, borderRadius: 12,
@@ -359,4 +367,11 @@ const styles = StyleSheet.create({
     padding: spacing.sm, borderWidth: 1, borderColor: colors.border,
   },
   quickBtnText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.text, flex: 1 },
+  navRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 48 : (StatusBar.currentHeight || 24) + 8,
+    paddingHorizontal: 4,
+  },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, padding: 8 },
+  backLabel: { color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.medium },
 });

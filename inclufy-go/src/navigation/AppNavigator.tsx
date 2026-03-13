@@ -1,20 +1,24 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
+import { Text, View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RootStackParamList } from '../types';
-import { colors, fontWeight as fw } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { fontWeight as fw, spacing } from '../theme';
 import { useTranslation } from '../i18n';
 
 // ─── Screens ────────────────────────────────────────────────────────
 import LoginScreen from '../screens/LoginScreen';
-// Tab screens
+// Tab root screens
 import HomeScreen from '../screens/HomeScreen';
-import CampaignListScreen from '../screens/CampaignListScreen';
 import EventListScreen from '../screens/EventListScreen';
-import AICommandScreen from '../screens/AICommandScreen';
+import AutonomousHubScreen from '../screens/AutonomousHubScreen';
+import NetworkingEngineScreen from '../screens/NetworkingEngineScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 // Stack screens
+import CampaignListScreen from '../screens/CampaignListScreen';
+import AICommandScreen from '../screens/AICommandScreen';
 import EventSetupScreen from '../screens/EventSetupScreen';
 import LiveCaptureScreen from '../screens/LiveCaptureScreen';
 import PostReviewScreen from '../screens/PostReviewScreen';
@@ -34,40 +38,94 @@ import NFCShareScreen from '../screens/NFCShareScreen';
 import OpportunityRadarScreen from '../screens/OpportunityRadarScreen';
 import MarketingAutomationScreen from '../screens/MarketingAutomationScreen';
 import BudgetMonitorScreen from '../screens/BudgetMonitorScreen';
-import SettingsScreen from '../screens/SettingsScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import DemoEnvironmentScreen from '../screens/DemoEnvironmentScreen';
 import AMOSHubScreen from '../screens/AMOSHubScreen';
 import EventScannerScreen from '../screens/EventScannerScreen';
 import EventIntelligenceScreen from '../screens/EventIntelligenceScreen';
 import OpportunityFeedScreen from '../screens/OpportunityFeedScreen';
-import AutonomousHubScreen from '../screens/AutonomousHubScreen';
-import NetworkingEngineScreen from '../screens/NetworkingEngineScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
 
-// ─── Create Button (center tab) ─────────────────────────────────────
-function CreateTabButton({ onPress, label }: { onPress?: (...args: any[]) => void; label?: string }) {
+// ─── Capture Center Tab Button ───────────────────────────────────────
+function CaptureTabButton({ onPress }: { onPress?: (...args: any[]) => void }) {
+  const { colors } = useTheme();
   return (
-    <TouchableOpacity style={tabStyles.createButton} onPress={onPress} activeOpacity={0.8}>
-      <View style={tabStyles.createCircle}>
-        <Ionicons name="add" size={30} color="#ffffff" />
+    <TouchableOpacity
+      style={[tabStyles.captureButton]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <View style={[tabStyles.captureCircle, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
+        <Ionicons name="camera" size={26} color="#fff" />
       </View>
-      <Text style={tabStyles.createLabel}>{label ?? 'Create'}</Text>
+      <Text style={[tabStyles.captureLabel, { color: colors.primary }]}>Capture</Text>
     </TouchableOpacity>
   );
 }
 
-// Placeholder for the Create tab (navigation happens via custom button)
-function CreatePlaceholder() {
-  return <View />;
+function CapturePlaceholder() { return <View />; }
+
+// ─── Events Stack (for tab) ──────────────────────────────────────────
+function EventsStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: fw.semibold as any },
+        headerShadowVisible: false,
+      }}
+    >
+      <Stack.Screen name={'EventsRoot' as any} component={EventListScreen} options={{ title: 'Events' }} />
+      <Stack.Screen name={'EventIntelligenceTab' as any} component={EventIntelligenceScreen} options={{ title: 'Event Intelligence' }} />
+    </Stack.Navigator>
+  );
 }
 
-// ─── Bottom Tabs ────────────────────────────────────────────────────
+// ─── AI Stack (for tab) ──────────────────────────────────────────────
+function AIStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: fw.semibold as any },
+        headerShadowVisible: false,
+      }}
+    >
+      <Stack.Screen name={'AIRoot' as any} component={AutonomousHubScreen} options={{ headerShown: false }} />
+      <Stack.Screen name={'OpportunityFeedTab' as any} component={OpportunityFeedScreen} options={{ title: 'AI Opportunity Feed' }} />
+      <Stack.Screen name={'CampaignListTab' as any} component={CampaignListScreen} options={{ title: 'Campagnes' }} />
+      <Stack.Screen name={'AMOSHubTab' as any} component={AMOSHubScreen} options={{ headerShown: false }} />
+    </Stack.Navigator>
+  );
+}
+
+// ─── Network Stack (for tab) ─────────────────────────────────────────
+function NetworkStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator
+      screenOptions={{
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
+        headerTitleStyle: { fontWeight: fw.semibold as any },
+        headerShadowVisible: false,
+      }}
+    >
+      <Stack.Screen name={'NetworkRoot' as any} component={NetworkingEngineScreen} options={{ title: 'Netwerk' }} />
+    </Stack.Navigator>
+  );
+}
+
+// ─── Bottom Tabs ─────────────────────────────────────────────────────
 function MainTabs() {
-  const { t } = useTranslation();
+  const { colors, isDark } = useTheme();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -77,88 +135,79 @@ function MainTabs() {
         tabBarInactiveTintColor: colors.textTertiary,
         tabBarLabelStyle: {
           fontSize: 10,
-          fontWeight: fw.medium,
+          fontWeight: fw.medium as any,
           marginTop: -2,
         },
         tabBarStyle: {
-          backgroundColor: '#111120',
-          borderTopColor: '#252338',
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 85,
-          paddingBottom: 24,
+          height: Platform.OS === 'ios' ? 88 : 68,
+          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
           paddingTop: 8,
         },
       }}
     >
+      {/* Tab 1 — Dashboard */}
       <Tab.Screen
         name="HomeTab"
         component={HomeScreen}
         options={{
-          tabBarLabel: t.nav.home,
+          tabBarLabel: 'Dashboard',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={focused ? 'home' : 'home-outline'}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
           ),
         }}
       />
+
+      {/* Tab 2 — Events */}
       <Tab.Screen
-        name="CampaignsTab"
-        component={CampaignListScreen}
+        name="EventsTab"
+        component={EventsStack}
         options={{
-          tabBarLabel: t.nav.campaigns,
+          tabBarLabel: 'Events',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={focused ? 'megaphone' : 'megaphone-outline'}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
           ),
         }}
       />
+
+      {/* Tab 3 — Capture (center) */}
       <Tab.Screen
-        name="CreateTab"
-        component={CreatePlaceholder}
+        name="CaptureTab"
+        component={CapturePlaceholder}
         options={{
           tabBarLabel: () => null,
-          tabBarButton: (props) => (
-            <CreateTabButton onPress={props.onPress} label={t.nav.create} />
-          ),
+          tabBarButton: (props) => <CaptureTabButton onPress={props.onPress} />,
         }}
         listeners={({ navigation }) => ({
           tabPress: (e) => {
             e.preventDefault();
-            navigation.navigate('ContentCreator');
+            navigation.navigate('LiveCapture');
           },
         })}
       />
+
+      {/* Tab 4 — AI Hub */}
       <Tab.Screen
-        name="EventsTab"
-        component={EventListScreen}
+        name="AITab"
+        component={AIStack}
         options={{
-          tabBarLabel: t.nav.events,
+          tabBarLabel: 'AI Hub',
           tabBarIcon: ({ focused, color }) => (
-            <Ionicons
-              name={focused ? 'calendar' : 'calendar-outline'}
-              size={24}
-              color={color}
-            />
+            <MaterialCommunityIcons name={focused ? 'brain' : 'brain'} size={22} color={focused ? color : colors.textTertiary} />
           ),
         }}
       />
+
+      {/* Tab 5 — Netwerk */}
       <Tab.Screen
-        name="AITab"
-        component={AMOSHubScreen}
+        name="NetworkTab"
+        component={NetworkStack}
         options={{
-          tabBarLabel: 'AMOS',
+          tabBarLabel: 'Netwerk',
           tabBarIcon: ({ focused, color }) => (
-            <MaterialCommunityIcons
-              name={focused ? 'robot' : 'robot-outline'}
-              size={24}
-              color={color}
-            />
+            <Ionicons name={focused ? 'people' : 'people-outline'} size={22} color={color} />
           ),
         }}
       />
@@ -168,234 +217,95 @@ function MainTabs() {
 
 // ─── Root Navigator ─────────────────────────────────────────────────
 export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const { colors } = useTheme();
   const { t } = useTranslation();
   return (
     <Stack.Navigator
       screenOptions={{
-        headerStyle: { backgroundColor: '#111120' },
+        headerStyle: { backgroundColor: colors.surface },
         headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: fw.semibold },
+        headerTitleStyle: { fontWeight: fw.semibold as any },
         headerShadowVisible: false,
       }}
     >
       {!isLoggedIn ? (
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-          options={{ headerShown: false }}
-        />
+        <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       ) : (
         <>
-          {/* Main Tabs */}
-          <Stack.Screen
-            name="Main"
-            component={MainTabs}
-            options={{ headerShown: false }}
-          />
+          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
 
           {/* ─── Event Screens ─── */}
-          <Stack.Screen
-            name="EventSetup"
-            component={EventSetupScreen}
-            options={{ title: t.screenTitles.eventSetup }}
-          />
-          <Stack.Screen
-            name="EventDashboard"
-            component={EventDashboardScreen}
-            options={{ title: t.screenTitles.event }}
-          />
-          <Stack.Screen
-            name="LiveCapture"
-            component={LiveCaptureScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="PostReview"
-            component={PostReviewScreen}
-            options={{ title: t.screenTitles.reviewPosts }}
-          />
-          <Stack.Screen
-            name="StoryArc"
-            component={StoryArcScreen}
-            options={{ title: t.screenTitles.storyArc }}
-          />
-          <Stack.Screen
-            name="EventRecap"
-            component={EventRecapScreen}
-            options={{ title: t.screenTitles.eventRecap }}
-          />
-          <Stack.Screen
-            name="TeamManage"
-            component={TeamManageScreen}
-            options={{ title: t.screenTitles.team }}
-          />
+          <Stack.Screen name="EventSetup" component={EventSetupScreen} options={{ title: t.screenTitles.eventSetup }} />
+          <Stack.Screen name="EventDashboard" component={EventDashboardScreen} options={{ title: t.screenTitles.event }} />
+          <Stack.Screen name="LiveCapture" component={LiveCaptureScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="PostReview" component={PostReviewScreen} options={{ title: t.screenTitles.reviewPosts }} />
+          <Stack.Screen name="StoryArc" component={StoryArcScreen} options={{ title: t.screenTitles.storyArc }} />
+          <Stack.Screen name="EventRecap" component={EventRecapScreen} options={{ title: t.screenTitles.eventRecap }} />
+          <Stack.Screen name="TeamManage" component={TeamManageScreen} options={{ title: t.screenTitles.team }} />
+          <Stack.Screen name="EventScanner" component={EventScannerScreen} options={{ title: 'Event Scanner' }} />
 
           {/* ─── Campaign Screens ─── */}
-          <Stack.Screen
-            name="CampaignList"
-            component={CampaignListScreen}
-            options={{ title: t.screenTitles.campaigns }}
-          />
-          <Stack.Screen
-            name="CampaignCreate"
-            component={CampaignCreateScreen}
-            options={{ title: t.screenTitles.campaignCreate }}
-          />
-          <Stack.Screen
-            name="CampaignDetail"
-            component={CampaignDetailScreen}
-            options={{ title: t.screenTitles.campaign }}
-          />
+          <Stack.Screen name="CampaignList" component={CampaignListScreen} options={{ title: t.screenTitles.campaigns }} />
+          <Stack.Screen name="CampaignCreate" component={CampaignCreateScreen} options={{ title: t.screenTitles.campaignCreate }} />
+          <Stack.Screen name="CampaignDetail" component={CampaignDetailScreen} options={{ title: t.screenTitles.campaign }} />
+          <Stack.Screen name="CampaignsTab" component={CampaignListScreen} options={{ title: t.screenTitles.campaigns }} />
 
           {/* ─── AI & Content ─── */}
-          <Stack.Screen
-            name="ContentCreator"
-            component={ContentCreatorScreen}
-            options={{ title: t.screenTitles.contentCreator }}
-          />
-          <Stack.Screen
-            name="AICommand"
-            component={AICommandScreen}
-            options={{ title: t.screenTitles.aiCopilot }}
-          />
+          <Stack.Screen name="ContentCreator" component={ContentCreatorScreen} options={{ title: t.screenTitles.contentCreator }} />
+          <Stack.Screen name="AICommand" component={AICommandScreen} options={{ title: t.screenTitles.aiCopilot }} />
 
-          {/* ─── Smart Contact Capture ─── */}
-          <Stack.Screen
-            name="SmartLead"
-            component={SmartLeadScreen}
-            options={{ title: t.screenTitles.smartLead ?? 'Smart Contact' }}
-          />
-          <Stack.Screen
-            name="QRScan"
-            component={QRScanScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="CardScan"
-            component={CardScanScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="MyDigitalCard"
-            component={MyDigitalCardScreen}
-            options={{ title: t.screenTitles.myDigitalCard ?? 'My Digital Card' }}
-          />
-          <Stack.Screen
-            name="NFCShare"
-            component={NFCShareScreen}
-            options={{ title: t.screenTitles.nfcShare ?? 'NFC Share' }}
-          />
-          <Stack.Screen
-            name="LeadCapture"
-            component={LeadCaptureScreen}
-            options={{ title: t.screenTitles.leadCapture }}
-          />
+          {/* ─── Networking / Contacts ─── */}
+          <Stack.Screen name="SmartLead" component={SmartLeadScreen} options={{ title: t.screenTitles.smartLead ?? 'Smart Contact' }} />
+          <Stack.Screen name="QRScan" component={QRScanScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="CardScan" component={CardScanScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="MyDigitalCard" component={MyDigitalCardScreen} options={{ title: t.screenTitles.myDigitalCard ?? 'My Digital Card' }} />
+          <Stack.Screen name="NFCShare" component={NFCShareScreen} options={{ title: t.screenTitles.nfcShare ?? 'NFC Share' }} />
+          <Stack.Screen name="LeadCapture" component={LeadCaptureScreen} options={{ title: t.screenTitles.leadCapture }} />
 
-          {/* ─── Opportunity Radar ─── */}
-          <Stack.Screen
-            name="OpportunityRadar"
-            component={OpportunityRadarScreen}
-            options={{ title: t.screenTitles.opportunityRadar ?? 'Opportunity Radar' }}
-          />
+          {/* ─── Intelligence ─── */}
+          <Stack.Screen name="OpportunityRadar" component={OpportunityRadarScreen} options={{ title: t.screenTitles.opportunityRadar ?? 'Opportunity Radar' }} />
+          <Stack.Screen name="EventIntelligence" component={EventIntelligenceScreen} options={{ title: 'Event Intelligence' }} />
+          <Stack.Screen name="OpportunityFeed" component={OpportunityFeedScreen} options={{ title: 'AI Opportunity Feed' }} />
 
           {/* ─── Marketing Automation ─── */}
-          <Stack.Screen
-            name="MarketingAutomation"
-            component={MarketingAutomationScreen}
-            options={{ title: t.screenTitles.automation ?? 'Automation' }}
-          />
-
-          {/* ─── Budget ─── */}
-          <Stack.Screen
-            name="BudgetMonitor"
-            component={BudgetMonitorScreen}
-            options={{ title: t.screenTitles.marketingBudget }}
-          />
+          <Stack.Screen name="MarketingAutomation" component={MarketingAutomationScreen} options={{ title: t.screenTitles.automation ?? 'Automation' }} />
+          <Stack.Screen name="BudgetMonitor" component={BudgetMonitorScreen} options={{ title: t.screenTitles.marketingBudget }} />
+          <Stack.Screen name="AMOSHub" component={AMOSHubScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AutonomousHub" component={AutonomousHubScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="NetworkingEngine" component={NetworkingEngineScreen} options={{ title: 'Networking Engine' }} />
 
           {/* ─── Settings & Notifications ─── */}
-          <Stack.Screen
-            name="Settings"
-            component={SettingsScreen}
-            options={{ title: t.screenTitles.settings }}
-          />
-          <Stack.Screen
-            name="Notifications"
-            component={NotificationsScreen}
-            options={{ title: t.screenTitles.notifications }}
-          />
-
-          {/* ─── Demo Environment ─── */}
-          <Stack.Screen
-            name="DemoEnvironment"
-            component={DemoEnvironmentScreen}
-            options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }}
-          />
-
-          {/* ─── AMOS Hub ─── */}
-          <Stack.Screen
-            name="AMOSHub"
-            component={AMOSHubScreen}
-            options={{ headerShown: false }}
-          />
-
-          {/* ─── Event Scanner ─── */}
-          <Stack.Screen
-            name="EventScanner"
-            component={EventScannerScreen}
-            options={{ title: 'Event Scanner' }}
-          />
-
-          {/* ─── AMOS Intelligence Screens ─── */}
-          <Stack.Screen
-            name="EventIntelligence"
-            component={EventIntelligenceScreen}
-            options={{ title: 'Event Intelligence' }}
-          />
-          <Stack.Screen
-            name="OpportunityFeed"
-            component={OpportunityFeedScreen}
-            options={{ title: 'AI Opportunity Feed' }}
-          />
-          <Stack.Screen
-            name="AutonomousHub"
-            component={AutonomousHubScreen}
-            options={{ headerShown: false }}
-          />
-          <Stack.Screen
-            name="NetworkingEngine"
-            component={NetworkingEngineScreen}
-            options={{ title: 'Networking Engine' }}
-          />
+          <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t.screenTitles.settings }} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: t.screenTitles.notifications }} />
+          <Stack.Screen name="DemoEnvironment" component={DemoEnvironmentScreen} options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }} />
         </>
       )}
     </Stack.Navigator>
   );
 }
 
-// ─── Tab Bar Styles ─────────────────────────────────────────────────
+// ─── Styles ─────────────────────────────────────────────────────────
 const tabStyles = StyleSheet.create({
-  createButton: {
+  captureButton: {
     alignItems: 'center',
     justifyContent: 'center',
-    top: -12,
+    top: -14,
+    width: 72,
   },
-  createCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    backgroundColor: colors.primary,
+  captureCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
+    elevation: 8,
   },
-  createLabel: {
+  captureLabel: {
     fontSize: 10,
-    color: colors.primary,
-    fontWeight: fw.semibold,
+    fontWeight: fw.semibold as any,
     marginTop: 4,
   },
 });

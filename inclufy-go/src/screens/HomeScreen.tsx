@@ -17,6 +17,8 @@ import type { RootStackParamList } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import { useTranslation } from '../i18n';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../services/supabase';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -60,38 +62,35 @@ export default function HomeScreen() {
   const [dismissedAlerts, setDismissedAlerts] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
 
-  const MOCK_AI_ALERTS: AIAlert[] = [
-    {
-      id: '1',
-      icon: 'cash-outline',
-      title: t.home.budgetOptimization,
-      description: t.home.budgetOptimizationDesc,
-      type: 'budget',
-      color: colors.warning,
+  // Real AI alerts from Supabase feed_items (replaces mock data)
+  const { data: feedAlerts = [], refetch: refetchFeed } = useQuery({
+    queryKey: ['home_feed_alerts'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data } = await supabase
+        .from('feed_items')
+        .select('id, type, title, description, urgency, estimated_value, is_read')
+        .eq('user_id', user.id)
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      return (data || []).map((item: any) => ({
+        id: item.id,
+        icon: item.type === 'budget' ? 'cash-outline' : item.type === 'lead' ? 'people-outline' : 'trending-up-outline',
+        title: item.title,
+        description: item.description,
+        type: item.type,
+        color: item.urgency === 'immediate' ? colors.error : item.urgency === 'high' ? colors.warning : colors.info,
+      } as AIAlert));
     },
-    {
-      id: '2',
-      icon: 'trending-up-outline',
-      title: t.home.engagementPeak,
-      description: t.home.engagementPeakDesc,
-      type: 'engagement',
-      color: colors.success,
-    },
-    {
-      id: '3',
-      icon: 'people-outline',
-      title: t.home.newLeads,
-      description: t.home.newLeadsDesc,
-      type: 'leads',
-      color: colors.info,
-    },
-  ];
+  });
 
   const QUICK_ACTIONS: QuickAction[] = [
-    { label: t.home.campaignAction, icon: 'rocket-outline', route: 'CampaignsTab', color: colors.primary },
-    { label: t.home.contentAction, icon: 'create-outline', route: 'ContentCreator', color: colors.secondary },
-    { label: t.home.leadAction, icon: 'qr-code-outline', route: 'SmartLead', color: colors.success },
-    { label: t.home.budgetAction, icon: 'card-outline', route: 'BudgetMonitor', color: colors.warning },
+    { label: 'Campagnes', icon: 'megaphone-outline', route: 'CampaignsTab', color: colors.primary },
+    { label: 'Content', icon: 'create-outline', route: 'ContentCreator', color: colors.secondary },
+    { label: 'QR Scan', icon: 'qr-code-outline', route: 'QRScan', color: colors.success },
+    { label: 'Events', icon: 'radar', route: 'EventIntelligence', color: colors.warning },
   ];
 
   const statusLabel: Record<string, string> = {
@@ -102,15 +101,15 @@ export default function HomeScreen() {
     scheduled: t.status.scheduled,
   };
 
-  const visibleAlerts = MOCK_AI_ALERTS.filter((a) => !dismissedAlerts.has(a.id));
+  const visibleAlerts = feedAlerts.filter((a) => !dismissedAlerts.has(a.id));
 
   const recentCampaigns = campaigns.slice(0, 3);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refetchStats(), refetchCampaigns()]);
+    await Promise.all([refetchStats(), refetchCampaigns(), refetchFeed()]);
     setRefreshing(false);
-  }, [refetchStats, refetchCampaigns]);
+  }, [refetchStats, refetchCampaigns, refetchFeed]);
 
   const dismissAlert = (id: string) => {
     setDismissedAlerts((prev) => new Set(prev).add(id));
@@ -295,7 +294,7 @@ export default function HomeScreen() {
         {/* ── Opportunity Radar Banner ───────────────────────────────── */}
         <TouchableOpacity
           style={styles.radarBanner}
-          onPress={() => navigation.navigate('OpportunityRadar' as any)}
+          onPress={() => navigation.navigate('OpportunityFeed' as any)}
           activeOpacity={0.85}
         >
           <View style={styles.radarBannerLeft}>
@@ -313,7 +312,7 @@ export default function HomeScreen() {
         {/* ── Marketing Automation Banner ────────────────────────────── */}
         <TouchableOpacity
           style={styles.automationBanner}
-          onPress={() => navigation.navigate('MarketingAutomation' as any)}
+          onPress={() => navigation.navigate('AutonomousHub' as any)}
           activeOpacity={0.85}
         >
           <View style={styles.radarBannerLeft}>

@@ -16,15 +16,32 @@ import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import { useTranslation, LOCALE_LABELS, type Locale } from '../i18n';
 import type { RootStackParamList } from '../types';
+import { useTheme } from '../context/ThemeContext';
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function SettingsScreen() {
   const { t, locale, setLocale } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { scheme, setScheme, isDark, colors: themeColors } = useTheme();
   const [email, setEmail] = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [biometricEnabled, setBiometricEnabled] = useState(false);
+
+  const handleThemeSwitch = () => {
+    Alert.alert(
+      'Weergave',
+      'Kies een thema',
+      [
+        { text: '☀️  Licht', onPress: () => setScheme('light') },
+        { text: '🌙  Donker', onPress: () => setScheme('dark') },
+        { text: '⚙️  Systeem', onPress: () => setScheme('system') },
+        { text: 'Annuleren', style: 'cancel' },
+      ]
+    );
+  };
+
+  const themeLabel = scheme === 'light' ? 'Licht ☀️' : scheme === 'dark' ? 'Donker 🌙' : 'Systeem ⚙️';
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -176,6 +193,15 @@ export default function SettingsScreen() {
                 thumbColor={biometricEnabled ? colors.primary : colors.textTertiary}
               />
             }
+          />
+          <View style={styles.separator} />
+          <View style={styles.separator} />
+          <SettingsRow
+            icon="moon-outline"
+            iconColor="#8B5CF6"
+            label="Weergave / Thema"
+            value={themeLabel}
+            onPress={handleThemeSwitch}
           />
           <View style={styles.separator} />
           <SettingsRow
