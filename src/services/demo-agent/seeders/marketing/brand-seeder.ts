@@ -20,6 +20,13 @@ export async function seedBrand(userId: string, template: IndustryTemplate): Pro
       usps: brand.usps,
       brand_values: brand.brand_values,
       audiences: brand.audiences,
+      marketing_goals: [
+        'Increase qualified leads by 40% in Q2',
+        'Achieve 25% improvement in conversion rate',
+        'Grow social media following to 50K',
+        'Launch 3 major campaigns per quarter',
+        'Reach €500K marketing-attributed revenue',
+      ],
       industries: brand.industries,
       messaging_dos: brand.messaging_dos,
       messaging_donts: brand.messaging_donts,

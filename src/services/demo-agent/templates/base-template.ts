@@ -147,14 +147,14 @@ export function getBaseIntegrations(userId: string) {
 // Base attribution models shared across industries
 export function getBaseAttributionModels(userId: string) {
   return [
-    { user_id: userId, name: 'First Touch', model_name: 'First Touch', type: 'first_touch', description: 'Credits the first interaction that started the journey', is_active: true },
-    { user_id: userId, name: 'Last Touch', model_name: 'Last Touch', type: 'last_touch', description: 'Credits the last interaction before conversion', is_active: true },
-    { user_id: userId, name: 'Linear', model_name: 'Linear', type: 'linear', description: 'Distributes credit equally across all touchpoints', is_active: true },
-    { user_id: userId, name: 'Time Decay', model_name: 'Time Decay', type: 'time_decay', description: 'More credit to touchpoints closer to conversion', is_active: true },
-    { user_id: userId, name: 'U-Shaped', model_name: 'U-Shaped', type: 'u_shaped', description: '40% first touch, 40% last touch, 20% distributed middle', is_active: true },
-    { user_id: userId, name: 'W-Shaped', model_name: 'W-Shaped', type: 'w_shaped', description: '30% first, 30% lead creation, 30% opportunity, 10% rest', is_active: true },
-    { user_id: userId, name: 'Markov Chain', model_name: 'Markov Chain', type: 'data_driven_markov', description: 'Data-driven model using transition probabilities', is_active: true, accuracy_score: 94.2 },
-    { user_id: userId, name: 'Shapley Value', model_name: 'Shapley Value', type: 'data_driven_shapley', description: 'Game theory approach for channel contribution', is_active: true, accuracy_score: 96.1 },
+    { user_id: userId, name: 'First Touch', type: 'first_touch', description: 'Credits the first interaction that started the journey', is_active: true },
+    { user_id: userId, name: 'Last Touch', type: 'last_touch', description: 'Credits the last interaction before conversion', is_active: true },
+    { user_id: userId, name: 'Linear', type: 'linear', description: 'Distributes credit equally across all touchpoints', is_active: true },
+    { user_id: userId, name: 'Time Decay', type: 'time_decay', description: 'More credit to touchpoints closer to conversion', is_active: true },
+    { user_id: userId, name: 'U-Shaped', type: 'u_shaped', description: '40% first touch, 40% last touch, 20% distributed middle', is_active: true },
+    { user_id: userId, name: 'W-Shaped', type: 'w_shaped', description: '30% first, 30% lead creation, 30% opportunity, 10% rest', is_active: true },
+    { user_id: userId, name: 'Markov Chain', type: 'data_driven_markov', description: 'Data-driven model using transition probabilities', is_active: true, accuracy_score: 94.2 },
+    { user_id: userId, name: 'Shapley Value', type: 'data_driven_shapley', description: 'Game theory approach for channel contribution', is_active: true, accuracy_score: 96.1 },
   ];
 }
 

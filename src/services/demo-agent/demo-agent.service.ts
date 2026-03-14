@@ -21,6 +21,7 @@ import { seedAnalytics } from './seeders/marketing/analytics-seeder';
 import { seedOpportunities } from './seeders/marketing/opportunities-seeder';
 import { seedContext } from './seeders/marketing/context-seeder';
 import { seedAutomation } from './seeders/marketing/automation-seeder';
+import { seedExtras } from './seeders/marketing/extras-seeder';
 
 const TEMPLATES: Record<IndustryType, IndustryTemplate> = {
   healthcare: healthcareTemplate,
@@ -32,12 +33,17 @@ const TEMPLATES: Record<IndustryType, IndustryTemplate> = {
 
 // All marketing tables that get seeded (reverse dependency order for deletion)
 const MARKETING_TABLES = [
+  // Extras (new tables)
+  'media_assets', 'journeys', 'strategic_plans', 'social_accounts',
+  'customer_ltv', 'revenue_opportunities', 'revenue_predictions', 'recommendations',
+  'channel_attributions',
+  // Original tables
   'data_flow_events', 'autonomous_decisions', 'qr_codes',
   'feed_items', 'discovered_events', 'opportunities',
   'content_items', 'publishable_content', 'content_templates_ai',
   'campaigns', 'triggered_campaigns', 'campaign_triggers', 'autonomous_campaign_status',
   'contacts', 'intent_signals', 'captured_contacts', 'lead_profiles', 'scored_leads',
-  'channel_attributions', 'attribution_models', 'channel_health',
+  'attribution_models', 'channel_health',
   'scoring_models', 'scoring_rules',
   'ai_agents', 'integration_configs', 'agent_messages', 'agent_tasks',
   'segments', 'personas', 'competitive_features', 'competitors',
@@ -101,6 +107,7 @@ class DemoAgentService {
       { name: 'Content & Templates', fn: () => seedContent(userId, template) },
       { name: 'Opportunities & Events', fn: () => seedOpportunities(userId, template) },
       { name: 'Automation & QR Codes', fn: () => seedAutomation(userId, template) },
+      { name: 'Recommendations, Revenue & Extras', fn: () => seedExtras(userId, template) },
     ];
 
     for (let i = 0; i < steps.length; i++) {

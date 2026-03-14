@@ -4,62 +4,71 @@ import type { IndustryTemplate } from '../../types';
 import { randomBetween } from '../../templates/base-template';
 
 export async function seedContext(userId: string, template: IndustryTemplate): Promise<void> {
-  // Organization entities
+  // Organization entities — DB columns: entity_name, entity_type, description
   const entities = template.organizationEntities.map((e) => ({
     user_id: userId,
-    name: e.name,
-    type: e.type,
+    entity_name: e.name,
+    entity_type: e.type,
     description: e.description,
   }));
   const { error: entityError } = await marketingSupabase.from('organization_entities').insert(entities);
   if (entityError) console.error('organization_entities seed error:', entityError);
 
-  // Products
+  // Products — DB columns: product_name, product_type, description, status (NO category column)
   const products = template.products.map((p) => ({
     user_id: userId,
-    name: p.name,
+    product_name: p.name,
     description: p.description,
-    category: p.category,
+    product_type: p.category || 'software',
     status: p.status,
   }));
   const { error: productError } = await marketingSupabase.from('products').insert(products);
   if (productError) console.error('products seed error:', productError);
 
-  // Competitors
+  // Competitors — DB columns: competitor_name, website_url, company_type, metadata (NO description column)
   const competitors = template.competitors.map((c) => ({
     user_id: userId,
-    name: c.name,
-    description: c.description,
-    website: c.website,
+    competitor_name: c.name,
+    website_url: c.website,
+    company_type: 'direct',
+    metadata: { description: c.description },
   }));
   const { error: compError } = await marketingSupabase.from('competitors').insert(competitors);
   if (compError) console.error('competitors seed error:', compError);
 
-  // Competitive features
+  // Competitive features — DB columns: feature_name, feature_category, our_score, our_capability,
+  //   competitor_capabilities (JSONB), importance_weight (NO competitor_name, our_rating, competitor_rating, importance)
   const featureNames = ['AI/ML Capabilities', 'User Experience', 'Integration Ecosystem', 'Pricing', 'Customer Support', 'Scalability', 'Data Security', 'Mobile App'];
   const compFeatures = template.competitors.flatMap((c) =>
     featureNames.map((feature) => ({
       user_id: userId,
-      competitor_name: c.name,
       feature_name: feature,
-      our_rating: randomBetween(7, 10),
-      competitor_rating: randomBetween(4, 9),
-      importance: randomBetween(6, 10),
+      feature_category: 'core',
+      our_score: randomBetween(7, 10),
+      our_capability: 'Available',
+      our_status: 'available',
+      competitor_capabilities: { [c.name]: { score: randomBetween(4, 9), status: 'available' } },
+      importance_weight: randomBetween(6, 10),
     }))
   );
   const { error: featError } = await marketingSupabase.from('competitive_features').insert(compFeatures);
   if (featError) console.error('competitive_features seed error:', featError);
 
-  // Personas
+  // Personas — DB columns: name, demographics (JSONB), psychographics (JSONB), behavioral (JSONB),
+  //   journey_stages (JSONB), metadata (JSONB) — NO description, pain_points, goals, preferred_channels
   const personas = template.personas.map((p) => ({
     user_id: userId,
     name: p.name,
-    description: p.description,
     demographics: p.demographics,
     psychographics: p.psychographics,
-    pain_points: p.pain_points,
-    goals: p.goals,
-    preferred_channels: p.preferred_channels,
+    behavioral: {
+      pain_points: p.pain_points,
+      goals: p.goals,
+      preferred_channels: p.preferred_channels,
+    },
+    metadata: {
+      description: p.description,
+    },
   }));
   const { error: personaError } = await marketingSupabase.from('personas').insert(personas);
   if (personaError) console.error('personas seed error:', personaError);
@@ -73,16 +82,18 @@ export async function seedContext(userId: string, template: IndustryTemplate): P
   const { error: segmentError } = await marketingSupabase.from('segments').insert(segments);
   if (segmentError) console.error('segments seed error:', segmentError);
 
-  // Strategic objectives
+  // Strategic objectives — DB columns: title, description, objective_type, priority, target_value,
+  //   current_value, time_horizon, target_date, status, success_metrics (NO name, category, unit)
   const objectives = template.strategicObjectives.map((o) => ({
     user_id: userId,
-    name: o.name,
+    title: o.name,
     description: o.description,
-    category: o.category,
+    objective_type: o.category || 'operational',
     target_value: o.target_value,
     current_value: o.current_value,
-    unit: o.unit,
     priority: o.priority,
+    status: 'active',
+    success_metrics: [{ metric: o.unit || 'units', target: o.target_value }],
   }));
   const { error: objError } = await marketingSupabase.from('strategic_objectives').insert(objectives);
   if (objError) console.error('strategic_objectives seed error:', objError);

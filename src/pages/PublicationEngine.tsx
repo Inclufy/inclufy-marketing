@@ -153,6 +153,7 @@ function ScoreBadge({ score }: { score: number }) {
 // ─── Helper: Format numbers compactly ───────────────────────────────
 
 function fmtNum(n: number): string {
+  if (n == null) return '0';
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
   return n.toLocaleString();
@@ -781,7 +782,7 @@ export default function PublicationEngine() {
                       {nl ? 'Gem. Betrokkenheid' : fr ? 'Engagement Moy.' : 'Avg Engagement'}
                     </p>
                     <p className="text-3xl font-bold mt-1 text-emerald-900 dark:text-emerald-100">
-                      {performanceDashboard.avg_engagement.toFixed(1)}%
+                      {(performanceDashboard.avg_engagement ?? 0).toFixed(1)}%
                     </p>
                   </CardContent>
                 </Card>

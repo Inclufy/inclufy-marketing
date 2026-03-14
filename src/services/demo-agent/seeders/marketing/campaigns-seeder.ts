@@ -5,7 +5,8 @@ import { daysAgo, daysFromNow, randomBetween } from '../../templates/base-templa
 
 export async function seedCampaigns(userId: string, template: IndustryTemplate): Promise<void> {
   // ── 1. campaigns table (used by CampaignOrchestrator, Analytics, Dashboard) ──
-  const campaignTypes = ['email', 'social', 'content', 'paid', 'event'];
+  // DB CHECK constraint: type IN ('email', 'sms', 'push', 'multi-channel')
+  const campaignTypes = ['email', 'sms', 'push', 'multi-channel', 'email'];
   const campaignStatuses = ['active', 'active', 'completed', 'draft', 'paused'];
   const campaigns = template.campaigns.map((c, i) => ({
     user_id: userId,

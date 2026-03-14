@@ -318,7 +318,7 @@ export default function LeadIntelligence() {
                       <PieChart>
                         <Pie
                           data={dashboard.intent_distribution.map(d => ({
-                            name: nl ? INTENT_LEVEL_META[d.level].labelNl : fr ? INTENT_LEVEL_META[d.level].labelFr : INTENT_LEVEL_META[d.level].label,
+                            name: nl ? (INTENT_LEVEL_META[d.level] ?? INTENT_LEVEL_META.medium).labelNl : fr ? (INTENT_LEVEL_META[d.level] ?? INTENT_LEVEL_META.medium).labelFr : (INTENT_LEVEL_META[d.level] ?? INTENT_LEVEL_META.medium).label,
                             value: d.count,
                             color: d.color,
                           }))}
@@ -341,7 +341,7 @@ export default function LeadIntelligence() {
                       {dashboard.intent_distribution.map((d) => (
                         <div key={d.level} className="flex items-center gap-1.5 text-xs">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: d.color }} />
-                          <span>{nl ? INTENT_LEVEL_META[d.level].labelNl : fr ? INTENT_LEVEL_META[d.level].labelFr : INTENT_LEVEL_META[d.level].label}: {d.count.toLocaleString()}</span>
+                          <span>{nl ? (INTENT_LEVEL_META[d.level] ?? INTENT_LEVEL_META.medium).labelNl : fr ? (INTENT_LEVEL_META[d.level] ?? INTENT_LEVEL_META.medium).labelFr : (INTENT_LEVEL_META[d.level] ?? INTENT_LEVEL_META.medium).label}: {d.count.toLocaleString()}</span>
                         </div>
                       ))}
                     </div>
@@ -447,7 +447,7 @@ export default function LeadIntelligence() {
             </Card>
           ) : (
             topLeads.map((lead) => {
-              const intentMeta = INTENT_LEVEL_META[lead.intent_level];
+              const intentMeta = INTENT_LEVEL_META[lead.intent_level] ?? INTENT_LEVEL_META.medium;
               const stageMeta = BUYING_STAGE_META[lead.buying_stage] ?? BUYING_STAGE_META.awareness;
               const isExpanded = expandedLeadId === lead.id;
               const isPredicting = predictingIds.has(lead.id);
@@ -662,7 +662,7 @@ export default function LeadIntelligence() {
                             </h4>
                             <div className="space-y-2">
                               {lead.signals.map((signal) => {
-                                const signalMeta = SIGNAL_TYPE_META[signal.type];
+                                const signalMeta = SIGNAL_TYPE_META[signal.type] ?? SIGNAL_TYPE_META.content_download;
                                 return (
                                   <div key={signal.id} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900/50 rounded-lg px-3 py-2">
                                     <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -711,7 +711,7 @@ export default function LeadIntelligence() {
                 </div>
               ) : (
                 recentSignals.map((signal) => {
-                  const signalMeta = SIGNAL_TYPE_META[signal.type];
+                  const signalMeta = SIGNAL_TYPE_META[signal.type] ?? SIGNAL_TYPE_META.content_download;
                   return (
                     <div key={signal.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors">
                       {/* Signal type icon */}
