@@ -399,10 +399,7 @@ export default function LuxuryDashboard() {
 
         <div className="w-full py-8">
           <TabsContent value="overview" className="space-y-6 mt-0">
-            {/* Smart Actions Bar */}
-            <SmartActionsBar />
-
-            {/* Key Metrics - Redesigned 2-row layout */}
+            {/* 1. Key Metrics — your numbers at a glance */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <LuxuryMetricCard
                 title={nl ? 'Totaal Budget' : fr ? 'Budget Total' : 'Total Budget'}
@@ -460,36 +457,35 @@ export default function LuxuryDashboard() {
               />
             </div>
 
-            {/* Autonomous Marketing Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="lg:col-span-2">
-                <AutonomousCommandCenter
-                  systemHealth={autonomous.systemHealth}
-                  isPaused={autonomous.isPaused}
-                  autonomyLevel={autonomous.autonomyLevel}
-                  pendingDecisions={autonomous.pendingDecisions}
-                  activeCampaigns={autonomous.activeCampaigns}
-                  metrics={autonomous.metrics}
-                  campaignPerformance={autonomous.campaignPerformance}
-                  onApprove={autonomous.approveDecision}
-                  onReject={autonomous.rejectDecision}
-                  onTogglePause={autonomous.togglePause}
-                  isLoading={autonomous.isLoading}
-                />
-              </div>
-              <div>
-                <AIRecommendationsWidget
-                  recommendations={autonomous.topRecommendations}
-                  stats={autonomous.recommendationStats}
-                  onAccept={autonomous.acceptRecommendation}
-                  onDismiss={autonomous.dismissRecommendation}
-                  isLoading={autonomous.isLoading}
-                />
-              </div>
+            {/* 2. Campaign Readiness + AI Recommendations — what needs attention */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <CampaignReadinessWidget />
+              <AIRecommendationsWidget
+                recommendations={autonomous.topRecommendations}
+                stats={autonomous.recommendationStats}
+                onAccept={autonomous.acceptRecommendation}
+                onDismiss={autonomous.dismissRecommendation}
+                isLoading={autonomous.isLoading}
+              />
             </div>
 
-            {/* Campaign Readiness Widget */}
-            <CampaignReadinessWidget />
+            {/* 3. Autonomous Marketing Command Center — AI automation status */}
+            <AutonomousCommandCenter
+              systemHealth={autonomous.systemHealth}
+              isPaused={autonomous.isPaused}
+              autonomyLevel={autonomous.autonomyLevel}
+              pendingDecisions={autonomous.pendingDecisions}
+              activeCampaigns={autonomous.activeCampaigns}
+              metrics={autonomous.metrics}
+              campaignPerformance={autonomous.campaignPerformance}
+              onApprove={autonomous.approveDecision}
+              onReject={autonomous.rejectDecision}
+              onTogglePause={autonomous.togglePause}
+              isLoading={autonomous.isLoading}
+            />
+
+            {/* 4. Smart Actions — take action */}
+            <SmartActionsBar />
 
             {/* Two-column: Campaign Progress + Recent Campaigns */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
