@@ -59,6 +59,42 @@ export interface EventROIAnalysis {
 // Type aliases for hook compatibility
 export type Event = DiscoveredEvent;
 
+function safeEvent(raw: any): DiscoveredEvent {
+  // estimated_roi may be stored as { percentage, value } object — extract the number
+  let roi = raw.estimated_roi;
+  if (roi && typeof roi === 'object') roi = roi.percentage ?? roi.value ?? 0;
+  roi = Number(roi) || 0;
+
+  // networking_value may be a string label — map to number
+  let nv = raw.networking_value;
+  if (typeof nv === 'string') {
+    const map: Record<string, number> = { low: 20, medium: 50, high: 75, very_high: 95 };
+    nv = map[nv] ?? 50;
+  }
+  nv = Number(nv) || 0;
+
+  // cost may be a number or object
+  let cost = raw.cost;
+  if (cost == null || typeof cost !== 'object') cost = { ticket: 0, travel: 0, accommodation: 0, total: Number(cost) || 0 };
+  if (!cost.total) cost.total = (cost.ticket || 0) + (cost.travel || 0) + (cost.accommodation || 0) + (cost.booth || 0);
+
+  return {
+    ...raw,
+    estimated_roi: roi,
+    networking_value: nv,
+    cost,
+    speakers: Array.isArray(raw.speakers) ? raw.speakers : [],
+    topics: Array.isArray(raw.topics) ? raw.topics : [],
+    competitors_attending: Array.isArray(raw.competitors_attending) ? raw.competitors_attending : [],
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    expected_attendees: Number(raw.expected_attendees) || 0,
+    target_audience_match: Number(raw.target_audience_match) || 0,
+    estimated_leads: Number(raw.estimated_leads) || 0,
+    priority_score: Number(raw.priority_score) || 0,
+    ai_recommendation: typeof raw.ai_recommendation === 'object' ? JSON.stringify(raw.ai_recommendation) : String(raw.ai_recommendation || ''),
+  };
+}
+
 class EventIntelligenceService {
   private async getUserId(): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
@@ -81,7 +117,7 @@ class EventIntelligenceService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as unknown as DiscoveredEvent[];
+    return (data || []).map(safeEvent);
   }
 
   async getMetrics(): Promise<EventMetrics> {
@@ -92,7 +128,7 @@ class EventIntelligenceService {
       .eq('user_id', userId);
     if (error) throw error;
 
-    const events = (data || []) as unknown as DiscoveredEvent[];
+    const events = (data || []).map(safeEvent);
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
@@ -137,7 +173,7 @@ class EventIntelligenceService {
       .single();
     if (error) throw error;
 
-    const event = data as unknown as DiscoveredEvent;
+    const event = safeEvent(data);
     const costTotal = event.cost?.total || 0;
     const revenueAttributed = costTotal * ((event.estimated_roi || 0) / 100);
 

@@ -95,6 +95,87 @@ const STAGE_LABELS: Record<LeadStage, string> = {
   customer: 'Customer',
 };
 
+// Ensure any value rendered in JSX is a primitive, not an object
+function str(val: any): string {
+  if (val == null) return '';
+  if (typeof val === 'object') return JSON.stringify(val);
+  return String(val);
+}
+
+function safeLead(raw: any): ScoredLead {
+  // next_best_action may be stored as { action, priority, channel } object — extract the string
+  let nba = raw.next_best_action;
+  if (nba && typeof nba === 'object') nba = nba.action ?? nba.label ?? JSON.stringify(nba);
+  nba = str(nba);
+
+  // score_breakdown may be stored differently
+  let sb = raw.score_breakdown;
+  if (sb == null || typeof sb !== 'object') sb = {};
+
+  return {
+    ...raw,
+    name: str(raw.name),
+    email: str(raw.email),
+    company: str(raw.company ?? ''),
+    title: str(raw.title ?? ''),
+    source: str(raw.source ?? ''),
+    stage: raw.stage || 'visitor',
+    composite_score: Number(raw.composite_score) || 0,
+    conversion_probability: Number(raw.conversion_probability) || 0,
+    predicted_value: Number(raw.predicted_value) || 0,
+    activity_count_30d: Number(raw.activity_count_30d) || 0,
+    last_activity: str(raw.last_activity ?? ''),
+    predicted_close_date: raw.predicted_close_date ? str(raw.predicted_close_date) : undefined,
+    next_best_action: nba,
+    score_breakdown: {
+      behavioral: Number(sb.behavioral) || 0,
+      demographic: Number(sb.demographic) || 0,
+      firmographic: Number(sb.firmographic) || 0,
+      engagement: Number(sb.engagement) || 0,
+      intent: Number(sb.intent) || 0,
+    },
+    score_history: Array.isArray(raw.score_history) ? raw.score_history : [],
+    hot_signals: Array.isArray(raw.hot_signals) ? raw.hot_signals.map(str) : [],
+    cold_signals: Array.isArray(raw.cold_signals) ? raw.cold_signals.map(str) : [],
+    tags: Array.isArray(raw.tags) ? raw.tags.map(str) : [],
+  };
+}
+
+function safeRule(raw: any): ScoringRule {
+  return {
+    ...raw,
+    name: str(raw.name),
+    category: raw.category || 'behavioral',
+    description: str(raw.description),
+    condition: str(raw.condition),
+    points: Number(raw.points) || 0,
+    is_active: raw.is_active ?? true,
+    triggers_count: Number(raw.triggers_count) || 0,
+  };
+}
+
+function safeModel(raw: any): ScoringModel {
+  const cw = raw.category_weights || {};
+  return {
+    ...raw,
+    name: str(raw.name),
+    description: str(raw.description ?? ''),
+    is_active: raw.is_active ?? false,
+    accuracy: Number(raw.accuracy) || 0,
+    total_leads_scored: Number(raw.total_leads_scored) || 0,
+    last_trained: str(raw.last_trained ?? ''),
+    threshold_mql: Number(raw.threshold_mql) || 40,
+    threshold_sql: Number(raw.threshold_sql) || 70,
+    category_weights: {
+      behavioral: Number(cw.behavioral) || 20,
+      demographic: Number(cw.demographic) || 20,
+      firmographic: Number(cw.firmographic) || 20,
+      engagement: Number(cw.engagement) || 20,
+      intent: Number(cw.intent) || 20,
+    },
+  };
+}
+
 const SCORE_DISTRIBUTION_COLORS: Record<string, string> = {
   '0-10': '#ef4444',
   '11-20': '#f97316',
@@ -127,7 +208,7 @@ class LeadScoringService {
 
     if (error) throw error;
 
-    const allLeads = (leads || []) as unknown as ScoredLead[];
+    const allLeads = (leads || []).map(safeLead);
     const totalLeads = allLeads.length;
     const averageScore = totalLeads > 0
       ? Math.round((allLeads.reduce((sum, l) => sum + l.composite_score, 0) / totalLeads) * 10) / 10
@@ -258,7 +339,7 @@ class LeadScoringService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as unknown as ScoredLead[];
+    return (data || []).map(safeLead);
   }
 
   async getLeadById(id: string): Promise<ScoredLead | null> {
@@ -272,7 +353,7 @@ class LeadScoringService {
       .maybeSingle();
 
     if (error) throw error;
-    return (data as unknown as ScoredLead) || null;
+    return data ? safeLead(data) : null;
   }
 
   async getScoringRules(): Promise<ScoringRule[]> {
@@ -285,7 +366,7 @@ class LeadScoringService {
       .order('category', { ascending: true });
 
     if (error) throw error;
-    return (data || []) as unknown as ScoringRule[];
+    return (data || []).map(safeRule);
   }
 
   async updateScoringRule(id: string, updates: Partial<ScoringRule>): Promise<void> {
@@ -315,7 +396,7 @@ class LeadScoringService {
     if (error) throw error;
     if (!data) {
       // Return a sensible default model when none exists yet
-      return {
+      return safeModel({
         id: '',
         name: 'Default Model',
         accuracy: 0,
@@ -324,9 +405,9 @@ class LeadScoringService {
         threshold_mql: 40,
         threshold_sql: 70,
         last_trained: null,
-      } as unknown as ScoringModel;
+      });
     }
-    return data as unknown as ScoringModel;
+    return safeModel(data);
   }
 
   async updateModelWeights(weights: Record<ScoreCategory, number>): Promise<void> {
@@ -367,7 +448,7 @@ class LeadScoringService {
 
     if (leadsError) throw leadsError;
 
-    const allLeads = (leads || []) as unknown as ScoredLead[];
+    const allLeads = (leads || []).map(safeLead);
     let changes = 0;
 
     for (const lead of allLeads) {
@@ -435,7 +516,11 @@ class LeadScoringService {
 
     if (error) throw error;
 
-    const allLeads = (leads || []) as unknown as Array<{ stage: LeadStage; composite_score: number; predicted_value: number }>;
+    const allLeads = (leads || []).map((r: any) => ({
+      stage: r.stage as LeadStage,
+      composite_score: Number(r.composite_score) || 0,
+      predicted_value: Number(r.predicted_value) || 0,
+    }));
     const stages: LeadStage[] = ['visitor', 'lead', 'mql', 'sql', 'opportunity', 'customer'];
 
     return stages.map((stage, idx) => {
@@ -475,7 +560,7 @@ class LeadScoringService {
 
     if (error) throw error;
 
-    const allLeads = (leads || []) as unknown as ScoredLead[];
+    const allLeads = (leads || []).map(safeLead);
     const insights: PredictiveInsight[] = [];
 
     // Insight 1: High-value leads stalling at MQL
