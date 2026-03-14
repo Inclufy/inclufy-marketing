@@ -19,6 +19,18 @@ export interface AutonomousDecision {
   executed_at?: string;
 }
 
+// Safe mapper: DB stores estimated_impact as JSONB — extract .description for display
+function safeDecision(raw: any): AutonomousDecision {
+  const ei = raw.estimated_impact;
+  return {
+    ...raw,
+    estimated_impact:
+      typeof ei === 'string' ? ei
+      : ei && typeof ei === 'object' && ei.description ? ei.description
+      : ei != null ? String(ei) : '',
+  };
+}
+
 export interface CampaignStatus {
   id: string;
   name: string;
@@ -233,7 +245,7 @@ class AutonomousService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as AutonomousDecision[];
+    return (data || []).map(safeDecision) as AutonomousDecision[];
   }
 
   // Get Active Campaigns
@@ -498,7 +510,7 @@ class AutonomousService {
       return data.map((o: any) => ({
         type: o.type,
         topic: o.title,
-        urgency: o.estimated_impact > 50000 ? 'high' : 'medium',
+        urgency: (typeof o.estimated_impact === 'object' && o.estimated_impact?.value ? o.estimated_impact.value : Number(o.estimated_impact) || 0) > 50000 ? 'high' : 'medium',
       }));
     }
 

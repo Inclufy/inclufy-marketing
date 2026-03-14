@@ -49,6 +49,35 @@ export interface RevenueMetrics {
   churnRate: number;
 }
 
+// Safe mappers: DB may store JSONB/TEXT that differs from TS interface
+function safePrediction(raw: any): RevenuePrediction {
+  const th = raw.time_horizon;
+  return {
+    ...raw,
+    predicted_value: Number(raw.predicted_value) || 0,
+    confidence: Number(raw.confidence) || 0,
+    time_horizon: typeof th === 'number' ? th : parseInt(String(th)) || 30,
+    factors: Array.isArray(raw.factors) ? raw.factors : [],
+  };
+}
+
+function safeRevOpp(raw: any): RevenueOpportunity {
+  const imp = raw.impact;
+  const ttv = raw.time_to_value;
+  return {
+    ...raw,
+    estimated_value: Number(raw.estimated_value) || 0,
+    success_probability: Number(raw.success_probability) || 0,
+    impact:
+      typeof imp === 'string' ? imp
+      : imp && typeof imp === 'object' && imp.level ? imp.level
+      : 'medium',
+    time_to_value:
+      typeof ttv === 'number' ? ttv
+      : parseInt(String(ttv)) || 30,
+  };
+}
+
 export interface PriceOptimization {
   product_id: string;
   current_price: number;
@@ -94,8 +123,8 @@ class RevenueEngineService {
       .eq('user_id', userId);
     if (oppError) throw oppError;
 
-    const preds = (predictions || []) as unknown as RevenuePrediction[];
-    const opps = (opportunities || []) as unknown as RevenueOpportunity[];
+    const preds = (predictions || []).map(safePrediction) as RevenuePrediction[];
+    const opps = (opportunities || []).map(safeRevOpp) as RevenueOpportunity[];
 
     const totalPredictedValue = preds.reduce((sum, p) => sum + p.predicted_value, 0);
     const avgConfidence = preds.length > 0
@@ -144,7 +173,7 @@ class RevenueEngineService {
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return (data || []) as unknown as RevenuePrediction[];
+    return (data || []).map(safePrediction) as RevenuePrediction[];
   }
 
   // Get revenue opportunities
@@ -157,7 +186,7 @@ class RevenueEngineService {
       .eq('status', 'identified')
       .order('estimated_value', { ascending: false });
     if (error) throw error;
-    return (data || []) as unknown as RevenueOpportunity[];
+    return (data || []).map(safeRevOpp) as RevenueOpportunity[];
   }
 
   // Get customer lifetime value analysis
@@ -254,7 +283,7 @@ class RevenueEngineService {
       .eq('entity_id', productId);
     if (error) throw error;
 
-    const preds = (predictions || []) as unknown as RevenuePrediction[];
+    const preds = (predictions || []).map(safePrediction) as RevenuePrediction[];
 
     const avgPredictedValue = preds.length > 0
       ? preds.reduce((sum, p) => sum + p.predicted_value, 0) / preds.length
@@ -306,7 +335,7 @@ class RevenueEngineService {
         .order('estimated_value', { ascending: false });
       if (error) throw error;
 
-      const opps = (opportunities || []) as unknown as RevenueOpportunity[];
+      const opps = (opportunities || []).map(safeRevOpp) as RevenueOpportunity[];
       const actions: string[] = [];
       let projectedImpact = 0;
 
@@ -376,7 +405,7 @@ class RevenueEngineService {
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    const preds = (predictions || []) as unknown as RevenuePrediction[];
+    const preds = (predictions || []).map(safePrediction) as RevenuePrediction[];
 
     const baseRevenue = preds.length > 0
       ? preds.reduce((sum, p) => sum + p.predicted_value, 0)
@@ -482,7 +511,7 @@ class RevenueEngineService {
       .eq('user_id', userId);
     if (error) throw error;
 
-    const preds = (predictions || []) as unknown as RevenuePrediction[];
+    const preds = (predictions || []).map(safePrediction) as RevenuePrediction[];
 
     const byChannel: Record<string, number> = {};
     const byCampaign: Record<string, number> = {};

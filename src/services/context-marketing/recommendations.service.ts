@@ -32,6 +32,21 @@ export interface Recommendation {
   results?: RecommendationResult;
 }
 
+// Safe mapper: impact_estimate comes from JSONB — ensure correct shape
+function safeRec(raw: any): Recommendation {
+  const ie = raw.impact_estimate;
+  return {
+    ...raw,
+    confidence_score: Number(raw.confidence_score) || 0,
+    impact_estimate:
+      ie && typeof ie === 'object' && ie.metric
+        ? ie
+        : { metric: 'General', value: 0, unit: '', revenue: 0, time_saved: 0, engagement: 0 },
+    action_items: Array.isArray(raw.action_items) ? raw.action_items : [],
+    data_sources: Array.isArray(raw.data_sources) ? raw.data_sources : [],
+  };
+}
+
 export interface RecommendationResult {
   actual_impact: {
     metric: string;
@@ -98,7 +113,7 @@ class RecommendationsService {
     const { data, error } = await query;
     if (error) throw error;
 
-    const recommendations = (data || []) as unknown as Recommendation[];
+    const recommendations = (data || []).map(safeRec) as Recommendation[];
 
     // Sort by priority and confidence (client-side for multi-column sort)
     recommendations.sort((a, b) => {
@@ -121,7 +136,7 @@ class RecommendationsService {
       .eq('user_id', userId)
       .maybeSingle();
     if (error) throw error;
-    return data as unknown as Recommendation | null;
+    return data ? safeRec(data) as Recommendation : null;
   }
 
   // Get statistics computed from recommendations data
@@ -134,7 +149,7 @@ class RecommendationsService {
       .eq('user_id', userId);
     if (error) throw error;
 
-    const allRecs = (data || []) as unknown as Recommendation[];
+    const allRecs = (data || []).map(safeRec) as Recommendation[];
     const activeRecs = allRecs.filter(r => r.status === 'pending' || r.status === 'in_progress');
     const implementedRecs = allRecs.filter(r => r.status === 'implemented');
 
@@ -243,7 +258,7 @@ class RecommendationsService {
       .order('created_at', { ascending: false });
     if (error) throw error;
 
-    return (data || []) as unknown as Recommendation[];
+    return (data || []).map(safeRec) as Recommendation[];
   }
 
   // Get similar recommendations by same type
@@ -263,7 +278,7 @@ class RecommendationsService {
       .limit(limit);
     if (error) throw error;
 
-    return (data || []) as unknown as Recommendation[];
+    return (data || []).map(safeRec) as Recommendation[];
   }
 }
 

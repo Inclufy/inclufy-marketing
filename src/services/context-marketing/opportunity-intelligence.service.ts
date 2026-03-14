@@ -29,6 +29,26 @@ export interface Opportunity {
   campaign_suggestion?: { title: string; channels: string[]; budget: number; duration_days: number };
 }
 
+// Safe mapper: DB stores estimated_impact as JSONB — may be number, object, or string
+function safeOpp(raw: any): Opportunity {
+  const ei = raw.estimated_impact;
+  return {
+    ...raw,
+    estimated_impact:
+      typeof ei === 'number' ? ei
+      : ei && typeof ei === 'object' && typeof ei.value === 'number' ? ei.value
+      : Number(ei) || 0,
+    estimated_reach: Number(raw.estimated_reach) || 0,
+    trend_velocity: Number(raw.trend_velocity) || 0,
+    relevance_score: Number(raw.relevance_score) || 0,
+    confidence: Number(raw.confidence) || 0,
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    suggested_actions: Array.isArray(raw.suggested_actions) ? raw.suggested_actions : [],
+    related_keywords: Array.isArray(raw.related_keywords) ? raw.related_keywords : [],
+    data_sources: Array.isArray(raw.data_sources) ? raw.data_sources : [],
+  };
+}
+
 export interface TrendData {
   keyword: string;
   volume: number;
@@ -83,7 +103,7 @@ class OpportunityIntelligenceService {
 
     const { data, error } = await query;
     if (error) throw error;
-    return (data || []) as unknown as Opportunity[];
+    return (data || []).map(safeOpp) as Opportunity[];
   }
 
   async getDashboard(): Promise<OpportunityDashboardData> {
@@ -96,7 +116,7 @@ class OpportunityIntelligenceService {
       .eq('user_id', userId);
     if (oppError) throw oppError;
 
-    const opps = (opportunities || []) as unknown as Opportunity[];
+    const opps = (opportunities || []).map(safeOpp) as Opportunity[];
 
     const today = new Date().toISOString().split('T')[0];
     const newToday = opps.filter(o => o.discovered_at?.startsWith(today)).length;

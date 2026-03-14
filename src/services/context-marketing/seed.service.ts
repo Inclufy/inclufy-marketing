@@ -464,14 +464,14 @@ class SeedService {
       {
         user_id: userId, type: 'campaign_creation', title: 'Launch Holiday Flash Sale Campaign',
         description: 'AI recommends launching a 48-hour flash sale targeting high-value customers based on detected buying patterns',
-        priority: 'high', confidence: 92, estimated_impact: '+EUR 125K revenue', risk_level: 'medium', cost_estimate: 15000,
+        priority: 'high', confidence: 92, estimated_impact: { description: '+EUR 125K revenue', revenue: 125000, cost_savings: 0 }, risk_level: 'medium', cost_estimate: 15000,
         requires_approval: true, status: 'pending',
         decision_data: { target_audience: 'high_value_customers', discount: '25%', duration: '48_hours', channels: ['email', 'sms', 'push'] },
       },
       {
         user_id: userId, type: 'budget_allocation', title: 'Reallocate Budget to High-Performing Channels',
         description: 'Shift EUR 10K from underperforming Facebook ads to Google Shopping campaigns showing 3x better ROI',
-        priority: 'critical', confidence: 95, estimated_impact: '+45% ROI improvement', risk_level: 'low', cost_estimate: 0,
+        priority: 'critical', confidence: 95, estimated_impact: { description: '+45% ROI improvement', revenue: 0, cost_savings: 10000 }, risk_level: 'low', cost_estimate: 0,
         requires_approval: false, status: 'pending',
         decision_data: { from_channel: 'facebook_ads', to_channel: 'google_shopping', amount: 10000, reason: 'performance_optimization' },
       },
