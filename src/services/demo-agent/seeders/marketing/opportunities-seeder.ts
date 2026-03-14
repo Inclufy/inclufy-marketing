@@ -10,7 +10,7 @@ export async function seedOpportunities(userId: string, template: IndustryTempla
       user_id: userId, type: 'trend', title: `${template.industry} Digital Transformation Acceleration`,
       description: `Industry analysts report 45% increase in ${template.industry} digital transformation budgets. Companies actively seeking solutions like ${template.brand.name}.`,
       source: 'Market Intelligence', priority: 'high', status: 'new', confidence: 88,
-      estimated_impact: randomBetween(200000, 500000), estimated_reach: randomBetween(5000, 15000),
+      estimated_impact: { value: randomBetween(200000, 500000), description: 'Revenue potential from digital transformation demand' }, estimated_reach: randomBetween(5000, 15000),
       trend_velocity: 78, relevance_score: 92, discovered_at: daysAgo(5), expires_at: daysFromNow(30),
       tags: ['digital-transformation', template.industry, 'growth'],
       suggested_actions: ['Launch targeted campaign', 'Create industry report', 'Reach out to top prospects'],
@@ -22,7 +22,7 @@ export async function seedOpportunities(userId: string, template: IndustryTempla
       user_id: userId, type: 'competitor_gap', title: `${template.competitors[0]?.name} Customer Dissatisfaction Spike`,
       description: `Social listening detected 3x increase in negative mentions of ${template.competitors[0]?.name}. Key complaints: poor support, outdated UI, high prices.`,
       source: 'Competitive Intelligence', priority: 'critical', status: 'new', confidence: 82,
-      estimated_impact: randomBetween(100000, 300000), estimated_reach: randomBetween(2000, 8000),
+      estimated_impact: { value: randomBetween(100000, 300000), description: 'Customer acquisition from competitor churn' }, estimated_reach: randomBetween(2000, 8000),
       trend_velocity: 65, relevance_score: 88, discovered_at: daysAgo(3), expires_at: daysFromNow(14),
       tags: ['competitive', 'acquisition', 'churn'],
       suggested_actions: ['Create migration campaign', 'Offer switch incentive', 'Target their customers with comparison ads'],
@@ -34,7 +34,7 @@ export async function seedOpportunities(userId: string, template: IndustryTempla
       user_id: userId, type: 'partnership', title: `Strategic Partnership with ${template.industry} Association`,
       description: `${template.industry} professional association with 12,000+ members seeking technology partner for member benefits program.`,
       source: 'Event Monitoring', priority: 'high', status: 'reviewing', confidence: 75,
-      estimated_impact: randomBetween(150000, 400000), estimated_reach: 12000,
+      estimated_impact: { value: randomBetween(150000, 400000), description: 'Revenue from partnership channel' }, estimated_reach: 12000,
       trend_velocity: 0, relevance_score: 85, discovered_at: daysAgo(7), expires_at: daysFromNow(45),
       tags: ['partnership', 'channel', 'growth'],
       suggested_actions: ['Schedule exploratory meeting', 'Prepare partnership proposal', 'Create co-branded content plan'],
@@ -46,7 +46,7 @@ export async function seedOpportunities(userId: string, template: IndustryTempla
       user_id: userId, type: 'trend', title: `New ${template.industry} Regulation Creates Compliance Demand`,
       description: `Upcoming regulation requires all ${template.industry} organizations to adopt digital compliance by 2027. Creates urgent need for our platform.`,
       source: 'Google Trends + Industry Reports', priority: 'high', status: 'new', confidence: 92,
-      estimated_impact: randomBetween(300000, 800000), estimated_reach: randomBetween(10000, 30000),
+      estimated_impact: { value: randomBetween(300000, 800000), description: 'Compliance-driven demand growth' }, estimated_reach: randomBetween(10000, 30000),
       trend_velocity: 85, relevance_score: 95, discovered_at: daysAgo(10), expires_at: daysFromNow(180),
       tags: ['regulation', 'compliance', 'urgency'],
       suggested_actions: ['Create compliance guide', 'Launch webinar series', 'Build compliance calculator'],
@@ -73,6 +73,7 @@ export async function seedOpportunities(userId: string, template: IndustryTempla
   if (feedError) console.error('feed_items seed error:', feedError);
 
   // Discovered events
+  const networkingLabels = ['low', 'medium', 'high', 'very_high'];
   const events = template.events.map((e) => ({
     user_id: userId,
     name: e.name,
@@ -85,9 +86,11 @@ export async function seedOpportunities(userId: string, template: IndustryTempla
     date_end: e.date_end,
     expected_attendees: e.expected_attendees,
     target_audience_match: e.target_audience_match,
-    estimated_roi: e.estimated_roi,
+    estimated_roi: { percentage: e.estimated_roi, value: Math.round(e.cost * e.estimated_roi / 100) },
     estimated_leads: e.estimated_leads,
-    networking_value: e.networking_value,
+    networking_value: typeof e.networking_value === 'number'
+      ? (networkingLabels[Math.min(Math.floor(e.networking_value / 25), 3)] || 'medium')
+      : String(e.networking_value),
     cost: e.cost,
     topics: e.topics,
     status: e.status,

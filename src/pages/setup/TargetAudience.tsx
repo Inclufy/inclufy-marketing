@@ -1,5 +1,5 @@
 // src/pages/setup/TargetAudience.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,14 +26,17 @@ import {
   Briefcase,
   Globe,
   Sparkles,
-  DollarSign
+  DollarSign,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Persona {
   id: string;
+  dbId?: string; // UUID from Supabase
   name: string;
   age: string;
   gender: string;
@@ -54,22 +57,63 @@ export default function TargetAudience() {
   const nl = lang === 'nl';
   const fr = lang === 'fr';
   const [activeTab, setActiveTab] = useState('overview');
-  const [personas, setPersonas] = useState<Persona[]>([
-    {
-      id: '1',
-      name: 'Marketing Manager Mike',
-      age: '35-45',
-      gender: 'Male',
-      occupation: 'Marketing Manager',
-      income: '$80k-120k',
-      location: 'Urban areas',
-      goals: ['Increase ROI', 'Automate workflows', 'Better reporting'],
-      painPoints: ['Time constraints', 'Multiple tools', 'Limited budget'],
-      interests: ['Technology', 'Data analytics', 'Professional development'],
-      buyingBehavior: 'Research-driven, seeks ROI proof'
-    }
-  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [personas, setPersonas] = useState<Persona[]>([]);
   const [currentPersona, setCurrentPersona] = useState(0);
+
+  // Load personas from DB
+  useEffect(() => {
+    async function loadPersonas() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsLoading(false); return; }
+
+        const { data, error } = await supabase
+          .from('personas')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at');
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const mapped: Persona[] = data.map((p: any, i: number) => ({
+            id: String(i + 1),
+            dbId: p.id,
+            name: p.name || '',
+            age: p.demographics?.age_range || p.demographics?.age || '',
+            gender: p.demographics?.gender || '',
+            occupation: p.demographics?.occupation || p.demographics?.job_title || '',
+            income: p.demographics?.income || p.demographics?.income_range || '',
+            location: p.demographics?.location || p.demographics?.region || '',
+            goals: p.behavioral?.goals || [],
+            painPoints: p.behavioral?.pain_points || [],
+            interests: p.psychographics?.interests || [],
+            buyingBehavior: p.behavioral?.buying_behavior || p.behavioral?.decision_style || '',
+          }));
+          setPersonas(mapped);
+        } else {
+          // Fallback empty persona
+          setPersonas([{
+            id: '1', name: nl ? 'Nieuw Persona' : 'New Persona',
+            age: '', gender: '', occupation: '', income: '', location: '',
+            goals: [], painPoints: [], interests: [], buyingBehavior: '',
+          }]);
+        }
+      } catch (err) {
+        console.error('Failed to load personas:', err);
+        setPersonas([{
+          id: '1', name: nl ? 'Nieuw Persona' : 'New Persona',
+          age: '', gender: '', occupation: '', income: '', location: '',
+          goals: [], painPoints: [], interests: [], buyingBehavior: '',
+        }]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadPersonas();
+  }, []);
 
   const handlePersonaAdd = () => {
     const newPersona: Persona = {
@@ -105,21 +149,80 @@ export default function TargetAudience() {
     }
   };
 
-  const handleSave = () => {
-    toast({
-      title: nl ? 'Doelgroep opgeslagen!' : fr ? 'Public cible enregistré !' : 'Target audience saved!',
-      description: nl ? 'Je doelgroepprofielen zijn succesvol bijgewerkt.' : fr ? 'Vos profils d\'audience ont été mis à jour avec succès.' : 'Your audience profiles have been updated successfully.',
-    });
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      for (const persona of personas) {
+        const row = {
+          user_id: user.id,
+          name: persona.name,
+          demographics: {
+            age_range: persona.age,
+            gender: persona.gender,
+            occupation: persona.occupation,
+            income_range: persona.income,
+            location: persona.location,
+          },
+          psychographics: {
+            interests: persona.interests,
+          },
+          behavioral: {
+            goals: persona.goals,
+            pain_points: persona.painPoints,
+            buying_behavior: persona.buyingBehavior,
+          },
+        };
+
+        if (persona.dbId) {
+          // Update existing
+          const { error } = await supabase.from('personas').update(row).eq('id', persona.dbId);
+          if (error) throw error;
+        } else {
+          // Insert new
+          const { data: inserted, error } = await supabase.from('personas').insert(row).select('id').single();
+          if (error) throw error;
+          persona.dbId = inserted.id;
+        }
+      }
+
+      toast({
+        title: nl ? 'Doelgroep opgeslagen!' : fr ? 'Public cible enregistré !' : 'Target audience saved!',
+        description: nl ? 'Je doelgroepprofielen zijn succesvol bijgewerkt.' : fr ? 'Vos profils d\'audience ont été mis à jour avec succès.' : 'Your audience profiles have been updated successfully.',
+      });
+    } catch (err: any) {
+      console.error('Failed to save personas:', err);
+      toast({
+        title: nl ? 'Opslaan mislukt' : fr ? 'Échec de l\'enregistrement' : 'Save failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleNext = () => {
-    handleSave();
+  const handleNext = async () => {
+    await handleSave();
     navigate('/app/setup/goals');
   };
 
   const completionPercentage = personas.filter(p =>
     p.name && p.age && p.occupation && p.goals.length > 0
   ).length / personas.length * 100;
+
+  if (isLoading) {
+    return (
+      <div className="w-full py-2 flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+          <p className="text-gray-500">{nl ? 'Persona\'s laden...' : fr ? 'Chargement des personas...' : 'Loading personas...'}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full py-2">
@@ -575,7 +678,8 @@ export default function TargetAudience() {
 
       {/* Actions */}
       <div className="flex items-center justify-between mt-8">
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleSave} disabled={saving}>
+          {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
           {nl ? 'Concept Opslaan' : fr ? 'Enregistrer le Brouillon' : 'Save Draft'}
         </Button>
         <div className="flex gap-3">
@@ -583,7 +687,8 @@ export default function TargetAudience() {
             <ChevronLeft className="w-4 h-4 mr-2" />
             {nl ? 'Terug' : fr ? 'Retour' : 'Back'}
           </Button>
-          <Button onClick={handleNext}>
+          <Button onClick={handleNext} disabled={saving}>
+            {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {nl ? 'Opslaan & Doorgaan' : fr ? 'Enregistrer & Continuer' : 'Save & Continue'}
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>

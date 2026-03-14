@@ -27,7 +27,8 @@ import {
   Users,
   DollarSign,
   Package,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -145,15 +146,59 @@ export default function CompetitiveAnalysisSetup() {
     }
   };
 
-  const handleSave = () => {
-    toast({
-      title: nl ? 'Concurrentieanalyse opgeslagen!' : fr ? 'Analyse concurrentielle enregistrée !' : 'Competitive analysis saved!',
-      description: nl ? 'Je concurrentielandschap is bijgewerkt.' : fr ? 'Votre paysage concurrentiel a été mis à jour.' : 'Your competitive landscape has been updated.',
-    });
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      for (const comp of competitors) {
+        const row = {
+          user_id: user.id,
+          competitor_name: comp.name,
+          website_url: comp.website,
+          company_type: comp.category,
+          market_share: comp.marketShare || null,
+          strengths: comp.strengths,
+          weaknesses: comp.weaknesses,
+          key_products: comp.products,
+          pricing_strategy: comp.pricing,
+          target_segments: comp.targetMarket ? comp.targetMarket.split(',').map(s => s.trim()) : [],
+          metadata: { description: comp.uniqueValue },
+        };
+
+        // Check if this is an existing DB record (UUID format)
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(comp.id);
+        if (isUuid) {
+          const { error } = await supabase.from('competitors').update(row).eq('id', comp.id);
+          if (error) throw error;
+        } else {
+          const { data: inserted, error } = await supabase.from('competitors').insert(row).select('id').single();
+          if (error) throw error;
+          comp.id = inserted.id; // Update to real UUID
+        }
+      }
+
+      toast({
+        title: nl ? 'Concurrentieanalyse opgeslagen!' : fr ? 'Analyse concurrentielle enregistrée !' : 'Competitive analysis saved!',
+        description: nl ? 'Je concurrentielandschap is bijgewerkt.' : fr ? 'Votre paysage concurrentiel a été mis à jour.' : 'Your competitive landscape has been updated.',
+      });
+    } catch (err: any) {
+      console.error('Failed to save competitors:', err);
+      toast({
+        title: nl ? 'Opslaan mislukt' : fr ? 'Échec de l\'enregistrement' : 'Save failed',
+        description: err.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleNext = () => {
-    handleSave();
+  const handleNext = async () => {
+    await handleSave();
     navigate('/app/context-marketing');
   };
 
@@ -633,7 +678,8 @@ export default function CompetitiveAnalysisSetup() {
 
       {/* Actions */}
       <div className="flex items-center justify-between mt-8">
-        <Button variant="outline">
+        <Button variant="outline" onClick={handleSave} disabled={saving}>
+          {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
           {nl ? 'Concept Opslaan' : fr ? 'Enregistrer le Brouillon' : 'Save Draft'}
         </Button>
         <div className="flex gap-3">
@@ -641,7 +687,8 @@ export default function CompetitiveAnalysisSetup() {
             <ChevronLeft className="w-4 h-4 mr-2" />
             {nl ? 'Terug' : fr ? 'Retour' : 'Back'}
           </Button>
-          <Button onClick={handleNext}>
+          <Button onClick={handleNext} disabled={saving}>
+            {saving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
             {nl ? 'Setup Voltooien' : fr ? 'Terminer la Configuration' : 'Complete Setup'}
             <ChevronRight className="w-4 h-4 ml-2" />
           </Button>

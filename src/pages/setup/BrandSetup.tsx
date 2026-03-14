@@ -112,6 +112,14 @@ export default function BrandSetup() {
       const primaryColor = brandColors.find(c => c.name.toLowerCase() === 'primary')?.hex || brandColors[0]?.hex;
       const secondaryColor = brandColors.find(c => c.name.toLowerCase() === 'secondary')?.hex || brandColors[1]?.hex;
 
+      // Map voice preset back to tone attributes
+      const voiceToTones: Record<string, string[]> = {
+        professional: ['Professional', 'Authoritative', 'Expert'],
+        friendly: ['Friendly', 'Warm', 'Approachable'],
+        innovative: ['Innovative', 'Bold', 'Forward-thinking'],
+        playful: ['Playful', 'Energetic', 'Enthusiastic'],
+      };
+
       await brandMemoryService.upsertActive({
         brand_name: brandName,
         tagline,
@@ -120,6 +128,7 @@ export default function BrandSetup() {
         brand_description: brandDescription,
         primary_color: primaryColor || '#7c3aed',
         secondary_color: secondaryColor || '#ec4899',
+        tone_attributes: voiceToTones[brandVoice] || voiceToTones.professional,
       });
 
       await refetchBrand();

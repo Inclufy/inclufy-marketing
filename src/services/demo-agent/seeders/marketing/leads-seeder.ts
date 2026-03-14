@@ -24,7 +24,7 @@ export async function seedLeads(userId: string, template: IndustryTemplate): Pro
     source: lead.source,
     tags: lead.tags,
     score_history: generateScoreHistory(lead.composite_score),
-    next_best_action: lead.next_best_action,
+    next_best_action: { action: lead.next_best_action, priority: lead.composite_score > 85 ? 'high' : 'medium', channel: 'sales' },
   }));
   const { error: leadsError } = await marketingSupabase.from('scored_leads').insert(scoredLeads);
   if (leadsError) console.error('scored_leads seed error:', leadsError);
@@ -39,7 +39,7 @@ export async function seedLeads(userId: string, template: IndustryTemplate): Pro
     intent_level: lead.intent_level || 'medium',
     intent_score: lead.composite_score,
     buying_stage: lead.buying_stage || 'consideration',
-    signals: lead.hot_signals,
+    signals: lead.hot_signals.map((s: string) => ({ signal: s, strength: randomBetween(60, 95), detected_at: daysAgo(randomBetween(1, 14)) })),
     website_behavior: { pages_viewed: randomBetween(8, 35), avg_time: randomBetween(120, 420), last_visit: daysAgo(randomBetween(0, 3)) },
     social_activity: { linkedin_engaged: true, twitter_followed: false, content_shared: randomBetween(0, 5) },
     engagement_timeline: [
