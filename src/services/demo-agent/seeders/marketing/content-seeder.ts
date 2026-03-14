@@ -13,6 +13,7 @@ export async function seedContent(userId: string, template: IndustryTemplate): P
   };
   const contentItems = template.content.map((c) => ({
     user_id: userId,
+    team_id: userId,
     title: c.title,
     type: contentTypeMap[c.content_type] || 'other',
     content: { markdown: c.body, summary: c.body?.substring(0, 150) },
@@ -28,19 +29,19 @@ export async function seedContent(userId: string, template: IndustryTemplate): P
   // Add items with 'review' status for Content Goedkeuring (approval workflow)
   contentItems.push(
     {
-      user_id: userId, title: `${template.brand.name} Q2 Campaign Brief`, type: 'document',
+      user_id: userId, team_id: userId, title: `${template.brand.name} Q2 Campaign Brief`, type: 'document',
       content: { markdown: `Comprehensive campaign brief for Q2 ${template.industry} marketing initiatives covering LinkedIn, email nurture, and thought leadership content.`, summary: 'Q2 campaign brief' },
       status: 'review', tags: ['campaign', 'q2', 'brief'],
       metadata: { content_type: 'brief', channels: ['linkedin', 'email'], word_count: 1450 },
     },
     {
-      user_id: userId, title: `Customer Testimonial: ${template.leads[0]?.company || 'Client'} Success Story`, type: 'blog',
+      user_id: userId, team_id: userId, title: `Customer Testimonial: ${template.leads[0]?.company || 'Client'} Success Story`, type: 'blog',
       content: { markdown: `How ${template.leads[0]?.company || 'our client'} achieved 3x ROI using ${template.brand.name}. Features quotes from ${template.leads[0]?.name || 'the CTO'} and detailed metrics.`, summary: 'Customer success story' },
       status: 'review', tags: ['case-study', 'testimonial', template.industry],
       metadata: { content_type: 'case_study', channels: ['blog', 'linkedin'], word_count: 2200 },
     },
     {
-      user_id: userId, title: `${template.industry} Industry Report 2026`, type: 'document',
+      user_id: userId, team_id: userId, title: `${template.industry} Industry Report 2026`, type: 'document',
       content: { markdown: `Annual industry report covering key ${template.industry} trends, challenges, and opportunities. Includes original research data from 500+ respondents.`, summary: `${template.industry} industry report` },
       status: 'review', tags: ['report', template.industry, 'research'],
       metadata: { content_type: 'whitepaper', channels: ['website', 'email'], word_count: 5800 },
