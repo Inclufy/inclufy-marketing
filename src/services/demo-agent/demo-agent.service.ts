@@ -22,6 +22,7 @@ import { seedOpportunities } from './seeders/marketing/opportunities-seeder';
 import { seedContext } from './seeders/marketing/context-seeder';
 import { seedAutomation } from './seeders/marketing/automation-seeder';
 import { seedExtras } from './seeders/marketing/extras-seeder';
+import { seedReports } from './seeders/marketing/reports-seeder';
 
 const TEMPLATES: Record<IndustryType, IndustryTemplate> = {
   healthcare: healthcareTemplate,
@@ -33,6 +34,8 @@ const TEMPLATES: Record<IndustryType, IndustryTemplate> = {
 
 // All marketing tables that get seeded (reverse dependency order for deletion)
 const MARKETING_TABLES = [
+  // Reports
+  'scheduled_reports', 'generated_reports', 'report_templates',
   // Extras (new tables)
   'media_assets', 'journeys', 'strategic_plans', 'social_accounts',
   'customer_ltv', 'revenue_opportunities', 'revenue_predictions', 'recommendations',
@@ -108,6 +111,7 @@ class DemoAgentService {
       { name: 'Opportunities & Events', fn: () => seedOpportunities(userId, template) },
       { name: 'Automation & QR Codes', fn: () => seedAutomation(userId, template) },
       { name: 'Recommendations, Revenue & Extras', fn: () => seedExtras(userId, template) },
+      { name: 'Reports & Templates', fn: () => seedReports(userId, template) },
     ];
 
     for (let i = 0; i < steps.length; i++) {

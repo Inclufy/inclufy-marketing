@@ -107,7 +107,8 @@ export async function seedExtras(userId: string, template: IndustryTemplate): Pr
   // ── 6. strategic_plans (Campaign Readiness → Groei Blauwdruk check) ──
   const strategicPlans = [
     {
-      user_id: userId, name: `${template.brand.name} Q2 2026 Growth Blueprint`,
+      user_id: userId, plan_name: `${template.brand.name} Q2 2026 Growth Blueprint`,
+      plan_type: 'quarterly',
       description: `Comprehensive marketing growth strategy for ${template.industry} market expansion`,
       status: 'active',
       goals: [

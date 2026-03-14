@@ -1,5 +1,5 @@
 // src/pages/setup/CompetitiveAnalysisSetup.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ import {
 import { useToast } from '@/components/ui/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Competitor {
   id: string;
@@ -54,23 +55,62 @@ export default function CompetitiveAnalysisSetup() {
   const nl = lang === 'nl';
   const fr = lang === 'fr';
   const [activeTab, setActiveTab] = useState('competitors');
-  const [competitors, setCompetitors] = useState<Competitor[]>([
-    {
-      id: '1',
-      name: 'Example Competitor',
-      website: 'https://example.com',
-      category: 'direct',
-      marketShare: 25,
-      strengths: ['Strong brand recognition', 'Large customer base'],
-      weaknesses: ['High pricing', 'Limited features'],
-      products: ['Product A', 'Product B'],
-      pricing: 'Premium ($299/month)',
-      targetMarket: 'Enterprise',
-      uniqueValue: 'Industry leader with extensive integrations'
-    }
-  ]);
+  const [competitors, setCompetitors] = useState<Competitor[]>([]);
   const [currentCompetitor, setCurrentCompetitor] = useState(0);
   const [marketPosition, setMarketPosition] = useState('challenger');
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load competitors from Supabase on mount
+  useEffect(() => {
+    async function loadCompetitors() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) { setIsLoading(false); return; }
+
+        const { data, error } = await supabase
+          .from('competitors')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at');
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+          const mapped: Competitor[] = data.map((c: any) => ({
+            id: c.id,
+            name: c.competitor_name || c.name || '',
+            website: c.website_url || c.website || '',
+            category: (['direct', 'indirect', 'aspirational'].includes(c.company_type) ? c.company_type : 'direct') as 'direct' | 'indirect' | 'aspirational',
+            marketShare: c.market_share || undefined,
+            strengths: c.strengths || [],
+            weaknesses: c.weaknesses || [],
+            products: c.key_products || [],
+            pricing: c.pricing_strategy || '',
+            targetMarket: (c.target_segments || []).join(', '),
+            uniqueValue: c.metadata?.description || '',
+          }));
+          setCompetitors(mapped);
+        } else {
+          // Fallback: show one empty competitor so the form isn't blank
+          setCompetitors([{
+            id: '1', name: '', website: '', category: 'direct',
+            strengths: [], weaknesses: [], products: [],
+            pricing: '', targetMarket: '', uniqueValue: '',
+          }]);
+        }
+      } catch (err) {
+        console.error('Failed to load competitors:', err);
+        setCompetitors([{
+          id: '1', name: '', website: '', category: 'direct',
+          strengths: [], weaknesses: [], products: [],
+          pricing: '', targetMarket: '', uniqueValue: '',
+        }]);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadCompetitors();
+  }, []);
 
   const handleCompetitorAdd = () => {
     const newCompetitor: Competitor = {
