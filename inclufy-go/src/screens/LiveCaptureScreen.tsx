@@ -51,10 +51,11 @@ export default function LiveCaptureScreen() {
 
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { eventId } = route.params;
+  // params may be undefined when navigated from the tab bar without an event
+  const eventId: string = (route.params as any)?.eventId ?? '';
 
-  const { data: event } = useEvent(eventId);
-  const { data: captures = [] } = useCaptures(eventId);
+  const { data: event } = useEvent(eventId || undefined);
+  const { data: captures = [] } = useCaptures(eventId || undefined);
   const { data: brandMemory } = useBrandMemory();
   const createCapture = useCreateCapture();
   const createPosts = useCreatePosts();
@@ -63,6 +64,27 @@ export default function LiveCaptureScreen() {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [note, setNote] = useState('');
   const [processing, setProcessing] = useState(false);
+
+  // Guard: no eventId → show event selector screen instead of crashing
+  if (!eventId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Ionicons name="camera-outline" size={52} color={colors.textTertiary} />
+        <Text style={{ color: colors.text, fontSize: 18, fontWeight: '700', marginTop: 16, textAlign: 'center' }}>
+          Selecteer een event
+        </Text>
+        <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 8, textAlign: 'center', lineHeight: 20 }}>
+          Open een event vanuit de Events-tab en tik op "Capture" om te starten.
+        </Text>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('EventList' as any)}
+          style={{ marginTop: 24, backgroundColor: colors.primary, paddingHorizontal: 28, paddingVertical: 12, borderRadius: 24 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Naar Events →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const tags = event?.default_tags?.length
     ? event.default_tags

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -76,6 +76,7 @@ export default function EventIntelligenceScreen() {
   const qc = useQueryClient();
   const [scanning, setScanning] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const autoSeeded = useRef(false);
 
   // Fetch discovered events from Supabase
   const { data: events = [], isLoading, refetch } = useQuery({
@@ -88,7 +89,11 @@ export default function EventIntelligenceScreen() {
         .select('*')
         .eq('user_id', user.id)
         .order('priority_score', { ascending: false });
-      if (error) throw error;
+      if (error) {
+        // Table may not exist yet — return empty instead of crashing
+        console.warn('discovered_events query error:', error.message);
+        return [];
+      }
       return (data || []) as DiscoveredEvent[];
     },
   });
@@ -179,6 +184,16 @@ export default function EventIntelligenceScreen() {
       setScanning(false);
     }
   }, [refetch]);
+
+  // Auto-seed on first mount if no events found and not already seeded
+  useEffect(() => {
+    if (!isLoading && events.length === 0 && !autoSeeded.current && !scanning) {
+      autoSeeded.current = true;
+      // Small delay so UI is visible first
+      const timer = setTimeout(() => { handleScan(); }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, events.length]);
 
   // Bijwonen (Attend) — register + create GO event
   const attendMutation = useMutation({
@@ -327,7 +342,7 @@ export default function EventIntelligenceScreen() {
   const highCount = events.filter(e => e.priority_score >= 75).length;
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerBadge}>

@@ -168,7 +168,7 @@ export default function CampaignListScreen() {
   // ─── Render ─────────────────────────────────────────────────────
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t.campaignList.title}</Text>

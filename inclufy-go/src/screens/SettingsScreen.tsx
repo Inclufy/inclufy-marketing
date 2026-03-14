@@ -130,9 +130,9 @@ export default function SettingsScreen() {
   // ─── Render ───────────────────────────────────────────────────────────
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.surface }]}>
         <Text style={styles.headerTitle}>{t.settings.title}</Text>
       </View>
 

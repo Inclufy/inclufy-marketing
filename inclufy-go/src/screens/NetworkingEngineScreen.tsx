@@ -234,7 +234,7 @@ export default function NetworkingEngineScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Green gradient header (matching web) */}
       <LinearGradient colors={['#065F46', '#047857', '#10B981']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.header}>
         <View style={styles.headerTop}>

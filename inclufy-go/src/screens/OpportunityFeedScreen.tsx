@@ -218,7 +218,7 @@ export default function OpportunityFeedScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerTop}>
@@ -250,12 +250,13 @@ export default function OpportunityFeedScreen() {
         </View>
       </View>
 
-      {/* Filter chips */}
+      {/* Filter chips — flexGrow:0 prevents the horizontal list from expanding vertically */}
       <FlatList
         horizontal
         data={FILTERS}
         keyExtractor={f => f.key}
         showsHorizontalScrollIndicator={false}
+        style={styles.filterList}
         contentContainerStyle={styles.filterRow}
         renderItem={({ item: f }) => (
           <TouchableOpacity
@@ -304,7 +305,8 @@ const styles = StyleSheet.create({
   stat: { flex: 1, alignItems: 'center' },
   statVal: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text },
   statLbl: { fontSize: 10, color: colors.textSecondary, marginTop: 1 },
-  filterRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs },
+  filterList: { flexGrow: 0, flexShrink: 0, maxHeight: 52 },
+  filterRow: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: spacing.xs, alignItems: 'center' },
   chip: {
     paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
     backgroundColor: '#F4F4F5', borderWidth: 1.5, borderColor: '#E4E4E7',

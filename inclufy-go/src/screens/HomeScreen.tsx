@@ -139,7 +139,7 @@ export default function HomeScreen() {
   // ─── Render ───────────────────────────────────────────────────────────
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -153,7 +153,7 @@ export default function HomeScreen() {
         }
       >
         {/* ── Welcome Header ─────────────────────────────────────────── */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.surface }]}>
           <View>
             <Text style={styles.greeting}>{t.home.greeting}</Text>
             <Text style={styles.headerSubtitle}>
