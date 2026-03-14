@@ -2,6 +2,7 @@
 // Demo verzoeken beheer + Demo Environment Manager
 
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,6 +55,7 @@ interface DemoRequest {
 export default function AdminDemoRequests() {
   const { toast } = useToast();
   const { lang } = useLanguage();
+  const queryClient = useQueryClient();
   const nl = lang === 'nl';
   const fr = lang === 'fr';
   const [requests, setRequests] = useState<DemoRequest[]>([]);
@@ -122,6 +124,8 @@ export default function AdminDemoRequests() {
         await demoAgentService.seedIndustryDemo(user.id, selectedIndustry, (p) => setDemoProgress(p));
       }
       setActiveIndustry(selectedIndustry);
+      // Invalidate all React Query caches so pages refetch fresh data
+      await queryClient.invalidateQueries();
       toast({ title: nl ? 'Demo omgeving gegenereerd!' : fr ? 'Environnement demo genere !' : 'Demo environment generated!', description: `Industry: ${selectedIndustry}` });
     } catch (err: any) {
       toast({ title: nl ? 'Genereren mislukt' : fr ? 'Echec de la generation' : 'Generation failed', description: err.message, variant: 'destructive' });
@@ -139,6 +143,10 @@ export default function AdminDemoRequests() {
       await demoAgentService.resetDemo(user.id, (p) => setDemoProgress(p));
       setActiveIndustry(null);
       setSelectedIndustry(null);
+      // Invalidate all React Query caches so pages show empty state
+      await queryClient.invalidateQueries();
+      // Clear the entire query cache to remove stale data
+      queryClient.clear();
       toast({ title: nl ? 'Demo data gewist' : fr ? 'Donnees demo effacees' : 'Demo data cleared' });
     } catch (err: any) {
       toast({ title: 'Reset failed', description: err.message, variant: 'destructive' });
