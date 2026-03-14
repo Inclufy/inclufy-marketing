@@ -81,7 +81,7 @@ const GROUP_1: { label: string; modules: AMOSModule[] } = {
       color: '#3B82F6',
       gradientColors: ['#2563EB', '#3B82F6'],
       status: 'active',
-      route: 'CampaignsTab',
+      route: 'CampaignList',
     },
     {
       id: 'content',
@@ -246,7 +246,12 @@ export default function AMOSHubScreen() {
 
   const navigate = (m: AMOSModule) => {
     if (!m.route || m.status === 'coming') return;
-    navigation.navigate(m.route as any);
+    try {
+      navigation.navigate(m.route as any);
+    } catch (e) {
+      // Try parent navigator if not found in current stack
+      try { (navigation as any).getParent()?.navigate(m.route); } catch {}
+    }
   };
 
   // ── Hero card (wide, full-row) ─────────────────────────────────────────────

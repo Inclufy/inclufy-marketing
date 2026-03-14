@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useColorScheme, Appearance } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { _syncThemeColors } from '../theme';
 
 // ─── Light Colors ──────────────────────────────────────────────────────────
 export const lightColors = {
@@ -118,8 +119,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     AsyncStorage.getItem(STORAGE_KEY).then(stored => {
       if (stored === 'light' || stored === 'dark' || stored === 'system') {
+        const isDark = stored === 'system' ? (systemScheme === 'dark') : stored === 'dark';
+        _syncThemeColors(isDark);
         setSchemeState(stored);
         applyNativeScheme(stored, systemScheme ?? 'dark');
+        setThemeKey(`${stored}-init`);
       }
     });
   }, []);
@@ -138,6 +142,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setSchemeState(s);
     applyNativeScheme(s, systemScheme ?? 'dark');
     AsyncStorage.setItem(STORAGE_KEY, s);
+    // Sync the static colors object in theme/index.ts BEFORE bumping themeKey
+    // so that when NavigationContainer remounts all screens, inline colors.xxx
+    // refs already read the correct palette.
+    const willBeDark = s === 'system' ? (systemScheme === 'dark') : s === 'dark';
+    _syncThemeColors(willBeDark);
     // Bump themeKey to trigger NavigationContainer re-mount → all screens re-render
     setThemeKey(`${s}-${Date.now()}`);
   };
