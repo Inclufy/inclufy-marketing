@@ -645,7 +645,7 @@ export default function PublicationEngine() {
                         </div>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <TrendingUp className="w-3.5 h-3.5" />
-                          <span className="font-medium text-foreground">{item.performance.engagement_rate.toFixed(1)}%</span>
+                          <span className="font-medium text-foreground">{(item.performance.engagement_rate ?? 0).toFixed(1)}%</span>
                         </div>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <MousePointerClick className="w-3.5 h-3.5" />
@@ -716,7 +716,7 @@ export default function PublicationEngine() {
                         </div>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <TrendingUp className="w-3 h-3" />
-                          {item.performance.engagement_rate.toFixed(1)}% {nl ? 'betrokkenheid' : fr ? 'engagement' : 'engagement'}
+                          {(item.performance.engagement_rate ?? 0).toFixed(1)}% {nl ? 'betrokkenheid' : fr ? 'engagement' : 'engagement'}
                         </div>
                         <div className="flex items-center gap-1 text-muted-foreground">
                           <Heart className="w-3 h-3" />
@@ -965,7 +965,7 @@ export default function PublicationEngine() {
                               </span>
                               <span className="flex items-center gap-0.5">
                                 <TrendingUp className="w-3 h-3" />
-                                {item.performance ? `${item.performance.engagement_rate.toFixed(1)}%` : '-'}
+                                {item.performance ? `${(item.performance.engagement_rate ?? 0).toFixed(1)}%` : '-'}
                               </span>
                               <span className="flex items-center gap-0.5">
                                 <MousePointerClick className="w-3 h-3" />
