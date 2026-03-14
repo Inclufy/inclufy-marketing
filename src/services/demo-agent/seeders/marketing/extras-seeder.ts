@@ -75,11 +75,12 @@ export async function seedExtras(userId: string, template: IndustryTemplate): Pr
   if (rpError) console.error('revenue_predictions seed error:', rpError);
 
   // ── 3. revenue_opportunities (Revenue Engine → Opportunities tab) ──
+  // DB schema: impact is JSONB, time_to_value is TEXT
   const revOpps = [
-    { user_id: userId, title: `Upsell premium package to ${template.leads[0]?.company}`, description: `${template.leads[0]?.company} has been using basic plan for 6 months. Usage patterns suggest they would benefit from premium features.`, opportunity_type: 'upsell', estimated_value: randomBetween(15000, 45000), priority: 'high', effort_required: 'low', time_to_value: 14, success_probability: 78, impact: 'high', status: 'identified' },
-    { user_id: userId, title: `Cross-sell analytics add-on to existing clients`, description: `12 clients on standard plans are actively using reporting features at capacity. Analytics add-on could address their needs.`, opportunity_type: 'cross_sell', estimated_value: randomBetween(30000, 80000), priority: 'high', effort_required: 'medium', time_to_value: 30, success_probability: 65, impact: 'high', status: 'identified' },
-    { user_id: userId, title: `Win-back churned ${template.industry} accounts`, description: `8 accounts churned in Q4. 5 cited "missing feature X" which was launched in January. Re-engagement campaign recommended.`, opportunity_type: 'retention', estimated_value: randomBetween(40000, 100000), priority: 'medium', effort_required: 'medium', time_to_value: 45, success_probability: 42, impact: 'high', status: 'identified' },
-    { user_id: userId, title: `Expand into adjacent ${template.industry} segment`, description: `Market analysis shows €${randomBetween(5, 20)}M addressable market in adjacent segment with low competition.`, opportunity_type: 'expansion', estimated_value: randomBetween(100000, 300000), priority: 'medium', effort_required: 'high', time_to_value: 90, success_probability: 55, impact: 'high', status: 'identified' },
+    { user_id: userId, title: `Upsell premium package to ${template.leads[0]?.company}`, description: `${template.leads[0]?.company} has been using basic plan for 6 months. Usage patterns suggest they would benefit from premium features.`, opportunity_type: 'upsell', estimated_value: randomBetween(15000, 45000), priority: 'high', effort_required: 'low', time_to_value: '14 days', success_probability: 78, impact: { level: 'high', revenue_potential: 45000, confidence: 0.78 }, status: 'identified' },
+    { user_id: userId, title: `Cross-sell analytics add-on to existing clients`, description: `12 clients on standard plans are actively using reporting features at capacity. Analytics add-on could address their needs.`, opportunity_type: 'cross_sell', estimated_value: randomBetween(30000, 80000), priority: 'high', effort_required: 'medium', time_to_value: '30 days', success_probability: 65, impact: { level: 'high', revenue_potential: 80000, confidence: 0.65 }, status: 'identified' },
+    { user_id: userId, title: `Win-back churned ${template.industry} accounts`, description: `8 accounts churned in Q4. 5 cited "missing feature X" which was launched in January. Re-engagement campaign recommended.`, opportunity_type: 'retention', estimated_value: randomBetween(40000, 100000), priority: 'medium', effort_required: 'medium', time_to_value: '45 days', success_probability: 42, impact: { level: 'high', revenue_potential: 100000, confidence: 0.42 }, status: 'identified' },
+    { user_id: userId, title: `Expand into adjacent ${template.industry} segment`, description: `Market analysis shows €${randomBetween(5, 20)}M addressable market in adjacent segment with low competition.`, opportunity_type: 'expansion', estimated_value: randomBetween(100000, 300000), priority: 'medium', effort_required: 'high', time_to_value: '90 days', success_probability: 55, impact: { level: 'high', revenue_potential: 300000, confidence: 0.55 }, status: 'identified' },
   ];
   const { error: roError } = await marketingSupabase.from('revenue_opportunities').insert(revOpps);
   if (roError) console.error('revenue_opportunities seed error:', roError);
@@ -95,11 +96,13 @@ export async function seedExtras(userId: string, template: IndustryTemplate): Pr
   if (ltvError) console.error('customer_ltv seed error:', ltvError);
 
   // ── 5. social_accounts (Campaign Readiness → Social Media check) ──
+  // Pre-existing table columns: user_id, platform, platform_account_id, account_name, profile_image_url, status, connected_at
+  // Does NOT have: followers, profile_url, organization_id (or they may be nullable in pre-existing table)
   const socialAccounts = [
-    { user_id: userId, platform: 'linkedin', account_name: `${template.brand.name} LinkedIn`, status: 'connected', connected_at: daysAgo(90), followers: randomBetween(5000, 25000), profile_url: `https://linkedin.com/company/${template.brand.name.toLowerCase().replace(/\s/g, '-')}` },
-    { user_id: userId, platform: 'twitter', account_name: `@${template.brand.name.replace(/\s/g, '')}`, status: 'connected', connected_at: daysAgo(120), followers: randomBetween(3000, 15000), profile_url: `https://twitter.com/${template.brand.name.replace(/\s/g, '')}` },
-    { user_id: userId, platform: 'instagram', account_name: `${template.brand.name.toLowerCase().replace(/\s/g, '')}`, status: 'connected', connected_at: daysAgo(60), followers: randomBetween(2000, 12000), profile_url: `https://instagram.com/${template.brand.name.toLowerCase().replace(/\s/g, '')}` },
-    { user_id: userId, platform: 'facebook', account_name: `${template.brand.name}`, status: 'connected', connected_at: daysAgo(150), followers: randomBetween(4000, 20000), profile_url: `https://facebook.com/${template.brand.name.toLowerCase().replace(/\s/g, '')}` },
+    { user_id: userId, platform: 'linkedin', platform_account_id: `li_${template.brand.name.toLowerCase().replace(/\s/g, '_')}`, account_name: `${template.brand.name} LinkedIn`, status: 'connected', connected_at: daysAgo(90), profile_image_url: `https://logo.clearbit.com/${template.brand.name.toLowerCase().replace(/\s/g, '')}.com` },
+    { user_id: userId, platform: 'twitter', platform_account_id: `tw_${template.brand.name.replace(/\s/g, '')}`, account_name: `@${template.brand.name.replace(/\s/g, '')}`, status: 'connected', connected_at: daysAgo(120), profile_image_url: `https://logo.clearbit.com/${template.brand.name.toLowerCase().replace(/\s/g, '')}.com` },
+    { user_id: userId, platform: 'instagram', platform_account_id: `ig_${template.brand.name.toLowerCase().replace(/\s/g, '')}`, account_name: `${template.brand.name.toLowerCase().replace(/\s/g, '')}`, status: 'connected', connected_at: daysAgo(60), profile_image_url: `https://logo.clearbit.com/${template.brand.name.toLowerCase().replace(/\s/g, '')}.com` },
+    { user_id: userId, platform: 'facebook', platform_account_id: `fb_${template.brand.name.toLowerCase().replace(/\s/g, '')}`, account_name: `${template.brand.name}`, status: 'connected', connected_at: daysAgo(150), profile_image_url: `https://logo.clearbit.com/${template.brand.name.toLowerCase().replace(/\s/g, '')}.com` },
   ];
   const { error: saError } = await marketingSupabase.from('social_accounts').insert(socialAccounts);
   if (saError) console.error('social_accounts seed error:', saError);
@@ -234,16 +237,16 @@ export async function seedExtras(userId: string, template: IndustryTemplate): Pr
   if (caError) console.error('channel_attributions seed error:', caError);
 
   // ── 9. media_assets (Media Bibliotheek) ──
-  // Live DB has team_id NOT NULL — must provide a placeholder value
+  // Pre-existing table may have: team_id NOT NULL, uploaded_by NOT NULL — provide both
   const mediaAssets = [
-    { user_id: userId, team_id: userId, file_name: `${template.brand.name}-logo.png`, file_path: `media/${userId}/logo.png`, file_size: 245000, mime_type: 'image/png', width: 1200, height: 400 },
-    { user_id: userId, team_id: userId, file_name: `${template.brand.name}-hero-banner.jpg`, file_path: `media/${userId}/hero.jpg`, file_size: 890000, mime_type: 'image/jpeg', width: 1920, height: 1080 },
-    { user_id: userId, team_id: userId, file_name: `product-screenshot-dashboard.png`, file_path: `media/${userId}/dashboard.png`, file_size: 567000, mime_type: 'image/png', width: 1440, height: 900 },
-    { user_id: userId, team_id: userId, file_name: `${template.industry}-case-study-cover.jpg`, file_path: `media/${userId}/case-study.jpg`, file_size: 420000, mime_type: 'image/jpeg', width: 1200, height: 628 },
-    { user_id: userId, team_id: userId, file_name: `social-post-template.png`, file_path: `media/${userId}/social-template.png`, file_size: 380000, mime_type: 'image/png', width: 1080, height: 1080 },
-    { user_id: userId, team_id: userId, file_name: `email-header-graphic.png`, file_path: `media/${userId}/email-header.png`, file_size: 195000, mime_type: 'image/png', width: 600, height: 200 },
-    { user_id: userId, team_id: userId, file_name: `product-demo-video.mp4`, file_path: `media/${userId}/demo.mp4`, file_size: 15400000, mime_type: 'video/mp4', width: 1920, height: 1080, duration: 120 },
-    { user_id: userId, team_id: userId, file_name: `${template.brand.name}-brand-guidelines.pdf`, file_path: `media/${userId}/brand-guide.pdf`, file_size: 4500000, mime_type: 'application/pdf' },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `${template.brand.name}-logo.png`, file_path: `media/${userId}/logo.png`, file_size: 245000, mime_type: 'image/png', width: 1200, height: 400 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `${template.brand.name}-hero-banner.jpg`, file_path: `media/${userId}/hero.jpg`, file_size: 890000, mime_type: 'image/jpeg', width: 1920, height: 1080 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `product-screenshot-dashboard.png`, file_path: `media/${userId}/dashboard.png`, file_size: 567000, mime_type: 'image/png', width: 1440, height: 900 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `${template.industry}-case-study-cover.jpg`, file_path: `media/${userId}/case-study.jpg`, file_size: 420000, mime_type: 'image/jpeg', width: 1200, height: 628 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `social-post-template.png`, file_path: `media/${userId}/social-template.png`, file_size: 380000, mime_type: 'image/png', width: 1080, height: 1080 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `email-header-graphic.png`, file_path: `media/${userId}/email-header.png`, file_size: 195000, mime_type: 'image/png', width: 600, height: 200 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `product-demo-video.mp4`, file_path: `media/${userId}/demo.mp4`, file_size: 15400000, mime_type: 'video/mp4', width: 1920, height: 1080, duration: 120 },
+    { user_id: userId, team_id: userId, uploaded_by: userId, file_name: `${template.brand.name}-brand-guidelines.pdf`, file_path: `media/${userId}/brand-guide.pdf`, file_size: 4500000, mime_type: 'application/pdf' },
   ];
   const { error: maError } = await marketingSupabase.from('media_assets').insert(mediaAssets);
   if (maError) console.error('media_assets seed error:', maError);
