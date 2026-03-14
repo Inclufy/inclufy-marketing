@@ -6,10 +6,12 @@ import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CopilotProvider, useCopilot } from '@/contexts/CopilotContext';
+import { SetupAgentProvider } from '@/contexts/SetupAgentContext';
 import SideNav from '@/components/navigation/SideNav';
 import AICopilot from '@/components/AICopilot';
+import SetupAgent from '@/components/SetupAgent';
 import {
-  Sun, Moon, Globe, LogOut, Sparkles, Home, Search
+  Sun, Moon, Globe, LogOut, Sparkles, Home, Search, Rocket
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -23,7 +25,7 @@ function LayoutInner() {
   const { user, signOut } = useAuth();
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
-  const { isOpen: copilotOpen, initialContext, openCopilot, closeCopilot, clearInitialContext } = useCopilot();
+  const { isOpen: copilotOpen, initialContext, setupMode, openCopilot, closeCopilot, clearInitialContext, enterSetupMode, exitSetupMode } = useCopilot();
 
   const email = user?.email || 'sami@inclufy.com';
   const initials = (user?.user_metadata?.full_name || email).charAt(0).toUpperCase();
@@ -166,32 +168,58 @@ function LayoutInner() {
         </div>
       </main>
 
-      {/* ─── AI Copilot Sidebar (right) ────────────────────── */}
-      <AICopilot
-        isOpen={copilotOpen}
-        onClose={closeCopilot}
-        initialContext={initialContext}
-        onContextConsumed={clearInitialContext}
-      />
+      {/* ─── Sidebar (right): Setup Agent OR AI Copilot ──────── */}
+      {setupMode ? (
+        <SetupAgent
+          isOpen={copilotOpen}
+          onClose={closeCopilot}
+          onExit={exitSetupMode}
+        />
+      ) : (
+        <AICopilot
+          isOpen={copilotOpen}
+          onClose={closeCopilot}
+          initialContext={initialContext}
+          onContextConsumed={clearInitialContext}
+        />
+      )}
 
-      {/* Copilot Toggle */}
+      {/* Sidebar Toggle */}
       {!copilotOpen && (
-        <button
-          onClick={openCopilot}
-          className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex items-center gap-2 bg-gradient-to-b from-purple-600 to-pink-600 text-white pl-3 pr-2 py-3 rounded-l-xl shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all group"
-          title="AI Copilot"
-        >
-          <span
-            className="text-xs font-medium hidden sm:block"
-            style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+        <div className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">
+          {/* AI Copilot toggle */}
+          <button
+            onClick={openCopilot}
+            className="flex items-center gap-2 bg-gradient-to-b from-purple-600 to-pink-600 text-white pl-3 pr-2 py-3 rounded-l-xl shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all group"
+            title="AI Copilot"
           >
-            AI Copilot
-          </span>
-          <Sparkles className="h-5 w-5" />
-          <span className="absolute -top-1 -left-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white">
-            <span className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-60" />
-          </span>
-        </button>
+            <span
+              className="text-xs font-medium hidden sm:block"
+              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+            >
+              AI Copilot
+            </span>
+            <Sparkles className="h-5 w-5" />
+            <span className="absolute -top-1 -left-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white">
+              <span className="absolute inset-0 bg-emerald-400 rounded-full animate-ping opacity-60" />
+            </span>
+          </button>
+
+          {/* Setup Agent toggle */}
+          <button
+            onClick={enterSetupMode}
+            className="flex items-center gap-2 bg-gradient-to-b from-indigo-600 to-purple-600 text-white pl-3 pr-2 py-3 rounded-l-xl shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transition-all group"
+            title="AI Setup"
+          >
+            <span
+              className="text-xs font-medium hidden sm:block"
+              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+            >
+              Setup
+            </span>
+            <Rocket className="h-5 w-5" />
+          </button>
+        </div>
       )}
     </div>
   );
@@ -200,7 +228,9 @@ function LayoutInner() {
 export default function LuxuryTopNavLayout() {
   return (
     <CopilotProvider>
-      <LayoutInner />
+      <SetupAgentProvider>
+        <LayoutInner />
+      </SetupAgentProvider>
     </CopilotProvider>
   );
 }

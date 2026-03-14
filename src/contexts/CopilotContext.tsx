@@ -11,24 +11,31 @@ export interface CopilotInitialContext {
 interface CopilotContextValue {
   isOpen: boolean;
   initialContext: CopilotInitialContext | null;
+  setupMode: boolean;
   openCopilot: () => void;
   openCopilotWithContext: (ctx: CopilotInitialContext) => void;
   closeCopilot: () => void;
   clearInitialContext: () => void;
+  enterSetupMode: () => void;
+  exitSetupMode: () => void;
 }
 
 const CopilotCtx = createContext<CopilotContextValue>({
   isOpen: false,
   initialContext: null,
+  setupMode: false,
   openCopilot: () => {},
   openCopilotWithContext: () => {},
   closeCopilot: () => {},
   clearInitialContext: () => {},
+  enterSetupMode: () => {},
+  exitSetupMode: () => {},
 });
 
 export function CopilotProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [initialContext, setInitialContext] = useState<CopilotInitialContext | null>(null);
+  const [setupMode, setSetupMode] = useState(false);
 
   const openCopilot = useCallback(() => {
     setInitialContext(null);
@@ -48,9 +55,18 @@ export function CopilotProvider({ children }: { children: React.ReactNode }) {
     setInitialContext(null);
   }, []);
 
+  const enterSetupMode = useCallback(() => {
+    setSetupMode(true);
+    setIsOpen(true);
+  }, []);
+
+  const exitSetupMode = useCallback(() => {
+    setSetupMode(false);
+  }, []);
+
   return (
     <CopilotCtx.Provider
-      value={{ isOpen, initialContext, openCopilot, openCopilotWithContext, closeCopilot, clearInitialContext }}
+      value={{ isOpen, initialContext, setupMode, openCopilot, openCopilotWithContext, closeCopilot, clearInitialContext, enterSetupMode, exitSetupMode }}
     >
       {children}
     </CopilotCtx.Provider>
