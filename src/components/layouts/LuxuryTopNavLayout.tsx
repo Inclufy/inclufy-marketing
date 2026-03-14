@@ -228,7 +228,7 @@ function LayoutInner() {
 export default function LuxuryTopNavLayout() {
   return (
     <CopilotProvider>
-      <SetupAgentProvider>
+      <SetupAgentProvider mode="sidebar">
         <LayoutInner />
       </SetupAgentProvider>
     </CopilotProvider>

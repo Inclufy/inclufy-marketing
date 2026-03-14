@@ -66,6 +66,7 @@ const Profile = lazy(() => import("./pages/Profile"));
 const AppSettings = lazy(() => import("./pages/Settings"));
 const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
 const Onboarding = lazy(() => import("./pages/Onboarding"));
+const SetupAgentOnboarding = lazy(() => import("./pages/SetupAgentOnboarding"));
 const ContentHub = lazy(() => import("./pages/ContentHub"));
 const ContentCalendar = lazy(() => import("./pages/ContentCalendar"));
 const ContentApprovals = lazy(() => import("./pages/ContentApprovals"));
@@ -139,10 +140,10 @@ export default function App() {
                       <Route path="/signup" element={<Signup />} />
                     </Route>
 
-                    {/* ONBOARDING - Full-screen, no sidebar */}
+                    {/* ONBOARDING - AI-driven Setup Copilot (full-screen) */}
                     <Route path="/app/onboarding" element={
                       <ProtectedRoute>
-                        <Onboarding />
+                        <SetupAgentOnboarding />
                       </ProtectedRoute>
                     } />
 

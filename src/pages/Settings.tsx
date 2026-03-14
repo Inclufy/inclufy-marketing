@@ -385,10 +385,10 @@ export default function Settings() {
                 </h3>
                 <p className="text-sm text-muted-foreground mt-1">
                   {lang === 'nl'
-                    ? 'Doorloop de onboarding wizard opnieuw om je bedrijfsinstellingen bij te werken.'
+                    ? 'Start de AI Setup Copilot opnieuw om je bedrijfsinstellingen bij te werken.'
                     : lang === 'fr'
-                    ? "Parcourez à nouveau l'assistant d'intégration pour mettre à jour vos paramètres."
-                    : 'Go through the onboarding wizard again to update your business settings.'}
+                    ? "Relancez l'assistant AI pour mettre à jour vos paramètres."
+                    : 'Restart the AI Setup Copilot to update your business settings.'}
                 </p>
               </div>
               <Button

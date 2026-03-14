@@ -1,15 +1,18 @@
 // src/components/SetupAgent.tsx
-// AI Setup Copilot — conversational sidebar that guides users through 6 setup steps
+// AI Setup Copilot — supports two modes:
+// - 'sidebar': 320px right panel, 6 setup steps (in-app reconfiguration)
+// - 'onboarding': full-page, 4 conversational phases (post-signup onboarding)
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Bot, X, Sparkles, Loader2, Rocket, ChevronRight, ChevronLeft,
   Globe, Users, Target, Zap, Brain, FileText, Check, Plus, SkipForward, Save,
-  PartyPopper,
+  PartyPopper, ArrowRight, Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
@@ -17,20 +20,28 @@ import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useSetupAgent } from '@/contexts/SetupAgentContext';
 import { setupAgentService } from '@/services/setup-agent/setup-agent.service';
-import type { SetupStep } from '@/services/setup-agent/types';
+import type { SetupStep, OnboardingData, ProductInfo, AudienceDetailed } from '@/services/setup-agent/types';
+import { ONBOARDING_STEPS } from '@/services/setup-agent/types';
 import {
   BrandPreviewCard,
+  ExtendedBrandPreviewCard,
+  ProductPreviewCard,
+  AudiencePreviewCard,
   CompetitorPreviewCard,
   StrategyPreviewCard,
   IntegrationPreviewCard,
   PersonaPreviewCard,
   TemplatePreviewCard,
+  OnboardingSummaryCard,
 } from './setup-agent/StepPreviewCards';
+import OnboardingLayout from './setup-agent/OnboardingLayout';
 
 interface SetupAgentProps {
   isOpen: boolean;
   onClose: () => void;
   onExit: () => void;
+  mode?: 'sidebar' | 'onboarding';
+  onOnboardingComplete?: () => void;
 }
 
 const STEP_CONFIG: { key: SetupStep; icon: typeof Globe; labelNl: string; labelEn: string }[] = [
@@ -53,18 +64,28 @@ const CHANNEL_OPTIONS = [
   'Email', 'Blog', 'Google Ads', 'YouTube', 'Podcast',
 ];
 
-export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps) {
+const COUNTRY_OPTIONS = [
+  'Nederland', 'Belgi\u00eb', 'Duitsland', 'Frankrijk', 'Verenigd Koninkrijk',
+  'Verenigde Staten', 'Spanje', 'Itali\u00eb', 'Anders',
+];
+
+export default function SetupAgent({ isOpen, onClose, onExit, mode = 'sidebar', onOnboardingComplete }: SetupAgentProps) {
   const { toast } = useToast();
   const { lang } = useLanguage();
   const nl = lang === 'nl';
   const scrollRef = useRef<HTMLDivElement>(null);
+
   const {
+    // Sidebar state
     currentStep, completedSteps, stepData, isLoading,
     nextStep, prevStep, skipStep, setStepData, markStepComplete,
     setLoading, setError, exitSetup, error,
+    // Onboarding state
+    onboardingStep, onboardingData, updateOnboardingData,
+    setOnboardingStep, nextOnboardingStep, prevOnboardingStep,
   } = useSetupAgent();
 
-  // Local input state
+  // ─── Local input state (sidebar) ──────────────────────────────
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [competitorNames, setCompetitorNames] = useState<string[]>([]);
   const [newCompetitor, setNewCompetitor] = useState('');
@@ -72,24 +93,65 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
   const [showConfetti, setShowConfetti] = useState(false);
 
+  // ─── Local input state (onboarding) ───────────────────────────
+  const [obWebsite, setObWebsite] = useState('');
+  const [obCompanyName, setObCompanyName] = useState('');
+  const [obCountry, setObCountry] = useState('Nederland');
+  const [obAnalyzing, setObAnalyzing] = useState(false);
+  const [obSaving, setObSaving] = useState(false);
+
   // Auto-scroll
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [currentStep, stepData, isLoading]);
+  }, [currentStep, stepData, isLoading, onboardingStep, onboardingData]);
 
-  // Pre-fill from saved data
+  // Pre-fill from saved data (sidebar)
   useEffect(() => {
     if (stepData.website?.suggested_competitors) {
       setCompetitorNames(stepData.website.suggested_competitors.slice(0, 3));
     }
   }, [stepData.website]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // ONBOARDING MODE
+  // ═══════════════════════════════════════════════════════════════
+  if (mode === 'onboarding') {
+    return (
+      <OnboardingLayout currentStep={onboardingStep}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={onboardingStep}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {onboardingStep === 0 && renderOnboardingBasics()}
+            {onboardingStep === 1 && renderOnboardingRefine()}
+            {onboardingStep === 2 && renderOnboardingStrategy()}
+            {onboardingStep === 3 && renderOnboardingSummary()}
+          </motion.div>
+        </AnimatePresence>
+
+        {error && (
+          <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-400">
+            {error}
+          </div>
+        )}
+      </OnboardingLayout>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SIDEBAR MODE (unchanged from original)
+  // ═══════════════════════════════════════════════════════════════
+
   const progressPct = Math.round((completedSteps.length / 6) * 100);
   const stepConfig = STEP_CONFIG[currentStep];
 
-  // ─── Step Handlers ──────────────────────────────────────────────
+  // ─── Step Handlers (sidebar) ──────────────────────────────────
   const handleAnalyzeWebsite = async () => {
     if (!websiteUrl) return;
     setLoading(true);
@@ -227,7 +289,7 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
     }
   };
 
-  // ─── Render Step Content ────────────────────────────────────────
+  // ─── Render Sidebar Step ──────────────────────────────────────
   const renderStep = () => {
     switch (currentStep) {
       case 0: return renderWebsiteStep();
@@ -284,7 +346,6 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
           ? "Wie zijn je belangrijkste concurrenten? Ik heb alvast een paar suggesties op basis van je website."
           : "Who are your main competitors? I've got some suggestions based on your website."}
       </BotMessage>
-      {/* Suggested competitors as chips */}
       <div className="flex flex-wrap gap-1.5">
         {(stepData.website?.suggested_competitors || []).map((name: string) => (
           <Badge
@@ -301,7 +362,6 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
           </Badge>
         ))}
       </div>
-      {/* Add custom */}
       <div className="flex gap-2">
         <Input
           value={newCompetitor}
@@ -512,6 +572,693 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
     </div>
   );
 
+  // ═══════════════════════════════════════════════════════════════
+  // ONBOARDING PHASE RENDERERS
+  // ═══════════════════════════════════════════════════════════════
+
+  // Phase 1: Basics — company name, website URL, country
+  function renderOnboardingBasics() {
+    const handleDeepAnalyze = async () => {
+      if (!obCompanyName.trim()) {
+        setError(nl ? 'Vul je bedrijfsnaam in.' : 'Please enter your company name.');
+        return;
+      }
+      setObAnalyzing(true);
+      setError(null);
+      updateOnboardingData({
+        companyName: obCompanyName.trim(),
+        website: obWebsite.trim(),
+        country: obCountry,
+        language: lang,
+      });
+
+      try {
+        if (obWebsite.trim()) {
+          // Run deep analysis + scan scores in parallel
+          const [analysis, scanScores] = await Promise.all([
+            setupAgentService.analyzeWebsiteDeep(obWebsite.trim(), lang),
+            setupAgentService.fetchScanScores(obWebsite.trim()),
+          ]);
+
+          // Merge AI-extracted brand name with user input (prefer user)
+          const finalAnalysis = {
+            ...analysis,
+            brand_name: obCompanyName.trim() || analysis.brand_name,
+          };
+
+          updateOnboardingData({
+            analysis: finalAnalysis,
+            scanScores,
+            // Pre-fill refinement fields from analysis
+            products: analysis.products?.length ? analysis.products : [],
+            audiences: analysis.audiences_detailed?.length ? analysis.audiences_detailed : [],
+            brandValues: analysis.brand_values || [],
+            mission: analysis.mission || '',
+            messagingDos: analysis.messaging_dos || '',
+            messagingDonts: analysis.messaging_donts || '',
+            tone: analysis.tone || 'professional',
+            competitors: (analysis.suggested_competitors || []).map(n => ({ name: n })),
+            socialAccounts: analysis.social_urls
+              ? Object.entries(analysis.social_urls)
+                  .filter(([, url]) => url)
+                  .map(([platform, url]) => ({ platform, url }))
+              : [],
+          });
+        } else {
+          // No website — just set company name, user will fill in manually in refine step
+          updateOnboardingData({
+            analysis: null,
+            scanScores: null,
+          });
+        }
+        nextOnboardingStep();
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setObAnalyzing(false);
+      }
+    };
+
+    return (
+      <div className="space-y-8">
+        <div className="text-center space-y-3">
+          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', delay: 0.1 }}>
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+          </motion.div>
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            {nl ? 'Welkom bij Inclufy Marketing' : 'Welcome to Inclufy Marketing'}
+          </h1>
+          <p className="text-white/60 text-sm max-w-lg mx-auto">
+            {nl
+              ? 'Vertel me over je bedrijf en ik configureer je hele marketing platform automatisch met AI.'
+              : "Tell me about your business and I'll configure your entire marketing platform automatically with AI."}
+          </p>
+        </div>
+
+        <div className="max-w-lg mx-auto space-y-4">
+          {/* Company Name */}
+          <div>
+            <label className="text-sm font-medium text-white/80 mb-1.5 block">
+              {nl ? 'Bedrijfsnaam' : 'Company Name'} *
+            </label>
+            <Input
+              value={obCompanyName}
+              onChange={(e) => setObCompanyName(e.target.value)}
+              placeholder={nl ? 'Jouw bedrijfsnaam' : 'Your company name'}
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12"
+            />
+          </div>
+
+          {/* Website URL */}
+          <div>
+            <label className="text-sm font-medium text-white/80 mb-1.5 block">
+              {nl ? 'Website URL' : 'Website URL'}
+              <span className="text-white/40 ml-1 text-xs">{nl ? '(sterk aanbevolen)' : '(strongly recommended)'}</span>
+            </label>
+            <Input
+              value={obWebsite}
+              onChange={(e) => setObWebsite(e.target.value)}
+              placeholder="https://www.jouwwebsite.nl"
+              className="bg-white/10 border-white/20 text-white placeholder:text-white/40 h-12"
+            />
+            <p className="text-[11px] text-white/40 mt-1">
+              {nl
+                ? 'Met een URL extraheer ik automatisch je merk, producten, doelgroep en meer.'
+                : "With a URL I'll automatically extract your brand, products, audience and more."}
+            </p>
+          </div>
+
+          {/* Country */}
+          <div>
+            <label className="text-sm font-medium text-white/80 mb-1.5 block">
+              {nl ? 'Land' : 'Country'}
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {COUNTRY_OPTIONS.map((c) => (
+                <Badge
+                  key={c}
+                  variant={obCountry === c ? 'default' : 'outline'}
+                  className={cn(
+                    'cursor-pointer text-xs transition-all',
+                    obCountry === c
+                      ? 'bg-purple-600 text-white border-purple-600'
+                      : 'text-white/60 border-white/20 hover:border-white/40',
+                  )}
+                  onClick={() => setObCountry(c)}
+                >
+                  {c}
+                </Badge>
+              ))}
+            </div>
+          </div>
+
+          {/* Submit */}
+          <Button
+            onClick={handleDeepAnalyze}
+            disabled={obAnalyzing || !obCompanyName.trim()}
+            className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white text-base font-semibold"
+          >
+            {obAnalyzing ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                {nl ? 'AI analyseert je bedrijf...' : 'AI is analyzing your business...'}
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2" />
+                {nl ? 'Start AI Analyse' : 'Start AI Analysis'}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Phase 2: Refine — show AI results, let user edit what's missing
+  function renderOnboardingRefine() {
+    const a = onboardingData.analysis;
+    const hasProducts = (onboardingData.products?.length || 0) > 0;
+    const hasAudiences = (onboardingData.audiences?.length || 0) > 0;
+
+    const addProduct = () => {
+      updateOnboardingData({
+        products: [...(onboardingData.products || []), { name: '', description: '', usp: '', features: '' }],
+      });
+    };
+
+    const updateProduct = (idx: number, patch: Partial<ProductInfo>) => {
+      const products = [...(onboardingData.products || [])];
+      products[idx] = { ...products[idx], ...patch };
+      updateOnboardingData({ products });
+    };
+
+    const addAudience = () => {
+      updateOnboardingData({
+        audiences: [...(onboardingData.audiences || []), {
+          audienceType: 'B2B', idealCustomer: '', customerSector: '',
+          companySize: '', ageGroup: '', occupation: '', painPoints: '',
+        }],
+      });
+    };
+
+    const updateAudience = (idx: number, patch: Partial<AudienceDetailed>) => {
+      const audiences = [...(onboardingData.audiences || [])];
+      audiences[idx] = { ...audiences[idx], ...patch };
+      updateOnboardingData({ audiences });
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold text-white">
+            {a ? (nl ? 'Brand Profile' : 'Brand Profile') : (nl ? 'Vul je bedrijfsgegevens aan' : 'Complete your business details')}
+          </h2>
+          <p className="text-white/60 text-sm">
+            {a
+              ? (nl ? 'Controleer de AI-analyse en pas aan waar nodig.' : 'Review the AI analysis and adjust where needed.')
+              : (nl ? 'Vul de onderstaande velden handmatig in.' : 'Fill in the fields below manually.')}
+          </p>
+        </div>
+
+        {/* Extended brand card */}
+        {a && <ExtendedBrandPreviewCard data={a} scanScores={onboardingData.scanScores} />}
+
+        {/* Products */}
+        <div className="bg-white/5 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Star className="w-4 h-4 text-blue-400" />
+              {nl ? 'Producten / Diensten' : 'Products / Services'}
+            </h3>
+            <Button size="sm" variant="ghost" onClick={addProduct} className="text-white/60 hover:text-white text-xs">
+              <Plus className="w-3 h-3 mr-1" /> {nl ? 'Toevoegen' : 'Add'}
+            </Button>
+          </div>
+          {hasProducts ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {onboardingData.products.map((p, i) => (
+                <div key={i} className="space-y-2">
+                  <ProductPreviewCard data={p} />
+                  {/* Inline edit fields */}
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Input
+                      value={p.name}
+                      onChange={(e) => updateProduct(i, { name: e.target.value })}
+                      placeholder={nl ? 'Naam' : 'Name'}
+                      className="text-xs bg-white/5 border-white/10 text-white h-8"
+                    />
+                    <Input
+                      value={p.usp}
+                      onChange={(e) => updateProduct(i, { usp: e.target.value })}
+                      placeholder="USP"
+                      className="text-xs bg-white/5 border-white/10 text-white h-8"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-white/40">
+              {nl ? 'Geen producten gevonden. Voeg ze handmatig toe.' : 'No products found. Add them manually.'}
+            </p>
+          )}
+        </div>
+
+        {/* Audiences */}
+        <div className="bg-white/5 rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-400" />
+              {nl ? 'Doelgroepen' : 'Target Audiences'}
+            </h3>
+            <Button size="sm" variant="ghost" onClick={addAudience} className="text-white/60 hover:text-white text-xs">
+              <Plus className="w-3 h-3 mr-1" /> {nl ? 'Toevoegen' : 'Add'}
+            </Button>
+          </div>
+          {hasAudiences ? (
+            <div className="grid gap-3 md:grid-cols-2">
+              {onboardingData.audiences.map((a, i) => (
+                <div key={i} className="space-y-2">
+                  <AudiencePreviewCard data={a} />
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <div className="flex gap-1">
+                      {(['B2B', 'B2C', 'Both'] as const).map(t => (
+                        <Badge
+                          key={t}
+                          variant={a.audienceType === t ? 'default' : 'outline'}
+                          className="cursor-pointer text-[10px]"
+                          onClick={() => updateAudience(i, { audienceType: t })}
+                        >
+                          {t}
+                        </Badge>
+                      ))}
+                    </div>
+                    <Input
+                      value={a.occupation}
+                      onChange={(e) => updateAudience(i, { occupation: e.target.value })}
+                      placeholder={nl ? 'Functie' : 'Role'}
+                      className="text-xs bg-white/5 border-white/10 text-white h-8"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-white/40">
+              {nl ? 'Geen doelgroep gevonden. Voeg er een toe.' : 'No audience found. Add one.'}
+            </p>
+          )}
+        </div>
+
+        {/* Messaging */}
+        <div className="bg-white/5 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-white">
+            {nl ? 'Toon & Messaging (optioneel)' : 'Tone & Messaging (optional)'}
+          </h3>
+          <div className="grid md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-white/60 mb-1 block">{nl ? 'Wel doen' : 'Dos'}</label>
+              <Textarea
+                value={onboardingData.messagingDos}
+                onChange={(e) => updateOnboardingData({ messagingDos: e.target.value })}
+                placeholder={nl ? 'Bijv. empathisch, data-driven, actiegericht' : 'e.g. empathetic, data-driven, action-oriented'}
+                className="text-xs bg-white/5 border-white/10 text-white min-h-[60px]"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-white/60 mb-1 block">{nl ? 'Niet doen' : "Don'ts"}</label>
+              <Textarea
+                value={onboardingData.messagingDonts}
+                onChange={(e) => updateOnboardingData({ messagingDonts: e.target.value })}
+                placeholder={nl ? 'Bijv. geen jargon, niet te formeel' : 'e.g. no jargon, not too formal'}
+                className="text-xs bg-white/5 border-white/10 text-white min-h-[60px]"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between pt-2">
+          <Button variant="ghost" onClick={prevOnboardingStep} className="text-white/60 hover:text-white">
+            <ChevronLeft className="w-4 h-4 mr-1" /> {nl ? 'Terug' : 'Back'}
+          </Button>
+          <Button
+            onClick={nextOnboardingStep}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          >
+            {nl ? 'Doorgaan naar Strategie' : 'Continue to Strategy'}
+            <ArrowRight className="w-4 h-4 ml-2" />
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Phase 3: Strategy — goals, competitors, personas, templates
+  function renderOnboardingStrategy() {
+    const obGoals = onboardingData.marketingGoals || [];
+    const obChannels = onboardingData.selectedChannels || [];
+
+    const toggleGoal = (goal: string) => {
+      const current = [...obGoals];
+      updateOnboardingData({
+        marketingGoals: current.includes(goal) ? current.filter(g => g !== goal) : [...current, goal],
+      });
+    };
+
+    const toggleChannel = (ch: string) => {
+      const current = [...obChannels];
+      updateOnboardingData({
+        selectedChannels: current.includes(ch) ? current.filter(c => c !== ch) : [...current, ch],
+      });
+    };
+
+    const handleGenerateAll = async () => {
+      if (obGoals.length === 0) {
+        setError(nl ? 'Selecteer minimaal 1 doel.' : 'Select at least 1 goal.');
+        return;
+      }
+      setLoading(true);
+      setError(null);
+      const brandName = onboardingData.companyName;
+      const industry = onboardingData.analysis?.industry || '';
+      const audiences = onboardingData.analysis?.target_audiences || [];
+      const tone = onboardingData.tone || 'professional';
+
+      try {
+        // 1. Strategy
+        const strategyResult = await setupAgentService.generateStrategy(obGoals, industry, brandName, lang);
+        updateOnboardingData({ strategyResult });
+        await setupAgentService.saveObjectives(strategyResult);
+
+        // 2. Competitors (if any)
+        const comps = onboardingData.competitors.filter(c => c.name?.trim());
+        if (comps.length > 0) {
+          const compResult = await setupAgentService.analyzeCompetitors(comps, industry, brandName, lang);
+          await setupAgentService.saveCompetitors(compResult.competitors);
+        }
+
+        // 3. Personas + scoring
+        const personaResult = await setupAgentService.generatePersonas(industry, brandName, audiences, obGoals, lang);
+        const scoringResult = await setupAgentService.generateScoringModel(industry, obGoals.join(', '), personaResult.personas, lang);
+        updateOnboardingData({ personaResult, scoringResult });
+        await setupAgentService.savePersonas(personaResult.personas);
+        await setupAgentService.saveScoringModel(scoringResult);
+
+        // 4. Integrations (if channels selected)
+        if (obChannels.length > 0) {
+          const integrationResult = await setupAgentService.suggestIntegrations(obChannels, industry, obGoals.join(', '), lang);
+          updateOnboardingData({ integrationResult });
+          await setupAgentService.saveIntegrations(integrationResult.integrations);
+        }
+
+        // 5. Templates
+        const templateResult = await setupAgentService.suggestTemplates(industry, obChannels.length ? obChannels : ['Email', 'Blog', 'LinkedIn'], obGoals.join(', '), tone, brandName, lang);
+        updateOnboardingData({ templateResult });
+        await setupAgentService.saveTemplates(templateResult.templates, brandName);
+
+        nextOnboardingStep();
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-xl font-bold text-white">
+            {nl ? 'Marketing Strategie' : 'Marketing Strategy'}
+          </h2>
+          <p className="text-white/60 text-sm">
+            {nl
+              ? 'Selecteer je doelen en kanalen. AI genereert je volledige strategie, personas en templates.'
+              : "Select your goals and channels. AI will generate your complete strategy, personas and templates."}
+          </p>
+        </div>
+
+        {/* Goals */}
+        <div className="bg-white/5 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Target className="w-4 h-4 text-orange-400" />
+            {nl ? 'Marketing Doelen' : 'Marketing Goals'} *
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {GOAL_OPTIONS.map((goal) => (
+              <Badge
+                key={goal}
+                variant={obGoals.includes(goal) ? 'default' : 'outline'}
+                className={cn(
+                  'cursor-pointer text-xs transition-all py-1.5 px-3',
+                  obGoals.includes(goal)
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'text-white/60 border-white/20 hover:border-white/40',
+                )}
+                onClick={() => toggleGoal(goal)}
+              >
+                {goal}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Channels */}
+        <div className="bg-white/5 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            {nl ? 'Kanalen (optioneel)' : 'Channels (optional)'}
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            {CHANNEL_OPTIONS.map((ch) => (
+              <Badge
+                key={ch}
+                variant={obChannels.includes(ch) ? 'default' : 'outline'}
+                className={cn(
+                  'cursor-pointer text-xs transition-all py-1.5 px-3',
+                  obChannels.includes(ch)
+                    ? 'bg-purple-600 text-white border-purple-600'
+                    : 'text-white/60 border-white/20 hover:border-white/40',
+                )}
+                onClick={() => toggleChannel(ch)}
+              >
+                {ch}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        {/* Competitors */}
+        <div className="bg-white/5 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+            <Users className="w-4 h-4 text-red-400" />
+            {nl ? 'Concurrenten' : 'Competitors'}
+          </h3>
+          <div className="flex flex-wrap gap-1.5">
+            {(onboardingData.competitors || []).map((c, i) => (
+              <Badge key={i} className="text-xs gap-1 bg-white/10 text-white">
+                {c.name}
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={() => {
+                    const updated = [...onboardingData.competitors];
+                    updated.splice(i, 1);
+                    updateOnboardingData({ competitors: updated });
+                  }}
+                />
+              </Badge>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={newCompetitor}
+              onChange={(e) => setNewCompetitor(e.target.value)}
+              placeholder={nl ? '+ Voeg concurrent toe...' : '+ Add competitor...'}
+              className="text-xs bg-white/5 border-white/10 text-white h-9"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newCompetitor.trim()) {
+                  updateOnboardingData({
+                    competitors: [...(onboardingData.competitors || []), { name: newCompetitor.trim() }],
+                  });
+                  setNewCompetitor('');
+                }
+              }}
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-white/20 text-white/60 hover:text-white"
+              onClick={() => {
+                if (newCompetitor.trim()) {
+                  updateOnboardingData({
+                    competitors: [...(onboardingData.competitors || []), { name: newCompetitor.trim() }],
+                  });
+                  setNewCompetitor('');
+                }
+              }}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between pt-2">
+          <Button variant="ghost" onClick={prevOnboardingStep} className="text-white/60 hover:text-white">
+            <ChevronLeft className="w-4 h-4 mr-1" /> {nl ? 'Terug' : 'Back'}
+          </Button>
+          <Button
+            onClick={handleGenerateAll}
+            disabled={isLoading || obGoals.length === 0}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                {nl ? 'AI genereert strategie...' : 'AI is generating strategy...'}
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-5 h-5 mr-2" />
+                {nl ? 'Genereer Alles' : 'Generate Everything'}
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Phase 4: Summary — overview + save + redirect
+  function renderOnboardingSummary() {
+    const a = onboardingData.analysis;
+
+    const handleFinalize = async () => {
+      setObSaving(true);
+      setError(null);
+      try {
+        // Save everything to auth + brand_memory + brand_kits
+        await setupAgentService.saveOnboardingComplete(onboardingData);
+
+        // Also save brand data if we have analysis
+        if (a) {
+          await setupAgentService.saveBrandData(a);
+        }
+
+        setShowConfetti(true);
+        toast({ title: nl ? 'Setup voltooid! Welkom bij Inclufy Marketing.' : 'Setup complete! Welcome to Inclufy Marketing.' });
+        setTimeout(() => {
+          setShowConfetti(false);
+          onOnboardingComplete?.();
+        }, 2000);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setObSaving(false);
+      }
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="text-center space-y-2">
+          {showConfetti ? (
+            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="space-y-3">
+              <PartyPopper className="w-16 h-16 text-yellow-500 mx-auto" />
+              <h2 className="text-2xl font-bold text-white">
+                {nl ? 'Setup Voltooid!' : 'Setup Complete!'}
+              </h2>
+              <p className="text-white/60">{nl ? 'Je wordt doorgestuurd naar je dashboard...' : 'Redirecting to your dashboard...'}</p>
+            </motion.div>
+          ) : (
+            <>
+              <h2 className="text-xl font-bold text-white">
+                {nl ? 'Samenvatting' : 'Summary'}
+              </h2>
+              <p className="text-white/60 text-sm">
+                {nl
+                  ? 'Alles ziet er goed uit! Klik op de knop om je platform te activeren.'
+                  : 'Everything looks good! Click the button to activate your platform.'}
+              </p>
+            </>
+          )}
+        </div>
+
+        {!showConfetti && (
+          <>
+            <OnboardingSummaryCard
+              brandName={onboardingData.companyName}
+              industry={a?.industry || ''}
+              primaryColor={a?.primary_color || '#7c3aed'}
+              secondaryColor={a?.secondary_color || '#ec4899'}
+              productsCount={onboardingData.products?.length || 0}
+              audiencesCount={onboardingData.audiences?.length || 0}
+              competitorsCount={onboardingData.competitors?.length || 0}
+              personasCount={onboardingData.personaResult?.personas?.length || 0}
+              objectivesCount={onboardingData.strategyResult?.objectives?.length || 0}
+              templatesCount={onboardingData.templateResult?.templates?.length || 0}
+              integrationsCount={onboardingData.integrationResult?.integrations?.length || 0}
+            />
+
+            {/* Strategy objectives preview */}
+            {onboardingData.strategyResult?.objectives && (
+              <div className="bg-white/5 rounded-xl p-4 space-y-2">
+                <h3 className="text-sm font-semibold text-white">{nl ? 'Strategische Doelen' : 'Strategic Objectives'}</h3>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {onboardingData.strategyResult.objectives.slice(0, 4).map((o, i) => (
+                    <StrategyPreviewCard key={i} data={o} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Personas preview */}
+            {onboardingData.personaResult?.personas && (
+              <div className="bg-white/5 rounded-xl p-4 space-y-2">
+                <h3 className="text-sm font-semibold text-white">{nl ? "Persona's" : 'Personas'}</h3>
+                <div className="grid gap-2 md:grid-cols-2">
+                  {onboardingData.personaResult.personas.map((p, i) => (
+                    <PersonaPreviewCard key={i} data={p} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Navigation */}
+            <div className="flex items-center justify-between pt-2">
+              <Button variant="ghost" onClick={prevOnboardingStep} className="text-white/60 hover:text-white">
+                <ChevronLeft className="w-4 h-4 mr-1" /> {nl ? 'Terug' : 'Back'}
+              </Button>
+              <Button
+                onClick={handleFinalize}
+                disabled={obSaving}
+                className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white px-8 h-12 text-base font-semibold"
+              >
+                {obSaving ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    {nl ? 'Opslaan...' : 'Saving...'}
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="w-5 h-5 mr-2" />
+                    {nl ? 'Start AI Marketing' : 'Start AI Marketing'}
+                  </>
+                )}
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  // SIDEBAR RENDER
+  // ═══════════════════════════════════════════════════════════════
+
   if (!isOpen) return null;
 
   return (
@@ -535,8 +1282,8 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
         </div>
         <div className="flex items-center gap-2 text-xs text-white/80">
           <span>{nl ? 'Stap' : 'Step'} {currentStep + 1}/6</span>
-          <span>•</span>
-          <span>{stepConfig?.labelNl || stepConfig?.labelEn}</span>
+          <span>&middot;</span>
+          <span>{stepConfig ? (nl ? stepConfig.labelNl : stepConfig.labelEn) : ''}</span>
         </div>
         <Progress value={progressPct} className="h-1.5 mt-2 bg-white/20" />
       </div>
@@ -550,11 +1297,7 @@ export default function SetupAgent({ isOpen, onClose, onExit }: SetupAgentProps)
           return (
             <button
               key={step.key}
-              onClick={() => {
-                if (isComplete || i <= currentStep) {
-                  useSetupAgent && void 0; // navigate
-                }
-              }}
+              onClick={() => {}}
               className={cn(
                 'w-8 h-8 rounded-full flex items-center justify-center transition-all',
                 isComplete

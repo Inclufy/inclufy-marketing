@@ -49,16 +49,40 @@ function parseJSON(text: string, fallback: unknown = {}) {
 
 // ─── Action: analyze-website ──────────────────────────────────────
 async function handleAnalyzeWebsite(body: Record<string, unknown>) {
-  const { url, language = 'nl' } = body;
+  const { url, language = 'nl', deep = false } = body;
   if (!url) throw new Error('URL is required');
 
-  // Fetch and extract text from website
+  // Fetch and extract text + metadata from website
   let pageText = '';
+  let metaColors: string[] = [];
+  let socialLinks: Record<string, string> = {};
   try {
     const res = await fetch(url as string, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; InclulyBot/1.0)' },
     });
     const html = await res.text();
+
+    // Extract social media links from HTML before stripping tags
+    const socialPatterns: [string, RegExp][] = [
+      ['linkedin', /href=["'](https?:\/\/(?:www\.)?linkedin\.com\/[^"']+)["']/i],
+      ['instagram', /href=["'](https?:\/\/(?:www\.)?instagram\.com\/[^"']+)["']/i],
+      ['facebook', /href=["'](https?:\/\/(?:www\.)?facebook\.com\/[^"']+)["']/i],
+      ['twitter', /href=["'](https?:\/\/(?:www\.)?(?:twitter|x)\.com\/[^"']+)["']/i],
+      ['youtube', /href=["'](https?:\/\/(?:www\.)?youtube\.com\/[^"']+)["']/i],
+      ['tiktok', /href=["'](https?:\/\/(?:www\.)?tiktok\.com\/[^"']+)["']/i],
+    ];
+    for (const [platform, regex] of socialPatterns) {
+      const m = html.match(regex);
+      if (m) socialLinks[platform] = m[1];
+    }
+
+    // Extract theme/brand colors from CSS custom properties or meta tags
+    const colorMatches = html.match(/--(?:primary|brand|main|accent)[-_]?color\s*:\s*(#[0-9a-fA-F]{3,8})/gi) || [];
+    metaColors = colorMatches.map(m => {
+      const hex = m.match(/#[0-9a-fA-F]{3,8}/);
+      return hex ? hex[0] : '';
+    }).filter(Boolean);
+
     // Strip HTML tags, scripts, styles
     pageText = html
       .replace(/<script[\s\S]*?<\/script>/gi, '')
@@ -66,13 +90,104 @@ async function handleAnalyzeWebsite(body: Record<string, unknown>) {
       .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-      .substring(0, 4000);
+      .substring(0, deep ? 6000 : 4000);
   } catch {
     pageText = `Website at ${url} (could not fetch content)`;
   }
 
   const langNote = language === 'nl' ? 'Antwoord in het Nederlands.' : language === 'fr' ? 'Répondez en français.' : 'Respond in English.';
 
+  // Deep mode: extract everything in one large call for onboarding
+  if (deep) {
+    const colorHint = metaColors.length > 0 ? `Detected CSS colors: ${metaColors.join(', ')}. ` : '';
+    const socialHint = Object.keys(socialLinks).length > 0
+      ? `Detected social links: ${JSON.stringify(socialLinks)}. `
+      : '';
+
+    const result = await callOpenAI([
+      {
+        role: 'system',
+        content: `You are a comprehensive brand & business analysis expert. Analyze the website content and extract ALL available information about the company. ${langNote}
+${colorHint}${socialHint}
+Return valid JSON with these fields:
+{
+  "brand_name": "string",
+  "description": "string (2-3 sentences about the company)",
+  "industry": "string",
+  "tone": "string (professional, friendly, innovative, luxury, playful, authoritative, casual)",
+  "brand_values": ["array of 3-5 core values"],
+  "usps": ["array of 3-5 unique selling points"],
+  "primary_color": "#hex (extract from brand colors if found, or #7c3aed as default)",
+  "secondary_color": "#hex (complementary, or #ec4899 as default)",
+  "tagline": "string (extract or generate a fitting tagline)",
+  "mission": "string (company mission statement, extract or infer)",
+  "target_audiences": ["array of 2-3 target audience descriptions"],
+  "suggested_competitors": ["array of 3-5 likely competitor company names"],
+  "products": [
+    {
+      "name": "string (product or service name)",
+      "description": "string (1-2 sentences)",
+      "usp": "string (key differentiator)",
+      "features": "string (comma-separated key features)"
+    }
+  ],
+  "audiences_detailed": [
+    {
+      "audienceType": "B2B or B2C or Both",
+      "idealCustomer": "string (ideal customer profile description)",
+      "customerSector": "string (industry/sector they serve)",
+      "companySize": "string (e.g. 10-50, 50-200, 200+, or N/A for B2C)",
+      "ageGroup": "string (e.g. 25-45)",
+      "occupation": "string (typical job title/role)",
+      "painPoints": "string (comma-separated pain points)"
+    }
+  ],
+  "messaging_dos": "string (recommended messaging style and themes, comma-separated)",
+  "messaging_donts": "string (what to avoid in messaging, comma-separated)",
+  "social_urls": {
+    "linkedin": "string (URL or empty)",
+    "instagram": "string (URL or empty)",
+    "facebook": "string (URL or empty)",
+    "twitter": "string (URL or empty)",
+    "youtube": "string (URL or empty)",
+    "tiktok": "string (URL or empty)"
+  }
+}
+Extract maximum 3 products. If info is not found, make reasonable inferences based on the industry and brand positioning.`,
+      },
+      { role: 'user', content: `Analyze this website content from ${url}:\n\n${pageText}` },
+    ], 'gpt-4o', 4000);
+
+    const parsed = parseJSON(result, {});
+    // Merge detected social links with AI-extracted ones
+    const finalSocial = {
+      linkedin: '', instagram: '', facebook: '', twitter: '', youtube: '', tiktok: '',
+      ...socialLinks,
+      ...(parsed.social_urls || {}),
+    };
+    // Prefer detected CSS colors over AI guesses
+    return {
+      brand_name: parsed.brand_name || '',
+      description: parsed.description || '',
+      industry: parsed.industry || 'technology',
+      tone: parsed.tone || 'professional',
+      brand_values: parsed.brand_values || [],
+      usps: parsed.usps || [],
+      primary_color: metaColors[0] || parsed.primary_color || '#7c3aed',
+      secondary_color: metaColors[1] || parsed.secondary_color || '#ec4899',
+      tagline: parsed.tagline || '',
+      mission: parsed.mission || '',
+      target_audiences: parsed.target_audiences || [],
+      suggested_competitors: parsed.suggested_competitors || [],
+      products: parsed.products || [],
+      audiences_detailed: parsed.audiences_detailed || [],
+      messaging_dos: parsed.messaging_dos || '',
+      messaging_donts: parsed.messaging_donts || '',
+      social_urls: finalSocial,
+    };
+  }
+
+  // Standard (non-deep) mode for sidebar
   const result = await callOpenAI([
     {
       role: 'system',
