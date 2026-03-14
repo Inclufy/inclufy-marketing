@@ -105,8 +105,10 @@ export async function seedExtras(userId: string, template: IndustryTemplate): Pr
   if (saError) console.error('social_accounts seed error:', saError);
 
   // ── 6. strategic_plans (Campaign Readiness → Groei Blauwdruk check) ──
+  // Pre-existing table may lack DEFAULT on id — provide explicit UUID
   const strategicPlans = [
     {
+      id: crypto.randomUUID(),
       user_id: userId, plan_name: `${template.brand.name} Q2 2026 Growth Blueprint`,
       plan_type: 'quarterly',
       description: `Comprehensive marketing growth strategy for ${template.industry} market expansion`,
@@ -116,81 +118,132 @@ export async function seedExtras(userId: string, template: IndustryTemplate): Pr
         { name: 'Reduce CAC by 20%', target: 150, current: 188, unit: 'EUR' },
         { name: 'Grow organic traffic 50%', target: 75000, current: 52000, unit: 'visits/month' },
       ],
-      channels: ['LinkedIn', 'Email', 'SEO', 'Google Ads', 'Events'],
-      budget_total: randomBetween(50000, 150000),
-      timeline: { start: daysAgo(30), end: daysFromNow(60) },
+      strategies: [
+        { name: 'Content-Led Growth', description: 'Publish 4 thought leadership articles/month', type: 'growth', status: 'in_progress' },
+        { name: 'Paid Media Optimization', description: 'Shift budget to highest-performing channels', type: 'acquisition', status: 'planned' },
+      ],
+      total_budget: randomBetween(50000, 150000),
+      timeline: { start_date: daysAgo(30), end_date: daysFromNow(60) },
     },
   ];
   const { error: spError } = await marketingSupabase.from('strategic_plans').insert(strategicPlans);
   if (spError) console.error('strategic_plans seed error:', spError);
 
   // ── 7. journeys (Klantreis / Journey Builder) ──
+  // Live DB columns: name, description, status, nodes, edges, entry_rules, exit_rules, settings, enrollment_count
+  // Does NOT have: trigger_type, trigger_config, steps, conversion_rate, metrics
   const journeys = [
     {
-      user_id: userId, name: `${template.industry} Lead Nurture Journey`, description: `Automated nurture sequence for new ${template.industry} leads`,
-      status: 'active', trigger_type: 'form_submission', trigger_config: { form: 'demo_request', source: 'website' },
-      steps: [
-        { id: '1', type: 'email', name: 'Welcome email', delay: 0, config: { template: 'welcome', subject: `Welcome to ${template.brand.name}` } },
-        { id: '2', type: 'delay', name: 'Wait 3 days', delay: 3, config: {} },
-        { id: '3', type: 'email', name: 'Case study', delay: 0, config: { template: 'case_study', subject: `How ${template.leads[0]?.company} achieved 3x ROI` } },
-        { id: '4', type: 'condition', name: 'Opened email?', delay: 0, config: { condition: 'email_opened', branch_yes: '5', branch_no: '6' } },
-        { id: '5', type: 'email', name: 'Book demo CTA', delay: 2, config: { template: 'demo_cta' } },
-        { id: '6', type: 'email', name: 'Value reminder', delay: 5, config: { template: 'value_props' } },
+      user_id: userId, name: `${template.industry} Lead Nurture Journey`,
+      description: `Automated nurture sequence for new ${template.industry} leads`,
+      status: 'active',
+      nodes: [
+        { id: '1', type: 'trigger', data: { label: 'Form Submission', trigger: 'demo_request' }, position: { x: 250, y: 0 } },
+        { id: '2', type: 'email', data: { label: 'Welcome Email', subject: `Welcome to ${template.brand.name}` }, position: { x: 250, y: 100 } },
+        { id: '3', type: 'delay', data: { label: 'Wait 3 days', days: 3 }, position: { x: 250, y: 200 } },
+        { id: '4', type: 'email', data: { label: 'Case Study', subject: `How ${template.leads[0]?.company} achieved 3x ROI` }, position: { x: 250, y: 300 } },
+        { id: '5', type: 'condition', data: { label: 'Opened email?' }, position: { x: 250, y: 400 } },
+        { id: '6', type: 'email', data: { label: 'Book Demo CTA' }, position: { x: 100, y: 500 } },
+        { id: '7', type: 'email', data: { label: 'Value Reminder' }, position: { x: 400, y: 500 } },
       ],
-      enrollment_count: randomBetween(150, 400), conversion_rate: +(Math.random() * 15 + 10).toFixed(1),
-      metrics: { emails_sent: randomBetween(1200, 3500), opens: randomBetween(400, 1200), clicks: randomBetween(100, 400), conversions: randomBetween(25, 80) },
+      edges: [
+        { id: 'e1-2', source: '1', target: '2' },
+        { id: 'e2-3', source: '2', target: '3' },
+        { id: 'e3-4', source: '3', target: '4' },
+        { id: 'e4-5', source: '4', target: '5' },
+        { id: 'e5-6', source: '5', target: '6', label: 'Yes' },
+        { id: 'e5-7', source: '5', target: '7', label: 'No' },
+      ],
+      entry_rules: { trigger: 'form_submission', source: 'website' },
+      exit_rules: { max_duration_days: 30 },
+      settings: { send_time: 'optimal', timezone: 'Europe/Amsterdam' },
+      enrollment_count: randomBetween(150, 400),
     },
     {
-      user_id: userId, name: `Event Follow-Up Journey`, description: `Post-event engagement sequence for captured contacts`,
-      status: 'active', trigger_type: 'event_capture', trigger_config: { source: 'event', event_type: 'conference' },
-      steps: [
-        { id: '1', type: 'email', name: 'Thank you + recap', delay: 0, config: { template: 'event_thankyou' } },
-        { id: '2', type: 'delay', name: 'Wait 2 days', delay: 2, config: {} },
-        { id: '3', type: 'email', name: 'Exclusive content offer', delay: 0, config: { template: 'exclusive_content' } },
+      user_id: userId, name: `Event Follow-Up Journey`,
+      description: `Post-event engagement sequence for captured contacts`,
+      status: 'active',
+      nodes: [
+        { id: '1', type: 'trigger', data: { label: 'Event Capture' }, position: { x: 250, y: 0 } },
+        { id: '2', type: 'email', data: { label: 'Thank You + Recap' }, position: { x: 250, y: 100 } },
+        { id: '3', type: 'delay', data: { label: 'Wait 2 days', days: 2 }, position: { x: 250, y: 200 } },
+        { id: '4', type: 'email', data: { label: 'Exclusive Content' }, position: { x: 250, y: 300 } },
       ],
-      enrollment_count: randomBetween(50, 120), conversion_rate: +(Math.random() * 20 + 15).toFixed(1),
-      metrics: { emails_sent: randomBetween(200, 600), opens: randomBetween(100, 300), clicks: randomBetween(40, 120), conversions: randomBetween(10, 40) },
+      edges: [
+        { id: 'e1-2', source: '1', target: '2' },
+        { id: 'e2-3', source: '2', target: '3' },
+        { id: 'e3-4', source: '3', target: '4' },
+      ],
+      entry_rules: { trigger: 'event_capture', event_type: 'conference' },
+      exit_rules: { max_duration_days: 14 },
+      settings: { send_time: 'morning' },
+      enrollment_count: randomBetween(50, 120),
     },
     {
-      user_id: userId, name: `Re-Engagement Journey`, description: `Win back inactive leads who haven't engaged in 30+ days`,
-      status: 'paused', trigger_type: 'inactivity', trigger_config: { days_inactive: 30 },
-      steps: [
-        { id: '1', type: 'email', name: 'We miss you', delay: 0, config: { template: 'reengagement' } },
-        { id: '2', type: 'delay', name: 'Wait 7 days', delay: 7, config: {} },
-        { id: '3', type: 'email', name: 'Special offer', delay: 0, config: { template: 'special_offer' } },
+      user_id: userId, name: `Re-Engagement Journey`,
+      description: `Win back inactive leads who haven't engaged in 30+ days`,
+      status: 'paused',
+      nodes: [
+        { id: '1', type: 'trigger', data: { label: 'Inactivity 30d' }, position: { x: 250, y: 0 } },
+        { id: '2', type: 'email', data: { label: 'We Miss You' }, position: { x: 250, y: 100 } },
+        { id: '3', type: 'delay', data: { label: 'Wait 7 days', days: 7 }, position: { x: 250, y: 200 } },
+        { id: '4', type: 'email', data: { label: 'Special Offer' }, position: { x: 250, y: 300 } },
       ],
-      enrollment_count: randomBetween(80, 200), conversion_rate: +(Math.random() * 8 + 5).toFixed(1),
-      metrics: { emails_sent: randomBetween(300, 800), opens: randomBetween(80, 250), clicks: randomBetween(20, 80), conversions: randomBetween(8, 30) },
+      edges: [
+        { id: 'e1-2', source: '1', target: '2' },
+        { id: 'e2-3', source: '2', target: '3' },
+        { id: 'e3-4', source: '3', target: '4' },
+      ],
+      entry_rules: { trigger: 'inactivity', days_inactive: 30 },
+      exit_rules: { max_duration_days: 21 },
+      settings: { send_time: 'afternoon' },
+      enrollment_count: randomBetween(80, 200),
     },
   ];
   const { error: jError } = await marketingSupabase.from('journeys').insert(journeys);
   if (jError) console.error('journeys seed error:', jError);
 
   // ── 8. channel_attributions (Attributie page data) ──
-  const channels = ['LinkedIn', 'Google Ads', 'Email', 'Organic', 'Referral', 'Events', 'Facebook'];
-  const channelAttributions = channels.map((channel) => ({
-    user_id: userId,
-    channel_name: channel,
-    conversions: randomBetween(15, 120),
-    revenue: randomBetween(5000, 80000),
-    touchpoints: randomBetween(200, 2000),
-    avg_time_to_convert: +(Math.random() * 20 + 5).toFixed(1),
-    model_type: 'shapley',
-    attribution_weight: +(Math.random() * 0.25 + 0.05).toFixed(3),
-  }));
+  // Live DB columns: channel, display_name, model_type, attributed_conversions,
+  //   attributed_revenue, cost, roi, percentage_share, total_touchpoints, confidence, color
+  const CHANNEL_COLORS: Record<string, string> = {
+    LinkedIn: '#0A66C2', 'Google Ads': '#34A853', Email: '#EA4335',
+    Organic: '#FBBC04', Referral: '#FF6D01', Events: '#8B5CF6', Facebook: '#1877F2',
+  };
+  const channelNames = ['LinkedIn', 'Google Ads', 'Email', 'Organic', 'Referral', 'Events', 'Facebook'];
+  const channelAttributions = channelNames.map((ch) => {
+    const rev = randomBetween(5000, 80000);
+    const cst = randomBetween(1000, 15000);
+    return {
+      user_id: userId,
+      channel: ch,
+      display_name: ch,
+      color: CHANNEL_COLORS[ch] || '#6b7280',
+      model_type: 'data_driven_shapley',
+      attributed_conversions: randomBetween(15, 120),
+      attributed_revenue: rev,
+      cost: cst,
+      roi: cst > 0 ? Math.round(((rev - cst) / cst) * 100) : 0,
+      percentage_share: +(Math.random() * 25 + 5).toFixed(1),
+      avg_position_in_journey: +(Math.random() * 3 + 1).toFixed(1),
+      total_touchpoints: randomBetween(200, 2000),
+      confidence: +(Math.random() * 15 + 80).toFixed(1),
+    };
+  });
   const { error: caError } = await marketingSupabase.from('channel_attributions').insert(channelAttributions);
   if (caError) console.error('channel_attributions seed error:', caError);
 
   // ── 9. media_assets (Media Bibliotheek) ──
+  // Live DB has team_id NOT NULL — must provide a placeholder value
   const mediaAssets = [
-    { user_id: userId, file_name: `${template.brand.name}-logo.png`, file_path: `media/${userId}/logo.png`, file_size: 245000, mime_type: 'image/png', width: 1200, height: 400 },
-    { user_id: userId, file_name: `${template.brand.name}-hero-banner.jpg`, file_path: `media/${userId}/hero.jpg`, file_size: 890000, mime_type: 'image/jpeg', width: 1920, height: 1080 },
-    { user_id: userId, file_name: `product-screenshot-dashboard.png`, file_path: `media/${userId}/dashboard.png`, file_size: 567000, mime_type: 'image/png', width: 1440, height: 900 },
-    { user_id: userId, file_name: `${template.industry}-case-study-cover.jpg`, file_path: `media/${userId}/case-study.jpg`, file_size: 420000, mime_type: 'image/jpeg', width: 1200, height: 628 },
-    { user_id: userId, file_name: `social-post-template.png`, file_path: `media/${userId}/social-template.png`, file_size: 380000, mime_type: 'image/png', width: 1080, height: 1080 },
-    { user_id: userId, file_name: `email-header-graphic.png`, file_path: `media/${userId}/email-header.png`, file_size: 195000, mime_type: 'image/png', width: 600, height: 200 },
-    { user_id: userId, file_name: `product-demo-video.mp4`, file_path: `media/${userId}/demo.mp4`, file_size: 15400000, mime_type: 'video/mp4', width: 1920, height: 1080, duration: 120 },
-    { user_id: userId, file_name: `${template.brand.name}-brand-guidelines.pdf`, file_path: `media/${userId}/brand-guide.pdf`, file_size: 4500000, mime_type: 'application/pdf' },
+    { user_id: userId, team_id: userId, file_name: `${template.brand.name}-logo.png`, file_path: `media/${userId}/logo.png`, file_size: 245000, mime_type: 'image/png', width: 1200, height: 400 },
+    { user_id: userId, team_id: userId, file_name: `${template.brand.name}-hero-banner.jpg`, file_path: `media/${userId}/hero.jpg`, file_size: 890000, mime_type: 'image/jpeg', width: 1920, height: 1080 },
+    { user_id: userId, team_id: userId, file_name: `product-screenshot-dashboard.png`, file_path: `media/${userId}/dashboard.png`, file_size: 567000, mime_type: 'image/png', width: 1440, height: 900 },
+    { user_id: userId, team_id: userId, file_name: `${template.industry}-case-study-cover.jpg`, file_path: `media/${userId}/case-study.jpg`, file_size: 420000, mime_type: 'image/jpeg', width: 1200, height: 628 },
+    { user_id: userId, team_id: userId, file_name: `social-post-template.png`, file_path: `media/${userId}/social-template.png`, file_size: 380000, mime_type: 'image/png', width: 1080, height: 1080 },
+    { user_id: userId, team_id: userId, file_name: `email-header-graphic.png`, file_path: `media/${userId}/email-header.png`, file_size: 195000, mime_type: 'image/png', width: 600, height: 200 },
+    { user_id: userId, team_id: userId, file_name: `product-demo-video.mp4`, file_path: `media/${userId}/demo.mp4`, file_size: 15400000, mime_type: 'video/mp4', width: 1920, height: 1080, duration: 120 },
+    { user_id: userId, team_id: userId, file_name: `${template.brand.name}-brand-guidelines.pdf`, file_path: `media/${userId}/brand-guide.pdf`, file_size: 4500000, mime_type: 'application/pdf' },
   ];
   const { error: maError } = await marketingSupabase.from('media_assets').insert(mediaAssets);
   if (maError) console.error('media_assets seed error:', maError);
