@@ -11,7 +11,7 @@ import SideNav from '@/components/navigation/SideNav';
 import AICopilot from '@/components/AICopilot';
 import SetupAgent from '@/components/SetupAgent';
 import {
-  Sun, Moon, Globe, LogOut, Sparkles, Home, Search, Rocket
+  Sun, Moon, Globe, LogOut, Sparkles, Home, Search, Rocket, HelpCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -26,6 +26,7 @@ function LayoutInner() {
   const { lang, setLang, t } = useLanguage();
   const navigate = useNavigate();
   const { isOpen: copilotOpen, initialContext, setupMode, openCopilot, closeCopilot, clearInitialContext, enterSetupMode, exitSetupMode } = useCopilot();
+  const [copilotTab, setCopilotTab] = useState<"chat" | "guide">("chat");
 
   const email = user?.email || 'sami@inclufy.com';
   const initials = (user?.user_metadata?.full_name || email).charAt(0).toUpperCase();
@@ -179,6 +180,7 @@ function LayoutInner() {
         <AICopilot
           isOpen={copilotOpen}
           onClose={closeCopilot}
+          requestedTab={copilotTab}
           initialContext={initialContext}
           onContextConsumed={clearInitialContext}
         />
@@ -189,7 +191,7 @@ function LayoutInner() {
         <div className="fixed right-0 top-1/2 -translate-y-1/2 z-40 flex flex-col gap-2">
           {/* AI Copilot toggle */}
           <button
-            onClick={openCopilot}
+            onClick={() => { setCopilotTab("chat"); openCopilot(); }}
             className="flex items-center gap-2 bg-gradient-to-b from-purple-600 to-pink-600 text-white pl-3 pr-2 py-3 rounded-l-xl shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-pink-700 transition-all group"
             title="AI Copilot"
           >
@@ -218,6 +220,21 @@ function LayoutInner() {
               Setup
             </span>
             <Rocket className="h-5 w-5" />
+          </button>
+
+          {/* Guide toggle */}
+          <button
+            onClick={() => { setCopilotTab("guide"); openCopilot(); }}
+            className="flex items-center gap-2 bg-gradient-to-b from-teal-600 to-emerald-600 text-white pl-3 pr-2 py-3 rounded-l-xl shadow-lg hover:shadow-xl hover:from-teal-700 hover:to-emerald-700 transition-all group"
+            title="Gids"
+          >
+            <span
+              className="text-xs font-medium hidden sm:block"
+              style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}
+            >
+              Gids
+            </span>
+            <HelpCircle className="h-5 w-5" />
           </button>
         </div>
       )}
