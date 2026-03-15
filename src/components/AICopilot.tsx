@@ -53,6 +53,7 @@ import {
   Megaphone,
   MousePointerClick,
   Layers,
+  CheckCircle2,
   type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -639,9 +640,6 @@ const DEFAULT_GUIDE: GuideContent = {
     { title: "Welkom bij Inclufy Marketing", description: "Dit is uw complete AI marketing platform. Laten we een rondleiding doen." },
   ],
 };
-
-/* ─── CheckCircle2 import fix ─── */
-const CheckCircle2 = Check; // Reuse Check icon
 
 /* ─── Related pages navigation map ─── */
 interface NavLink {
