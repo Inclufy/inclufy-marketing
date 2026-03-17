@@ -18,6 +18,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery } from '@tanstack/react-query';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../services/supabase';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
@@ -554,45 +555,36 @@ export default function SettingsScreen() {
 
     if (platformKey === 'linkedin') {
       const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '789493c65q6j5e';
-      const params = new URLSearchParams({
-        response_type: 'code',
-        client_id: clientId,
-        redirect_uri: redirectUri,
-        scope: 'openid profile email w_member_social',
-        state,
-      });
-      authUrl = `https://www.linkedin.com/oauth/v2/authorization?${params}`;
+      authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email w_member_social')}&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'facebook' || platformKey === 'instagram') {
       const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
-      // Request both personal + page permissions for business page support
       const scope = platformKey === 'instagram'
         ? 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement'
         : 'pages_show_list,pages_read_engagement,pages_manage_posts,public_profile';
-      const params = new URLSearchParams({
-        client_id: metaAppId,
-        redirect_uri: redirectUri,
-        scope,
-        response_type: 'code',
-        state,
-      });
-      authUrl = `https://www.facebook.com/v18.0/dialog/oauth?${params}`;
+      authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'tiktok') {
       const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
-      const params = new URLSearchParams({
-        client_key: tiktokClientKey,
-        redirect_uri: redirectUri,
-        scope: 'user.info.basic,video.publish,video.list',
-        response_type: 'code',
-        state,
-      });
-      authUrl = `https://www.tiktok.com/v2/auth/authorize/?${params}`;
+      authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
     }
 
     if (authUrl) {
       try {
-        await Linking.openURL(authUrl);
+        // Use WebBrowser for in-app OAuth flow (more reliable than Linking.openURL)
+        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
+        console.log('OAuth result:', result.type);
+        // After the browser closes, refresh social accounts
+        if (result.type === 'success' || result.type === 'dismiss') {
+          // Give the edge function a moment to process
+          setTimeout(() => refetchSocial(), 2000);
+        }
       } catch (err: any) {
-        Alert.alert('Error', err?.message ?? 'Kon de browser niet openen.');
+        // Fallback to Linking if WebBrowser fails
+        console.log('WebBrowser failed, falling back to Linking:', err.message);
+        try {
+          await Linking.openURL(authUrl);
+        } catch (linkErr: any) {
+          Alert.alert('Error', linkErr?.message ?? 'Kon de browser niet openen.');
+        }
       }
     }
   };
