@@ -87,6 +87,24 @@ function parseContactFromQR(data: string): ParsedContact {
   if (/^\+?[\d\s\-()]{7,}$/.test(data)) {
     return { phone: data };
   }
+  // URL — LinkedIn, website, or other profile link
+  if (data.startsWith('http://') || data.startsWith('https://')) {
+    const contact: ParsedContact = { url: data };
+    // Extract name from LinkedIn URL if possible
+    const linkedinMatch = data.match(/linkedin\.com\/in\/([^/?]+)/i);
+    if (linkedinMatch) {
+      const slug = decodeURIComponent(linkedinMatch[1]).replace(/-/g, ' ');
+      const parts = slug.split(' ').map(p => p.charAt(0).toUpperCase() + p.slice(1));
+      if (parts.length >= 2) {
+        contact.firstName = parts[0];
+        contact.lastName = parts.slice(1).join(' ');
+      } else if (parts.length === 1) {
+        contact.firstName = parts[0];
+      }
+      contact.company = 'LinkedIn';
+    }
+    return contact;
+  }
   return {};
 }
 
