@@ -11,7 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCampaigns, type Campaign } from '../hooks/useCampaigns';
+import { useCampaigns, useCampaignROI, type Campaign } from '../hooks/useCampaigns';
 import type { RootStackParamList } from '../types';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
@@ -33,6 +33,38 @@ const typeIcons: Record<Campaign['type'], string> = {
   push: 'notifications-outline',
   'multi-channel': 'radio-outline',
 };
+
+// ─── ROI Badge Component ─────────────────────────────────────────────
+
+function CampaignROIBadge({ campaignId, colors: c }: { campaignId: string; colors: any }) {
+  const { data: roiData } = useCampaignROI(campaignId);
+  if (!roiData || (roiData.totalCosts === 0 && roiData.totalRevenue === 0)) return null;
+
+  const { roi, totalCosts, totalRevenue } = roiData;
+  const roiColor = roi > 100 ? c.success : roi > 0 ? '#F59E0B' : c.error;
+
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <Ionicons name="trending-down" size={12} color={c.error} />
+        <Text style={{ fontSize: 11, color: c.error }}>
+          €{totalCosts.toLocaleString()}
+        </Text>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
+        <Ionicons name="trending-up" size={12} color={c.success} />
+        <Text style={{ fontSize: 11, color: c.success }}>
+          €{totalRevenue.toLocaleString()}
+        </Text>
+      </View>
+      <View style={{ backgroundColor: roiColor + '18', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+        <Text style={{ fontSize: 10, fontWeight: '700', color: roiColor }}>
+          ROI {roi > 0 ? '+' : ''}{roi.toFixed(0)}%
+        </Text>
+      </View>
+    </View>
+  );
+}
 
 // ─── Component ──────────────────────────────────────────────────────
 
@@ -369,6 +401,9 @@ export default function CampaignListScreen() {
             </Text>
           </View>
         </View>
+
+        {/* ROI mini-stats */}
+        <CampaignROIBadge campaignId={item.id} colors={colors} />
       </TouchableOpacity>
     );
   };
