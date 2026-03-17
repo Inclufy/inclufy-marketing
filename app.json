@@ -1,0 +1,131 @@
+{
+  "expo": {
+    "name": "AMOS",
+    "slug": "inclufy-go",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "inclufy-go",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#9333EA"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.inclufy.go",
+      "buildNumber": "68",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Inclufy GO needs camera access to capture photos and videos at events.",
+        "NSMicrophoneUsageDescription": "Inclufy GO needs microphone access for video and audio recording.",
+        "NSPhotoLibraryUsageDescription": "Inclufy GO saves branded content to your photo library.",
+        "NSFaceIDUsageDescription": "Inclufy GO uses Face ID for secure app access.",
+        "NFCReaderUsageDescription": "Inclufy GO uses NFC to instantly share and receive contact cards.",
+        "NSLocationWhenInUseUsageDescription": "Inclufy GO uses your location to tag scanned contacts with region data (city, province, country).",
+        "NSCalendarsUsageDescription": "Inclufy GO adds events to your calendar with automatic reminders.",
+        "NSCalendarsFullAccessUsageDescription": "Inclufy GO adds events to your calendar with automatic reminders.",
+        "CFBundleLocalizations": [
+          "nl",
+          "en",
+          "fr"
+        ],
+        "CFBundleDevelopmentRegion": "nl",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "entitlements": {
+        "com.apple.developer.nfc.readersession.formats": [
+          "TAG"
+        ]
+      }
+    },
+    "android": {
+      "package": "com.inclufy.go",
+      "adaptiveIcon": {
+        "backgroundColor": "#9333EA",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO",
+        "android.permission.READ_MEDIA_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "inclufy",
+    "extra": {
+      "eas": {
+        "projectId": "1e7b33cf-2f76-4dab-b515-68db9ea482ff"
+      },
+      "router": {}
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Inclufy GO heeft camera nodig om event content te maken."
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Inclufy GO heeft microfoon nodig voor audio-opname en transcriptie."
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Inclufy GO slaat branded afbeeldingen op in je fotobibliotheek."
+        }
+      ],
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Inclufy GO gebruikt je locatie om gescande contacten te taggen met regio-informatie."
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "Inclufy GO voegt events toe aan je agenda met automatische herinneringen."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#A855F7"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Inclufy GO heeft toegang nodig tot je fotobibliotheek om een logo te selecteren."
+        }
+      ],
+      "expo-web-browser"
+    ]
+  }
+}
