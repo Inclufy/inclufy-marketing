@@ -187,6 +187,7 @@ export type RootStackParamList = {
   OpportunityFeed: undefined;
   AutonomousHub: undefined;
   NetworkingEngine: undefined;
+  FollowedOrganizers: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────

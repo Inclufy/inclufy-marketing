@@ -2,20 +2,22 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
   RefreshControl,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '../services/supabase';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 
-type OpportunityType = 'trending' | 'event' | 'budget' | 'lead' | 'content' | 'channel';
+type OpportunityType = 'trending' | 'event' | 'budget' | 'lead' | 'content' | 'channel' | 'gap';
 
 interface Opportunity {
   id: string;
@@ -26,69 +28,10 @@ interface Opportunity {
   action: string;
   route?: string;
   timeAgo: string;
+  estimatedValue?: number;
+  cost?: number;
+  revenue?: number;
 }
-
-const MOCK_OPPORTUNITIES: Opportunity[] = [
-  {
-    id: '1',
-    type: 'trending',
-    title: 'AI Marketing trending on LinkedIn',
-    description: 'Posts about AI marketing automation have 3x more engagement this week. Post now to ride the wave.',
-    impact: 'high',
-    action: 'Create post',
-    route: 'ContentCreator',
-    timeAgo: '2h ago',
-  },
-  {
-    id: '2',
-    type: 'event',
-    title: 'Marketing Summit near you',
-    description: 'B2B Marketing Summit in 5 days. High lead potential (score: 87). 3 competitors attending.',
-    impact: 'high',
-    action: 'View event',
-    route: 'EventSetup',
-    timeAgo: '4h ago',
-  },
-  {
-    id: '3',
-    type: 'budget',
-    title: 'Budget optimization available',
-    description: 'Email campaigns showing 2.3x better ROI than social ads this month. Reallocate 20% for +\u20ac840 projected revenue.',
-    impact: 'high',
-    action: 'View budget',
-    route: 'BudgetMonitor',
-    timeAgo: '6h ago',
-  },
-  {
-    id: '4',
-    type: 'lead',
-    title: '3 leads went cold \u2014 act now',
-    description: "Leads captured at the Tech Expo haven't been contacted in 5 days. Strike while hot.",
-    impact: 'medium',
-    action: 'View leads',
-    route: 'LeadCapture',
-    timeAgo: '1d ago',
-  },
-  {
-    id: '5',
-    type: 'content',
-    title: 'Best time to post: Today 18:00',
-    description: 'Your audience is most active between 17:00\u201319:00 on Thursdays. Schedule a post for peak engagement.',
-    impact: 'medium',
-    action: 'Create content',
-    route: 'ContentCreator',
-    timeAgo: '1d ago',
-  },
-  {
-    id: '6',
-    type: 'channel',
-    title: 'LinkedIn outperforming Instagram 4x',
-    description: 'Your LinkedIn content generates 4x more qualified leads than Instagram. Consider shifting resources.',
-    impact: 'medium',
-    action: 'See analytics',
-    timeAgo: '2d ago',
-  },
-];
 
 const TYPE_CONFIG: Record<OpportunityType, { icon: string; color: string; bg: string; lib: string }> = {
   trending: { icon: 'trending-up', color: '#9333EA', bg: '#F3E8FF', lib: 'Ionicons' },
@@ -97,6 +40,7 @@ const TYPE_CONFIG: Record<OpportunityType, { icon: string; color: string; bg: st
   lead: { icon: 'people-outline', color: '#10b981', bg: '#D1FAE5', lib: 'Ionicons' },
   content: { icon: 'create-outline', color: '#3b82f6', bg: '#EFF6FF', lib: 'Ionicons' },
   channel: { icon: 'bar-chart-outline', color: '#0077b5', bg: '#E0F2FE', lib: 'Ionicons' },
+  gap: { icon: 'warning-outline', color: '#FF6B35', bg: '#FFF7ED', lib: 'Ionicons' },
 };
 
 const IMPACT_COLORS: Record<string, string> = {
@@ -125,12 +69,18 @@ function ImpactDot({ level }: { level: 'high' | 'medium' | 'low' }) {
   );
 }
 
+function formatValue(val: number) {
+  if (!val) return '€0';
+  if (val >= 1000) return `€${Math.round(val / 1000)}K`;
+  return `€${val}`;
+}
+
 export default function OpportunityRadarScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<any>();
+  const qc = useQueryClient();
   const { colors } = useTheme();
   const [dismissed, setDismissed] = useState<string[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<OpportunityType | 'all'>('all');
 
   const styles = useThemedStyles((c) => ({
@@ -185,7 +135,9 @@ export default function OpportunityRadarScreen() {
     cardMeta: { alignItems: 'flex-end' as const, gap: 4 },
     timeAgo: { fontSize: 10, color: c.textTertiary },
     cardTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: c.text, marginBottom: 6 },
-    cardDesc: { fontSize: fontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: spacing.md },
+    cardDesc: { fontSize: fontSize.sm, color: c.textSecondary, lineHeight: 20, marginBottom: spacing.sm },
+    metricsRow: { flexDirection: 'row' as const, gap: spacing.xs, flexWrap: 'wrap' as const, marginBottom: spacing.sm },
+    metricBadge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
     cardActions: { flexDirection: 'row' as const, justifyContent: 'space-between' as const, alignItems: 'center' as const },
     dismissBtn: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 4, paddingVertical: 6, paddingHorizontal: 2 },
     dismissText: { fontSize: fontSize.xs, color: c.textTertiary },
@@ -203,10 +155,142 @@ export default function OpportunityRadarScreen() {
     emptySub: { fontSize: fontSize.sm, color: c.textSecondary, textAlign: 'center' as const },
   }));
 
-  const onRefresh = () => {
-    setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 1200);
-  };
+  // ── Fetch real data from multiple sources ─────────────────────────────
+  const { data: opportunities = [], isLoading, refetch } = useQuery<Opportunity[]>({
+    queryKey: ['radar_opportunities'],
+    queryFn: async () => {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      const opps: Opportunity[] = [];
+
+      // 1) Discovered events as opportunities
+      try {
+        const { data: events } = await supabase
+          .from('discovered_events')
+          .select('*')
+          .eq('user_id', user.id)
+          .neq('status', 'registered')
+          .order('priority_score', { ascending: false })
+          .limit(5);
+
+        (events ?? []).forEach(e => {
+          const now = new Date();
+          const eventDate = new Date(e.date_start);
+          const daysUntil = Math.ceil((eventDate.getTime() - now.getTime()) / 86400000);
+          if (daysUntil < 0) return;
+
+          const score = e.priority_score ?? 0;
+          const ticketCost = typeof e.cost === 'object' ? (e.cost?.total ?? 0) : (e.cost ?? 0);
+          opps.push({
+            id: `radar-event-${e.id}`,
+            type: 'event',
+            title: e.name,
+            description: `${e.city || e.location || ''} · ${daysUntil} dagen · Match: ${e.target_audience_match ?? 0}%. ${e.ai_recommendation || ''}`,
+            impact: score >= 80 ? 'high' : score >= 60 ? 'medium' : 'low',
+            action: 'Bekijk event',
+            route: 'EventIntelligence',
+            timeAgo: `${daysUntil}d`,
+            estimatedValue: (e.estimated_leads ?? 0) * 150,
+            cost: ticketCost,
+            revenue: (e.estimated_leads ?? 0) * 150,
+          });
+        });
+      } catch {}
+
+      // 2) Feed items as opportunities
+      try {
+        const { data: feedItems } = await supabase
+          .from('feed_items')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('is_actioned', false)
+          .order('created_at', { ascending: false })
+          .limit(8);
+
+        (feedItems ?? []).forEach(fi => {
+          const typeMap: Record<string, OpportunityType> = {
+            lead_signal: 'lead',
+            trend_alert: 'trending',
+            campaign_trigger: 'content',
+            event_opportunity: 'event',
+            competitor_move: 'channel',
+            content_opportunity: 'content',
+            budget_optimization: 'budget',
+          };
+          opps.push({
+            id: `radar-feed-${fi.id}`,
+            type: typeMap[fi.type] || 'lead',
+            title: fi.title,
+            description: fi.description || '',
+            impact: fi.urgency === 'immediate' ? 'high' : fi.urgency === 'today' ? 'high' : 'medium',
+            action: fi.suggested_action?.label || 'Bekijken',
+            route: fi.type === 'event_opportunity' ? 'EventIntelligence' : fi.type === 'lead_signal' ? 'LeadCapture' : undefined,
+            timeAgo: formatTimeShort(fi.created_at || fi.timestamp),
+            estimatedValue: fi.estimated_value ?? 0,
+            revenue: fi.impact_metrics?.revenue,
+            cost: fi.impact_metrics?.cost,
+          });
+        });
+      } catch {}
+
+      // 3) Marketing gaps
+      try {
+        const { data: profile } = await supabase.from('profiles').select('linkedin, instagram, website').eq('id', user.id).maybeSingle();
+        const { count: contactCount } = await supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+
+        if (!profile?.linkedin && !profile?.instagram) {
+          opps.push({
+            id: 'radar-gap-social',
+            type: 'gap',
+            title: 'Social media profielen ontbreken',
+            description: 'Voeg LinkedIn of Instagram toe om je bereik te vergroten.',
+            impact: 'medium',
+            action: 'Profiel aanvullen',
+            route: 'Settings',
+            timeAgo: 'nu',
+            estimatedValue: 2000,
+          });
+        }
+        if ((contactCount ?? 0) < 10) {
+          opps.push({
+            id: 'radar-gap-contacts',
+            type: 'gap',
+            title: `Nog maar ${contactCount ?? 0} contacten`,
+            description: 'Gebruik QR, NFC of visitekaartjes om je netwerk uit te breiden.',
+            impact: 'medium',
+            action: 'Deel QR',
+            route: 'MyDigitalCard',
+            timeAgo: 'nu',
+            estimatedValue: 1500,
+          });
+        }
+        if (!profile?.website) {
+          opps.push({
+            id: 'radar-gap-website',
+            type: 'gap',
+            title: 'Website ontbreekt',
+            description: 'Contacten kunnen niet naar je site navigeren.',
+            impact: 'low',
+            action: 'Toevoegen',
+            route: 'Settings',
+            timeAgo: 'nu',
+            estimatedValue: 800,
+          });
+        }
+      } catch {}
+
+      return opps;
+    },
+    staleTime: 60_000,
+  });
+
+  const visible = opportunities.filter(o =>
+    !dismissed.includes(o.id) &&
+    (filter === 'all' || o.type === filter)
+  );
+
+  const highCount = visible.filter(o => o.impact === 'high').length;
 
   const handleDismiss = (id: string) => {
     setDismissed(prev => [...prev, id]);
@@ -215,30 +299,22 @@ export default function OpportunityRadarScreen() {
   const handleAction = (opp: Opportunity) => {
     if (opp.route) {
       navigation.navigate(opp.route as any);
-    } else {
-      Alert.alert(opp.title, 'Feature coming soon!');
     }
   };
 
   const FILTERS: Array<{ key: OpportunityType | 'all'; label: string }> = [
-    { key: 'all', label: 'All' },
-    { key: 'trending', label: 'Trending' },
+    { key: 'all', label: 'Alle' },
     { key: 'event', label: 'Events' },
-    { key: 'budget', label: 'Budget' },
     { key: 'lead', label: 'Leads' },
+    { key: 'gap', label: 'Gaps' },
+    { key: 'trending', label: 'Trending' },
+    { key: 'budget', label: 'Budget' },
     { key: 'content', label: 'Content' },
   ];
 
-  const visible = MOCK_OPPORTUNITIES.filter(o =>
-    !dismissed.includes(o.id) &&
-    (filter === 'all' || o.type === filter)
-  );
-
-  const highCount = visible.filter(o => o.impact === 'high').length;
-
   return (
     <View style={styles.container}>
-      {/* Header stats */}
+      {/* Header */}
       <View style={styles.header}>
         <View style={styles.radarBadge}>
           <MaterialCommunityIcons name="radar" size={18} color={colors.primary} />
@@ -248,7 +324,7 @@ export default function OpportunityRadarScreen() {
         <Text style={styles.headerSub}>
           {highCount > 0
             ? `${highCount} ${t.radar?.highImpact ?? 'high-impact opportunities'}`
-            : t.radar?.noHighImpact ?? 'All opportunities reviewed'}
+            : t.radar?.noHighImpact ?? 'Alle kansen beoordeeld'}
         </Text>
       </View>
 
@@ -274,13 +350,19 @@ export default function OpportunityRadarScreen() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); setDismissed([]); }} tintColor={colors.primary} />}
       >
-        {visible.length === 0 && (
+        {isLoading && visible.length === 0 && (
+          <View style={{ alignItems: 'center', paddingTop: 60 }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+          </View>
+        )}
+
+        {!isLoading && visible.length === 0 && (
           <View style={styles.empty}>
             <MaterialCommunityIcons name="radar" size={52} color={colors.textTertiary} />
-            <Text style={styles.emptyTitle}>{t.radar?.allClear ?? 'All clear!'}</Text>
-            <Text style={styles.emptySub}>{t.radar?.allClearSub ?? 'No opportunities right now. Pull to refresh.'}</Text>
+            <Text style={styles.emptyTitle}>{t.radar?.allClear ?? 'Alles in orde!'}</Text>
+            <Text style={styles.emptySub}>{t.radar?.allClearSub ?? 'Geen kansen op dit moment. Trek om te vernieuwen.'}</Text>
           </View>
         )}
 
@@ -302,10 +384,31 @@ export default function OpportunityRadarScreen() {
               <Text style={styles.cardTitle}>{opp.title}</Text>
               <Text style={styles.cardDesc}>{opp.description}</Text>
 
+              {/* Financial metrics */}
+              {(opp.estimatedValue || opp.cost || opp.revenue) ? (
+                <View style={styles.metricsRow}>
+                  {opp.revenue ? (
+                    <View style={[styles.metricBadge, { backgroundColor: '#F0FDF4' }]}>
+                      <Text style={{ fontSize: 11, color: '#166534' }}>💰 {formatValue(opp.revenue)} opbrengst</Text>
+                    </View>
+                  ) : null}
+                  {opp.cost ? (
+                    <View style={[styles.metricBadge, { backgroundColor: '#FEF2F2' }]}>
+                      <Text style={{ fontSize: 11, color: '#991B1B' }}>📊 {formatValue(opp.cost)} kosten</Text>
+                    </View>
+                  ) : null}
+                  {opp.estimatedValue && !opp.revenue ? (
+                    <View style={[styles.metricBadge, { backgroundColor: '#F0FDF4' }]}>
+                      <Text style={{ fontSize: 11, color: '#166534' }}>💎 {formatValue(opp.estimatedValue)} potentieel</Text>
+                    </View>
+                  ) : null}
+                </View>
+              ) : null}
+
               <View style={styles.cardActions}>
                 <TouchableOpacity style={styles.dismissBtn} onPress={() => handleDismiss(opp.id)}>
                   <Ionicons name="close" size={14} color={colors.textTertiary} />
-                  <Text style={styles.dismissText}>{t.radar?.dismiss ?? 'Dismiss'}</Text>
+                  <Text style={styles.dismissText}>{t.radar?.dismiss ?? 'Negeer'}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: cfg.color }]}
@@ -323,4 +426,17 @@ export default function OpportunityRadarScreen() {
       </ScrollView>
     </View>
   );
+}
+
+function formatTimeShort(iso: string): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    const diff = Date.now() - d.getTime();
+    const h = Math.floor(diff / 3600000);
+    if (h < 1) return 'nu';
+    if (h < 24) return `${h}u`;
+    return `${Math.floor(h / 24)}d`;
+  } catch { return ''; }
 }

@@ -1,18 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  View, Text, FlatList, TouchableOpacity,
   ActivityIndicator, RefreshControl, Alert,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import { api } from '../services/api';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 
-type FeedItemType = 'lead_signal' | 'trend_alert' | 'event_opportunity' | 'partnership_match' | 'campaign_trigger' | 'competitor_move' | 'content_opportunity' | 'budget_optimization';
+type FeedItemType = 'lead_signal' | 'trend_alert' | 'event_opportunity' | 'partnership_match' | 'campaign_trigger' | 'competitor_move' | 'content_opportunity' | 'budget_optimization' | 'marketing_gap';
 
 interface FeedItem {
   id: string;
@@ -27,11 +28,11 @@ interface FeedItem {
   is_read: boolean;
   is_actioned: boolean;
   suggested_action: { label: string; action_type: string };
-  impact_metrics: { reach?: number; leads?: number; revenue?: number; roi?: number };
+  impact_metrics: { reach?: number; leads?: number; revenue?: number; roi?: number; cost?: number };
   tags: string[];
 }
 
-const TYPE_CONFIG: Record<FeedItemType, { icon: string; color: string; label: string; lib: 'ion' | 'mci' }> = {
+const TYPE_CONFIG: Record<string, { icon: string; color: string; label: string; lib: 'ion' | 'mci' }> = {
   lead_signal:         { icon: 'person-add',       color: '#8B5CF6', label: 'Lead Signaal',        lib: 'ion' },
   trend_alert:         { icon: 'trending-up',       color: '#EC4899', label: 'Trend Alert',         lib: 'ion' },
   campaign_trigger:    { icon: 'megaphone',          color: '#3B82F6', label: 'Campagne Trigger',    lib: 'ion' },
@@ -40,6 +41,7 @@ const TYPE_CONFIG: Record<FeedItemType, { icon: string; color: string; label: st
   partnership_match:   { icon: 'handshake',          color: '#14B8A6', label: 'Partnership',         lib: 'mci' },
   content_opportunity: { icon: 'create',             color: '#06B6D4', label: 'Content Kans',        lib: 'ion' },
   budget_optimization: { icon: 'cash',               color: '#EF4444', label: 'Budget',              lib: 'ion' },
+  marketing_gap:       { icon: 'warning',            color: '#FF6B35', label: 'Marketing Gap',       lib: 'ion' },
 };
 
 const URGENCY_COLORS: Record<string, string> = {
@@ -75,11 +77,136 @@ function formatValue(val: number) {
   return `€${val}`;
 }
 
+// ── Dynamic opportunity generators (from real data, not hardcoded) ──────
+
+function generateEventOpportunities(discoveredEvents: any[]): Partial<FeedItem>[] {
+  const now = new Date();
+  return discoveredEvents
+    .filter(e => {
+      const d = new Date(e.date_start);
+      return d > now && (e.status === 'discovered' || !e.status);
+    })
+    .slice(0, 5)
+    .map(e => {
+      const daysUntil = Math.ceil((new Date(e.date_start).getTime() - now.getTime()) / 86400000);
+      const urgency = daysUntil <= 3 ? 'immediate' : daysUntil <= 7 ? 'today' : daysUntil <= 30 ? 'this_week' : 'this_month';
+      const ticketCost = typeof e.cost === 'object' ? (e.cost?.total ?? 0) : (e.cost ?? 0);
+      const estRevenue = (e.estimated_leads ?? 10) * 150;
+      return {
+        id: `event-${e.id || e.name}`,
+        type: 'event_opportunity' as FeedItemType,
+        title: `${e.name} — over ${daysUntil} dagen`,
+        description: `${e.description || ''}\n📍 ${e.city || e.location || ''} · Match: ${e.target_audience_match ?? 0}%`,
+        urgency,
+        confidence: e.target_audience_match ?? 70,
+        estimated_value: estRevenue,
+        source: 'event_intelligence',
+        timestamp: new Date().toISOString(),
+        is_read: false,
+        is_actioned: e.status === 'registered',
+        suggested_action: { label: 'Bekijk event', action_type: 'navigate_event' },
+        impact_metrics: {
+          leads: e.estimated_leads ?? 0,
+          revenue: estRevenue,
+          cost: ticketCost,
+          roi: typeof e.estimated_roi === 'number' ? e.estimated_roi : 0,
+        },
+        tags: e.tags ?? [],
+      };
+    });
+}
+
+function generateMarketingGaps(profile: any, contacts: number, events: number): Partial<FeedItem>[] {
+  const gaps: Partial<FeedItem>[] = [];
+  const now = new Date().toISOString();
+
+  if (!profile?.linkedin && !profile?.instagram) {
+    gaps.push({
+      id: 'gap-social',
+      type: 'marketing_gap' as FeedItemType,
+      title: 'Social media profielen ontbreken',
+      description: 'Geen LinkedIn of Instagram ingesteld. Dit beperkt je bereik en lead generatie via social kanalen.',
+      urgency: 'this_week',
+      confidence: 90,
+      estimated_value: 2000,
+      source: 'profile_analysis',
+      timestamp: now,
+      is_read: false,
+      is_actioned: false,
+      suggested_action: { label: 'Profiel aanvullen', action_type: 'navigate_settings' },
+      impact_metrics: { leads: 5, revenue: 750, roi: 200 },
+      tags: ['social', 'profiel', 'gap'],
+    });
+  }
+
+  if (contacts < 10) {
+    gaps.push({
+      id: 'gap-contacts',
+      type: 'marketing_gap' as FeedItemType,
+      title: `Nog maar ${contacts} contacten — groei je netwerk`,
+      description: 'Scan visitekaartjes, gebruik NFC of deel je QR-code om je netwerk sneller op te bouwen.',
+      urgency: 'this_week',
+      confidence: 85,
+      estimated_value: 1500,
+      source: 'network_analysis',
+      timestamp: now,
+      is_read: false,
+      is_actioned: false,
+      suggested_action: { label: 'QR delen', action_type: 'navigate_qr' },
+      impact_metrics: { leads: 10, revenue: 1500 },
+      tags: ['contacten', 'netwerk', 'gap'],
+    });
+  }
+
+  if (events < 2) {
+    gaps.push({
+      id: 'gap-events',
+      type: 'marketing_gap' as FeedItemType,
+      title: 'Geen events bezocht — mis je kansen?',
+      description: 'Events zijn de #1 bron voor B2B leads. Ontdek relevante events via Event Intelligence.',
+      urgency: 'this_month',
+      confidence: 80,
+      estimated_value: 3000,
+      source: 'event_analysis',
+      timestamp: now,
+      is_read: false,
+      is_actioned: false,
+      suggested_action: { label: 'Scan events', action_type: 'navigate_intelligence' },
+      impact_metrics: { leads: 20, revenue: 3000, cost: 500, roi: 300 },
+      tags: ['events', 'leads', 'gap'],
+    });
+  }
+
+  if (!profile?.website) {
+    gaps.push({
+      id: 'gap-website',
+      type: 'marketing_gap' as FeedItemType,
+      title: 'Website ontbreekt in je profiel',
+      description: 'Contacten via QR of NFC kunnen niet naar je site navigeren. Voeg je website toe.',
+      urgency: 'this_month',
+      confidence: 70,
+      estimated_value: 800,
+      source: 'profile_analysis',
+      timestamp: now,
+      is_read: false,
+      is_actioned: false,
+      suggested_action: { label: 'Profiel bewerken', action_type: 'navigate_settings' },
+      impact_metrics: { reach: 50, leads: 3 },
+      tags: ['website', 'profiel', 'gap'],
+    });
+  }
+
+  return gaps;
+}
+
+// ── Main Component ─────────────────────────────────────────────────────
+
 export default function OpportunityFeedScreen() {
   const navigation = useNavigation<any>();
   const qc = useQueryClient();
   const [filter, setFilter] = useState<FeedItemType | 'all'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [scanning, setScanning] = useState(false);
   const { colors } = useTheme();
 
   const styles = useThemedStyles((c) => ({
@@ -133,6 +260,10 @@ export default function OpportunityFeedScreen() {
     impactRow: { flexDirection: 'row' as const, gap: spacing.xs, flexWrap: 'wrap' as const },
     impactBadge: { backgroundColor: '#F0FDF4', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
     impactText: { fontSize: 11, color: '#166534' },
+    gapBadge: { backgroundColor: '#FFF7ED', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+    gapText: { fontSize: 11, color: '#9A3412' },
+    costBadge: { backgroundColor: '#FEF2F2', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 },
+    costText: { fontSize: 11, color: '#991B1B' },
     actionBtn: {
       flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, borderRadius: borderRadius.full,
       paddingHorizontal: spacing.md, paddingVertical: spacing.xs, alignSelf: 'flex-end' as const,
@@ -141,9 +272,17 @@ export default function OpportunityFeedScreen() {
     actionedRow: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 5, alignSelf: 'flex-end' as const },
     actionedText: { fontSize: fontSize.xs, color: c.success },
     chevronRow: { alignItems: 'center' as const, marginTop: spacing.xs },
+    scanBtn: {
+      flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6,
+      backgroundColor: c.primary, borderRadius: borderRadius.full,
+      paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
+      alignSelf: 'flex-start' as const, marginTop: spacing.xs,
+    },
+    scanBtnText: { color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.xs },
   }));
 
-  const { data: items = [], isLoading, refetch } = useQuery({
+  // ── Fetch DB feed items ─────────────────────────────────────────────────
+  const { data: dbItems = [], isLoading, refetch } = useQuery({
     queryKey: ['feed_items'],
     queryFn: async () => {
       const { data: { user } = {} as any } = await supabase.auth.getUser();
@@ -159,8 +298,69 @@ export default function OpportunityFeedScreen() {
     },
   });
 
+  // ── Fetch discovered events for event opportunities ─────────────────────
+  const { data: discoveredEvents = [] } = useQuery({
+    queryKey: ['discovered_events'],
+    queryFn: async () => {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data } = await supabase
+        .from('discovered_events')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('priority_score', { ascending: false });
+      return data ?? [];
+    },
+    staleTime: 60_000,
+  });
+
+  // ── Fetch profile + contacts + events count for gap analysis ────────────
+  const { data: gapData } = useQuery({
+    queryKey: ['opportunity_gaps'],
+    queryFn: async () => {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) return { profile: null, contactCount: 0, eventCount: 0 };
+
+      const [profileRes, contactRes, eventRes] = await Promise.all([
+        supabase.from('profiles').select('linkedin, instagram, website, company').eq('id', user.id).maybeSingle(),
+        supabase.from('contacts').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('discovered_events').select('id', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'registered'),
+      ]);
+
+      return {
+        profile: profileRes.data,
+        contactCount: contactRes.count ?? 0,
+        eventCount: eventRes.count ?? 0,
+      };
+    },
+    staleTime: 120_000,
+  });
+
+  // ── Combine: DB items + dynamic event opportunities + marketing gaps ────
+  const eventOpps = generateEventOpportunities(discoveredEvents);
+  const marketingGaps = gapData
+    ? generateMarketingGaps(gapData.profile, gapData.contactCount, gapData.eventCount)
+    : [];
+
+  const dbIds = new Set(dbItems.map(i => i.id));
+  const allItems: FeedItem[] = [
+    ...dbItems,
+    ...eventOpps.filter(i => !dbIds.has(i.id!)) as FeedItem[],
+    ...marketingGaps.filter(i => !dbIds.has(i.id!)) as FeedItem[],
+  ];
+
+  // Sort by urgency priority
+  const urgencyOrder: Record<string, number> = { immediate: 0, today: 1, this_week: 2, this_month: 3 };
+  allItems.sort((a, b) => {
+    const ua = urgencyOrder[a.urgency] ?? 4;
+    const ub = urgencyOrder[b.urgency] ?? 4;
+    if (ua !== ub) return ua - ub;
+    return new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime();
+  });
+
   const markRead = useMutation({
     mutationFn: async (id: string) => {
+      if (id.startsWith('event-') || id.startsWith('gap-')) return;
       const { data: { user } = {} as any } = await supabase.auth.getUser();
       await supabase.from('feed_items').update({ is_read: true }).eq('id', id).eq('user_id', user!.id);
     },
@@ -169,35 +369,66 @@ export default function OpportunityFeedScreen() {
 
   const actionItem = useMutation({
     mutationFn: async (id: string) => {
+      if (id.startsWith('event-') || id.startsWith('gap-')) return;
       const { data: { user } = {} as any } = await supabase.auth.getUser();
       await supabase.from('feed_items').update({ is_actioned: true, is_read: true }).eq('id', id).eq('user_id', user!.id);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['feed_items'] }),
   });
 
-  const filtered = filter === 'all' ? items : items.filter(i => i.type === filter);
-  const unread = items.filter(i => !i.is_read).length;
-  const totalValue = items.reduce((s, i) => s + (i.estimated_value || 0), 0);
-  const immediate = items.filter(i => i.urgency === 'immediate').length;
+  const handleScan = useCallback(async () => {
+    if (scanning) return;
+    setScanning(true);
+    try {
+      await api.post('/api/opportunities/scan', {});
+    } catch {}
+    await refetch();
+    qc.invalidateQueries({ queryKey: ['discovered_events'] });
+    qc.invalidateQueries({ queryKey: ['opportunity_gaps'] });
+    setScanning(false);
+  }, [scanning, refetch, qc]);
+
+  const filtered = filter === 'all' ? allItems : allItems.filter(i => i.type === filter);
+  const unread = allItems.filter(i => !i.is_read).length;
+  const totalValue = allItems.reduce((s, i) => s + (i.estimated_value || 0), 0);
+  const gapCount = allItems.filter(i => i.type === 'marketing_gap' || i.id?.startsWith('gap-')).length;
 
   const FILTERS = [
     { key: 'all', label: 'Alle' },
     { key: 'lead_signal', label: 'Leads' },
     { key: 'event_opportunity', label: 'Events' },
+    { key: 'marketing_gap', label: `Gaps${gapCount > 0 ? ` (${gapCount})` : ''}` },
     { key: 'trend_alert', label: 'Trends' },
     { key: 'campaign_trigger', label: 'Campagnes' },
     { key: 'content_opportunity', label: 'Content' },
+    { key: 'budget_optimization', label: 'Budget' },
   ] as { key: FeedItemType | 'all'; label: string }[];
+
+  const handleAction = (item: FeedItem) => {
+    const action = item.suggested_action?.action_type;
+    if (action === 'navigate_event' || action === 'navigate_intelligence') {
+      navigation.navigate('EventIntelligence');
+    } else if (action === 'navigate_settings') {
+      navigation.navigate('Settings');
+    } else if (action === 'navigate_qr') {
+      navigation.navigate('MyDigitalCard');
+    } else if (action === 'navigate_brandkit') {
+      navigation.navigate('BrandKit');
+    } else {
+      actionItem.mutate(item.id);
+    }
+  };
 
   const renderItem = ({ item }: { item: FeedItem }) => {
     const cfg = TYPE_CONFIG[item.type] || TYPE_CONFIG.lead_signal;
     const isExpanded = expandedId === item.id;
     const urgencyColor = URGENCY_COLORS[item.urgency] || colors.textSecondary;
     const IconComp = cfg.lib === 'mci' ? MaterialCommunityIcons : Ionicons;
+    const isGap = item.type === 'marketing_gap' || item.id?.startsWith('gap-');
 
     return (
       <TouchableOpacity
-        style={[styles.card, !item.is_read && styles.cardUnread]}
+        style={[styles.card, !item.is_read && styles.cardUnread, isGap && { borderLeftColor: '#FF6B35' }]}
         onPress={() => {
           setExpandedId(isExpanded ? null : item.id);
           if (!item.is_read) markRead.mutate(item.id);
@@ -236,21 +467,26 @@ export default function OpportunityFeedScreen() {
           <View style={styles.expanded}>
             <Text style={styles.description}>{item.description}</Text>
 
-            {(item.impact_metrics?.leads || item.impact_metrics?.revenue) ? (
+            {(item.impact_metrics?.leads || item.impact_metrics?.revenue || item.impact_metrics?.roi || item.impact_metrics?.cost) ? (
               <View style={styles.impactRow}>
                 {item.impact_metrics?.leads ? (
-                  <View style={styles.impactBadge}>
-                    <Text style={styles.impactText}>👥 {item.impact_metrics.leads} leads</Text>
+                  <View style={isGap ? styles.gapBadge : styles.impactBadge}>
+                    <Text style={isGap ? styles.gapText : styles.impactText}>👥 {item.impact_metrics.leads} leads</Text>
                   </View>
                 ) : null}
                 {item.impact_metrics?.revenue ? (
                   <View style={styles.impactBadge}>
-                    <Text style={styles.impactText}>💰 €{item.impact_metrics.revenue}</Text>
+                    <Text style={styles.impactText}>💰 €{item.impact_metrics.revenue} opbrengst</Text>
+                  </View>
+                ) : null}
+                {item.impact_metrics?.cost ? (
+                  <View style={styles.costBadge}>
+                    <Text style={styles.costText}>📊 €{item.impact_metrics.cost} kosten</Text>
                   </View>
                 ) : null}
                 {item.impact_metrics?.roi ? (
-                  <View style={styles.impactBadge}>
-                    <Text style={styles.impactText}>📈 {item.impact_metrics.roi}% ROI</Text>
+                  <View style={isGap ? styles.gapBadge : styles.impactBadge}>
+                    <Text style={isGap ? styles.gapText : styles.impactText}>📈 {item.impact_metrics.roi}% ROI</Text>
                   </View>
                 ) : null}
               </View>
@@ -259,7 +495,7 @@ export default function OpportunityFeedScreen() {
             {item.suggested_action?.label && !item.is_actioned && (
               <TouchableOpacity
                 style={[styles.actionBtn, { backgroundColor: cfg.color }]}
-                onPress={() => actionItem.mutate(item.id)}
+                onPress={() => handleAction(item)}
               >
                 <Text style={styles.actionBtnText}>{item.suggested_action.label}</Text>
                 <Ionicons name="arrow-forward" size={14} color="#fff" />
@@ -288,15 +524,15 @@ export default function OpportunityFeedScreen() {
         <View style={styles.headerTop}>
           <View>
             <Text style={styles.headerTitle}>AI Opportunity Feed</Text>
-            <Text style={styles.headerSub}>Centraal overzicht van alle kansen</Text>
+            <Text style={styles.headerSub}>Events, leads, gaps en kosten — dynamisch</Text>
           </View>
-          <TouchableOpacity onPress={() => refetch()} style={styles.refreshBtn}>
+          <TouchableOpacity onPress={() => { refetch(); qc.invalidateQueries({ queryKey: ['discovered_events'] }); qc.invalidateQueries({ queryKey: ['opportunity_gaps'] }); }} style={styles.refreshBtn}>
             <Ionicons name="refresh" size={18} color={colors.primary} />
           </TouchableOpacity>
         </View>
         <View style={styles.statsRow}>
           <View style={styles.stat}>
-            <Text style={styles.statVal}>{items.length}</Text>
+            <Text style={styles.statVal}>{allItems.length}</Text>
             <Text style={styles.statLbl}>Totaal</Text>
           </View>
           <View style={styles.stat}>
@@ -304,17 +540,30 @@ export default function OpportunityFeedScreen() {
             <Text style={styles.statLbl}>Ongelezen</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={[styles.statVal, { color: '#F59E0B' }]}>{immediate}</Text>
-            <Text style={styles.statLbl}>Direct</Text>
+            <Text style={[styles.statVal, { color: '#FF6B35' }]}>{gapCount}</Text>
+            <Text style={styles.statLbl}>Gaps</Text>
           </View>
           <View style={styles.stat}>
             <Text style={[styles.statVal, { color: colors.success }]}>{formatValue(totalValue)}</Text>
             <Text style={styles.statLbl}>Potentieel</Text>
           </View>
         </View>
+
+        <TouchableOpacity
+          style={[styles.scanBtn, { opacity: scanning ? 0.6 : 1 }]}
+          onPress={handleScan}
+          disabled={scanning}
+        >
+          {scanning ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <MaterialCommunityIcons name="radar" size={16} color="#fff" />
+          )}
+          <Text style={styles.scanBtnText}>{scanning ? 'Scannen...' : 'Scan kansen'}</Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Filter chips — flexGrow:0 prevents the horizontal list from expanding vertically */}
+      {/* Filter chips */}
       <FlatList
         horizontal
         data={FILTERS}
@@ -340,7 +589,7 @@ export default function OpportunityFeedScreen() {
         <View style={styles.empty}>
           <Ionicons name="radio-outline" size={52} color={colors.textTertiary} />
           <Text style={styles.emptyTitle}>Geen kansen gevonden</Text>
-          <Text style={styles.emptySub}>AMOS monitort continu en voegt nieuwe kansen toe.</Text>
+          <Text style={styles.emptySub}>Tik op "Scan kansen" of ga naar Event Intelligence om events te ontdekken.</Text>
         </View>
       ) : (
         <FlatList
@@ -348,7 +597,7 @@ export default function OpportunityFeedScreen() {
           keyExtractor={item => item.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
-          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => { refetch(); qc.invalidateQueries({ queryKey: ['discovered_events'] }); qc.invalidateQueries({ queryKey: ['opportunity_gaps'] }); }} tintColor={colors.primary} />}
         />
       )}
     </View>

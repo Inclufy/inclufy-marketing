@@ -48,6 +48,7 @@ import BrandKitScreen from '../screens/BrandKitScreen';
 import EventAttendeesScreen from '../screens/EventAttendeesScreen';
 import EventShareScreen from '../screens/EventShareScreen';
 import CopilotScreen from '../screens/CopilotScreen';
+import FollowedOrganizersScreen from '../screens/FollowedOrganizersScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -273,6 +274,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="OpportunityRadar" component={OpportunityRadarScreen} options={{ title: t.screenTitles.opportunityRadar ?? 'Opportunity Radar' }} />
           <Stack.Screen name="EventIntelligence" component={EventIntelligenceScreen} options={{ title: 'Event Intelligence' }} />
           <Stack.Screen name="OpportunityFeed" component={OpportunityFeedScreen} options={{ title: 'AI Opportunity Feed' }} />
+          <Stack.Screen name="FollowedOrganizers" component={FollowedOrganizersScreen} options={{ title: 'Gevolgde Organisatoren' }} />
 
           {/* ─── Marketing Automation ─── */}
           <Stack.Screen name="MarketingAutomation" component={MarketingAutomationScreen} options={{ title: t.screenTitles.automation ?? 'Automation' }} />

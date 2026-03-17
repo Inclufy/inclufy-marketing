@@ -20,6 +20,7 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import type { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
+import type { RegionData } from '../hooks/useLocation';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -64,77 +65,210 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
-const SEED_EVENTS = [
+// ── Scan layers: stad → provincie → landelijk → Benelux → Europa → globaal ──
+interface ScanLayer {
+  label: string;
+  radius_km: number;
+  queryBuilder: (region: RegionData) => string;
+  seedTag: string;
+}
+
+const SCAN_LAYERS: ScanLayer[] = [
   {
-    name: 'Emakina Connect 2026', type: 'conference',
-    description: 'Leading digital marketing summit in Brussels bringing together CMOs and growth leaders.',
-    location: 'Tour & Taxis, Brussels', city: 'Brussel',
-    date_start: '2026-05-14', date_end: '2026-05-15',
-    website: 'https://emakina.com', expected_attendees: 800,
-    target_audience_match: 88, estimated_roi: 320, estimated_leads: 45, networking_value: 90,
-    cost: { ticket: 395, travel: 80, accommodation: 0, total: 475 },
-    status: 'discovered', priority_score: 88,
-    ai_recommendation: 'Hoog relevant voor B2B marketing. Sterke networking kansen met CMOs.',
-    tags: ['digital', 'marketing', 'brussels', 'b2b'],
+    label: 'Stad',
+    radius_km: 25,
+    queryBuilder: (r) => `B2B marketing event ${r.city} 2026`,
+    seedTag: 'city',
   },
   {
-    name: 'B2B Marketing Forum Antwerpen', type: 'conference',
-    description: 'Annual forum for B2B marketers in the Benelux region, focusing on demand generation and ABM.',
-    location: 'Antwerp Expo, Antwerpen', city: 'Antwerpen',
-    date_start: '2026-04-22', date_end: '2026-04-22',
-    website: 'https://b2bforum.be', expected_attendees: 350,
-    target_audience_match: 92, estimated_roi: 280, estimated_leads: 35, networking_value: 85,
-    cost: { ticket: 295, travel: 40, accommodation: 0, total: 335 },
-    status: 'discovered', priority_score: 91,
-    ai_recommendation: 'Top prioriteit. 92% match met jouw doelgroep. ABM-focus sluit aan bij jullie aanpak.',
-    tags: ['b2b', 'abm', 'demand-gen', 'antwerpen'],
+    label: 'Provincie',
+    radius_km: 75,
+    queryBuilder: (r) => `B2B marketing conference ${r.province} ${r.country} 2026`,
+    seedTag: 'province',
   },
   {
-    name: 'MarTech Summit Amsterdam 2026', type: 'conference',
-    description: 'The biggest marketing technology summit in the Netherlands. AI, automation and data.',
-    location: 'RAI Amsterdam, Amsterdam', city: 'Amsterdam',
-    date_start: '2026-06-03', date_end: '2026-06-04',
-    website: 'https://martechsummit.nl', expected_attendees: 1200,
-    target_audience_match: 85, estimated_roi: 400, estimated_leads: 60, networking_value: 92,
-    cost: { ticket: 450, travel: 120, accommodation: 180, total: 750 },
-    status: 'discovered', priority_score: 86,
-    ai_recommendation: 'Groot bereik. Ideaal om thought leadership te tonen in MarTech segment.',
-    tags: ['martech', 'automation', 'ai', 'amsterdam'],
+    label: 'Landelijk',
+    radius_km: 200,
+    queryBuilder: (r) => `B2B marketing conference trade show ${r.country} 2026`,
+    seedTag: 'national',
   },
   {
-    name: 'Networking Night Gent – Digital Leaders', type: 'networking',
-    description: 'Monthly networking evening for digital marketing leaders in Ghent and surroundings.',
-    location: 'Overpoort, Gent', city: 'Gent',
-    date_start: '2026-04-09', date_end: '2026-04-09',
-    website: 'https://digitalleaders.be', expected_attendees: 80,
-    target_audience_match: 78, estimated_roi: 150, estimated_leads: 12, networking_value: 88,
-    cost: { ticket: 0, travel: 30, accommodation: 0, total: 30 },
-    status: 'discovered', priority_score: 74,
-    ai_recommendation: 'Laagdrempelig en lokaal. Goede kans om regionale contacten op te bouwen.',
-    tags: ['networking', 'gent', 'digital'],
+    label: 'Benelux',
+    radius_km: 400,
+    queryBuilder: () => `B2B marketing conference Belgium Netherlands Luxembourg 2026`,
+    seedTag: 'benelux',
   },
   {
-    name: 'Content Marketing World — Benelux Edition', type: 'conference',
-    description: 'Content strategy, SEO, video and storytelling for B2B companies.',
-    location: 'Brussels Expo, Brussel', city: 'Brussel',
-    date_start: '2026-07-01', date_end: '2026-07-02',
-    website: 'https://contentmarketingworld.be', expected_attendees: 600,
-    target_audience_match: 80, estimated_roi: 260, estimated_leads: 30, networking_value: 75,
-    cost: { ticket: 350, travel: 60, accommodation: 0, total: 410 },
-    status: 'discovered', priority_score: 79,
-    ai_recommendation: 'Relevant voor content-gedreven groei. Goede spreker line-up verwacht.',
-    tags: ['content', 'seo', 'storytelling', 'benelux'],
+    label: 'Europa',
+    radius_km: 1500,
+    queryBuilder: () => `B2B marketing summit conference Europe 2026`,
+    seedTag: 'europe',
+  },
+  {
+    label: 'Globaal',
+    radius_km: 99999,
+    queryBuilder: () => `B2B marketing summit conference global 2026`,
+    seedTag: 'global',
   },
 ];
+
+// ── Seed events per layer ─────────────────────────────────────────────
+const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> = {
+  city: [
+    {
+      name: 'Startup Almere Pitch Night', type: 'networking',
+      description: 'Maandelijkse pitch avond voor startups en scale-ups in Almere. Ideaal voor lokaal netwerken.',
+      location: 'Kunstlinie, Almere', city: 'Almere',
+      date_start: '2026-04-15', date_end: '2026-04-15',
+      website: 'https://startupalmere.nl', expected_attendees: 60,
+      target_audience_match: 75, estimated_roi: 120, estimated_leads: 8, networking_value: 82,
+      cost: { ticket: 0, travel: 0, accommodation: 0, total: 0 },
+      status: 'discovered', priority_score: 72,
+      ai_recommendation: 'Lokaal en laagdrempelig. Perfecte kans voor regionale zichtbaarheid.',
+      tags: ['networking', 'startup', 'almere', 'lokaal'],
+    },
+  ],
+  province: [
+    {
+      name: 'ICT Tribe Flevoland Meetup', type: 'meetup',
+      description: 'Kwartaalbijeenkomst voor ICT-professionals en digitale marketeers in Flevoland.',
+      location: 'De Meerpaal, Dronten', city: 'Dronten',
+      date_start: '2026-05-08', date_end: '2026-05-08',
+      website: 'https://icttribe.nl', expected_attendees: 45,
+      target_audience_match: 70, estimated_roi: 100, estimated_leads: 6, networking_value: 78,
+      cost: { ticket: 0, travel: 15, accommodation: 0, total: 15 },
+      status: 'discovered', priority_score: 68,
+      ai_recommendation: 'Regionaal relevant. Goede kans om ICT-netwerk in de provincie uit te breiden.',
+      tags: ['ict', 'meetup', 'flevoland', 'provinciaal'],
+    },
+    {
+      name: 'Innovaly Innovation Day', type: 'conference',
+      description: 'Jaarlijks innovatie-event met focus op digitale transformatie en marketing technologie.',
+      location: 'Innovaly Hub, Lelystad', city: 'Lelystad',
+      date_start: '2026-06-12', date_end: '2026-06-12',
+      website: 'https://innovaly.nl', expected_attendees: 120,
+      target_audience_match: 82, estimated_roi: 200, estimated_leads: 15, networking_value: 80,
+      cost: { ticket: 95, travel: 20, accommodation: 0, total: 115 },
+      status: 'discovered', priority_score: 78,
+      ai_recommendation: 'Sterke innovatiefocus. Goed platform voor thought leadership in de regio.',
+      tags: ['innovatie', 'digitaal', 'lelystad', 'provinciaal'],
+    },
+  ],
+  national: [
+    {
+      name: 'MarTech Summit Amsterdam 2026', type: 'conference',
+      description: 'Het grootste marketing technology congres van Nederland. AI, automation en data-driven marketing.',
+      location: 'RAI Amsterdam, Amsterdam', city: 'Amsterdam',
+      date_start: '2026-06-03', date_end: '2026-06-04',
+      website: 'https://martechsummit.nl', expected_attendees: 1200,
+      target_audience_match: 85, estimated_roi: 400, estimated_leads: 60, networking_value: 92,
+      cost: { ticket: 450, travel: 120, accommodation: 180, total: 750 },
+      status: 'discovered', priority_score: 86,
+      ai_recommendation: 'Groot bereik. Ideaal om thought leadership te tonen in MarTech segment.',
+      tags: ['martech', 'automation', 'ai', 'amsterdam', 'nationaal'],
+    },
+    {
+      name: 'ROC Digital Skills Conference', type: 'conference',
+      description: 'Landelijke conferentie over digitale vaardigheden, marketing en onderwijs. Sterke B2B focus.',
+      location: 'Jaarbeurs, Utrecht', city: 'Utrecht',
+      date_start: '2026-05-21', date_end: '2026-05-21',
+      website: 'https://roc-digitaal.nl', expected_attendees: 400,
+      target_audience_match: 78, estimated_roi: 250, estimated_leads: 30, networking_value: 75,
+      cost: { ticket: 175, travel: 40, accommodation: 0, total: 215 },
+      status: 'discovered', priority_score: 77,
+      ai_recommendation: 'Goed voor B2B in onderwijs en digitale training. Sterke doelgroep match.',
+      tags: ['onderwijs', 'digitaal', 'utrecht', 'nationaal'],
+    },
+  ],
+  benelux: [
+    {
+      name: 'Emakina Connect 2026', type: 'conference',
+      description: 'Toonaangevend digital marketing congres in Brussel met CMOs en growth leaders.',
+      location: 'Tour & Taxis, Brussels', city: 'Brussel',
+      date_start: '2026-05-14', date_end: '2026-05-15',
+      website: 'https://emakina.com', expected_attendees: 800,
+      target_audience_match: 88, estimated_roi: 320, estimated_leads: 45, networking_value: 90,
+      cost: { ticket: 395, travel: 80, accommodation: 0, total: 475 },
+      status: 'discovered', priority_score: 88,
+      ai_recommendation: 'Hoog relevant voor B2B marketing. Sterke networking kansen met CMOs.',
+      tags: ['digital', 'marketing', 'brussels', 'b2b', 'benelux'],
+    },
+    {
+      name: 'B2B Marketing Forum Antwerpen', type: 'conference',
+      description: 'Jaarlijks forum voor B2B marketeers in de Benelux. Focus op demand generation en ABM.',
+      location: 'Antwerp Expo, Antwerpen', city: 'Antwerpen',
+      date_start: '2026-04-22', date_end: '2026-04-22',
+      website: 'https://b2bforum.be', expected_attendees: 350,
+      target_audience_match: 92, estimated_roi: 280, estimated_leads: 35, networking_value: 85,
+      cost: { ticket: 295, travel: 40, accommodation: 0, total: 335 },
+      status: 'discovered', priority_score: 91,
+      ai_recommendation: 'Top prioriteit. 92% match met jouw doelgroep. ABM-focus sluit aan bij jullie aanpak.',
+      tags: ['b2b', 'abm', 'demand-gen', 'antwerpen', 'benelux'],
+    },
+  ],
+  europe: [
+    {
+      name: 'Web Summit 2026', type: 'conference',
+      description: 'Europa\'s grootste tech-conferentie in Lissabon. Marketing, AI en startup ecosysteem.',
+      location: 'Altice Arena, Lisbon', city: 'Lissabon',
+      date_start: '2026-11-02', date_end: '2026-11-05',
+      website: 'https://websummit.com', expected_attendees: 70000,
+      target_audience_match: 72, estimated_roi: 500, estimated_leads: 80, networking_value: 95,
+      cost: { ticket: 850, travel: 250, accommodation: 400, total: 1500 },
+      status: 'discovered', priority_score: 82,
+      ai_recommendation: 'Massaal bereik. Ideaal voor internationale thought leadership en brand awareness.',
+      tags: ['tech', 'startup', 'lisbon', 'europa'],
+    },
+  ],
+  global: [
+    {
+      name: 'Content Marketing World 2026', type: 'conference',
+      description: 'Wereldwijd toonaangevend content marketing event. SEO, storytelling en B2B strategie.',
+      location: 'San Diego Convention Center', city: 'San Diego',
+      date_start: '2026-10-14', date_end: '2026-10-17',
+      website: 'https://contentmarketingworld.com', expected_attendees: 4000,
+      target_audience_match: 80, estimated_roi: 600, estimated_leads: 50, networking_value: 85,
+      cost: { ticket: 1200, travel: 800, accommodation: 600, total: 2600 },
+      status: 'discovered', priority_score: 75,
+      ai_recommendation: 'Top content marketing event wereldwijd. Hoge investering maar unieke kansen.',
+      tags: ['content', 'seo', 'storytelling', 'globaal'],
+    },
+  ],
+};
+
+// Flatten all seed events (legacy fallback)
+const ALL_SEED_EVENTS = Object.values(SEED_EVENTS_BY_LAYER).flat();
 
 export default function EventIntelligenceScreen() {
   const navigation = useNavigation<Nav>();
   const qc = useQueryClient();
   const { colors } = useTheme();
   const [scanning, setScanning] = useState(false);
+  const [scanProgress, setScanProgress] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [attendingId, setAttendingId] = useState<string | null>(null);
+  const [activeLayer, setActiveLayer] = useState<string>('all');
   const autoSeeded = useRef(false);
+
+  // ── Load user location from metadata ────────────────────────────────────
+  const [userRegion, setUserRegion] = useState<RegionData | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data: { user } = {} as any } = await supabase.auth.getUser();
+        const meta = user?.user_metadata;
+        if (meta?.location_city || meta?.location_country) {
+          setUserRegion({
+            city: meta.location_city || '',
+            province: meta.location_province || '',
+            country: meta.location_country || '',
+            countryCode: meta.location_country_code || '',
+            continent: meta.location_continent || '',
+          });
+        }
+      } catch {}
+    })();
+  }, []);
 
   // ── Fetch ─────────────────────────────────────────────────────────────────
   const { data: events = [], isLoading, refetch } = useQuery<DiscoveredEvent[]>({
@@ -163,48 +297,114 @@ export default function EventIntelligenceScreen() {
     staleTime: 30_000,
   });
 
-  // ── Seed / Scan ───────────────────────────────────────────────────────────
+  // ── Hierarchical Scan: stad → provincie → landelijk → Benelux → Europa → globaal
   const handleScan = useCallback(async () => {
     if (scanning) return;
     setScanning(true);
-    try {
-      // 1) Try live backend
-      let backendOk = false;
-      try {
-        const resp = await api.post('/api/events/discover', {
-          radius_km: 200,
-          query: 'B2B marketing conference trade show networking Belgium Netherlands 2026',
-          limit: 8,
-        });
-        await refetch();
-        Alert.alert('✅ Scannen klaar', `${resp.data?.discovered ?? 0} events gevonden in jouw regio.`);
-        backendOk = true;
-      } catch {
-        // Backend unreachable — fall through to local seed
-      }
-      if (backendOk) return;
+    setScanProgress('');
 
-      // 2) Seed curated Benelux events directly
+    try {
       const { data: authSeed } = await supabase.auth.getUser();
       const user = authSeed?.user;
       if (!user) {
         Alert.alert('Fout', 'Niet ingelogd. Log opnieuw in en probeer opnieuw.');
         return;
       }
-      for (const ev of SEED_EVENTS) {
-        await supabase
-          .from('discovered_events')
-          .upsert({ ...ev, user_id: user.id }, { onConflict: 'user_id,name', ignoreDuplicates: true });
+
+      const region: RegionData = userRegion ?? {
+        city: user.user_metadata?.location_city || '',
+        province: user.user_metadata?.location_province || '',
+        country: user.user_metadata?.location_country || 'Nederland',
+        countryCode: user.user_metadata?.location_country_code || 'NL',
+        continent: user.user_metadata?.location_continent || 'Europe',
+      };
+
+      let totalFound = 0;
+      const layerResults: string[] = [];
+
+      // Scan each layer hierarchically
+      for (const layer of SCAN_LAYERS) {
+        setScanProgress(`🔍 ${layer.label} scannen...`);
+
+        // 1) Try live backend for this layer
+        let backendOk = false;
+        try {
+          const resp = await api.post('/api/events/discover', {
+            radius_km: layer.radius_km,
+            query: layer.queryBuilder(region),
+            limit: 5,
+            layer: layer.seedTag,
+          });
+          const found = resp.data?.discovered ?? 0;
+          if (found > 0) {
+            totalFound += found;
+            layerResults.push(`${layer.label}: ${found}`);
+          }
+          backendOk = true;
+        } catch {
+          // Backend unreachable — seed from curated events
+        }
+
+        if (!backendOk) {
+          // 2) Seed curated events for this layer
+          const seeds = SEED_EVENTS_BY_LAYER[layer.seedTag] ?? [];
+          for (const ev of seeds) {
+            await supabase
+              .from('discovered_events')
+              .upsert(
+                { ...ev, user_id: user.id, scan_layer: layer.seedTag },
+                { onConflict: 'user_id,name', ignoreDuplicates: true }
+              );
+          }
+          if (seeds.length > 0) {
+            totalFound += seeds.length;
+            layerResults.push(`${layer.label}: ${seeds.length}`);
+          }
+        }
       }
+
+      // Also fetch events from followed organizers
+      setScanProgress('⭐ Gevolgde organisatoren...');
+      try {
+        const { data: orgEvents } = await supabase
+          .from('followed_organizers')
+          .select('organizer_name')
+          .eq('user_id', user.id);
+
+        if (orgEvents && orgEvents.length > 0) {
+          for (const org of orgEvents) {
+            try {
+              await api.post('/api/events/discover', {
+                radius_km: 99999,
+                query: `${org.organizer_name} event 2026`,
+                limit: 3,
+                source: 'followed_organizer',
+              });
+            } catch {}
+          }
+        }
+      } catch {}
+
       await refetch();
-      Alert.alert('✅ Events geladen', `${SEED_EVENTS.length} Benelux B2B events toegevoegd aan jouw radar.`);
+      setScanProgress('');
+
+      if (totalFound > 0) {
+        const layerSummary = layerResults.join('\n');
+        Alert.alert(
+          '✅ Hiërarchisch scannen klaar',
+          `${totalFound} events gevonden:\n\n${layerSummary}`
+        );
+      } else {
+        Alert.alert('ℹ️ Geen nieuwe events', 'Probeer later opnieuw of pas je locatie aan in Instellingen.');
+      }
     } catch (err: any) {
       console.warn('[EventIntelligence] scan error:', err?.message);
       Alert.alert('Fout', 'Scannen mislukt. Controleer je verbinding en probeer opnieuw.');
     } finally {
       setScanning(false);
+      setScanProgress('');
     }
-  }, [scanning, refetch]);
+  }, [scanning, refetch, userRegion]);
 
   // ── Auto-seed on first load when empty ────────────────────────────────────
   useEffect(() => {
@@ -216,6 +416,14 @@ export default function EventIntelligenceScreen() {
       return () => clearTimeout(t);
     }
   }, [isLoading, events.length]); // intentionally omit handleScan to avoid loop
+
+  // ── Filter events by layer ──────────────────────────────────────────────
+  const filteredEvents = activeLayer === 'all'
+    ? events
+    : events.filter(e => {
+        const tags = e.tags ?? [];
+        return tags.includes(activeLayer) || (e as any).scan_layer === activeLayer;
+      });
 
   // ── Attend mutation ───────────────────────────────────────────────────────
   const handleAttend = useCallback(async (item: DiscoveredEvent) => {
@@ -318,7 +526,7 @@ export default function EventIntelligenceScreen() {
           borderRadius: borderRadius.sm, padding: spacing.sm, marginBottom: spacing.sm,
         }}>
           {[
-            { label: 'ROI', val: `€${item.estimated_roi ?? 0}%` },
+            { label: 'ROI', val: `${typeof item.estimated_roi === 'number' ? item.estimated_roi : 0}%` },
             { label: 'Leads', val: String(item.estimated_leads ?? 0) },
             { label: 'Match', val: `${item.target_audience_match ?? 0}%` },
             { label: 'Bezoekers', val: item.expected_attendees ? String(Math.round(item.expected_attendees / 100) * 100) : '—' },
@@ -425,7 +633,17 @@ export default function EventIntelligenceScreen() {
     );
   }, [expandedId, attendingId, colors, handleAttend]);
 
-  const highCount = events.filter(e => (e.priority_score ?? 0) >= 75).length;
+  const highCount = filteredEvents.filter(e => (e.priority_score ?? 0) >= 75).length;
+
+  const LAYER_CHIPS = [
+    { key: 'all', label: 'Alle' },
+    { key: 'city', label: '🏙️ Stad' },
+    { key: 'province', label: '🗺️ Provincie' },
+    { key: 'national', label: '🇳🇱 Landelijk' },
+    { key: 'benelux', label: '🇧🇪 Benelux' },
+    { key: 'europe', label: '🇪🇺 Europa' },
+    { key: 'global', label: '🌍 Globaal' },
+  ];
 
   // ── Header ────────────────────────────────────────────────────────────────
   return (
@@ -455,30 +673,82 @@ export default function EventIntelligenceScreen() {
           Event Intelligence
         </Text>
         <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>
-          {highCount > 0
-            ? `${highCount} high-impact events in jouw regio`
-            : 'Scan voor nieuwe events in jouw regio'}
+          {userRegion?.city
+            ? `📍 ${userRegion.city}, ${userRegion.country} — ${highCount > 0 ? `${highCount} high-impact events` : 'Scan voor events'}`
+            : highCount > 0
+              ? `${highCount} high-impact events gevonden`
+              : 'Stel je locatie in via Instellingen voor betere resultaten'}
         </Text>
 
-        <TouchableOpacity
-          style={{
-            flexDirection: 'row', alignItems: 'center', gap: 8,
-            backgroundColor: colors.primary, borderRadius: borderRadius.full,
-            paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-            alignSelf: 'flex-start', marginTop: spacing.xs,
-            opacity: scanning ? 0.6 : 1,
-          }}
-          onPress={handleScan}
-          disabled={scanning}
-        >
-          {scanning
-            ? <ActivityIndicator size="small" color="#fff" />
-            : <MaterialCommunityIcons name="radar" size={18} color="#fff" />}
-          <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.sm }}>
-            {scanning ? 'Scannen...' : 'Scan Regio'}
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 8,
+              backgroundColor: colors.primary, borderRadius: borderRadius.full,
+              paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+              opacity: scanning ? 0.6 : 1,
+            }}
+            onPress={handleScan}
+            disabled={scanning}
+          >
+            {scanning
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <MaterialCommunityIcons name="radar" size={18} color="#fff" />}
+            <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.sm }}>
+              {scanning ? 'Scannen...' : 'Scan Hiërarchisch'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              borderWidth: 1.5, borderColor: colors.primary + '60',
+              borderRadius: borderRadius.full,
+              paddingHorizontal: spacing.sm, paddingVertical: spacing.xs,
+            }}
+            onPress={() => (navigation as any).navigate('FollowedOrganizers')}
+          >
+            <Ionicons name="star-outline" size={16} color={colors.primary} />
+            <Text style={{ fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium }}>
+              Organisatoren
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {scanning && scanProgress ? (
+          <Text style={{ fontSize: fontSize.xs, color: colors.primary, fontStyle: 'italic', marginTop: 2 }}>
+            {scanProgress}
           </Text>
-        </TouchableOpacity>
+        ) : null}
       </View>
+
+      {/* Layer filter chips */}
+      {events.length > 0 && (
+        <FlatList
+          horizontal
+          data={LAYER_CHIPS}
+          keyExtractor={c => c.key}
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, maxHeight: 48, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}
+          contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, gap: spacing.xs, alignItems: 'center' }}
+          renderItem={({ item: c }) => (
+            <TouchableOpacity
+              style={{
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+                backgroundColor: activeLayer === c.key ? colors.primary : colors.background,
+                borderWidth: 1.5, borderColor: activeLayer === c.key ? colors.primary : colors.border,
+              }}
+              onPress={() => setActiveLayer(c.key)}
+            >
+              <Text style={{
+                fontSize: 12, fontWeight: fontWeight.semibold,
+                color: activeLayer === c.key ? '#fff' : colors.textSecondary,
+              }}>
+                {c.label}
+              </Text>
+            </TouchableOpacity>
+          )}
+        />
+      )}
 
       {/* Metrics bar */}
       {events.length > 0 && (
@@ -487,12 +757,12 @@ export default function EventIntelligenceScreen() {
           paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border,
         }}>
           {[
-            { val: String(events.length), label: 'Gevonden', color: colors.text },
+            { val: String(filteredEvents.length), label: 'Gevonden', color: colors.text },
             { val: String(highCount), label: 'High Impact', color: colors.success },
             { val: String(events.filter(e => e.status === 'registered').length), label: 'Ingeschreven', color: colors.primary },
             {
-              val: events.length > 0
-                ? String(Math.round(events.reduce((s, e) => s + (e.estimated_leads ?? 0), 0) / events.length))
+              val: filteredEvents.length > 0
+                ? String(Math.round(filteredEvents.reduce((s, e) => s + (e.estimated_leads ?? 0), 0) / filteredEvents.length))
                 : '0',
               label: 'Avg Leads', color: colors.text,
             },
@@ -536,7 +806,7 @@ export default function EventIntelligenceScreen() {
         </View>
       ) : (
         <FlatList
-          data={events}
+          data={filteredEvents}
           keyExtractor={item => item.id}
           renderItem={renderEvent}
           contentContainerStyle={{ padding: spacing.md, paddingBottom: 40 }}
