@@ -26,6 +26,10 @@ interface UserProfile {
   company?: string;
   title?: string;
   website?: string;
+  linkedin?: string;
+  instagram?: string;
+  twitter?: string;
+  facebook?: string;
 }
 
 function buildVCard(profile: UserProfile): string {
@@ -40,6 +44,10 @@ function buildVCard(profile: UserProfile): string {
   if (profile.company) lines.push(`ORG:${profile.company}`);
   if (profile.title) lines.push(`TITLE:${profile.title}`);
   if (profile.website) lines.push(`URL:${profile.website}`);
+  if (profile.linkedin) lines.push(`URL;type=LinkedIn:${profile.linkedin}`);
+  if (profile.instagram) lines.push(`URL;type=Instagram:https://instagram.com/${profile.instagram.replace('@', '')}`);
+  if (profile.twitter) lines.push(`URL;type=Twitter:https://x.com/${profile.twitter.replace('@', '')}`);
+  if (profile.facebook) lines.push(`URL;type=Facebook:${profile.facebook}`);
   lines.push('END:VCARD');
   return lines.join('\n');
 }
@@ -59,16 +67,42 @@ export default function MyDigitalCardScreen() {
     try {
       const { data: { user } = {} as any } = await supabase.auth.getUser();
       if (user) {
-        const meta = user.user_metadata ?? {};
-        setProfile({
-          first_name: meta.first_name ?? meta.full_name?.split(' ')[0] ?? '',
-          last_name: meta.last_name ?? meta.full_name?.split(' ').slice(1).join(' ') ?? '',
-          email: user.email ?? '',
-          phone: meta.phone ?? '',
-          company: meta.company ?? '',
-          title: meta.title ?? '',
-          website: meta.website ?? '',
-        });
+        // Try to load from profiles table first (contains user-editable QR card data)
+        const { data: dbProfile } = await supabase
+          .from('profiles')
+          .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, qr_fields')
+          .eq('id', user.id)
+          .maybeSingle();
+
+        if (dbProfile?.full_name) {
+          const nameParts = (dbProfile.full_name || '').split(' ');
+          const qrFields = dbProfile.qr_fields ?? {};
+          setProfile({
+            first_name: nameParts[0] ?? '',
+            last_name: nameParts.slice(1).join(' ') ?? '',
+            email: qrFields.share_email !== false ? (dbProfile.email ?? user.email ?? '') : '',
+            phone: qrFields.share_phone !== false ? (dbProfile.phone ?? '') : '',
+            company: qrFields.share_company !== false ? (dbProfile.company ?? '') : '',
+            title: qrFields.share_title !== false ? (dbProfile.title ?? '') : '',
+            website: qrFields.share_website !== false ? (dbProfile.website ?? '') : '',
+            linkedin: qrFields.share_linkedin !== false ? (dbProfile.linkedin ?? '') : '',
+            instagram: qrFields.share_instagram !== false ? (dbProfile.instagram ?? '') : '',
+            twitter: qrFields.share_twitter !== false ? (dbProfile.twitter ?? '') : '',
+            facebook: qrFields.share_facebook !== false ? (dbProfile.facebook ?? '') : '',
+          });
+        } else {
+          // Fallback to auth user_metadata
+          const meta = user.user_metadata ?? {};
+          setProfile({
+            first_name: meta.first_name ?? meta.full_name?.split(' ')[0] ?? '',
+            last_name: meta.last_name ?? meta.full_name?.split(' ').slice(1).join(' ') ?? '',
+            email: user.email ?? '',
+            phone: meta.phone ?? '',
+            company: meta.company ?? '',
+            title: meta.title ?? '',
+            website: meta.website ?? '',
+          });
+        }
       }
     } catch (e) {
       console.error('Profile load error', e);
@@ -155,6 +189,38 @@ export default function MyDigitalCardScreen() {
             <View style={styles.companyRow}>
               <Ionicons name="call-outline" size={13} color={colors.textTertiary} />
               <Text style={styles.company}>{profile.phone}</Text>
+            </View>
+          ) : null}
+          {profile.website ? (
+            <View style={styles.companyRow}>
+              <Ionicons name="globe-outline" size={13} color={colors.textTertiary} />
+              <Text style={styles.company}>{profile.website}</Text>
+            </View>
+          ) : null}
+
+          {/* Social Media Links */}
+          {(profile.linkedin || profile.instagram || profile.twitter || profile.facebook) ? (
+            <View style={styles.socialRow}>
+              {profile.linkedin ? (
+                <View style={[styles.socialBadge, { backgroundColor: '#0077B520' }]}>
+                  <Ionicons name="logo-linkedin" size={16} color="#0077B5" />
+                </View>
+              ) : null}
+              {profile.instagram ? (
+                <View style={[styles.socialBadge, { backgroundColor: '#E4405F20' }]}>
+                  <Ionicons name="logo-instagram" size={16} color="#E4405F" />
+                </View>
+              ) : null}
+              {profile.twitter ? (
+                <View style={[styles.socialBadge, { backgroundColor: '#1a1a1a20' }]}>
+                  <Ionicons name="logo-twitter" size={16} color="#1a1a1a" />
+                </View>
+              ) : null}
+              {profile.facebook ? (
+                <View style={[styles.socialBadge, { backgroundColor: '#1877F220' }]}>
+                  <Ionicons name="logo-facebook" size={16} color="#1877F2" />
+                </View>
+              ) : null}
             </View>
           ) : null}
         </View>
@@ -272,4 +338,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   editHintText: { fontSize: fontSize.xs, color: colors.textTertiary },
+  socialRow: { flexDirection: 'row', gap: 8, marginTop: spacing.sm },
+  socialBadge: { width: 32, height: 32, borderRadius: 16, justifyContent: 'center', alignItems: 'center' },
 });
