@@ -77,13 +77,10 @@ export default function EventShareScreen() {
   const [calendarSynced, setCalendarSynced] = useState(false);
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
-  // Registration link — uses deep link so scanning opens the app directly
-  // Falls back to web URL for users who don't have the app
+  // Registration link — points to Supabase edge function that serves a registration form
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
   const registrationUrl = event
-    ? `inclufy-go://event/${event.id}/register`
-    : '';
-  const webRegistrationUrl = event
-    ? `https://app.inclufy.nl/events/${event.id}/register`
+    ? `${supabaseUrl}/functions/v1/event-register?id=${event.id}`
     : '';
 
   // ─── Share event ──────────────────────────────────────────────
