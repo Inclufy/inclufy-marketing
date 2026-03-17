@@ -8,11 +8,8 @@ import {
   Alert,
   Share,
   Linking,
-  Modal,
-  TextInput,
   ActivityIndicator,
 } from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,95 +28,14 @@ import { useLocation, formatRegion, type RegionData } from '../hooks/useLocation
 const BIOMETRIC_KEY = 'amos_biometric_enabled';
 
 const SOCIAL_PLATFORMS = [
-  { key: 'linkedin',  label: 'LinkedIn',    icon: 'logo-linkedin',  color: '#0077B5', appScheme: 'linkedin://' },
-  { key: 'instagram', label: 'Instagram',   icon: 'logo-instagram', color: '#E4405F', appScheme: 'instagram://' },
-  { key: 'x',         label: 'X / Twitter', icon: 'logo-twitter',   color: '#1a1a1a', appScheme: 'twitter://' },
-  { key: 'facebook',  label: 'Facebook',    icon: 'logo-facebook',  color: '#1877F2', appScheme: 'fb://' },
-  { key: 'tiktok',    label: 'TikTok',      icon: 'musical-notes',  color: '#010101', appScheme: 'snssdk1233://' },
-  { key: 'snapchat',  label: 'Snapchat',    icon: 'camera',         color: '#FFFC00', appScheme: 'snapchat://' },
+  { key: 'linkedin',  label: 'LinkedIn',    icon: 'logo-linkedin'  as keyof typeof Ionicons.glyphMap, color: '#0077B5', supported: true },
+  { key: 'instagram', label: 'Instagram',   icon: 'logo-instagram' as keyof typeof Ionicons.glyphMap, color: '#E4405F', supported: true },
+  { key: 'x',         label: 'X / Twitter', icon: 'logo-twitter'   as keyof typeof Ionicons.glyphMap, color: '#1DA1F2', supported: false },
+  { key: 'facebook',  label: 'Facebook',    icon: 'logo-facebook'  as keyof typeof Ionicons.glyphMap, color: '#1877F2', supported: true },
+  { key: 'tiktok',    label: 'TikTok',      icon: 'musical-notes'  as keyof typeof Ionicons.glyphMap, color: '#000000', supported: false },
+  { key: 'snapchat',  label: 'Snapchat',    icon: 'eye-outline'    as keyof typeof Ionicons.glyphMap, color: '#FFFC00', supported: false },
 ] as const;
 
-// ─── PKCE helpers — pure JS, no crypto.subtle dependency ────────────────────
-function randomStr(len: number): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~';
-  let s = '';
-  for (let i = 0; i < len; i++) s += chars[Math.floor(Math.random() * chars.length)];
-  return s;
-}
-async function generatePKCE(): Promise<{ verifier: string; challenge: string; method: string }> {
-  const verifier = randomStr(64);
-  try {
-    // Try crypto.subtle (React Native 0.73+ / Hermes)
-    const enc     = new TextEncoder();
-    const digest  = await (globalThis as any).crypto.subtle.digest('SHA-256', enc.encode(verifier));
-    const bytes   = new Uint8Array(digest);
-    let raw = '';
-    bytes.forEach(b => { raw += String.fromCharCode(b); });
-    const challenge = btoa(raw).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-    return { verifier, challenge, method: 'S256' };
-  } catch {
-    // Fallback: plain PKCE (challenge === verifier). Supported by LinkedIn & X.
-    return { verifier, challenge: verifier, method: 'plain' };
-  }
-}
-
-// ─── OAuth config per platform ───────────────────────────────────────────────
-const OAUTH_CONFIG: Record<string, {
-  authUrl:      string;
-  tokenUrl:     string;
-  scope:        string;
-  clientId:     string;
-  clientSecret: string;
-}> = {
-  linkedin: {
-    authUrl:      'https://www.linkedin.com/oauth/v2/authorization',
-    tokenUrl:     'https://www.linkedin.com/oauth/v2/accessToken',
-    scope:        'openid profile email w_member_social',
-    clientId:     process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID ?? '',
-    clientSecret: process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_SECRET ?? '',
-  },
-  instagram: {
-    authUrl:      'https://www.facebook.com/v18.0/dialog/oauth',
-    tokenUrl:     'https://graph.facebook.com/v18.0/oauth/access_token',
-    scope:        'pages_manage_posts,instagram_basic,instagram_content_publish',
-    clientId:     process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '',
-    clientSecret: process.env.EXPO_PUBLIC_FACEBOOK_APP_SECRET ?? '',
-  },
-  facebook: {
-    authUrl:      'https://www.facebook.com/v18.0/dialog/oauth',
-    tokenUrl:     'https://graph.facebook.com/v18.0/oauth/access_token',
-    scope:        'pages_manage_posts,pages_read_engagement',
-    clientId:     process.env.EXPO_PUBLIC_FACEBOOK_APP_ID ?? '',
-    clientSecret: process.env.EXPO_PUBLIC_FACEBOOK_APP_SECRET ?? '',
-  },
-  x: {
-    authUrl:      'https://twitter.com/i/oauth2/authorize',
-    tokenUrl:     'https://api.twitter.com/2/oauth2/token',
-    scope:        'tweet.read tweet.write users.read offline.access',
-    clientId:     process.env.EXPO_PUBLIC_X_CLIENT_ID ?? '',
-    clientSecret: process.env.EXPO_PUBLIC_X_CLIENT_SECRET ?? '',
-  },
-  tiktok: {
-    authUrl:      'https://www.tiktok.com/v2/auth/authorize/',
-    tokenUrl:     'https://open.tiktokapis.com/v2/oauth/token/',
-    scope:        'user.info.basic,video.publish,video.upload',
-    clientId:     process.env.EXPO_PUBLIC_TIKTOK_CLIENT_ID ?? '',
-    clientSecret: process.env.EXPO_PUBLIC_TIKTOK_CLIENT_SECRET ?? '',
-  },
-  snapchat: {
-    authUrl:      'https://accounts.snapchat.com/login/oauth2/authorize',
-    tokenUrl:     'https://accounts.snapchat.com/login/oauth2/access_token',
-    scope:        'snapchat-marketing-api',
-    clientId:     process.env.EXPO_PUBLIC_SNAPCHAT_CLIENT_ID ?? '',
-    clientSecret: process.env.EXPO_PUBLIC_SNAPCHAT_CLIENT_SECRET ?? '',
-  },
-};
-
-const ACCOUNT_TYPES = [
-  { key: 'personal',     label: 'Persoonlijk',      icon: 'person-outline' },
-  { key: 'business',     label: 'Zakelijk',         icon: 'briefcase-outline' },
-  { key: 'company_page', label: 'Bedrijfspagina',   icon: 'business-outline' },
-] as const;
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
@@ -133,14 +49,6 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabled]   = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [exportLoading, setExportLoading]         = useState(false);
-  // Social connect modal state
-  const [connectingPlatform, setConnectingPlatform] = useState<string | null>(null);
-  const [appInstalled, setAppInstalled]           = useState<Record<string, boolean>>({});
-  // 'choose' | 'token' | 'oauth' — which step of the connect flow
-  const [connectStep, setConnectStep]             = useState<'choose' | 'token' | 'oauth'>('choose');
-  const [tokenInput, setTokenInput]               = useState('');
-  const [tokenAccountType, setTokenAccountType]   = useState<string>('personal');
-  const [savingToken, setSavingToken]             = useState(false);
 
   // ─── Location ──────────────────────────────────────────────────────
   const gpsLocation = useLocation(false); // Don't auto-detect on mount
@@ -268,18 +176,6 @@ export default function SettingsScreen() {
     staleTime: 30_000,
   });
 
-  // Detect which social apps are installed on this device
-  useEffect(() => {
-    const check = async () => {
-      const results: Record<string, boolean> = {};
-      for (const p of SOCIAL_PLATFORMS) {
-        try { results[p.key] = await Linking.canOpenURL(p.appScheme); }
-        catch { results[p.key] = false; }
-      }
-      setAppInstalled(results);
-    };
-    check();
-  }, []);
 
   // ── Brand Kit ────────────────────────────────────────────────────────────
   const { data: brandKits = [], refetch: refetchBrandKits } = useQuery({
@@ -439,206 +335,45 @@ export default function SettingsScreen() {
     }
   };
 
-  // Opens the account-type picker sheet, then proceeds to connect flow
-  const handleConnectSocial = (platform: string) => {
-    setConnectStep('choose');
-    setTokenInput('');
-    setTokenAccountType('personal');
-    setConnectingPlatform(platform);
-  };
+  // Connect social media via backend API (OAuth handled server-side)
+  const handleConnectSocial = async (platformKey: string) => {
+    const pf = SOCIAL_PLATFORMS.find(p => p.key === platformKey);
+    const label = pf?.label ?? platformKey;
 
-  // Save API access token directly to Supabase social_accounts table
-  const handleSaveToken = async () => {
-    if (!connectingPlatform || !tokenInput.trim()) return;
-    setSavingToken(true);
-    try {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
-      if (!user) throw new Error('Niet ingelogd');
-
-      const pf = SOCIAL_PLATFORMS.find(p => p.key === connectingPlatform);
-      const { error } = await supabase.from('social_accounts').upsert({
-        user_id:             user.id,
-        platform:            connectingPlatform,
-        account_type:        tokenAccountType,
-        platform_account_id: `${connectingPlatform}_${user.id}`,
-        access_token:        tokenInput.trim(),
-        is_active:           true,
-        display_name:        pf?.label ?? connectingPlatform,
-        connected_at:        new Date().toISOString(),
-      }, { onConflict: 'user_id,platform,account_type' });
-
-      if (error) throw error;
-
-      await refetchSocial();
-      setConnectingPlatform(null);
-      setTokenInput('');
-      Alert.alert('✅ Verbonden', `${pf?.label ?? connectingPlatform} succesvol gekoppeld met jouw token.`);
-    } catch (err: any) {
-      Alert.alert('Fout', err?.message ?? 'Opslaan mislukt. Controleer je token.');
-    } finally {
-      setSavingToken(false);
-    }
-  };
-
-  const doOAuth = async (platform: string, accountType: string) => {
-    const pf    = SOCIAL_PLATFORMS.find(p => p.key === platform);
-    const label = pf?.label ?? platform;
-    const cfg   = OAUTH_CONFIG[platform];
-    // Supabase Edge Function as OAuth redirect proxy.
-    // Platforms require HTTPS redirect URIs — the Edge Function receives
-    // the callback and redirects to inclufy-go://oauth/callback so the app
-    // intercepts it via openAuthSessionAsync (custom scheme ✓).
-    // Register this URL in every platform's developer portal.
-    const redirectUri = 'https://mpxkugfqzmxydxnlxqoj.supabase.co/functions/v1/oauth-callback';
-
-    if (!cfg?.clientId) {
-      // Close modal first so it doesn't look stuck
-      setConnectingPlatform(null);
-      setConnectStep('choose');
-      setTimeout(() => {
-        Alert.alert(
-          `${label} app-koppeling`,
-          `Verbinden via ${label} vereist een eenmalige app-registratie door Inclufy.\n\n` +
-          `Gebruik voorlopig de "API Token invoeren" optie — plak je access token uit de ${label} Developer Portal.`,
-          [{ text: 'Begrepen' }],
-        );
-      }, 300);
+    // Check if platform is supported
+    if (!pf?.supported) {
+      Alert.alert(t.common?.comingSoon ?? 'Binnenkort beschikbaar', `${label} wordt binnenkort ondersteund.`);
       return;
     }
 
+    // Check if already connected
+    const alreadyConnected = (socialAccounts as any[]).some(
+      (a: any) => a.platform === platformKey && a.is_active,
+    );
+    if (alreadyConnected) {
+      Alert.alert('Verbonden', `${label} is al verbonden.`);
+      return;
+    }
+
+    // Open OAuth flow via backend
+    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) {
+      Alert.alert('Error', 'Je bent niet ingelogd.');
+      return;
+    }
     try {
-      // ── PKCE: generate verifier + challenge ──────────────────────────────
-      // Note: Hermes (React Native) does not support crypto.subtle, so PKCE
-      // falls back to 'plain'. Most platforms (LinkedIn, Meta) only accept S256.
-      // For confidential apps (those with a client_secret), PKCE is optional —
-      // we skip it entirely when S256 is unavailable to avoid rejections.
-      const { verifier, challenge, method } = await generatePKCE();
-      const usePKCE = method === 'S256';
-      const state = randomStr(24);
-
-      const baseParams: Record<string, string> = {
-        response_type: 'code',
-        client_id:     cfg.clientId,
-        redirect_uri:  redirectUri,
-        scope:         cfg.scope,
-        state,
-      };
-      if (usePKCE) {
-        baseParams.code_challenge        = challenge;
-        baseParams.code_challenge_method = method;
-      }
-      const params = new URLSearchParams(baseParams);
-      const oauthUrl = `${cfg.authUrl}?${params.toString()}`;
-
-      // ── Open platform's own login / consent screen ───────────────────────
-      // The Supabase Edge Function (redirectUri) receives the HTTPS callback
-      // and redirects to inclufy-go://oauth/callback. We pass the custom
-      // scheme as the intercept URL so ASWebAuthenticationSession catches it.
-      const result = await WebBrowser.openAuthSessionAsync(oauthUrl, 'inclufy-go://oauth/callback', {
-        preferEphemeralSession: false, // keep session so user stays logged in
+      const res = await fetch(`${apiUrl}/social-auth/connect/${platformKey}`, {
+        headers: { Authorization: `Bearer ${session.access_token}` },
       });
-
-      if (result.type !== 'success' || !result.url) return; // user cancelled
-
-      // Parse redirect URL manually (avoids URL constructor issues in some RN versions)
-      const queryStr = result.url.split('?')[1] ?? '';
-      const qp: Record<string, string> = {};
-      queryStr.split('&').forEach(pair => {
-        const [k, v] = pair.split('=');
-        if (k) qp[decodeURIComponent(k)] = decodeURIComponent(v ?? '');
-      });
-      const code     = qp['code'];
-      const retState = qp['state'];
-
-      if (!code || retState !== state) {
-        Alert.alert('Koppeling mislukt', 'Ongeldige autorisatie. Probeer opnieuw.');
-        return;
+      const json = await res.json();
+      if (json.authorization_url) {
+        await Linking.openURL(json.authorization_url);
+      } else if (json.detail) {
+        Alert.alert('Error', json.detail);
       }
-
-      // ── Exchange code + PKCE verifier directly with the platform ─────────
-      const tokenParams: Record<string, string> = {
-        grant_type:   'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-        client_id:    cfg.clientId,
-      };
-      // Only include code_verifier if PKCE (S256) was used in the auth request
-      if (usePKCE) tokenParams.code_verifier = verifier;
-      // LinkedIn and other confidential apps require client_secret in token exchange
-      if (cfg.clientSecret) tokenParams.client_secret = cfg.clientSecret;
-      const body = new URLSearchParams(tokenParams);
-
-      const tokenRes = await fetch(cfg.tokenUrl, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body:    body.toString(),
-      });
-      const tokenData = await tokenRes.json();
-
-      if (!tokenData?.access_token) {
-        const errMsg = tokenData?.error_description ?? tokenData?.message ?? 'Token ophalen mislukt';
-        Alert.alert('Verbinding mislukt', errMsg);
-        return;
-      }
-
-      // ── Fetch display name + platform account ID ──────────────────────────
-      let displayName = label;
-      let platformAccountId: string | null = null;
-      try {
-        if (platform === 'linkedin') {
-          const me = await fetch('https://api.linkedin.com/v2/userinfo', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
-          }).then(r => r.json());
-          displayName       = me.name ?? me.email ?? label;
-          platformAccountId = me.sub ?? null;
-        } else if (platform === 'instagram' || platform === 'facebook') {
-          const me = await fetch('https://graph.facebook.com/me?fields=id,name', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
-          }).then(r => r.json());
-          displayName       = me.name ?? label;
-          platformAccountId = me.id ?? null;
-        } else if (platform === 'tiktok') {
-          const me = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
-          }).then(r => r.json());
-          displayName       = me.data?.user?.display_name ?? label;
-          platformAccountId = me.data?.user?.open_id ?? null;
-        } else if (platform === 'x') {
-          const me = await fetch('https://api.twitter.com/2/users/me', {
-            headers: { Authorization: `Bearer ${tokenData.access_token}` },
-          }).then(r => r.json());
-          displayName       = me.data?.name ?? me.data?.username ?? label;
-          platformAccountId = me.data?.id ?? null;
-        }
-      } catch { /* display name / id is optional */ }
-
-      // ── Store token in Supabase ───────────────────────────────────────────
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData?.user;
-      if (!user) { Alert.alert('Fout', 'Niet ingelogd.'); return; }
-
-      const { error: upsertErr } = await supabase.from('social_accounts').upsert({
-        user_id:             user.id,
-        platform,
-        account_type:        accountType,
-        platform_account_id: platformAccountId ?? `${platform}_${user.id}`,
-        access_token:        tokenData.access_token,
-        refresh_token:       tokenData.refresh_token ?? null,
-        is_active:           true,
-        display_name:        displayName,
-        connected_at:        new Date().toISOString(),
-      }, { onConflict: 'user_id,platform,account_type' });
-
-      if (upsertErr) throw upsertErr;
-
-      await refetchSocial();
-      setConnectingPlatform(null);
-      const typeLabel = ACCOUNT_TYPES.find(t => t.key === accountType)?.label ?? accountType;
-      Alert.alert('✅ Verbonden', `${label} (${typeLabel}) is succesvol verbonden met AMOS.`);
-
     } catch (err: any) {
-      Alert.alert('Fout', err?.message ?? 'OAuth verbinding mislukt.');
+      Alert.alert('Error', err?.message ?? 'Verbinding mislukt.');
     }
   };
 
@@ -850,60 +585,46 @@ export default function SettingsScreen() {
         <Text style={styles.sectionLabel}>Social Media</Text>
         <View style={styles.card}>
           {SOCIAL_PLATFORMS.map((platform, index) => {
-            // All accounts connected for this platform (supports multiple)
-            const accounts = socialAccounts.filter((a) => a.platform === platform.key && a.is_active);
-            const isInstalled = appInstalled[platform.key];
+            const isConnected = (socialAccounts as any[]).some(
+              (a: any) => a.platform === platform.key && a.is_active,
+            );
             return (
               <React.Fragment key={platform.key}>
                 {index > 0 && <View style={styles.separator} />}
-                {/* Platform header row */}
-                <View style={[styles.row, { paddingBottom: accounts.length > 0 ? 6 : undefined }]}>
+                <View style={styles.row}>
                   <View style={[styles.rowIconWrap, { backgroundColor: platform.color + '18' }]}>
                     <Ionicons name={platform.icon as any} size={20} color={platform.color} />
                   </View>
-                  <View style={[styles.rowContent, { flex: 1 }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Text style={styles.rowLabel}>{platform.label}</Text>
-                      {/* "App geïnstalleerd" badge */}
-                      {isInstalled && (
-                        <View style={{ backgroundColor: platform.color + '18', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
-                          <Text style={{ fontSize: 9, color: platform.color, fontWeight: fontWeight.semibold }}>App ✓</Text>
-                        </View>
-                      )}
-                    </View>
-                    {/* Connected accounts list */}
-                    {accounts.map((acc) => {
-                      const typeLabel = ACCOUNT_TYPES.find(t => t.key === acc.account_type)?.label;
-                      return (
-                        <View key={acc.id ?? acc.platform_username} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
-                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
-                          <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }}>
-                            {acc.platform_username ? `@${acc.platform_username}` : 'Verbonden'}
-                            {typeLabel ? ` · ${typeLabel}` : ''}
-                          </Text>
-                        </View>
-                      );
-                    })}
+                  <View style={styles.rowContent}>
+                    <Text style={styles.rowLabel}>{platform.label}</Text>
+                    {isConnected && (
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
+                        <Text style={{ fontSize: fontSize.xs, color: colors.success }}>Verbonden</Text>
+                      </View>
+                    )}
+                    {!platform.supported && !isConnected && (
+                      <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 2 }}>Binnenkort</Text>
+                    )}
                   </View>
-                  {/* Connect / Add button */}
                   <TouchableOpacity
                     onPress={() => handleConnectSocial(platform.key)}
                     style={{
                       flexDirection: 'row', alignItems: 'center', gap: 4,
-                      backgroundColor: accounts.length > 0 ? platform.color + '12' : colors.error + '12',
+                      backgroundColor: isConnected ? colors.success + '12' : colors.error + '12',
                       paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
                     }}
                   >
                     <Ionicons
-                      name={accounts.length > 0 ? 'add-circle-outline' : 'link-outline'}
+                      name={isConnected ? 'checkmark-circle-outline' : 'link-outline'}
                       size={14}
-                      color={accounts.length > 0 ? platform.color : colors.error}
+                      color={isConnected ? colors.success : colors.error}
                     />
                     <Text style={{
                       fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-                      color: accounts.length > 0 ? platform.color : colors.error,
+                      color: isConnected ? colors.success : colors.error,
                     }}>
-                      {accounts.length > 0 ? 'Account toev.' : 'Verbinden'}
+                      {isConnected ? 'Verbonden' : 'Verbinden'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -921,214 +642,6 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
-
-        {/* ── Social Connect Modal (multi-step) ──────────────────────── */}
-        <Modal
-          visible={!!connectingPlatform}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setConnectingPlatform(null)}
-        >
-          <TouchableOpacity
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)' }}
-            activeOpacity={1}
-            onPress={() => setConnectingPlatform(null)}
-          >
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={() => {}}
-              style={{
-                position: 'absolute', bottom: 0, left: 0, right: 0,
-                backgroundColor: colors.surface,
-                borderTopLeftRadius: 24, borderTopRightRadius: 24,
-                padding: 24, paddingBottom: 48,
-              }}
-            >
-              {connectingPlatform && (() => {
-                const pf = SOCIAL_PLATFORMS.find(p => p.key === connectingPlatform)!;
-                const pfColor = pf?.color ?? colors.primary;
-
-                return (
-                  <>
-                    {/* ── Header ── */}
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        {connectStep !== 'choose' && (
-                          <TouchableOpacity onPress={() => setConnectStep('choose')} style={{ marginRight: 2 }}>
-                            <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
-                          </TouchableOpacity>
-                        )}
-                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: pfColor + '18', justifyContent: 'center', alignItems: 'center' }}>
-                          <Ionicons name={pf?.icon as any} size={18} color={pfColor} />
-                        </View>
-                        <Text style={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text }}>
-                          {pf?.label ?? connectingPlatform} koppelen
-                        </Text>
-                      </View>
-                      <TouchableOpacity onPress={() => setConnectingPlatform(null)}>
-                        <Ionicons name="close" size={22} color={colors.textSecondary} />
-                      </TouchableOpacity>
-                    </View>
-
-                    {/* ── Step: choose method ── */}
-                    {connectStep === 'choose' && (
-                      <View style={{ gap: 12 }}>
-                        <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: 4 }}>
-                          Kies hoe je jouw {pf?.label} account wilt koppelen:
-                        </Text>
-
-                        {/* Option 1 — API Token */}
-                        <TouchableOpacity
-                          onPress={() => setConnectStep('token')}
-                          style={{
-                            flexDirection: 'row', alignItems: 'center', gap: 14,
-                            backgroundColor: colors.background, borderRadius: 16,
-                            paddingVertical: 16, paddingHorizontal: 16,
-                            borderWidth: 1.5, borderColor: pfColor + '50',
-                          }}
-                        >
-                          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: pfColor + '15', justifyContent: 'center', alignItems: 'center' }}>
-                            <Ionicons name="key-outline" size={22} color={pfColor} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text }}>
-                              API Token invoeren
-                            </Text>
-                            <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 16 }}>
-                              Plak je access token uit {pf?.label} Developer Portal. Direct en betrouwbaar.
-                            </Text>
-                          </View>
-                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                        </TouchableOpacity>
-
-                        {/* Option 2 — OAuth via platform */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            doOAuth(connectingPlatform, tokenAccountType).catch((e: any) => {
-                              Alert.alert('Fout', e?.message ?? 'Verbinding mislukt.');
-                            });
-                          }}
-                          style={{
-                            flexDirection: 'row', alignItems: 'center', gap: 14,
-                            backgroundColor: colors.background, borderRadius: 16,
-                            paddingVertical: 16, paddingHorizontal: 16,
-                            borderWidth: 1.5, borderColor: pfColor + '30',
-                          }}
-                        >
-                          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: pfColor + '15', justifyContent: 'center', alignItems: 'center' }}>
-                            <Ionicons name={pf?.icon as any} size={22} color={pfColor} />
-                          </View>
-                          <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text }}>
-                              Inloggen via {pf?.label}
-                            </Text>
-                            <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 3, lineHeight: 16 }}>
-                              {pf?.label} opent — log in met je eigen account en tik "Toestaan".
-                            </Text>
-                          </View>
-                          <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-                        </TouchableOpacity>
-
-                        {/* Token help link */}
-                        <TouchableOpacity
-                          onPress={() => {
-                            const helpUrls: Record<string, string> = {
-                              linkedin:  'https://www.linkedin.com/developers/apps',
-                              instagram: 'https://developers.facebook.com/apps',
-                              x:         'https://developer.twitter.com/en/portal/dashboard',
-                              facebook:  'https://developers.facebook.com/apps',
-                            };
-                            Linking.openURL(helpUrls[connectingPlatform] ?? 'https://inclufy.com').catch(() => {});
-                          }}
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'center', marginTop: 4 }}
-                        >
-                          <Ionicons name="help-circle-outline" size={15} color={colors.textSecondary} />
-                          <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }}>
-                            Waar vind ik mijn API token?
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
-                    {/* ── Step: enter token ── */}
-                    {connectStep === 'token' && (
-                      <View style={{ gap: 14 }}>
-                        <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>
-                          Plak je {pf?.label} access token hieronder. Je vindt deze in de Developer Portal van {pf?.label}.
-                        </Text>
-
-                        {/* Account type selector */}
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
-                          {ACCOUNT_TYPES.map((type) => (
-                            <TouchableOpacity
-                              key={type.key}
-                              onPress={() => setTokenAccountType(type.key)}
-                              style={{
-                                flex: 1, paddingVertical: 10, borderRadius: 12, alignItems: 'center',
-                                backgroundColor: tokenAccountType === type.key ? pfColor + '18' : colors.background,
-                                borderWidth: 1.5,
-                                borderColor: tokenAccountType === type.key ? pfColor : colors.border,
-                              }}
-                            >
-                              <Ionicons name={type.icon as any} size={16} color={tokenAccountType === type.key ? pfColor : colors.textSecondary} />
-                              <Text style={{ fontSize: 10, marginTop: 3, color: tokenAccountType === type.key ? pfColor : colors.textSecondary, fontWeight: fontWeight.medium }}>
-                                {type.label}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-
-                        {/* Token input */}
-                        <TextInput
-                          value={tokenInput}
-                          onChangeText={setTokenInput}
-                          placeholder="Plak je access token hier..."
-                          placeholderTextColor={colors.textTertiary}
-                          multiline
-                          numberOfLines={4}
-                          autoCapitalize="none"
-                          autoCorrect={false}
-                          style={{
-                            backgroundColor: colors.background,
-                            borderRadius: 12,
-                            borderWidth: 1.5,
-                            borderColor: tokenInput ? pfColor + '60' : colors.border,
-                            padding: 14,
-                            fontSize: fontSize.sm,
-                            color: colors.text,
-                            fontFamily: 'monospace',
-                            minHeight: 90,
-                            textAlignVertical: 'top',
-                          }}
-                        />
-
-                        {/* Save button */}
-                        <TouchableOpacity
-                          onPress={handleSaveToken}
-                          disabled={!tokenInput.trim() || savingToken}
-                          style={{
-                            backgroundColor: tokenInput.trim() ? pfColor : colors.border,
-                            borderRadius: 14, paddingVertical: 15,
-                            alignItems: 'center', opacity: savingToken ? 0.7 : 1,
-                          }}
-                        >
-                          <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.md }}>
-                            {savingToken ? 'Opslaan...' : `${pf?.label} koppelen`}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <Text style={{ fontSize: 10, color: colors.textTertiary, textAlign: 'center', lineHeight: 14 }}>
-                          Je token wordt versleuteld opgeslagen en alleen gebruikt om posts te publiceren namens jou.
-                        </Text>
-                      </View>
-                    )}
-
-                  </>
-                );
-              })()}
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </Modal>
 
         {/* ── Demo ──────────────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>{t.settings.demo ?? 'DEMO'}</Text>
