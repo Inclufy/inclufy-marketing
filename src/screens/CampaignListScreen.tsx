@@ -323,10 +323,30 @@ export default function CampaignListScreen() {
           </View>
         </View>
 
-        {/* Type badge */}
-        <View style={styles.typeBadge}>
-          <Ionicons name={typeIcon as any} size={14} color={colors.primary} />
-          <Text style={styles.typeLabel}>{typeLabel}</Text>
+        {/* Type badge + Channel badges */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          <View style={styles.typeBadge}>
+            <Ionicons name={typeIcon as any} size={14} color={colors.primary} />
+            <Text style={styles.typeLabel}>{typeLabel}</Text>
+          </View>
+          {(() => {
+            const channels = (item.settings as any)?.channels as string[] | undefined;
+            const channelIcons: Record<string, { icon: string; color: string }> = {
+              linkedin: { icon: 'logo-linkedin', color: '#0077B5' },
+              facebook: { icon: 'logo-facebook', color: '#1877F2' },
+              instagram: { icon: 'logo-instagram', color: '#E4405F' },
+            };
+            if (!channels) return null;
+            return channels.map(ch => {
+              const cfg = channelIcons[ch];
+              if (!cfg) return null;
+              return (
+                <View key={ch} style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: cfg.color + '12', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8 }}>
+                  <Ionicons name={cfg.icon as any} size={12} color={cfg.color} />
+                </View>
+              );
+            });
+          })()}
         </View>
 
         {/* Divider */}
@@ -344,7 +364,7 @@ export default function CampaignListScreen() {
             <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
             <Text style={styles.footerText}>
               {formatDate(item.start_date)}
-              {item.end_date ? ` \u2013 ${formatDate(item.end_date)}` : ''}
+              {item.end_date ? ` – ${formatDate(item.end_date)}` : ''}
             </Text>
           </View>
         </View>

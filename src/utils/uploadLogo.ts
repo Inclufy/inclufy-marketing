@@ -59,10 +59,18 @@ export async function uploadImageToStorage(uri: string): Promise<string> {
 
   if (error) throw error;
 
-  // Get public URL
-  const { data: urlData } = supabase.storage
+  // Get signed URL (works regardless of bucket public setting)
+  const { data: signedData, error: signedError } = await supabase.storage
     .from('media')
-    .getPublicUrl(filePath);
+    .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year
 
-  return urlData.publicUrl;
+  if (signedError || !signedData?.signedUrl) {
+    // Fallback to public URL
+    const { data: urlData } = supabase.storage
+      .from('media')
+      .getPublicUrl(filePath);
+    return urlData.publicUrl;
+  }
+
+  return signedData.signedUrl;
 }

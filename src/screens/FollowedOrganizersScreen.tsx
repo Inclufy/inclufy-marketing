@@ -42,16 +42,25 @@ const CATEGORIES = [
 
 // Popular organizers as suggestions
 const SUGGESTED_ORGANIZERS = [
+  // Nederland
   { name: 'ROC', category: 'education', website: 'https://roc.nl', description: 'Regionaal Opleidingen Centrum — digitale vaardigheden en marketing' },
   { name: 'Innovaly', category: 'innovation', website: 'https://innovaly.nl', description: 'Innovatie hub met focus op digitale transformatie' },
   { name: 'ICT Tribe', category: 'tech', website: 'https://icttribe.nl', description: 'ICT-community voor professionals en ondernemers' },
   { name: 'Startup Almere', category: 'startup', website: 'https://startupalmere.nl', description: 'Startup ecosysteem Almere — pitch events en netwerkbijeenkomsten' },
-  { name: 'Emakina', category: 'marketing', website: 'https://emakina.com', description: 'Digital agency met grote marketingconferenties' },
-  { name: 'MarTech Alliance', category: 'marketing', website: 'https://martechalliance.com', description: 'Marketing technologie community en events' },
+  { name: 'RVO (Rijksdienst voor Ondernemend Nederland)', category: 'innovation', website: 'https://rvo.nl', description: 'Overheidsorganisatie — subsidies, innovatieprogramma\'s, handelsmissies' },
   { name: 'Dutch Digital Agencies', category: 'marketing', website: 'https://dutchdigitalagencies.com', description: 'Branchevereniging voor digitale bureaus in Nederland' },
   { name: 'Amsterdam Economic Board', category: 'networking', website: 'https://amsterdameconomicboard.com', description: 'Innovatieplatform Metropoolregio Amsterdam' },
   { name: 'StartupDelta', category: 'startup', website: 'https://startupdelta.org', description: 'Nederlands startup ecosysteem — verbindt ondernemers' },
-  { name: 'Web Summit', category: 'tech', website: 'https://websummit.com', description: 'Europa\'s grootste technologie conferentie' },
+  // Internationaal — grote tech & startup events
+  { name: 'Web Summit', category: 'tech', website: 'https://websummit.com', description: 'Europa\'s grootste technologie conferentie (Lissabon)' },
+  { name: 'GITEX Global', category: 'tech', website: 'https://gitex.com', description: 'Grootste tech event in het Midden-Oosten & Afrika (Dubai)' },
+  { name: 'Slush', category: 'startup', website: 'https://slush.org', description: 'Startup event voor founders & investors (Helsinki)' },
+  { name: 'Collision', category: 'tech', website: 'https://collisionconf.com', description: 'North America\'s fastest-growing tech conference (Toronto)' },
+  { name: 'VivaTech', category: 'tech', website: 'https://vivatechnology.com', description: 'Europese tech conferentie voor innovatie & startups (Parijs)' },
+  // Marketing
+  { name: 'Emakina', category: 'marketing', website: 'https://emakina.com', description: 'Digital agency met grote marketingconferenties' },
+  { name: 'MarTech Alliance', category: 'marketing', website: 'https://martechalliance.com', description: 'Marketing technologie community en events' },
+  { name: 'DMEXCO', category: 'marketing', website: 'https://dmexco.com', description: 'Digital Marketing Expo & Conference (Keulen)' },
 ];
 
 export default function FollowedOrganizersScreen() {

@@ -243,8 +243,16 @@ export default function SettingsScreen() {
     queryFn: async () => {
       const { data } = await supabase
         .from('social_accounts')
-        .select('id, platform, platform_username, account_type, is_active');
-      return (data || []) as Array<{ id?: string; platform: string; platform_username: string | null; account_type?: string | null; is_active: boolean }>;
+        .select('id, platform, account_name, platform_account_id, status, profile_image_url');
+      return (data || []) as Array<{
+        id: string;
+        platform: string;
+        account_name: string | null;
+        platform_account_id: string | null;
+        status: string;
+        profile_image_url: string | null;
+        is_active?: boolean;
+      }>;
     },
     staleTime: 30_000,
   });
@@ -408,45 +416,75 @@ export default function SettingsScreen() {
     }
   };
 
-  // Connect social media via backend API (OAuth handled server-side)
+  // Connect social media via OAuth (direct URL → Supabase edge function callback)
   const handleConnectSocial = async (platformKey: string) => {
     const pf = SOCIAL_PLATFORMS.find(p => p.key === platformKey);
     const label = pf?.label ?? platformKey;
 
-    // Check if platform is supported
     if (!pf?.supported) {
       Alert.alert(t.common?.comingSoon ?? 'Binnenkort beschikbaar', `${label} wordt binnenkort ondersteund.`);
       return;
     }
 
-    // Check if already connected
     const alreadyConnected = (socialAccounts as any[]).some(
-      (a: any) => a.platform === platformKey && a.is_active,
+      (a: any) => a.platform === platformKey && (a.is_active || a.status === 'active'),
     );
     if (alreadyConnected) {
       Alert.alert('Verbonden', `${label} is al verbonden.`);
       return;
     }
 
-    // Open OAuth flow via backend
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api';
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.access_token) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
       Alert.alert('Error', 'Je bent niet ingelogd.');
       return;
     }
-    try {
-      const res = await fetch(`${apiUrl}/social-auth/connect/${platformKey}`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
+
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
+    const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
+    const state = `${user.id}:${user.id}:${platformKey}`;
+
+    let authUrl = '';
+
+    if (platformKey === 'linkedin') {
+      const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '789493c65q6j5e';
+      const params = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope: 'openid profile email w_member_social',
+        state,
       });
-      const json = await res.json();
-      if (json.authorization_url) {
-        await Linking.openURL(json.authorization_url);
-      } else if (json.detail) {
-        Alert.alert('Error', json.detail);
+      authUrl = `https://www.linkedin.com/oauth/v2/authorization?${params}`;
+    } else if (platformKey === 'facebook' || platformKey === 'instagram') {
+      const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID;
+      if (!metaAppId) {
+        Alert.alert(
+          `${label} koppeling`,
+          `Om ${label} te verbinden heb je een Meta (Facebook) App ID nodig.\n\nGa naar developers.facebook.com om een app aan te maken en voeg EXPO_PUBLIC_META_APP_ID toe aan je .env bestand.`,
+          [{ text: 'Begrepen' }],
+        );
+        return;
       }
-    } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Verbinding mislukt.');
+      const scope = platformKey === 'instagram'
+        ? 'instagram_basic,instagram_content_publish,pages_show_list'
+        : 'pages_show_list,pages_read_engagement,pages_manage_posts';
+      const params = new URLSearchParams({
+        client_id: metaAppId,
+        redirect_uri: redirectUri,
+        scope,
+        response_type: 'code',
+        state,
+      });
+      authUrl = `https://www.facebook.com/v18.0/dialog/oauth?${params}`;
+    }
+
+    if (authUrl) {
+      try {
+        await Linking.openURL(authUrl);
+      } catch (err: any) {
+        Alert.alert('Error', err?.message ?? 'Kon de browser niet openen.');
+      }
     }
   };
 
@@ -783,9 +821,10 @@ export default function SettingsScreen() {
         <Text style={styles.sectionLabel}>Social Media</Text>
         <View style={styles.card}>
           {SOCIAL_PLATFORMS.map((platform, index) => {
-            const isConnected = (socialAccounts as any[]).some(
-              (a: any) => a.platform === platform.key && a.is_active,
+            const connectedAccount = (socialAccounts as any[]).find(
+              (a: any) => a.platform === platform.key && (a.status === 'active' || a.is_active),
             );
+            const isConnected = !!connectedAccount;
             return (
               <React.Fragment key={platform.key}>
                 {index > 0 && <View style={styles.separator} />}
@@ -798,7 +837,9 @@ export default function SettingsScreen() {
                     {isConnected && (
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
                         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
-                        <Text style={{ fontSize: fontSize.xs, color: colors.success }}>Verbonden</Text>
+                        <Text style={{ fontSize: fontSize.xs, color: colors.success }}>
+                          {connectedAccount?.account_name ? `Verbonden als ${connectedAccount.account_name}` : 'Verbonden'}
+                        </Text>
                       </View>
                     )}
                     {!platform.supported && !isConnected && (

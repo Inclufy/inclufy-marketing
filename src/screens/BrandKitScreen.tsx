@@ -27,6 +27,7 @@ import {
 } from '../hooks/useBrandMemory';
 import type { BrandKit } from '../types';
 import { pickAndUploadLogo } from '../utils/uploadLogo';
+import { supabase } from '../services/supabase';
 
 // ─── Color Presets ──────────────────────────────────────────────────
 const COLOR_PRESETS = [
@@ -61,6 +62,47 @@ const EMPTY_FORM: BrandKitInput = {
   tagline: null,
   is_default: false,
 };
+
+// ─── Logo Image with error handling ─────────────────────────────────
+function LogoImage({ uri, style, fallbackColor }: { uri: string; style: any; fallbackColor?: string }) {
+  const [failed, setFailed] = React.useState(false);
+  const [resolvedUri, setResolvedUri] = React.useState(uri);
+  const { colors } = useTheme();
+
+  React.useEffect(() => {
+    setFailed(false);
+    // If URL looks like a Supabase storage path (no signed token), try to get a signed URL
+    if (uri && uri.includes('/storage/v1/object/public/')) {
+      const path = uri.split('/storage/v1/object/public/media/')[1];
+      if (path) {
+        supabase.storage.from('media').createSignedUrl(path, 60 * 60 * 24 * 365)
+          .then(({ data }) => {
+            if (data?.signedUrl) setResolvedUri(data.signedUrl);
+          })
+          .catch(() => {});
+      }
+    } else {
+      setResolvedUri(uri);
+    }
+  }, [uri]);
+
+  if (failed || !uri) {
+    return (
+      <View style={[style, { justifyContent: 'center', alignItems: 'center', backgroundColor: (fallbackColor || colors.primary) + '20' }]}>
+        <Ionicons name="image-outline" size={Math.min(style.width || 40, style.height || 40) / 2} color={fallbackColor || colors.primary} />
+      </View>
+    );
+  }
+
+  return (
+    <Image
+      source={{ uri: resolvedUri }}
+      style={style}
+      resizeMode="cover"
+      onError={() => setFailed(true)}
+    />
+  );
+}
 
 // ─── Component ──────────────────────────────────────────────────────
 
@@ -171,7 +213,7 @@ export default function BrandKitScreen() {
       <View style={styles.cardHeader}>
         <View style={styles.cardLeft}>
           {item.logo_url ? (
-            <Image source={{ uri: item.logo_url }} style={styles.logoThumb} />
+            <LogoImage uri={item.logo_url} style={styles.logoThumb} fallbackColor={item.primary_color} />
           ) : (
             <View style={[styles.logoPlaceholder, { backgroundColor: item.primary_color + '20' }]}>
               <Ionicons name="color-palette" size={20} color={item.primary_color} />
@@ -373,7 +415,7 @@ export default function BrandKitScreen() {
                 {uploading ? (
                   <ActivityIndicator size="small" color={colors.primary} />
                 ) : form.logo_url ? (
-                  <Image source={{ uri: form.logo_url }} style={styles.logoPreview} />
+                  <LogoImage uri={form.logo_url} style={styles.logoPreview} />
                 ) : (
                   <>
                     <Ionicons name="cloud-upload-outline" size={28} color={colors.textTertiary} />
@@ -459,7 +501,7 @@ export default function BrandKitScreen() {
               >
                 <View style={[styles.previewGradient, { backgroundColor: form.primary_color }]}>
                   {form.logo_url ? (
-                    <Image source={{ uri: form.logo_url }} style={styles.previewLogo} />
+                    <LogoImage uri={form.logo_url} style={styles.previewLogo} />
                   ) : (
                     <Ionicons name="diamond" size={24} color="#fff" />
                   )}
