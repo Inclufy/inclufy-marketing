@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Share,
   Linking,
   ActivityIndicator,
+  TextInput,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -49,6 +51,76 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabled]   = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [exportLoading, setExportLoading]         = useState(false);
+
+  // ─── QR Card Profile ──────────────────────────────────────────────
+  const [qrProfile, setQrProfile] = useState({
+    full_name: '', email: '', phone: '', company: '', title: '', website: '',
+    linkedin: '', instagram: '', twitter: '', facebook: '',
+  });
+  const [qrFields, setQrFields] = useState<Record<string, boolean>>({
+    share_email: true, share_phone: true, share_company: true, share_title: true,
+    share_website: true, share_linkedin: true, share_instagram: true,
+    share_twitter: true, share_facebook: true,
+  });
+  const [showQrEditor, setShowQrEditor] = useState(false);
+  const [qrSaving, setQrSaving] = useState(false);
+
+  const loadQrProfile = useCallback(async () => {
+    try {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, qr_fields')
+        .eq('id', user.id)
+        .maybeSingle();
+      if (p) {
+        setQrProfile({
+          full_name: p.full_name ?? '', email: p.email ?? user.email ?? '',
+          phone: p.phone ?? '', company: p.company ?? '', title: p.title ?? '',
+          website: p.website ?? '', linkedin: p.linkedin ?? '', instagram: p.instagram ?? '',
+          twitter: p.twitter ?? '', facebook: p.facebook ?? '',
+        });
+        if (p.qr_fields && typeof p.qr_fields === 'object') {
+          setQrFields(prev => ({ ...prev, ...(p.qr_fields as Record<string, boolean>) }));
+        }
+      } else {
+        // No profile row yet — use auth email
+        setQrProfile(prev => ({ ...prev, email: user.email ?? '' }));
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadQrProfile(); }, [loadQrProfile]);
+
+  const handleSaveQrProfile = async () => {
+    setQrSaving(true);
+    try {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const { error } = await supabase.from('profiles').upsert({
+        id: user.id,
+        full_name: qrProfile.full_name,
+        email: qrProfile.email,
+        phone: qrProfile.phone,
+        company: qrProfile.company,
+        title: qrProfile.title,
+        website: qrProfile.website,
+        linkedin: qrProfile.linkedin,
+        instagram: qrProfile.instagram,
+        twitter: qrProfile.twitter,
+        facebook: qrProfile.facebook,
+        qr_fields: qrFields,
+      }, { onConflict: 'id' });
+      if (error) throw error;
+      setShowQrEditor(false);
+      Alert.alert('✅ Opgeslagen', 'Je QR-kaart profiel is bijgewerkt.');
+    } catch (err: any) {
+      Alert.alert('Fout', err?.message ?? 'Kon profiel niet opslaan.');
+    } finally {
+      setQrSaving(false);
+    }
+  };
 
   // ─── Location ──────────────────────────────────────────────────────
   const gpsLocation = useLocation(false); // Don't auto-detect on mount
@@ -448,6 +520,129 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         </View>
+
+        {/* ── Mijn QR-kaart ─────────────────────────────────────────── */}
+        <Text style={styles.sectionLabel}>Mijn QR-kaart</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="qr-code-outline"
+            iconColor={colors.primary}
+            label="Profiel bewerken"
+            value={qrProfile.full_name || 'Vul je gegevens in'}
+            onPress={() => setShowQrEditor(true)}
+          />
+          <View style={styles.separator} />
+          <View style={{ paddingHorizontal: spacing.md, paddingVertical: spacing.sm }}>
+            <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary }}>
+              Deze gegevens worden gedeeld via je QR-code en digitale visitekaart.
+            </Text>
+          </View>
+        </View>
+
+        {/* QR Profile Editor Modal */}
+        <Modal visible={showQrEditor} animationType="slide" presentationStyle="pageSheet">
+          <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 60, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface }}>
+              <TouchableOpacity onPress={() => setShowQrEditor(false)}>
+                <Text style={{ fontSize: fontSize.md, color: colors.textSecondary }}>Annuleren</Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text }}>QR Profiel</Text>
+              <TouchableOpacity onPress={handleSaveQrProfile} disabled={qrSaving}>
+                {qrSaving ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary }}>Opslaan</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.md }}>
+              {/* Contact fields */}
+              <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm }}>Contactgegevens</Text>
+              <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.lg }}>
+                {[
+                  { key: 'full_name', label: 'Volledige naam', placeholder: 'Jan Jansen', icon: 'person-outline' },
+                  { key: 'email', label: 'E-mail', placeholder: 'jan@bedrijf.nl', icon: 'mail-outline' },
+                  { key: 'phone', label: 'Telefoon', placeholder: '+31 6 12345678', icon: 'call-outline' },
+                  { key: 'company', label: 'Bedrijf', placeholder: 'Inclufy', icon: 'business-outline' },
+                  { key: 'title', label: 'Functie', placeholder: 'Marketing Manager', icon: 'briefcase-outline' },
+                  { key: 'website', label: 'Website', placeholder: 'https://inclufy.com', icon: 'globe-outline' },
+                ].map((field, i) => (
+                  <View key={field.key} style={{ marginBottom: i < 5 ? spacing.sm : 0 }}>
+                    <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 4 }}>{field.label}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm }}>
+                      <Ionicons name={field.icon as any} size={16} color={colors.textTertiary} />
+                      <TextInput
+                        style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: fontSize.sm, color: colors.text }}
+                        value={(qrProfile as any)[field.key]}
+                        onChangeText={(v) => setQrProfile(p => ({ ...p, [field.key]: v }))}
+                        placeholder={field.placeholder}
+                        placeholderTextColor={colors.textTertiary}
+                        autoCapitalize={field.key === 'email' || field.key === 'website' ? 'none' : 'words'}
+                        keyboardType={field.key === 'email' ? 'email-address' : field.key === 'phone' ? 'phone-pad' : field.key === 'website' ? 'url' : 'default'}
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Social Media */}
+              <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm }}>Social Media</Text>
+              <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.lg }}>
+                {[
+                  { key: 'linkedin', label: 'LinkedIn', placeholder: 'https://linkedin.com/in/janjansen', icon: 'logo-linkedin', color: '#0077B5' },
+                  { key: 'instagram', label: 'Instagram', placeholder: '@janjansen', icon: 'logo-instagram', color: '#E4405F' },
+                  { key: 'twitter', label: 'X / Twitter', placeholder: '@janjansen', icon: 'logo-twitter', color: '#1DA1F2' },
+                  { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/janjansen', icon: 'logo-facebook', color: '#1877F2' },
+                ].map((field, i) => (
+                  <View key={field.key} style={{ marginBottom: i < 3 ? spacing.sm : 0 }}>
+                    <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 4 }}>{field.label}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm }}>
+                      <Ionicons name={field.icon as any} size={16} color={field.color} />
+                      <TextInput
+                        style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 8, fontSize: fontSize.sm, color: colors.text }}
+                        value={(qrProfile as any)[field.key]}
+                        onChangeText={(v) => setQrProfile(p => ({ ...p, [field.key]: v }))}
+                        placeholder={field.placeholder}
+                        placeholderTextColor={colors.textTertiary}
+                        autoCapitalize="none"
+                      />
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Sharing toggles */}
+              <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm }}>Delen via QR-code</Text>
+              <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.lg, marginBottom: spacing.lg }}>
+                {[
+                  { key: 'share_email', label: 'E-mail' },
+                  { key: 'share_phone', label: 'Telefoon' },
+                  { key: 'share_company', label: 'Bedrijf' },
+                  { key: 'share_title', label: 'Functie' },
+                  { key: 'share_website', label: 'Website' },
+                  { key: 'share_linkedin', label: 'LinkedIn' },
+                  { key: 'share_instagram', label: 'Instagram' },
+                  { key: 'share_twitter', label: 'X / Twitter' },
+                  { key: 'share_facebook', label: 'Facebook' },
+                ].map((toggle, i, arr) => (
+                  <React.Fragment key={toggle.key}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: 12 }}>
+                      <Text style={{ fontSize: fontSize.sm, color: colors.text }}>{toggle.label}</Text>
+                      <Switch
+                        value={qrFields[toggle.key] !== false}
+                        onValueChange={(v) => setQrFields(prev => ({ ...prev, [toggle.key]: v }))}
+                        trackColor={{ false: colors.border, true: colors.primaryLight }}
+                        thumbColor={qrFields[toggle.key] !== false ? colors.primary : colors.textTertiary}
+                      />
+                    </View>
+                    {i < arr.length - 1 && <View style={{ height: 1, backgroundColor: colors.borderLight, marginLeft: spacing.md }} />}
+                  </React.Fragment>
+                ))}
+              </View>
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </Modal>
 
         {/* ── Voorkeuren ────────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>{t.settings.preferences}</Text>
