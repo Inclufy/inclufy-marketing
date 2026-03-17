@@ -104,18 +104,34 @@ export default function NFCShareScreen() {
   const loadMyCard = async () => {
     try {
       const { data: { user } = {} as any } = await supabase.auth.getUser();
-      if (user) {
-        const meta = user.user_metadata ?? {};
-        const lines = [
-          'BEGIN:VCARD', 'VERSION:3.0',
-          `FN:${[meta.first_name, meta.last_name].filter(Boolean).join(' ') || 'Inclufy User'}`,
-        ];
-        if (user.email) lines.push(`EMAIL:${user.email}`);
-        if (meta.phone) lines.push(`TEL:${meta.phone}`);
-        if (meta.company) lines.push(`ORG:${meta.company}`);
-        lines.push('END:VCARD');
-        setMyVCard(lines.join('\n'));
-      }
+      if (!user) return;
+
+      // Load from profiles table (same source as QR card)
+      const { data: p } = await supabase
+        .from('profiles')
+        .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, qr_fields')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      const qf = (p?.qr_fields ?? {}) as Record<string, boolean>;
+      const name = p?.full_name || 'Inclufy User';
+      const lines = ['BEGIN:VCARD', 'VERSION:3.0', `FN:${name}`];
+
+      const nameParts = name.split(' ');
+      lines.push(`N:${nameParts.slice(1).join(' ') || ''};${nameParts[0] || ''};;;`);
+
+      if (qf.share_email !== false && (p?.email || user.email)) lines.push(`EMAIL:${p?.email || user.email}`);
+      if (qf.share_phone !== false && p?.phone) lines.push(`TEL:${p.phone}`);
+      if (qf.share_company !== false && p?.company) lines.push(`ORG:${p.company}`);
+      if (qf.share_title !== false && p?.title) lines.push(`TITLE:${p.title}`);
+      if (qf.share_website !== false && p?.website) lines.push(`URL:${p.website}`);
+      if (qf.share_linkedin !== false && p?.linkedin) lines.push(`URL;type=LinkedIn:${p.linkedin}`);
+      if (qf.share_instagram !== false && p?.instagram) lines.push(`URL;type=Instagram:https://instagram.com/${p.instagram.replace('@', '')}`);
+      if (qf.share_twitter !== false && p?.twitter) lines.push(`URL;type=Twitter:https://x.com/${p.twitter.replace('@', '')}`);
+      if (qf.share_facebook !== false && p?.facebook) lines.push(`URL;type=Facebook:${p.facebook}`);
+
+      lines.push('END:VCARD');
+      setMyVCard(lines.join('\n'));
     } catch {}
   };
 
@@ -152,6 +168,15 @@ export default function NFCShareScreen() {
           const email = get('EMAIL') ?? '';
           const phone = get('TEL') ?? '';
           const org = get('ORG:') ?? '';
+          const title = get('TITLE:') ?? '';
+          const website = get('URL:') ?? '';
+          // Collect social URLs
+          const urlLines = lines.filter(l => l.toUpperCase().startsWith('URL'));
+          const linkedin = urlLines.find(l => l.includes('LinkedIn'))?.split(':').slice(1).join(':').trim() ?? '';
+          const instagram = urlLines.find(l => l.includes('Instagram'))?.split(':').slice(1).join(':').trim() ?? '';
+          const twitter = urlLines.find(l => l.includes('Twitter'))?.split(':').slice(1).join(':').trim() ?? '';
+          const facebook = urlLines.find(l => l.includes('Facebook'))?.split(':').slice(1).join(':').trim() ?? '';
+
           const nameParts = fn.split(' ');
           await createContact.mutateAsync({
             first_name: nameParts[0] || null,
@@ -160,7 +185,16 @@ export default function NFCShareScreen() {
             phone: phone || null,
             source: 'nfc',
             tags: ['nfc-tap'],
-            attributes: { company: org || undefined, captured_via: 'nfc' },
+            attributes: {
+              company: org || undefined,
+              title: title || undefined,
+              website: website || undefined,
+              linkedin: linkedin || undefined,
+              instagram: instagram || undefined,
+              twitter: twitter || undefined,
+              facebook: facebook || undefined,
+              captured_via: 'nfc',
+            },
           });
           setMode('success');
           setTimeout(() => navigation.goBack(), 2500);
