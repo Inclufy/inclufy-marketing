@@ -438,7 +438,51 @@ export default function SettingsScreen() {
     }
   };
 
-  // Connect social media via OAuth (direct URL → Supabase edge function callback)
+  // ── Manual connect state ────────────────────────────────────────────
+  const [showManualConnect, setShowManualConnect] = useState(false);
+  const [manualPlatform, setManualPlatform] = useState('');
+  const [manualAccountName, setManualAccountName] = useState('');
+  const [manualAccountUrl, setManualAccountUrl] = useState('');
+  const [manualConnecting, setManualConnecting] = useState(false);
+
+  const handleManualConnect = async () => {
+    if (!manualAccountName.trim()) {
+      Alert.alert('Vul een accountnaam in');
+      return;
+    }
+    setManualConnecting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
+      const res = await fetch(`${supabaseUrl}/functions/v1/oauth-callback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          platform: manualPlatform,
+          accountName: manualAccountName.trim(),
+          accountUrl: manualAccountUrl.trim() || undefined,
+          accountType: 'manual',
+        }),
+      });
+
+      if (!res.ok) throw new Error('Kon niet verbinden');
+
+      Alert.alert('✅ Verbonden', `${manualAccountName} is gekoppeld.`);
+      setShowManualConnect(false);
+      setManualAccountName('');
+      setManualAccountUrl('');
+      refetchSocial();
+    } catch (err: any) {
+      Alert.alert('Fout', err?.message ?? 'Verbinding mislukt');
+    } finally {
+      setManualConnecting(false);
+    }
+  };
+
+  // Connect social media via OAuth or manual
   const handleConnectSocial = async (platformKey: string) => {
     const pf = SOCIAL_PLATFORMS.find(p => p.key === platformKey);
     const label = pf?.label ?? platformKey;
@@ -448,14 +492,54 @@ export default function SettingsScreen() {
       return;
     }
 
-    const alreadyConnected = (socialAccounts as any[]).some(
+    const connectedAccounts = (socialAccounts as any[]).filter(
       (a: any) => a.platform === platformKey && (a.is_active || a.status === 'active'),
     );
-    if (alreadyConnected) {
-      Alert.alert('Verbonden', `${label} is al verbonden.`);
-      return;
+
+    // Show options: OAuth, manual, or manage if already connected
+    const options: any[] = [];
+
+    if (connectedAccounts.length > 0) {
+      options.push({
+        text: '🔄 Opnieuw verbinden (OAuth)',
+        onPress: () => startOAuth(platformKey, label),
+      });
+      options.push({
+        text: '➕ Extra account toevoegen',
+        onPress: () => {
+          setManualPlatform(platformKey);
+          setShowManualConnect(true);
+        },
+      });
+      options.push({
+        text: '🏢 Bedrijfspagina toevoegen',
+        onPress: () => {
+          setManualPlatform(platformKey);
+          setManualAccountName('');
+          setManualAccountUrl('');
+          setShowManualConnect(true);
+        },
+      });
+    } else {
+      options.push({
+        text: '🔗 Verbinden via OAuth',
+        onPress: () => startOAuth(platformKey, label),
+      });
+      options.push({
+        text: '✏️ Handmatig koppelen',
+        onPress: () => {
+          setManualPlatform(platformKey);
+          setShowManualConnect(true);
+        },
+      });
     }
 
+    options.push({ text: 'Annuleren', style: 'cancel' });
+
+    Alert.alert(`${label} koppelen`, 'Kies hoe je wilt verbinden:', options);
+  };
+
+  const startOAuth = async (platformKey: string, label: string) => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
       Alert.alert('Error', 'Je bent niet ingelogd.');
@@ -479,18 +563,11 @@ export default function SettingsScreen() {
       });
       authUrl = `https://www.linkedin.com/oauth/v2/authorization?${params}`;
     } else if (platformKey === 'facebook' || platformKey === 'instagram') {
-      const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID;
-      if (!metaAppId) {
-        Alert.alert(
-          `${label} koppeling`,
-          `Om ${label} te verbinden heb je een Meta (Facebook) App ID nodig.\n\nGa naar developers.facebook.com om een app aan te maken en voeg EXPO_PUBLIC_META_APP_ID toe aan je .env bestand.`,
-          [{ text: 'Begrepen' }],
-        );
-        return;
-      }
+      const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
+      // Request both personal + page permissions for business page support
       const scope = platformKey === 'instagram'
-        ? 'instagram_basic,instagram_content_publish,pages_show_list'
-        : 'pages_show_list,pages_read_engagement,pages_manage_posts';
+        ? 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement'
+        : 'pages_show_list,pages_read_engagement,pages_manage_posts,public_profile';
       const params = new URLSearchParams({
         client_id: metaAppId,
         redirect_uri: redirectUri,
@@ -500,15 +577,7 @@ export default function SettingsScreen() {
       });
       authUrl = `https://www.facebook.com/v18.0/dialog/oauth?${params}`;
     } else if (platformKey === 'tiktok') {
-      const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY;
-      if (!tiktokClientKey) {
-        Alert.alert(
-          'TikTok koppeling',
-          'Om TikTok te verbinden heb je een TikTok Client Key nodig.\n\nVoeg EXPO_PUBLIC_TIKTOK_CLIENT_KEY toe aan je .env bestand.',
-          [{ text: 'Begrepen' }],
-        );
-        return;
-      }
+      const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
       const params = new URLSearchParams({
         client_key: tiktokClientKey,
         redirect_uri: redirectUri,
@@ -861,52 +930,50 @@ export default function SettingsScreen() {
         <Text style={styles.sectionLabel}>Social Media</Text>
         <View style={styles.card}>
           {SOCIAL_PLATFORMS.map((platform, index) => {
-            const connectedAccount = (socialAccounts as any[]).find(
+            const connectedAccounts = (socialAccounts as any[]).filter(
               (a: any) => a.platform === platform.key && (a.status === 'active' || a.is_active),
             );
-            const isConnected = !!connectedAccount;
+            const isConnected = connectedAccounts.length > 0;
             return (
               <React.Fragment key={platform.key}>
                 {index > 0 && <View style={styles.separator} />}
-                <View style={styles.row}>
+                <TouchableOpacity style={styles.row} onPress={() => handleConnectSocial(platform.key)} activeOpacity={0.7}>
                   <View style={[styles.rowIconWrap, { backgroundColor: platform.color + '18' }]}>
                     <Ionicons name={platform.icon as any} size={20} color={platform.color} />
                   </View>
                   <View style={styles.rowContent}>
                     <Text style={styles.rowLabel}>{platform.label}</Text>
-                    {isConnected && (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+                    {connectedAccounts.map((acc: any, i: number) => (
+                      <View key={acc.id || i} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
                         <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.success }} />
-                        <Text style={{ fontSize: fontSize.xs, color: colors.success }}>
-                          {connectedAccount?.account_name ? `Verbonden als ${connectedAccount.account_name}` : 'Verbonden'}
+                        <Text style={{ fontSize: fontSize.xs, color: colors.success }} numberOfLines={1}>
+                          {acc.account_name || 'Verbonden'}
+                          {acc.account_type === 'page' ? ' 🏢' : acc.account_type === 'business' ? ' 💼' : ''}
                         </Text>
                       </View>
-                    )}
+                    ))}
                     {!platform.supported && !isConnected && (
                       <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 2 }}>Binnenkort</Text>
                     )}
                   </View>
-                  <TouchableOpacity
-                    onPress={() => handleConnectSocial(platform.key)}
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 4,
-                      backgroundColor: isConnected ? colors.success + '12' : colors.error + '12',
-                      paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
-                    }}
-                  >
+                  <View style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    backgroundColor: isConnected ? colors.success + '12' : colors.primary + '12',
+                    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
+                  }}>
                     <Ionicons
                       name={isConnected ? 'checkmark-circle-outline' : 'link-outline'}
                       size={14}
-                      color={isConnected ? colors.success : colors.error}
+                      color={isConnected ? colors.success : colors.primary}
                     />
                     <Text style={{
                       fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-                      color: isConnected ? colors.success : colors.error,
+                      color: isConnected ? colors.success : colors.primary,
                     }}>
-                      {isConnected ? 'Verbonden' : 'Verbinden'}
+                      {isConnected ? `${connectedAccounts.length} verbonden` : 'Verbinden'}
                     </Text>
-                  </TouchableOpacity>
-                </View>
+                  </View>
+                </TouchableOpacity>
               </React.Fragment>
             );
           })}
@@ -921,6 +988,72 @@ export default function SettingsScreen() {
             </View>
           </TouchableOpacity>
         </View>
+
+        {/* Manual Connect Modal */}
+        <Modal visible={showManualConnect} animationType="slide" presentationStyle="pageSheet">
+          <View style={{ flex: 1, backgroundColor: colors.background }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 60, paddingHorizontal: spacing.lg, paddingBottom: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: colors.surface }}>
+              <TouchableOpacity onPress={() => setShowManualConnect(false)}>
+                <Text style={{ fontSize: fontSize.md, color: colors.textSecondary }}>Annuleren</Text>
+              </TouchableOpacity>
+              <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text }}>
+                {SOCIAL_PLATFORMS.find(p => p.key === manualPlatform)?.label || 'Social'} koppelen
+              </Text>
+              <TouchableOpacity onPress={handleManualConnect} disabled={manualConnecting}>
+                {manualConnecting ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.primary }}>Opslaan</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.md }}>
+              <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md, marginBottom: spacing.lg }}>
+                <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
+                  Accountnaam of paginanaam
+                </Text>
+                <View style={{ backgroundColor: colors.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm, marginBottom: spacing.md }}>
+                  <TextInput
+                    style={{ paddingVertical: 12, fontSize: fontSize.sm, color: colors.text }}
+                    value={manualAccountName}
+                    onChangeText={setManualAccountName}
+                    placeholder="bijv. Inclufy of @inclufy"
+                    placeholderTextColor={colors.textTertiary}
+                    autoFocus
+                  />
+                </View>
+
+                <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
+                  Profiel URL (optioneel)
+                </Text>
+                <View style={{ backgroundColor: colors.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm }}>
+                  <TextInput
+                    style={{ paddingVertical: 12, fontSize: fontSize.sm, color: colors.text }}
+                    value={manualAccountUrl}
+                    onChangeText={setManualAccountUrl}
+                    placeholder="https://..."
+                    placeholderTextColor={colors.textTertiary}
+                    autoCapitalize="none"
+                    keyboardType="url"
+                  />
+                </View>
+              </View>
+
+              <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <Ionicons name="information-circle-outline" size={18} color={colors.info} />
+                  <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Handmatige koppeling</Text>
+                </View>
+                <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 }}>
+                  Met handmatig koppelen kun je je account of bedrijfspagina toevoegen zonder OAuth.
+                  Dit is handig voor bedrijfspagina's of accounts die je alleen wilt tracken.
+                  {'\n\n'}
+                  Voor volledige API-toegang (automatisch posten, statistieken) gebruik je de OAuth koppeling via het hoofdmenu.
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </Modal>
 
         {/* ── Demo ──────────────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>{t.settings.demo ?? 'DEMO'}</Text>

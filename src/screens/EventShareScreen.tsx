@@ -77,9 +77,13 @@ export default function EventShareScreen() {
   const [calendarSynced, setCalendarSynced] = useState(false);
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
-  // Registration link (deep link or web URL)
+  // Registration link — uses deep link so scanning opens the app directly
+  // Falls back to web URL for users who don't have the app
   const registrationUrl = event
-    ? `https://app.inclufy.io/events/${event.id}/register`
+    ? `inclufy-go://event/${event.id}/register`
+    : '';
+  const webRegistrationUrl = event
+    ? `https://app.inclufy.nl/events/${event.id}/register`
     : '';
 
   // ─── Share event ──────────────────────────────────────────────
