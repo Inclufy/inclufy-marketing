@@ -6,6 +6,7 @@ import {
   FlatList,
   Image,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -73,15 +74,18 @@ export default function EventDashboardScreen() {
     statValue: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: c.text },
     statLabel: { fontSize: fontSize.xs, color: c.textSecondary, marginTop: 2 },
     quickActions: {
+      paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.md,
+    },
+    quickActionsRow: {
       flexDirection: 'row' as const,
       gap: spacing.sm,
-      padding: spacing.md,
-      paddingBottom: 0,
     },
     quickActionBtn: {
-      flex: 1,
+      width: 72,
       alignItems: 'center' as const,
       paddingVertical: spacing.sm,
+      paddingHorizontal: 4,
       borderRadius: borderRadius.md,
       borderWidth: 1,
       borderColor: c.border,
@@ -89,9 +93,10 @@ export default function EventDashboardScreen() {
       gap: 2,
     },
     quickActionLabel: {
-      fontSize: fontSize.xs,
+      fontSize: 10,
       fontWeight: fontWeight.medium,
       color: c.textSecondary,
+      textAlign: 'center' as const,
     },
     sectionTitle: {
       fontSize: fontSize.md,
@@ -257,7 +262,7 @@ export default function EventDashboardScreen() {
             {capturePosts.map((p) => (
               <View key={p.id} style={styles.postStatusDot}>
                 <Text style={{ fontSize: 10, color: colors.textSecondary }}>
-                  {p.channel === 'linkedin' ? 'LI' : p.channel === 'instagram' ? 'IG' : p.channel === 'x' ? 'X' : 'FB'}
+                  {p.channel === 'linkedin' ? 'LI' : p.channel === 'instagram' ? 'IG' : p.channel === 'x' ? 'X' : p.channel === 'tiktok' ? 'TT' : 'FB'}
                 </Text>
                 <View
                   style={[
@@ -354,55 +359,57 @@ export default function EventDashboardScreen() {
 
       {/* Quick Actions */}
       <View style={styles.quickActions}>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('StoryArc', { eventId })}
-        >
-          <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickActionLabel}>{t.eventDashboard.storyArc}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('EventRecap', { eventId })}
-        >
-          <Ionicons name="document-text-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickActionLabel}>{t.eventDashboard.recap}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('TeamManage', { eventId })}
-        >
-          <Ionicons name="people-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickActionLabel}>{t.eventDashboard.team}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('LiveCapture', { eventId })}
-        >
-          <Ionicons name="camera-outline" size={20} color={colors.primary} />
-          <Text style={styles.quickActionLabel}>{t.eventDashboard.capture}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('EventScanner', { eventId })}
-        >
-          <Ionicons name="scan-outline" size={20} color={colors.success} />
-          <Text style={[styles.quickActionLabel, { color: colors.success }]}>Scan</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('EventAttendees', { eventId })}
-        >
-          <Ionicons name="person-add-outline" size={20} color={colors.info} />
-          <Text style={[styles.quickActionLabel, { color: colors.info }]}>{t.eventDashboard.attendees ?? 'Deelnemers'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={() => navigation.navigate('EventShare', { eventId })}
-        >
-          <Ionicons name="share-social-outline" size={20} color={colors.secondary} />
-          <Text style={[styles.quickActionLabel, { color: colors.secondary }]}>{t.eventDashboard.sharePublish ?? 'Delen'}</Text>
-        </TouchableOpacity>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('StoryArc', { eventId })}
+          >
+            <Ionicons name="git-branch-outline" size={20} color={colors.primary} />
+            <Text style={styles.quickActionLabel} numberOfLines={1}>Story</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('EventRecap', { eventId })}
+          >
+            <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+            <Text style={styles.quickActionLabel} numberOfLines={1}>Recap</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('TeamManage', { eventId })}
+          >
+            <Ionicons name="people-outline" size={20} color={colors.primary} />
+            <Text style={styles.quickActionLabel} numberOfLines={1}>Team</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('LiveCapture', { eventId })}
+          >
+            <Ionicons name="camera-outline" size={20} color={colors.primary} />
+            <Text style={styles.quickActionLabel} numberOfLines={1}>Foto</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('EventScanner', { eventId })}
+          >
+            <Ionicons name="scan-outline" size={20} color={colors.success} />
+            <Text style={[styles.quickActionLabel, { color: colors.success }]} numberOfLines={1}>Scan</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('EventAttendees', { eventId })}
+          >
+            <Ionicons name="person-add-outline" size={20} color={colors.info} />
+            <Text style={[styles.quickActionLabel, { color: colors.info }]} numberOfLines={1}>Gasten</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickActionBtn}
+            onPress={() => navigation.navigate('EventShare', { eventId })}
+          >
+            <Ionicons name="share-social-outline" size={20} color={colors.secondary} />
+            <Text style={[styles.quickActionLabel, { color: colors.secondary }]} numberOfLines={1}>Delen</Text>
+          </TouchableOpacity>
+        </ScrollView>
       </View>
 
       {/* Timeline */}

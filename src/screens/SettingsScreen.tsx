@@ -34,7 +34,7 @@ const SOCIAL_PLATFORMS = [
   { key: 'instagram', label: 'Instagram',   icon: 'logo-instagram' as keyof typeof Ionicons.glyphMap, color: '#E4405F', supported: true },
   { key: 'x',         label: 'X / Twitter', icon: 'logo-twitter'   as keyof typeof Ionicons.glyphMap, color: '#1DA1F2', supported: false },
   { key: 'facebook',  label: 'Facebook',    icon: 'logo-facebook'  as keyof typeof Ionicons.glyphMap, color: '#1877F2', supported: true },
-  { key: 'tiktok',    label: 'TikTok',      icon: 'musical-notes'  as keyof typeof Ionicons.glyphMap, color: '#000000', supported: false },
+  { key: 'tiktok',    label: 'TikTok',      icon: 'musical-notes'  as keyof typeof Ionicons.glyphMap, color: '#000000', supported: true },
   { key: 'snapchat',  label: 'Snapchat',    icon: 'eye-outline'    as keyof typeof Ionicons.glyphMap, color: '#FFFC00', supported: false },
 ] as const;
 
@@ -98,8 +98,8 @@ export default function SettingsScreen() {
     try {
       const { data: { user } = {} as any } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
-      const { error } = await supabase.from('profiles').upsert({
-        id: user.id,
+
+      const profileData = {
         full_name: qrProfile.full_name,
         email: qrProfile.email,
         phone: qrProfile.phone,
@@ -112,7 +112,29 @@ export default function SettingsScreen() {
         facebook: qrProfile.facebook,
         whatsapp: qrProfile.whatsapp,
         qr_fields: qrFields,
-      }, { onConflict: 'id' });
+      };
+
+      // Try update first (existing profile row)
+      const { data: existing } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      let error;
+      if (existing) {
+        // Update existing row
+        ({ error } = await supabase
+          .from('profiles')
+          .update(profileData)
+          .eq('id', user.id));
+      } else {
+        // Insert new row
+        ({ error } = await supabase
+          .from('profiles')
+          .insert({ id: user.id, ...profileData }));
+      }
+
       if (error) throw error;
       setShowQrEditor(false);
       Alert.alert('✅ Opgeslagen', 'Je QR-kaart profiel is bijgewerkt.');
@@ -477,6 +499,24 @@ export default function SettingsScreen() {
         state,
       });
       authUrl = `https://www.facebook.com/v18.0/dialog/oauth?${params}`;
+    } else if (platformKey === 'tiktok') {
+      const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY;
+      if (!tiktokClientKey) {
+        Alert.alert(
+          'TikTok koppeling',
+          'Om TikTok te verbinden heb je een TikTok Client Key nodig.\n\nVoeg EXPO_PUBLIC_TIKTOK_CLIENT_KEY toe aan je .env bestand.',
+          [{ text: 'Begrepen' }],
+        );
+        return;
+      }
+      const params = new URLSearchParams({
+        client_key: tiktokClientKey,
+        redirect_uri: redirectUri,
+        scope: 'user.info.basic,video.publish,video.list',
+        response_type: 'code',
+        state,
+      });
+      authUrl = `https://www.tiktok.com/v2/auth/authorize/?${params}`;
     }
 
     if (authUrl) {

@@ -40,6 +40,7 @@ const channelConfig: Record<Channel, { label: string; color: string; icon: strin
   instagram: { label: 'Instagram', color: '#E4405F', icon: 'logo-instagram' },
   x: { label: 'X', color: '#000000', icon: 'logo-twitter' },
   facebook: { label: 'Facebook', color: '#1877F2', icon: 'logo-facebook' },
+  tiktok: { label: 'TikTok', color: '#000000', icon: 'logo-tiktok' },
 };
 
 export default function PostReviewScreen() {

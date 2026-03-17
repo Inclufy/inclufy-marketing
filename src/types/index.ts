@@ -22,7 +22,7 @@ export interface Event {
 }
 
 export type EventStatus = 'upcoming' | 'active' | 'completed' | 'archived';
-export type Channel = 'linkedin' | 'instagram' | 'x' | 'facebook';
+export type Channel = 'linkedin' | 'instagram' | 'x' | 'facebook' | 'tiktok';
 export type MediaType = 'photo' | 'video' | 'audio' | 'quote';
 export type AIStatus = 'pending' | 'processing' | 'completed' | 'error';
 export type PostStatus = 'draft' | 'approved' | 'scheduled' | 'published' | 'failed' | 'in_review';

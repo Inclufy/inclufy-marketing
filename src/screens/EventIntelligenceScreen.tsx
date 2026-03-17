@@ -637,12 +637,12 @@ export default function EventIntelligenceScreen() {
 
   const LAYER_CHIPS = [
     { key: 'all', label: 'Alle' },
-    { key: 'city', label: '🏙️ Stad' },
-    { key: 'province', label: '🗺️ Provincie' },
-    { key: 'national', label: '🇳🇱 Landelijk' },
+    { key: 'city', label: '🏙️ Lokaal' },
+    { key: 'province', label: '🗺️ Regio' },
+    { key: 'national', label: '🇳🇱 NL' },
     { key: 'benelux', label: '🇧🇪 Benelux' },
-    { key: 'europe', label: '🇪🇺 Europa' },
-    { key: 'global', label: '🌍 Globaal' },
+    { key: 'europe', label: '🇪🇺 EU' },
+    { key: 'global', label: '🌍 Wereld' },
   ];
 
   // ── Header ────────────────────────────────────────────────────────────────
@@ -694,8 +694,8 @@ export default function EventIntelligenceScreen() {
             {scanning
               ? <ActivityIndicator size="small" color="#fff" />
               : <MaterialCommunityIcons name="radar" size={18} color="#fff" />}
-            <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.sm }}>
-              {scanning ? 'Scannen...' : 'Scan Hiërarchisch'}
+            <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.sm }} numberOfLines={1}>
+              {scanning ? 'Scannen...' : 'Scannen'}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

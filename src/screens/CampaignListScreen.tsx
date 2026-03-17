@@ -335,6 +335,7 @@ export default function CampaignListScreen() {
               linkedin: { icon: 'logo-linkedin', color: '#0077B5' },
               facebook: { icon: 'logo-facebook', color: '#1877F2' },
               instagram: { icon: 'logo-instagram', color: '#E4405F' },
+              tiktok: { icon: 'musical-notes', color: '#000000' },
             };
             if (!channels) return null;
             return channels.map(ch => {

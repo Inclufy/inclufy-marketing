@@ -45,7 +45,7 @@ const SUGGESTED_ORGANIZERS = [
   // Nederland
   { name: 'ROC', category: 'education', website: 'https://roc.nl', description: 'Regionaal Opleidingen Centrum — digitale vaardigheden en marketing' },
   { name: 'Innovaly', category: 'innovation', website: 'https://innovaly.nl', description: 'Innovatie hub met focus op digitale transformatie' },
-  { name: 'ICT Tribe', category: 'tech', website: 'https://icttribe.nl', description: 'ICT-community voor professionals en ondernemers' },
+  { name: 'KVK (Kamer van Koophandel)', category: 'networking', website: 'https://kvk.nl', description: 'Ondernemersplatform — events, netwerken en bedrijfsinformatie' },
   { name: 'Startup Almere', category: 'startup', website: 'https://startupalmere.nl', description: 'Startup ecosysteem Almere — pitch events en netwerkbijeenkomsten' },
   { name: 'RVO (Rijksdienst voor Ondernemend Nederland)', category: 'innovation', website: 'https://rvo.nl', description: 'Overheidsorganisatie — subsidies, innovatieprogramma\'s, handelsmissies' },
   { name: 'Dutch Digital Agencies', category: 'marketing', website: 'https://dutchdigitalagencies.com', description: 'Branchevereniging voor digitale bureaus in Nederland' },
@@ -297,7 +297,7 @@ export default function FollowedOrganizersScreen() {
             Nog geen organisatoren
           </Text>
           <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center' }}>
-            Volg organisatoren zoals ROC, Innovaly of ICT Tribe om hun events automatisch te ontdekken
+            Volg organisatoren zoals ROC, Innovaly of RVO om hun events automatisch te ontdekken
           </Text>
           <TouchableOpacity
             style={{
@@ -343,7 +343,7 @@ export default function FollowedOrganizersScreen() {
               }}
               value={newName}
               onChangeText={setNewName}
-              placeholder="bijv. ICT Tribe"
+              placeholder="bijv. RVO"
               placeholderTextColor={colors.textTertiary}
             />
 

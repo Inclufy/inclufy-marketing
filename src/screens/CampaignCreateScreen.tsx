@@ -46,6 +46,7 @@ const CHANNEL_PLATFORMS = [
   { key: 'linkedin', icon: 'logo-linkedin', label: 'LinkedIn', color: '#0077B5' },
   { key: 'facebook', icon: 'logo-facebook', label: 'Facebook', color: '#1877F2' },
   { key: 'instagram', icon: 'logo-instagram', label: 'Instagram', color: '#E4405F' },
+  { key: 'tiktok', icon: 'musical-notes', label: 'TikTok', color: '#000000' },
   { key: 'email', icon: 'mail-outline', label: 'E-mail', color: '#6366F1' },
   { key: 'sms', icon: 'chatbubble-outline', label: 'SMS', color: '#059669' },
 ];
