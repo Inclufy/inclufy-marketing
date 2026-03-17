@@ -87,14 +87,24 @@ const SCAN_LAYERS: ScanLayer[] = [
 
 // ── Filter chip config ───────────────────────────────────────────────────
 const LAYER_CHIPS = [
-  { key: 'all',      label: 'Alle',    emoji: '' },
-  { key: 'city',     label: 'Stad',    emoji: '🏙️' },
-  { key: 'province', label: 'Regio',   emoji: '🗺️' },
-  { key: 'national', label: 'NL',      emoji: '🇳🇱' },
-  { key: 'benelux',  label: 'Benelux', emoji: '🇧🇪' },
-  { key: 'europe',   label: 'EU',      emoji: '🇪🇺' },
-  { key: 'global',   label: 'Wereld',  emoji: '🌍' },
-  { key: 'organizer',label: 'Organisator', emoji: '⭐' },
+  { key: 'all',       label: 'Alle',        emoji: '' },
+  { key: 'organizer', label: 'Organisator', emoji: '⭐' },
+  { key: 'city',      label: 'Stad',        emoji: '🏙️' },
+  { key: 'province',  label: 'Regio',       emoji: '📍' },
+  { key: 'national',  label: 'NL',          emoji: '🇳🇱' },
+  { key: 'benelux',   label: 'Benelux',     emoji: '🇧🇪' },
+  { key: 'europe',    label: 'EU',          emoji: '🇪🇺' },
+  { key: 'global',    label: 'Wereld',      emoji: '🌍' },
+];
+
+// ── Time filter chips ────────────────────────────────────────────────────
+const TIME_CHIPS = [
+  { key: 'all_time', label: 'Alles',   emoji: '📅', months: 0 },
+  { key: '1m',       label: '1 mnd',   emoji: '⏳', months: 1 },
+  { key: '2m',       label: '2 mnd',   emoji: '⏳', months: 2 },
+  { key: '3m',       label: '3 mnd',   emoji: '⏳', months: 3 },
+  { key: '6m',       label: '6 mnd',   emoji: '📆', months: 6 },
+  { key: '1y',       label: '1 jaar',  emoji: '🗓️', months: 12 },
 ];
 
 // ── Seed events per layer ─────────────────────────────────────────────
@@ -344,6 +354,7 @@ export default function EventIntelligenceScreen() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [attendingId, setAttendingId] = useState<string | null>(null);
   const [activeLayer, setActiveLayer] = useState<string>('all');
+  const [activeTimeFilter, setActiveTimeFilter] = useState<string>('all_time');
   const autoSeeded = useRef(false);
 
   // ── Load user location ──────────────────────────────────────────────────
@@ -418,7 +429,56 @@ export default function EventIntelligenceScreen() {
       let totalFound = 0;
       const layerResults: string[] = [];
 
-      // Scan each geographic layer
+      // ── 1. Fetch events from followed organizers FIRST ────────────────
+      setScanProgress('⭐ Organisatoren scannen...');
+      try {
+        const { data: orgs } = await supabase
+          .from('followed_organizers')
+          .select('id, organizer_name')
+          .eq('user_id', user.id);
+
+        if (orgs && orgs.length > 0) {
+          let orgEventsFound = 0;
+
+          for (const org of orgs) {
+            try {
+              const resp = await api.post('/api/events/discover', {
+                radius_km: 99999,
+                query: `${org.organizer_name} event 2026`,
+                limit: 3,
+                source: 'followed_organizer',
+              });
+              orgEventsFound += resp.data?.discovered ?? 0;
+            } catch {
+              const orgName = org.organizer_name?.trim() || '';
+              const matchingKey = Object.keys(ORGANIZER_EVENTS).find(k =>
+                orgName.toLowerCase().includes(k.toLowerCase()) ||
+                k.toLowerCase().includes(orgName.toLowerCase().split(' ')[0])
+              );
+
+              if (matchingKey) {
+                const seeds = ORGANIZER_EVENTS[matchingKey];
+                for (const ev of seeds) {
+                  await supabase
+                    .from('discovered_events')
+                    .upsert(
+                      { ...ev, user_id: user.id, scan_layer: 'organizer', organizer_id: org.id },
+                      { onConflict: 'user_id,name', ignoreDuplicates: true }
+                    );
+                }
+                orgEventsFound += seeds.length;
+              }
+            }
+          }
+
+          if (orgEventsFound > 0) {
+            totalFound += orgEventsFound;
+            layerResults.push(`Organisatoren: ${orgEventsFound}`);
+          }
+        }
+      } catch {}
+
+      // ── 2. Scan each geographic layer (stad → provincie → … → global) ──
       for (const layer of SCAN_LAYERS) {
         setScanProgress(`🔍 ${layer.label} scannen...`);
 
@@ -457,58 +517,6 @@ export default function EventIntelligenceScreen() {
         }
       }
 
-      // ── Fetch events from followed organizers ───────────────────────
-      setScanProgress('⭐ Organisatoren scannen...');
-      try {
-        const { data: orgs } = await supabase
-          .from('followed_organizers')
-          .select('id, organizer_name')
-          .eq('user_id', user.id);
-
-        if (orgs && orgs.length > 0) {
-          let orgEventsFound = 0;
-
-          for (const org of orgs) {
-            // First try backend API
-            try {
-              const resp = await api.post('/api/events/discover', {
-                radius_km: 99999,
-                query: `${org.organizer_name} event 2026`,
-                limit: 3,
-                source: 'followed_organizer',
-              });
-              orgEventsFound += resp.data?.discovered ?? 0;
-            } catch {
-              // Backend not running — use curated organizer events
-              const orgName = org.organizer_name?.trim() || '';
-              // Find matching organizer events by checking name prefixes
-              const matchingKey = Object.keys(ORGANIZER_EVENTS).find(k =>
-                orgName.toLowerCase().includes(k.toLowerCase()) ||
-                k.toLowerCase().includes(orgName.toLowerCase().split(' ')[0])
-              );
-
-              if (matchingKey) {
-                const seeds = ORGANIZER_EVENTS[matchingKey];
-                for (const ev of seeds) {
-                  await supabase
-                    .from('discovered_events')
-                    .upsert(
-                      { ...ev, user_id: user.id, scan_layer: 'organizer', organizer_id: org.id },
-                      { onConflict: 'user_id,name', ignoreDuplicates: true }
-                    );
-                }
-                orgEventsFound += seeds.length;
-              }
-            }
-          }
-
-          if (orgEventsFound > 0) {
-            totalFound += orgEventsFound;
-            layerResults.push(`Organisatoren: ${orgEventsFound}`);
-          }
-        }
-      } catch {}
-
       await refetch();
       setScanProgress('');
 
@@ -536,11 +544,25 @@ export default function EventIntelligenceScreen() {
   }, [isLoading, events.length]);
 
   // ── Filter by layer ─────────────────────────────────────────────────────
-  const filteredEvents = activeLayer === 'all'
+  const layerFiltered = activeLayer === 'all'
     ? events
     : events.filter(e => {
         const tags = e.tags ?? [];
         return tags.includes(activeLayer) || (e as any).scan_layer === activeLayer;
+      });
+
+  // ── Filter by time horizon ────────────────────────────────────────────
+  const filteredEvents = activeTimeFilter === 'all_time'
+    ? layerFiltered
+    : layerFiltered.filter(e => {
+        if (!e.date_start) return false;
+        const eventDate = new Date(e.date_start);
+        const now = new Date();
+        const chip = TIME_CHIPS.find(c => c.key === activeTimeFilter);
+        if (!chip?.months) return true;
+        const cutoff = new Date();
+        cutoff.setMonth(cutoff.getMonth() + chip.months);
+        return eventDate >= now && eventDate <= cutoff;
       });
 
   // ── Attend / register for event (directly via Supabase) ─────────────────
@@ -836,12 +858,12 @@ export default function EventIntelligenceScreen() {
         ) : null}
       </View>
 
-      {/* Filter chips - scrollable row */}
+      {/* Filter chips - geo layer row */}
       {events.length > 0 && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={{ flexGrow: 0, maxHeight: 52, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}
+          style={{ flexGrow: 0, maxHeight: 52, backgroundColor: colors.surface, borderBottomWidth: 0, borderBottomColor: colors.border }}
           contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingVertical: 8, gap: 8, alignItems: 'center' }}
         >
           {LAYER_CHIPS.map(c => {
@@ -863,6 +885,42 @@ export default function EventIntelligenceScreen() {
                   fontSize: 13,
                   fontWeight: fontWeight.semibold,
                   color: isActive ? '#fff' : colors.text,
+                }}>
+                  {c.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
+
+      {/* Filter chips - time horizon row */}
+      {events.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={{ flexGrow: 0, maxHeight: 44, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}
+          contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingVertical: 6, gap: 6, alignItems: 'center' }}
+        >
+          {TIME_CHIPS.map(c => {
+            const isActive = activeTimeFilter === c.key;
+            return (
+              <TouchableOpacity
+                key={c.key}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: 3,
+                  paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
+                  backgroundColor: isActive ? colors.primary + '20' : 'transparent',
+                  borderWidth: 1,
+                  borderColor: isActive ? colors.primary : colors.border + '80',
+                }}
+                onPress={() => setActiveTimeFilter(c.key)}
+              >
+                <Text style={{ fontSize: 12 }}>{c.emoji}</Text>
+                <Text style={{
+                  fontSize: 12,
+                  fontWeight: isActive ? fontWeight.bold : fontWeight.medium,
+                  color: isActive ? colors.primary : colors.textSecondary,
                 }}>
                   {c.label}
                 </Text>
