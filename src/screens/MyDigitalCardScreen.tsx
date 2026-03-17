@@ -30,6 +30,7 @@ interface UserProfile {
   instagram?: string;
   twitter?: string;
   facebook?: string;
+  whatsapp?: string;
 }
 
 function buildVCard(profile: UserProfile): string {
@@ -48,6 +49,7 @@ function buildVCard(profile: UserProfile): string {
   if (profile.instagram) lines.push(`URL;type=Instagram:https://instagram.com/${profile.instagram.replace('@', '')}`);
   if (profile.twitter) lines.push(`URL;type=Twitter:https://x.com/${profile.twitter.replace('@', '')}`);
   if (profile.facebook) lines.push(`URL;type=Facebook:${profile.facebook}`);
+  if (profile.whatsapp) lines.push(`TEL;type=WhatsApp:${profile.whatsapp}`);
   lines.push('END:VCARD');
   return lines.join('\n');
 }
@@ -70,7 +72,7 @@ export default function MyDigitalCardScreen() {
         // Try to load from profiles table first (contains user-editable QR card data)
         const { data: dbProfile } = await supabase
           .from('profiles')
-          .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, qr_fields')
+          .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, whatsapp, qr_fields')
           .eq('id', user.id)
           .maybeSingle();
 
@@ -89,6 +91,7 @@ export default function MyDigitalCardScreen() {
             instagram: qrFields.share_instagram !== false ? (dbProfile.instagram ?? '') : '',
             twitter: qrFields.share_twitter !== false ? (dbProfile.twitter ?? '') : '',
             facebook: qrFields.share_facebook !== false ? (dbProfile.facebook ?? '') : '',
+            whatsapp: qrFields.share_whatsapp !== false ? (dbProfile.whatsapp ?? '') : '',
           });
         } else {
           // Fallback to auth user_metadata
@@ -199,7 +202,7 @@ export default function MyDigitalCardScreen() {
           ) : null}
 
           {/* Social Media Links */}
-          {(profile.linkedin || profile.instagram || profile.twitter || profile.facebook) ? (
+          {(profile.linkedin || profile.instagram || profile.twitter || profile.facebook || profile.whatsapp) ? (
             <View style={styles.socialRow}>
               {profile.linkedin ? (
                 <View style={[styles.socialBadge, { backgroundColor: '#0077B520' }]}>
@@ -219,6 +222,11 @@ export default function MyDigitalCardScreen() {
               {profile.facebook ? (
                 <View style={[styles.socialBadge, { backgroundColor: '#1877F220' }]}>
                   <Ionicons name="logo-facebook" size={16} color="#1877F2" />
+                </View>
+              ) : null}
+              {profile.whatsapp ? (
+                <View style={[styles.socialBadge, { backgroundColor: '#25D36620' }]}>
+                  <Ionicons name="logo-whatsapp" size={16} color="#25D366" />
                 </View>
               ) : null}
             </View>

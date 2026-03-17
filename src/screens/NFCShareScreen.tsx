@@ -109,7 +109,7 @@ export default function NFCShareScreen() {
       // Load from profiles table (same source as QR card)
       const { data: p } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, qr_fields')
+        .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, whatsapp, qr_fields')
         .eq('id', user.id)
         .maybeSingle();
 
@@ -129,6 +129,7 @@ export default function NFCShareScreen() {
       if (qf.share_instagram !== false && p?.instagram) lines.push(`URL;type=Instagram:https://instagram.com/${p.instagram.replace('@', '')}`);
       if (qf.share_twitter !== false && p?.twitter) lines.push(`URL;type=Twitter:https://x.com/${p.twitter.replace('@', '')}`);
       if (qf.share_facebook !== false && p?.facebook) lines.push(`URL;type=Facebook:${p.facebook}`);
+      if (qf.share_whatsapp !== false && p?.whatsapp) lines.push(`TEL;type=WhatsApp:${p.whatsapp}`);
 
       lines.push('END:VCARD');
       setMyVCard(lines.join('\n'));

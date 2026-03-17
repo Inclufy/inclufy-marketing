@@ -55,12 +55,12 @@ export default function SettingsScreen() {
   // ─── QR Card Profile ──────────────────────────────────────────────
   const [qrProfile, setQrProfile] = useState({
     full_name: '', email: '', phone: '', company: '', title: '', website: '',
-    linkedin: '', instagram: '', twitter: '', facebook: '',
+    linkedin: '', instagram: '', twitter: '', facebook: '', whatsapp: '',
   });
   const [qrFields, setQrFields] = useState<Record<string, boolean>>({
     share_email: true, share_phone: true, share_company: true, share_title: true,
     share_website: true, share_linkedin: true, share_instagram: true,
-    share_twitter: true, share_facebook: true,
+    share_twitter: true, share_facebook: true, share_whatsapp: true,
   });
   const [showQrEditor, setShowQrEditor] = useState(false);
   const [qrSaving, setQrSaving] = useState(false);
@@ -71,7 +71,7 @@ export default function SettingsScreen() {
       if (!user) return;
       const { data: p } = await supabase
         .from('profiles')
-        .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, qr_fields')
+        .select('full_name, email, phone, company, title, website, linkedin, instagram, twitter, facebook, whatsapp, qr_fields')
         .eq('id', user.id)
         .maybeSingle();
       if (p) {
@@ -79,7 +79,7 @@ export default function SettingsScreen() {
           full_name: p.full_name ?? '', email: p.email ?? user.email ?? '',
           phone: p.phone ?? '', company: p.company ?? '', title: p.title ?? '',
           website: p.website ?? '', linkedin: p.linkedin ?? '', instagram: p.instagram ?? '',
-          twitter: p.twitter ?? '', facebook: p.facebook ?? '',
+          twitter: p.twitter ?? '', facebook: p.facebook ?? '', whatsapp: p.whatsapp ?? '',
         });
         if (p.qr_fields && typeof p.qr_fields === 'object') {
           setQrFields(prev => ({ ...prev, ...(p.qr_fields as Record<string, boolean>) }));
@@ -110,6 +110,7 @@ export default function SettingsScreen() {
         instagram: qrProfile.instagram,
         twitter: qrProfile.twitter,
         facebook: qrProfile.facebook,
+        whatsapp: qrProfile.whatsapp,
         qr_fields: qrFields,
       }, { onConflict: 'id' });
       if (error) throw error;
@@ -593,8 +594,9 @@ export default function SettingsScreen() {
                   { key: 'instagram', label: 'Instagram', placeholder: '@janjansen', icon: 'logo-instagram', color: '#E4405F' },
                   { key: 'twitter', label: 'X / Twitter', placeholder: '@janjansen', icon: 'logo-twitter', color: '#1DA1F2' },
                   { key: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/janjansen', icon: 'logo-facebook', color: '#1877F2' },
+                  { key: 'whatsapp', label: 'WhatsApp', placeholder: '+31 6 12345678', icon: 'logo-whatsapp', color: '#25D366' },
                 ].map((field, i) => (
-                  <View key={field.key} style={{ marginBottom: i < 3 ? spacing.sm : 0 }}>
+                  <View key={field.key} style={{ marginBottom: i < 4 ? spacing.sm : 0 }}>
                     <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 4 }}>{field.label}</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.background, borderRadius: borderRadius.sm, borderWidth: 1, borderColor: colors.border, paddingHorizontal: spacing.sm }}>
                       <Ionicons name={field.icon as any} size={16} color={field.color} />
@@ -624,6 +626,7 @@ export default function SettingsScreen() {
                   { key: 'share_instagram', label: 'Instagram' },
                   { key: 'share_twitter', label: 'X / Twitter' },
                   { key: 'share_facebook', label: 'Facebook' },
+                  { key: 'share_whatsapp', label: 'WhatsApp' },
                 ].map((toggle, i, arr) => (
                   <React.Fragment key={toggle.key}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.md, paddingVertical: 12 }}>
