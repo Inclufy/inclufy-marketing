@@ -1,0 +1,239 @@
+# backend/routers/growth_blueprint.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
+from datetime import datetime
+from supabase import Client
+from pydantic import BaseModel
+
+from dependencies import get_current_user, get_supabase_client
+
+router = APIRouter(prefix="/api/growth-blueprint", tags=["Growth Blueprint"])
+
+class BlueprintScanInput(BaseModel):
+    company_name: str
+    website_url: Optional[str] = None
+    industry: Optional[str] = None
+
+@router.get("/")
+def list_blueprints(
+    current_user: dict = Depends(get_current_user),
+    db: Client = Depends(get_supabase_client)
+):
+    try:
+        result = db.table("growth_blueprints")\
+            .select("*")\
+            .eq("user_id", current_user["id"])\
+            .order("created_at", desc=True)\
+            .execute()
+        return result.data
+    except Exception as e:
+        print(f"Error listing: {e}")
+        return []
+
+@router.post("/", status_code=status.HTTP_201_CREATED)
+def create_blueprint(
+    scan_input: BlueprintScanInput,
+    current_user: dict = Depends(get_current_user),
+    db: Client = Depends(get_supabase_client)
+):
+    print(f"🔵 Received request: {scan_input.company_name}")
+    
+    try:
+        blueprint_data = {
+            "user_id": current_user["id"],
+            "company_name": scan_input.company_name,
+            "website_url": scan_input.website_url,
+            "industry": scan_input.industry,
+            "status": "scanning",
+            "scan_progress": 25,
+            "scan_started_at": datetime.utcnow().isoformat(),
+        }
+        
+        result = db.table("growth_blueprints").insert(blueprint_data).execute()
+        blueprint = result.data[0]
+        print(f"✅ Blueprint created: {blueprint['id']}")
+        
+        import threading
+        def complete_scan():
+            try:
+                import time
+                time.sleep(2)
+                
+                print(f"📊 Updating to 50%...")
+                db.table("growth_blueprints").update({
+                    "scan_progress": 50,
+                    "status": "analyzing"
+                }).eq("id", blueprint['id']).execute()
+                
+                time.sleep(2)
+                
+                print(f"📊 Inserting status quo...")
+                status_quo_data = {
+                    "blueprint_id": blueprint['id'],
+                    "company_name": scan_input.company_name,
+                    "industry": scan_input.industry or "Technology",
+                    "website_score": 65,
+                    "seo_score": 45,
+                    "content_score": 78,
+                    "social_score": 82,
+                    "brand_consistency_score": 70,
+                    "market_position": 47,
+                    "market_position_percentile": 53,
+                    "strengths": ["Sterke social media (82/100)", "Goede content (78/100)"],
+                    "weaknesses": ["SEO needs work (45/100)", "Website optimization"],
+                    "current_limitations": ["No automation", "Manual processes"],
+                    "growth_accelerators": ["Content marketing", "SEO program"]
+                }
+                db.table("blueprint_status_quo").insert(status_quo_data).execute()
+                print(f"✅ Status quo done")
+                
+                print(f"📊 Inserting vision...")
+                vision_data = {
+                    "blueprint_id": blueprint['id'],
+                    "stated_mission": "AI democratiseren voor MKB",
+                    "extracted_vision": "Toonaangevende AI platform worden",
+                    "ambition_risk_score": 65,
+                    "reality_alignment_score": 72
+                }
+                db.table("blueprint_vision").insert(vision_data).execute()
+                print(f"✅ Vision done")
+                
+                print(f"📊 Inserting recommendations...")
+                recommendations = [
+                    {
+                        "blueprint_id": blueprint['id'],
+                        "priority": "critical",
+                        "category": "SEO",
+                        "title": "SEO Optimalisatie",
+                        "description": "Verbeter SEO score van 45 naar 70+",
+                        "impact_score": 10,
+                        "effort_score": 5,
+                        "estimated_timeline_days": 60
+                    },
+                    {
+                        "blueprint_id": blueprint['id'],
+                        "priority": "high",
+                        "category": "Content",
+                        "title": "Content Strategie",
+                        "description": "Start wekelijkse blog posts",
+                        "impact_score": 8,
+                        "effort_score": 6,
+                        "estimated_timeline_days": 90
+                    }
+                ]
+                for rec in recommendations:
+                    db.table("blueprint_recommendations").insert(rec).execute()
+                print(f"✅ Recommendations done")
+                
+                print(f"📊 Inserting opportunities...")
+                opportunities = [
+                    {
+                        "blueprint_id": blueprint['id'],
+                        "type": "Market Gap",
+                        "title": "Nederlandse AI Marketing markt",
+                        "description": "Geen dominant platform",
+                        "potential_value": "€10M+ opportunity"
+                    }
+                ]
+                for opp in opportunities:
+                    db.table("blueprint_opportunities").insert(opp).execute()
+                print(f"✅ Opportunities done")
+                
+                print(f"📊 Inserting threats...")
+                threats = [
+                    {
+                        "blueprint_id": blueprint['id'],
+                        "severity": "high",
+                        "title": "Internationale concurrentie",
+                        "description": "Grote spelers betreden NL markt",
+                        "mitigation_strategy": "Focus op lokale features"
+                    }
+                ]
+                for threat in threats:
+                    db.table("blueprint_threats").insert(threat).execute()
+                print(f"✅ Threats done")
+                
+                print(f"📊 Completing blueprint...")
+                db.table("growth_blueprints").update({
+                    "status": "completed",
+                    "scan_progress": 100,
+                    "overall_score": 72,
+                    "growth_reality_score": 68,
+                    "scan_completed_at": datetime.utcnow().isoformat()
+                }).eq("id", blueprint['id']).execute()
+                
+                print(f"✅✅✅ Blueprint {blueprint['id']} COMPLETED!")
+                
+            except Exception as e:
+                print(f"❌ ERROR in scan: {str(e)}")
+                import traceback
+                traceback.print_exc()
+                
+                db.table("growth_blueprints").update({
+                    "status": "failed",
+                    "scan_progress": 50
+                }).eq("id", blueprint['id']).execute()
+        
+        threading.Thread(target=complete_scan, daemon=True).start()
+        
+        return blueprint
+        
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{blueprint_id}")
+def get_blueprint(
+    blueprint_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: Client = Depends(get_supabase_client)
+):
+    try:
+        blueprint = db.table("growth_blueprints")\
+            .select("*")\
+            .eq("id", blueprint_id)\
+            .single()\
+            .execute()
+        
+        status_quo = db.table("blueprint_status_quo")\
+            .select("*")\
+            .eq("blueprint_id", blueprint_id)\
+            .limit(1)\
+            .execute()
+        
+        vision = db.table("blueprint_vision")\
+            .select("*")\
+            .eq("blueprint_id", blueprint_id)\
+            .limit(1)\
+            .execute()
+        
+        recommendations = db.table("blueprint_recommendations")\
+            .select("*")\
+            .eq("blueprint_id", blueprint_id)\
+            .execute()
+        
+        opportunities = db.table("blueprint_opportunities")\
+            .select("*")\
+            .eq("blueprint_id", blueprint_id)\
+            .execute()
+        
+        threats = db.table("blueprint_threats")\
+            .select("*")\
+            .eq("blueprint_id", blueprint_id)\
+            .execute()
+        
+        return {
+            "blueprint": blueprint.data,
+            "status_quo": status_quo.data[0] if status_quo.data else None,
+            "vision": vision.data[0] if vision.data else None,
+            "budget_capacity": None,
+            "endgame": None,
+            "recommendations": recommendations.data,
+            "opportunities": opportunities.data,
+            "threats": threats.data
+        }
+    except Exception as e:
+        print(f"Error getting blueprint: {e}")
+        raise HTTPException(status_code=404, detail=str(e))

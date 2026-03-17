@@ -1,0 +1,42 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin/node",
+      "runtimeArgs": ["node_modules/.bin/vite", "--host", "--port", "5199"],
+      "port": 5199,
+      "env": {
+        "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    {
+      "name": "inclufy-go",
+      "runtimeExecutable": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx",
+      "runtimeArgs": ["expo", "start", "--web", "--port", "8085"],
+      "port": 8085,
+      "env": {
+        "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "cwd": "inclufy-go"
+    },
+    {
+      "name": "finance-dev",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /Users/samiloukile/Projects/inclufy-auto-finance-main && /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port 8080 --force"],
+      "port": 8080,
+      "env": {
+        "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    {
+      "name": "projectpal-dev",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd /Users/samiloukile/Projects/projextpal/frontend && /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port 8084 --force"],
+      "port": 8084,
+      "env": {
+        "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    }
+  ]
+}
