@@ -8,6 +8,8 @@ import {
   Modal,
   TextInput,
   ActivityIndicator,
+  Linking,
+  Share,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRoute, RouteProp } from '@react-navigation/native';
@@ -15,7 +17,7 @@ import {
   useCampaign, useUpdateCampaign, useCampaignMetrics,
   useCampaignCosts, useAddCampaignCost, useDeleteCampaignCost,
   useCampaignRevenue, useAddCampaignRevenue, useDeleteCampaignRevenue,
-  useCampaignROI,
+  useCampaignROI, useConnectedChannels,
   type CampaignCost, type CampaignRevenue,
 } from '../hooks/useCampaigns';
 import type { RootStackParamList } from '../types';
@@ -78,6 +80,7 @@ export default function CampaignDetailScreen() {
   const { data: costs = [] } = useCampaignCosts(campaignId);
   const { data: revenues = [] } = useCampaignRevenue(campaignId);
   const { data: roiData } = useCampaignROI(campaignId);
+  const { data: connectedAccounts = [] } = useConnectedChannels();
   const updateCampaign = useUpdateCampaign();
   const addCost = useAddCampaignCost();
   const deleteCost = useDeleteCampaignCost();
@@ -88,6 +91,8 @@ export default function CampaignDetailScreen() {
   // Modal states
   const [showCostModal, setShowCostModal] = useState(false);
   const [showRevenueModal, setShowRevenueModal] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
+  const [publishing, setPublishing] = useState<string | null>(null);
   const [costCategory, setCostCategory] = useState<CampaignCost['category']>('ads');
   const [costDesc, setCostDesc] = useState('');
   const [costAmount, setCostAmount] = useState('');
@@ -191,6 +196,7 @@ export default function CampaignDetailScreen() {
     linkedin: { icon: 'logo-linkedin', color: '#0077B5', label: 'LinkedIn' },
     facebook: { icon: 'logo-facebook', color: '#1877F2', label: 'Facebook' },
     instagram: { icon: 'logo-instagram', color: '#E4405F', label: 'Instagram' },
+    tiktok: { icon: 'musical-notes', color: '#000000', label: 'TikTok' },
     email: { icon: 'mail-outline', color: '#6366F1', label: 'E-mail' },
     sms: { icon: 'chatbubble-outline', color: '#059669', label: 'SMS' },
   };
@@ -236,6 +242,124 @@ export default function CampaignDetailScreen() {
     Alert.alert('Revenue verwijderen?', `${item.description || item.source} — €${item.amount}`, [
       { text: 'Annuleren', style: 'cancel' },
       { text: 'Verwijderen', style: 'destructive', onPress: () => deleteRevenue.mutate({ id: item.id, campaign_id: campaignId }) },
+    ]);
+  };
+
+  // ─── Publish to channel ─────────────────────────────────────────────
+  const enc = (s: string) => encodeURIComponent(s || '');
+  const campaignText = [
+    campaign?.name,
+    campaign?.description ? `\n${campaign.description}` : '',
+    campaign?.start_date ? `\n📅 ${formatDate(campaign.start_date)}` : '',
+  ].join('');
+
+  const PUBLISH_CHANNELS = [
+    {
+      key: 'linkedin', icon: 'logo-linkedin', label: 'LinkedIn', color: '#0077B5',
+      getUrl: () => `https://www.linkedin.com/sharing/share-offsite/?url=${enc('https://inclufy.com')}&title=${enc(campaign?.name || '')}&summary=${enc(campaign?.description || '')}`,
+    },
+    {
+      key: 'facebook', icon: 'logo-facebook', label: 'Facebook', color: '#1877F2',
+      getUrl: () => `https://www.facebook.com/sharer/sharer.php?quote=${enc(campaignText)}`,
+    },
+    {
+      key: 'instagram', icon: 'logo-instagram', label: 'Instagram', color: '#E4405F',
+      getUrl: () => null, // Instagram doesn't support URL sharing, use native share
+    },
+    {
+      key: 'tiktok', icon: 'musical-notes', label: 'TikTok', color: '#000000',
+      getUrl: () => null,
+    },
+    {
+      key: 'email', icon: 'mail-outline', label: 'E-mail', color: '#6366F1',
+      getUrl: () => `mailto:?subject=${enc(campaign?.name || '')}&body=${enc(campaignText)}`,
+    },
+  ];
+
+  const handlePublishToChannel = async (channel: typeof PUBLISH_CHANNELS[0]) => {
+    setPublishing(channel.key);
+    try {
+      const url = channel.getUrl();
+      if (url) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to native share sheet (for Instagram, TikTok, etc.)
+        await Share.share({
+          title: campaign?.name || 'Campagne',
+          message: campaignText,
+        });
+      }
+
+      // Update campaign status to active if still draft
+      if (campaign?.status === 'draft') {
+        updateCampaign.mutate({ id: campaign.id, status: 'active' });
+      }
+    } catch (err: any) {
+      if (err.name !== 'AbortError') {
+        Alert.alert('Fout', 'Kon niet openen. Probeer opnieuw.');
+      }
+    } finally {
+      setPublishing(null);
+    }
+  };
+
+  const handleShareCampaign = async () => {
+    try {
+      await Share.share({
+        title: campaign?.name || 'Campagne',
+        message: campaignText,
+      });
+    } catch {}
+  };
+
+  const handleActivate = () => {
+    if (campaign?.status === 'active') {
+      Alert.alert('Al actief', 'Deze campagne is al actief.');
+      return;
+    }
+    Alert.alert(
+      'Campagne activeren?',
+      `${campaign?.name} wordt geactiveerd en is klaar om te publiceren.`,
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        {
+          text: 'Activeren',
+          onPress: () => {
+            updateCampaign.mutate({ id: campaign!.id, status: 'active' });
+            Alert.alert('✅ Geactiveerd', 'Je campagne is nu actief! Publiceer naar kanalen om te starten.');
+          },
+        },
+      ]
+    );
+  };
+
+  const handleComplete = () => {
+    Alert.alert(
+      'Campagne afronden?',
+      'Markeer deze campagne als voltooid.',
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        { text: 'Afronden', onPress: () => updateCampaign.mutate({ id: campaign!.id, status: 'completed' }) },
+      ]
+    );
+  };
+
+  const handleReport = () => {
+    const report = [
+      `📊 Rapport: ${campaign?.name}`,
+      `\nStatus: ${statusLabels[campaign?.status || ''] || campaign?.status}`,
+      `Budget: ${formatBudget(budgetTotal)} (${budgetPercent.toFixed(0)}% besteed)`,
+      `Kosten: ${formatBudget(totalCosts)}`,
+      `Revenue: ${formatBudget(totalRevenue)}`,
+      `ROI: ${roi.toFixed(0)}%`,
+      `\nVerzonden: ${sent} | Geopend: ${opened} | Geklikt: ${clicked}`,
+      openRate > 0 ? `Open Rate: ${openRate.toFixed(1)}%` : '',
+      channels?.length ? `\nKanalen: ${channels.join(', ')}` : '',
+    ].filter(Boolean).join('\n');
+
+    Alert.alert('📊 Campagne Rapport', report, [
+      { text: 'Sluiten' },
+      { text: 'Delen', onPress: () => Share.share({ title: `Rapport: ${campaign?.name}`, message: report }).catch(() => {}) },
     ]);
   };
 
@@ -323,15 +447,70 @@ export default function CampaignDetailScreen() {
             <Ionicons name={campaign.status === 'paused' ? 'play-outline' : 'pause-outline'} size={22} color={colors.primary} />
             <Text style={styles.actionLabel}>{campaign.status === 'paused' ? 'Hervatten' : 'Pauzeren'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => updateCampaign.mutate({ id: campaign.id, status: 'active' })}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleActivate}>
             <Ionicons name="rocket-outline" size={22} color={colors.success} />
             <Text style={styles.actionLabel}>Activeren</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionBtn} onPress={() => Alert.alert('Rapport', 'Binnenkort beschikbaar.')}>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleReport}>
             <Ionicons name="bar-chart-outline" size={22} color={colors.primary} />
             <Text style={styles.actionLabel}>Rapport</Text>
           </TouchableOpacity>
         </View>
+        <View style={[styles.actionsRow, { marginTop: spacing.xs }]}>
+          <TouchableOpacity style={styles.actionBtn} onPress={() => setShowPublishModal(true)}>
+            <Ionicons name="send-outline" size={22} color="#E8317A" />
+            <Text style={styles.actionLabel}>Publiceren</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleShareCampaign}>
+            <Ionicons name="share-outline" size={22} color={colors.primary} />
+            <Text style={styles.actionLabel}>Delen</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.actionBtn} onPress={handleComplete}>
+            <Ionicons name="checkmark-done-outline" size={22} color={colors.textSecondary} />
+            <Text style={styles.actionLabel}>Afronden</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ─── Publish to Channels ──────────────────────────────────── */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>📢 Publiceren naar kanalen</Text>
+        {(!channels || channels.length === 0) && (
+          <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: spacing.xs }}>
+            Selecteer kanalen bij het aanmaken van een campagne om hier te publiceren.
+          </Text>
+        )}
+        {PUBLISH_CHANNELS.filter(ch => !channels || channels.length === 0 || channels.includes(ch.key)).map(ch => {
+          const isConnected = connectedAccounts.some(a => a.platform === ch.key);
+          const connectedAccount = connectedAccounts.find(a => a.platform === ch.key);
+          const isPublishing = publishing === ch.key;
+          return (
+            <TouchableOpacity
+              key={ch.key}
+              style={[styles.itemRow, { borderBottomColor: colors.borderLight }]}
+              onPress={() => handlePublishToChannel(ch)}
+              disabled={!!publishing}
+            >
+              <View style={[styles.itemIconWrap, { backgroundColor: ch.color + '18' }]}>
+                <Ionicons name={ch.icon as any} size={20} color={ch.color} />
+              </View>
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemCategory}>{ch.label}</Text>
+                <Text style={{ fontSize: fontSize.xs, color: isConnected ? colors.success : colors.textTertiary, marginTop: 1 }}>
+                  {isConnected ? `● ${connectedAccount?.account_name || 'Verbonden'}` : '○ Niet verbonden'}
+                </Text>
+              </View>
+              {isPublishing ? (
+                <ActivityIndicator size="small" color={ch.color} />
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: ch.color + '15', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 }}>
+                  <Ionicons name="send" size={12} color={ch.color} />
+                  <Text style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: ch.color }}>Publiceer</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {/* Budget */}
@@ -445,6 +624,56 @@ export default function CampaignDetailScreen() {
             <TextInput style={styles.modalInput} value={revAmount} onChangeText={setRevAmount} placeholder="0" keyboardType="numeric" placeholderTextColor={colors.textTertiary} />
             <TouchableOpacity style={styles.modalSaveBtn} onPress={handleSaveRevenue} disabled={addRevenue.isPending}>
               {addRevenue.isPending ? <ActivityIndicator color="#fff" size="small" /> : <Text style={styles.modalSaveBtnText}>Opslaan</Text>}
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ─── Publish Modal ─────────────────────────────────────────── */}
+      <Modal visible={showPublishModal} transparent animationType="slide" onRequestClose={() => setShowPublishModal(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setShowPublishModal(false)}>
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>📢 Publiceer Campagne</Text>
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
+              Deel "{campaign.name}" op je kanalen
+            </Text>
+
+            {PUBLISH_CHANNELS.map(ch => {
+              const isConnected = connectedAccounts.some(a => a.platform === ch.key);
+              const isPublishing = publishing === ch.key;
+              return (
+                <TouchableOpacity
+                  key={ch.key}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                    paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.borderLight,
+                  }}
+                  onPress={() => handlePublishToChannel(ch)}
+                  disabled={!!publishing}
+                >
+                  <View style={[styles.itemIconWrap, { backgroundColor: ch.color + '18' }]}>
+                    <Ionicons name={ch.icon as any} size={22} color={ch.color} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.text }}>{ch.label}</Text>
+                    <Text style={{ fontSize: fontSize.xs, color: isConnected ? colors.success : colors.textTertiary }}>
+                      {isConnected ? '● Verbonden' : '○ Niet verbonden — opent browser'}
+                    </Text>
+                  </View>
+                  {isPublishing ? (
+                    <ActivityIndicator size="small" color={ch.color} />
+                  ) : (
+                    <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+
+            <TouchableOpacity
+              style={[styles.modalSaveBtn, { backgroundColor: colors.primary, marginTop: spacing.lg }]}
+              onPress={handleShareCampaign}
+            >
+              <Text style={styles.modalSaveBtnText}>📤 Deel via andere app</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
