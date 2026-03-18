@@ -196,6 +196,10 @@ export type RootStackParamList = {
   MarketingStrategy: undefined;
   // Content Proposals
   ContentProposals: undefined;
+  // New screens
+  ContentCalendar: undefined;
+  Analytics: undefined;
+  Onboarding: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────
