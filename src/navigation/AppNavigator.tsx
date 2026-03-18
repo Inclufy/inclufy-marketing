@@ -1,22 +1,30 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import {
+  Text,
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Platform,
+  Modal,
+  Dimensions,
+} from 'react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
-import { fontWeight as fw, spacing } from '../theme';
+import { fontWeight as fw, spacing, borderRadius, fontSize } from '../theme';
 import { useTranslation } from '../i18n';
 
 // ─── Screens ────────────────────────────────────────────────────────
 import LoginScreen from '../screens/LoginScreen';
-// Tab root screens
 import HomeScreen from '../screens/HomeScreen';
 import EventListScreen from '../screens/EventListScreen';
 import AutonomousHubScreen from '../screens/AutonomousHubScreen';
 import NetworkingEngineScreen from '../screens/NetworkingEngineScreen';
 import SettingsScreen from '../screens/SettingsScreen';
-// Stack screens
 import CampaignListScreen from '../screens/CampaignListScreen';
 import AICommandScreen from '../screens/AICommandScreen';
 import EventSetupScreen from '../screens/EventSetupScreen';
@@ -49,63 +57,52 @@ import EventAttendeesScreen from '../screens/EventAttendeesScreen';
 import EventShareScreen from '../screens/EventShareScreen';
 import CopilotScreen from '../screens/CopilotScreen';
 import FollowedOrganizersScreen from '../screens/FollowedOrganizersScreen';
+import ProductsScreen from '../screens/ProductsScreen';
+import TeamDirectoryScreen from '../screens/TeamDirectoryScreen';
+import OrganizationScreen from '../screens/OrganizationScreen';
+import MarketingStrategyScreen from '../screens/MarketingStrategyScreen';
+import ContentProposalsScreen from '../screens/ContentProposalsScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
+type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-// ─── Capture Center Tab Button ───────────────────────────────────────
-function CaptureTabButton({ onPress }: { onPress?: (...args: any[]) => void }) {
-  const { colors } = useTheme();
-  return (
-    <TouchableOpacity
-      style={[tabStyles.captureButton]}
-      onPress={onPress}
-      activeOpacity={0.85}
-    >
-      <View style={[tabStyles.captureCircle, { backgroundColor: colors.primary, shadowColor: colors.primary }]}>
-        <Ionicons name="camera" size={26} color="#fff" />
-      </View>
-      <Text style={[tabStyles.captureLabel, { color: colors.primary }]}>Capture</Text>
-    </TouchableOpacity>
-  );
-}
+// ─── Capture Categories ─────────────────────────────────────────────
+const CAPTURE_CATEGORIES = [
+  { key: 'event', label: 'Event Capture', desc: 'Content van events & conferenties', icon: 'party-popper' as const, color: '#E8317A' },
+  { key: 'product', label: 'Product Capture', desc: 'Product shots, demos & unboxings', icon: 'package-variant-closed' as const, color: '#3B82F6' },
+  { key: 'inspiration', label: 'Inspiratie', desc: 'Trends, ideeën & concurrentie', icon: 'lightbulb-on' as const, color: '#F59E0B' },
+  { key: 'behind_scenes', label: 'Behind the Scenes', desc: 'Team, kantoor & bedrijfscultuur', icon: 'account-group' as const, color: '#10B981' },
+];
 
-function CapturePlaceholder() { return <View />; }
-
-// ─── Events Stack (for tab) ──────────────────────────────────────────
+// ─── Events Stack ───────────────────────────────────────────────────
 function EventsStack() {
   const { colors } = useTheme();
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: fw.semibold as any },
-        headerShadowVisible: false,
-      }}
-    >
+    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text, headerTitleStyle: { fontWeight: fw.semibold as any }, headerShadowVisible: false }}>
       <Stack.Screen name={'EventsRoot' as any} component={EventListScreen} options={{ title: 'Events' }} />
       <Stack.Screen name={'EventIntelligenceTab' as any} component={EventIntelligenceScreen} options={{ title: 'Event Intelligence' }} />
     </Stack.Navigator>
   );
 }
 
-// ─── AI Stack (for tab) ─ starts at AMOSHubScreen (full hub) ────────
+// ─── Campaigns Stack ────────────────────────────────────────────────
+function CampaignsStack() {
+  const { colors } = useTheme();
+  return (
+    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text, headerTitleStyle: { fontWeight: fw.semibold as any }, headerShadowVisible: false }}>
+      <Stack.Screen name={'CampaignsRoot' as any} component={CampaignListScreen} options={{ title: 'Campagnes' }} />
+    </Stack.Navigator>
+  );
+}
+
+// ─── AI / AMOS Stack ────────────────────────────────────────────────
 function AIStack() {
   const { colors } = useTheme();
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: fw.semibold as any },
-        headerShadowVisible: false,
-      }}
-    >
-      {/* Root = full AMOS Hub with ALL modules */}
+    <Stack.Navigator screenOptions={{ headerStyle: { backgroundColor: colors.surface }, headerTintColor: colors.text, headerTitleStyle: { fontWeight: fw.semibold as any }, headerShadowVisible: false }}>
       <Stack.Screen name={'AIRoot' as any} component={AMOSHubScreen} options={{ headerShown: false }} />
-      {/* Sub-screens reachable from hub tiles */}
       <Stack.Screen name={'OpportunityFeedTab' as any} component={OpportunityFeedScreen} options={{ title: 'AI Opportunity Feed' }} />
       <Stack.Screen name={'CampaignListTab' as any} component={CampaignListScreen} options={{ title: 'Campagnes' }} />
       <Stack.Screen name={'AutonomousHubTab' as any} component={AutonomousHubScreen} options={{ headerShown: false }} />
@@ -113,112 +110,149 @@ function AIStack() {
   );
 }
 
-// ─── Network Stack (for tab) ─────────────────────────────────────────
-function NetworkStack() {
+// ─── Main Tabs + Floating Camera FAB ────────────────────────────────
+function MainTabsWrapper() {
   const { colors } = useTheme();
+  const navigation = useNavigation<Nav>();
+  const [showCaptureModal, setShowCaptureModal] = useState(false);
+
+  const handleCaptureCategory = (category: string) => {
+    setShowCaptureModal(false);
+    setTimeout(() => navigation.navigate('LiveCapture' as any, { captureCategory: category }), 200);
+  };
+
   return (
-    <Stack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: colors.surface },
-        headerTintColor: colors.text,
-        headerTitleStyle: { fontWeight: fw.semibold as any },
-        headerShadowVisible: false,
-      }}
-    >
-      <Stack.Screen name={'NetworkRoot' as any} component={NetworkingEngineScreen} options={{ title: 'Netwerk' }} />
-    </Stack.Navigator>
-  );
-}
-
-// ─── Bottom Tabs ─────────────────────────────────────────────────────
-function MainTabs() {
-  const { colors, isDark } = useTheme();
-  return (
-    <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarShowLabel: true,
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: fw.medium as any,
-          marginTop: -2,
-        },
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 68,
-          paddingBottom: Platform.OS === 'ios' ? 28 : 10,
-          paddingTop: 8,
-        },
-      }}
-    >
-      {/* Tab 1 — Dashboard */}
-      <Tab.Screen
-        name="HomeTab"
-        component={HomeScreen}
-        options={{
-          tabBarLabel: 'Dashboard',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'grid' : 'grid-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      {/* Tab 2 — Events */}
-      <Tab.Screen
-        name="EventsTab"
-        component={EventsStack}
-        options={{
-          tabBarLabel: 'Events',
-          tabBarIcon: ({ focused, color }) => (
-            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={22} color={color} />
-          ),
-        }}
-      />
-
-      {/* Tab 3 — Capture (center) */}
-      <Tab.Screen
-        name="CaptureTab"
-        component={CapturePlaceholder}
-        options={{
-          tabBarLabel: () => null,
-          tabBarButton: (props) => <CaptureTabButton onPress={props.onPress} />,
-        }}
-        listeners={({ navigation }) => ({
-          tabPress: (e) => {
-            e.preventDefault();
-            navigation.navigate('LiveCapture');
+    <View style={{ flex: 1 }}>
+      <Tab.Navigator
+        screenOptions={{
+          headerShown: false,
+          tabBarShowLabel: true,
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.textTertiary,
+          tabBarLabelStyle: { fontSize: 10, fontWeight: fw.medium as any, marginTop: -2 },
+          tabBarStyle: {
+            backgroundColor: colors.surface,
+            borderTopColor: colors.border,
+            borderTopWidth: 1,
+            height: Platform.OS === 'ios' ? 88 : 68,
+            paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+            paddingTop: 8,
           },
-        })}
-      />
-
-      {/* Tab 4 — AI Hub */}
-      <Tab.Screen
-        name="AITab"
-        component={AIStack}
-        options={{
-          tabBarLabel: 'AI Hub',
-          tabBarIcon: ({ focused, color }) => (
-            <MaterialCommunityIcons name={focused ? 'brain' : 'brain'} size={22} color={focused ? color : colors.textTertiary} />
-          ),
         }}
-      />
+      >
+        {/* Tab 1 — Dashboard */}
+        <Tab.Screen
+          name="HomeTab"
+          component={HomeScreen}
+          options={{
+            tabBarLabel: 'Dashboard',
+            tabBarIcon: ({ focused, color }) => (
+              <MaterialCommunityIcons name={focused ? 'view-dashboard' : 'view-dashboard-outline'} size={22} color={color} />
+            ),
+          }}
+        />
 
-      {/* Tab 5 — Copilot */}
-      <Tab.Screen
-        name="NetworkTab"
-        component={CopilotScreen}
-        options={{
-          tabBarLabel: 'Copilot',
-          tabBarIcon: ({ focused, color }) => (
-            <MaterialCommunityIcons name="robot" size={22} color={color} />
-          ),
-        }}
-      />
-    </Tab.Navigator>
+        {/* Tab 2 — Events */}
+        <Tab.Screen
+          name="EventsTab"
+          component={EventsStack}
+          options={{
+            tabBarLabel: 'Events',
+            tabBarIcon: ({ focused, color }) => (
+              <MaterialCommunityIcons name={focused ? 'calendar-star' : 'calendar-blank-outline'} size={22} color={color} />
+            ),
+          }}
+        />
+
+        {/* Tab 3 — Campaigns */}
+        <Tab.Screen
+          name="CampaignsTab"
+          component={CampaignsStack}
+          options={{
+            tabBarLabel: 'Campagnes',
+            tabBarIcon: ({ focused, color }) => (
+              <MaterialCommunityIcons name={focused ? 'bullhorn' : 'bullhorn-outline'} size={22} color={color} />
+            ),
+          }}
+        />
+
+        {/* Tab 4 — AMOS AI Hub */}
+        <Tab.Screen
+          name="AITab"
+          component={AIStack}
+          options={{
+            tabBarLabel: 'AMOS',
+            tabBarIcon: ({ focused, color }) => (
+              <MaterialCommunityIcons name={focused ? 'brain' : 'head-snowflake-outline'} size={22} color={color} />
+            ),
+          }}
+        />
+
+        {/* Tab 5 — Copilot */}
+        <Tab.Screen
+          name="CopilotTab"
+          component={CopilotScreen}
+          options={{
+            tabBarLabel: 'Copilot',
+            tabBarIcon: ({ focused, color }) => (
+              <MaterialCommunityIcons name={focused ? 'robot' : 'robot-outline'} size={22} color={color} />
+            ),
+          }}
+        />
+      </Tab.Navigator>
+
+      {/* ── Floating Camera FAB ── */}
+      <TouchableOpacity
+        style={[fabStyles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
+        onPress={() => setShowCaptureModal(true)}
+        activeOpacity={0.85}
+      >
+        <MaterialCommunityIcons name="camera-plus" size={28} color="#fff" />
+      </TouchableOpacity>
+
+      {/* ── Capture Category Modal ── */}
+      <Modal visible={showCaptureModal} transparent animationType="slide" onRequestClose={() => setShowCaptureModal(false)}>
+        <TouchableOpacity style={fabStyles.modalOverlay} activeOpacity={1} onPress={() => setShowCaptureModal(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={[fabStyles.modalContent, { backgroundColor: colors.surface }]}>
+              <View style={[fabStyles.handleBar, { backgroundColor: colors.border }]} />
+
+              <Text style={[fabStyles.modalTitle, { color: colors.text }]}>Wat wil je vastleggen?</Text>
+              <Text style={[fabStyles.modalSubtitle, { color: colors.textSecondary }]}>Kies een categorie voor je content</Text>
+
+              <View style={fabStyles.categoriesGrid}>
+                {CAPTURE_CATEGORIES.map(cat => (
+                  <TouchableOpacity
+                    key={cat.key}
+                    style={[fabStyles.categoryCard, { backgroundColor: cat.color + '08', borderColor: cat.color + '30' }]}
+                    onPress={() => handleCaptureCategory(cat.key)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[fabStyles.categoryIcon, { backgroundColor: cat.color + '18' }]}>
+                      <MaterialCommunityIcons name={cat.icon} size={28} color={cat.color} />
+                    </View>
+                    <Text style={[fabStyles.categoryLabel, { color: colors.text }]}>{cat.label}</Text>
+                    <Text style={[fabStyles.categoryDesc, { color: colors.textSecondary }]}>{cat.desc}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={[fabStyles.quickCapture, { borderColor: colors.border, backgroundColor: colors.background }]}
+                onPress={() => handleCaptureCategory('quick')}
+              >
+                <MaterialCommunityIcons name="camera-burst" size={20} color={colors.primary} />
+                <Text style={[fabStyles.quickCaptureText, { color: colors.primary }]}>Snel vastleggen</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={fabStyles.cancelBtn} onPress={() => setShowCaptureModal(false)}>
+                <Text style={[fabStyles.cancelText, { color: colors.textSecondary }]}>Annuleren</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+    </View>
   );
 }
 
@@ -239,7 +273,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
         <Stack.Screen name="Login" component={LoginScreen} options={{ headerShown: false }} />
       ) : (
         <>
-          <Stack.Screen name="Main" component={MainTabs} options={{ headerShown: false }} />
+          <Stack.Screen name="Main" component={MainTabsWrapper} options={{ headerShown: false }} />
 
           {/* ─── Event Screens ─── */}
           <Stack.Screen name="EventSetup" component={EventSetupScreen} options={{ title: t.screenTitles.eventSetup }} />
@@ -283,6 +317,13 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="AutonomousHub" component={AutonomousHubScreen} options={{ headerShown: false }} />
           <Stack.Screen name="NetworkingEngine" component={NetworkingEngineScreen} options={{ title: 'Networking Engine' }} />
 
+          {/* ─── Content Hubs ─── */}
+          <Stack.Screen name="Products" component={ProductsScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="TeamDirectory" component={TeamDirectoryScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Organization" component={OrganizationScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="MarketingStrategy" component={MarketingStrategyScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="ContentProposals" component={ContentProposalsScreen} options={{ headerShown: false }} />
+
           {/* ─── Settings & Notifications ─── */}
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t.screenTitles.settings }} />
           <Stack.Screen name="BrandKit" component={BrandKitScreen} options={{ title: t.screenTitles.brandKit ?? 'Brand Kit' }} />
@@ -295,27 +336,103 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
 }
 
 // ─── Styles ─────────────────────────────────────────────────────────
-const tabStyles = StyleSheet.create({
-  captureButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    top: -14,
-    width: 72,
-  },
-  captureCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+const { width: SCREEN_W } = Dimensions.get('window');
+
+const fabStyles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 100 : 76,
+    alignSelf: 'center',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
     justifyContent: 'center',
     alignItems: 'center',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowRadius: 12,
+    elevation: 10,
+    zIndex: 100,
   },
-  captureLabel: {
-    fontSize: 10,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 20,
+    paddingTop: 12,
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: fw.bold as any,
+    marginBottom: 4,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    marginBottom: 20,
+  },
+  categoriesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+  },
+  categoryCard: {
+    width: (SCREEN_W - 52) / 2,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    padding: 16,
+    alignItems: 'center',
+    gap: 8,
+  },
+  categoryIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  categoryLabel: {
+    fontSize: 14,
+    fontWeight: fw.bold as any,
+    textAlign: 'center',
+  },
+  categoryDesc: {
+    fontSize: 11,
+    textAlign: 'center',
+    lineHeight: 15,
+  },
+  quickCapture: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  quickCaptureText: {
+    fontSize: 14,
     fontWeight: fw.semibold as any,
-    marginTop: 4,
+  },
+  cancelBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  cancelText: {
+    fontSize: 14,
+    fontWeight: fw.medium as any,
   },
 });

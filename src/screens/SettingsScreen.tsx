@@ -569,19 +569,26 @@ export default function SettingsScreen() {
 
     if (authUrl) {
       try {
-        // Use WebBrowser for in-app OAuth flow (more reliable than Linking.openURL)
-        const result = await WebBrowser.openAuthSessionAsync(authUrl, redirectUri);
-        console.log('OAuth result:', result.type);
-        // After the browser closes, refresh social accounts
-        if (result.type === 'success' || result.type === 'dismiss') {
-          // Give the edge function a moment to process
-          setTimeout(() => refetchSocial(), 2000);
-        }
+        // Use openBrowserAsync (NOT openAuthSessionAsync) so the browser does NOT
+        // intercept the redirect to the edge function — the edge function needs to
+        // receive the OAuth code, exchange it for a token, and store the account.
+        // openAuthSessionAsync was intercepting the redirect before it reached the server.
+        const result = await WebBrowser.openBrowserAsync(authUrl, {
+          dismissButtonStyle: 'done',
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+        });
+        console.log('OAuth browser result:', result.type);
+        // After the browser is dismissed, refresh social accounts
+        // Small delay to let the edge function finish processing
+        setTimeout(() => refetchSocial(), 1500);
+        setTimeout(() => refetchSocial(), 4000);
       } catch (err: any) {
         // Fallback to Linking if WebBrowser fails
         console.log('WebBrowser failed, falling back to Linking:', err.message);
         try {
           await Linking.openURL(authUrl);
+          // Also refetch after some time when using Linking
+          setTimeout(() => refetchSocial(), 5000);
         } catch (linkErr: any) {
           Alert.alert('Error', linkErr?.message ?? 'Kon de browser niet openen.');
         }

@@ -13,6 +13,9 @@ import { subtleShadow } from '../utils/shadows';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { useTranslation } from '../i18n';
+import { useMarketingStrategy } from '../hooks/useMarketingStrategy';
+import { useProposalStats, useTrustScore } from '../hooks/useContentProposals';
+import { useAutomationStats } from '../hooks/useAutomations';
 
 interface Decision {
   id: string;
@@ -45,7 +48,31 @@ export default function AutonomousHubScreen() {
   const { colors } = useTheme();
   const { t } = useTranslation();
   const [systemActive, setSystemActive] = useState(true);
+  const { data: strategy } = useMarketingStrategy();
+  const { data: proposalStats } = useProposalStats();
+  const { data: autoStats } = useAutomationStats();
+  const { data: trust } = useTrustScore();
   const [autonomyLevel, setAutonomyLevel] = useState<'conservative' | 'balanced' | 'aggressive'>('balanced');
+
+  // ── Real health & success rate calculation ──
+  // Health = weighted score: strategy (25%) + channels (25%) + proposals pipeline (25%) + automations (25%)
+  const healthScore = (() => {
+    let score = 0;
+    // Has strategy? +25
+    if (strategy) score += 25;
+    // Has active channels? +25
+    const activeChannels = strategy ? Object.values(strategy.channels ?? {}).filter((c: any) => c.active).length : 0;
+    if (activeChannels > 0) score += 25;
+    // Has proposals in pipeline? +25
+    const proposalPipeline = (proposalStats?.pending ?? 0) + (proposalStats?.approved ?? 0);
+    if (proposalPipeline > 0) score += 25;
+    // Has active automations? +25
+    if ((autoStats?.activeCount ?? 0) > 0) score += 25;
+    return score;
+  })();
+
+  // Success rate from automation stats
+  const successRate = autoStats?.successRate ?? 0;
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.background },
@@ -132,6 +159,20 @@ export default function AutonomousHubScreen() {
     },
     backBtn: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 2, padding: 8 },
     backLabel: { color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.medium },
+    strategyBanner: {
+      backgroundColor: c.surface, borderRadius: borderRadius.lg,
+      padding: spacing.md, ...subtleShadow, borderLeftWidth: 4, borderLeftColor: '#059669',
+    },
+    strategyBannerTitle: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const },
+    strategyBadge: { flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 },
+    strategyStats: { flexDirection: 'row' as const, gap: spacing.sm, marginTop: spacing.sm },
+    strategyStat: { flex: 1, backgroundColor: c.background, borderRadius: borderRadius.md, padding: spacing.sm, alignItems: 'center' as const },
+    strategyStatValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: c.text },
+    strategyStatLabel: { fontSize: 10, color: c.textSecondary, marginTop: 2 },
+    strategyCta: {
+      backgroundColor: '#05966918', borderRadius: borderRadius.lg, borderWidth: 1.5, borderColor: '#05966940',
+      padding: spacing.md, alignItems: 'center' as const, gap: spacing.sm,
+    },
   }));
 
   // Navigate to a screen — try current navigator first, fall back to parent (root stack)
@@ -238,11 +279,11 @@ export default function AutonomousHubScreen() {
         {/* Stats — shortened labels to prevent wrapping */}
         <View style={styles.statsRow}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>89%</Text>
+            <Text style={styles.statValue}>{healthScore}%</Text>
             <Text style={styles.statLabel}>{t.autonomousHub.health}</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{feedItems.length}</Text>
+            <Text style={styles.statValue}>{feedItems.length + (proposalStats?.pending ?? 0)}</Text>
             <Text style={styles.statLabel}>{t.autonomousHub.actions}</Text>
           </View>
           <View style={styles.statItem}>
@@ -250,13 +291,134 @@ export default function AutonomousHubScreen() {
             <Text style={styles.statLabel}>{t.autonomousHub.campaigns}</Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>60%</Text>
+            <Text style={styles.statValue}>{successRate}%</Text>
             <Text style={styles.statLabel}>{t.autonomousHub.successRate}</Text>
           </View>
         </View>
       </LinearGradient>
 
       <View style={styles.content}>
+        {/* Strategy Banner */}
+        {strategy ? (
+          <TouchableOpacity style={styles.strategyBanner} onPress={() => navigateTo('MarketingStrategy')} activeOpacity={0.7}>
+            <View style={styles.strategyBannerTitle}>
+              <View style={styles.strategyBadge}>
+                <MaterialCommunityIcons name="check-decagram" size={18} color="#059669" />
+                <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: '#059669' }}>Marketing Strategie Actief</Text>
+              </View>
+              <MaterialCommunityIcons name="pencil" size={16} color={colors.textTertiary} />
+            </View>
+            <View style={styles.strategyStats}>
+              <View style={styles.strategyStat}>
+                <Text style={styles.strategyStatValue}>€{strategy.monthly_budget?.toLocaleString() ?? '0'}</Text>
+                <Text style={styles.strategyStatLabel}>Budget/mnd</Text>
+              </View>
+              <View style={styles.strategyStat}>
+                <Text style={styles.strategyStatValue}>{strategy.posts_per_week ?? 0}</Text>
+                <Text style={styles.strategyStatLabel}>Posts/week</Text>
+              </View>
+              <View style={styles.strategyStat}>
+                <Text style={styles.strategyStatValue}>{Object.values(strategy.channels ?? {}).filter((c: any) => c.active).length}</Text>
+                <Text style={styles.strategyStatLabel}>Kanalen</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.strategyCta} onPress={() => navigateTo('MarketingStrategy')} activeOpacity={0.7}>
+            <MaterialCommunityIcons name="chart-timeline-variant-shimmer" size={32} color="#059669" />
+            <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text }}>Stel je Marketing Strategie in</Text>
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center' }}>AMOS heeft een strategie nodig om autonoom te werken — doelen, budget, kanalen & planning.</Text>
+            <View style={{ backgroundColor: '#059669', borderRadius: borderRadius.full, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm }}>
+              <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.sm }}>Strategie Instellen</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* Content Proposals Banner */}
+        {(proposalStats?.pending ?? 0) > 0 ? (
+          <TouchableOpacity
+            style={[styles.section, { borderLeftWidth: 4, borderLeftColor: '#F59E0B' }]}
+            onPress={() => navigateTo('ContentProposals')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <MaterialCommunityIcons name="file-document-edit-outline" size={20} color="#F59E0B" />
+                <Text style={[styles.sectionTitle, { color: '#F59E0B' }]}>
+                  {proposalStats?.pending ?? 0} {(proposalStats?.pending ?? 0) === 1 ? 'voorstel wacht' : 'voorstellen wachten'} op goedkeuring
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            </View>
+            <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: spacing.xs }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' }} />
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>{proposalStats?.approved ?? 0} goedgekeurd</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#3B82F6' }} />
+                <Text style={{ fontSize: 11, color: colors.textSecondary }}>{proposalStats?.scheduled ?? 0} ingepland</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+        ) : strategy ? (
+          <TouchableOpacity
+            style={[styles.section, { alignItems: 'center', gap: spacing.sm }]}
+            onPress={() => navigateTo('ContentProposals')}
+            activeOpacity={0.7}
+          >
+            <MaterialCommunityIcons name="robot-happy-outline" size={32} color={colors.textTertiary} />
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center' }}>
+              Laat AMOS content voorstellen genereren op basis van je strategie.
+            </Text>
+            <View style={{ backgroundColor: colors.primary, borderRadius: borderRadius.full, paddingHorizontal: spacing.lg, paddingVertical: spacing.xs }}>
+              <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.sm }}>Voorstellen Genereren</Text>
+            </View>
+          </TouchableOpacity>
+        ) : null}
+
+        {/* Autonomy Trust Indicator */}
+        {strategy && (
+          <TouchableOpacity
+            style={styles.section}
+            onPress={() => navigateTo('ContentProposals')}
+            activeOpacity={0.7}
+          >
+            <View style={styles.sectionHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <MaterialCommunityIcons
+                  name={strategy.auto_publish ? 'rocket-launch' : 'shield-check-outline'}
+                  size={20}
+                  color={strategy.auto_publish ? '#10B981' : '#F59E0B'}
+                />
+                <Text style={styles.sectionTitle}>
+                  {strategy.auto_publish ? 'Autopilot' : strategy.autonomy_level === 'aggressive' ? 'Hoge autonomie' : strategy.autonomy_level === 'balanced' ? 'Begeleide modus' : 'Handmatig'}
+                </Text>
+              </View>
+              <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, fontWeight: fontWeight.semibold }}>
+                Vertrouwen: {trust?.overallScore ?? 0}%
+              </Text>
+            </View>
+            {/* Trust progress */}
+            <View style={{ height: 4, backgroundColor: colors.border, borderRadius: 2, marginTop: spacing.xs, overflow: 'hidden' as const }}>
+              <View style={{
+                height: 4,
+                borderRadius: 2,
+                width: `${Math.min(100, trust?.overallScore ?? 0)}%` as any,
+                backgroundColor: (trust?.overallScore ?? 0) >= 70 ? '#10B981' : (trust?.overallScore ?? 0) >= 40 ? '#F59E0B' : '#EF4444',
+              }} />
+            </View>
+            <Text style={{ fontSize: 11, color: colors.textTertiary, marginTop: 4 }}>
+              {strategy.auto_publish
+                ? `${trust?.totalPublished ?? 0} posts gepubliceerd · Autopilot actief`
+                : trust?.autoPublishReady
+                  ? `${trust?.totalPublished ?? 0} posts gepubliceerd · Klaar voor autopilot`
+                  : `${trust?.totalPublished ?? 0} van ${5} posts nodig voor autopilot`
+              }
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Autonomy Level */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t.autonomousHub.autonomyLevel}</Text>

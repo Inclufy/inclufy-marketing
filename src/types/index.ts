@@ -188,6 +188,14 @@ export type RootStackParamList = {
   AutonomousHub: undefined;
   NetworkingEngine: undefined;
   FollowedOrganizers: undefined;
+  // Content Hubs
+  Products: undefined;
+  TeamDirectory: undefined;
+  Organization: undefined;
+  // Marketing Strategy
+  MarketingStrategy: undefined;
+  // Content Proposals
+  ContentProposals: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────

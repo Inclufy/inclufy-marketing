@@ -120,7 +120,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 0, travel: 0, accommodation: 0, total: 0 },
       status: 'discovered', priority_score: 72,
       ai_recommendation: 'Lokaal en laagdrempelig. Perfecte kans voor regionale zichtbaarheid.',
-      tags: ['networking', 'startup', 'almere', 'lokaal'],
+      tags: ['city', 'networking', 'startup', 'almere', 'lokaal'],
     },
   ],
   province: [
@@ -134,7 +134,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 0, travel: 15, accommodation: 0, total: 15 },
       status: 'discovered', priority_score: 68,
       ai_recommendation: 'Regionaal relevant. Goede kans om ICT-netwerk in de provincie uit te breiden.',
-      tags: ['ict', 'meetup', 'flevoland', 'provinciaal'],
+      tags: ['province', 'ict', 'meetup', 'flevoland', 'provinciaal'],
     },
     {
       name: 'Innovaly Innovation Day', type: 'conference',
@@ -146,7 +146,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 95, travel: 20, accommodation: 0, total: 115 },
       status: 'discovered', priority_score: 78,
       ai_recommendation: 'Sterke innovatiefocus. Goed platform voor thought leadership.',
-      tags: ['innovatie', 'digitaal', 'lelystad', 'provinciaal'],
+      tags: ['province', 'innovatie', 'digitaal', 'lelystad', 'provinciaal'],
     },
   ],
   national: [
@@ -161,7 +161,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 800, travel: 50, accommodation: 0, total: 850 },
       status: 'discovered', priority_score: 99,
       ai_recommendation: 'Top prioriteit! Enorm bereik en perfecte match voor cloud-native doelgroep.',
-      tags: ['tech', 'cloud', 'amsterdam', 'nationaal'],
+      tags: ['national', 'tech', 'cloud', 'amsterdam', 'nationaal'],
     },
     {
       name: 'DevOps Days Amsterdam', type: 'conference',
@@ -173,7 +173,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 250, travel: 50, accommodation: 0, total: 300 },
       status: 'discovered', priority_score: 88,
       ai_recommendation: 'Sterke DevOps community. Ideaal voor tech-leads en engineering teams.',
-      tags: ['devops', 'amsterdam', 'nationaal'],
+      tags: ['national', 'devops', 'amsterdam', 'nationaal'],
     },
   ],
   benelux: [
@@ -187,7 +187,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 295, travel: 40, accommodation: 0, total: 335 },
       status: 'discovered', priority_score: 91,
       ai_recommendation: 'Top prioriteit. 92% match met jouw doelgroep.',
-      tags: ['b2b', 'abm', 'antwerpen', 'benelux'],
+      tags: ['benelux', 'b2b', 'abm', 'antwerpen'],
     },
   ],
   europe: [
@@ -202,7 +202,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 0, travel: 200, accommodation: 250, total: 450 },
       status: 'discovered', priority_score: 79,
       ai_recommendation: 'Gratis entree, grote cloud community. Goede ROI voor tech-bedrijven.',
-      tags: ['aws', 'cloud', 'berlin', 'europa'],
+      tags: ['europe', 'aws', 'cloud', 'berlin', 'europa'],
     },
     {
       name: 'Web Summit 2026', type: 'conference',
@@ -214,7 +214,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 850, travel: 250, accommodation: 400, total: 1500 },
       status: 'discovered', priority_score: 82,
       ai_recommendation: 'Massaal bereik. Ideaal voor internationale thought leadership.',
-      tags: ['tech', 'startup', 'lisbon', 'europa'],
+      tags: ['europe', 'tech', 'startup', 'lisbon', 'europa'],
     },
   ],
   global: [
@@ -228,7 +228,7 @@ const SEED_EVENTS_BY_LAYER: Record<string, Array<Omit<DiscoveredEvent, 'id'>>> =
       cost: { ticket: 500, travel: 600, accommodation: 800, total: 1900 },
       status: 'discovered', priority_score: 76,
       ai_recommendation: 'Enorm internationaal bereik. Sterk voor MENA-expansie.',
-      tags: ['tech', 'dubai', 'globaal'],
+      tags: ['global', 'tech', 'dubai', 'globaal'],
     },
   ],
 };
@@ -860,74 +860,105 @@ export default function EventIntelligenceScreen() {
 
       {/* Filter chips - geo layer row */}
       {events.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flexGrow: 0, maxHeight: 52, backgroundColor: colors.surface, borderBottomWidth: 0, borderBottomColor: colors.border }}
-          contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingVertical: 8, gap: 8, alignItems: 'center' }}
-        >
-          {LAYER_CHIPS.map(c => {
-            const isActive = activeLayer === c.key;
-            return (
-              <TouchableOpacity
-                key={c.key}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 4,
-                  paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-                  backgroundColor: isActive ? colors.primary : colors.background,
-                  borderWidth: 1.5,
-                  borderColor: isActive ? colors.primary : colors.border,
-                }}
-                onPress={() => setActiveLayer(c.key)}
-              >
-                {c.emoji ? <Text style={{ fontSize: 14 }}>{c.emoji}</Text> : null}
-                <Text style={{
-                  fontSize: 13,
-                  fontWeight: fontWeight.semibold,
-                  color: isActive ? '#fff' : colors.text,
-                }}>
-                  {c.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <View style={{ backgroundColor: colors.surface, paddingTop: spacing.sm }}>
+          <Text style={{ fontSize: 11, fontWeight: fontWeight.semibold, color: colors.textSecondary, paddingHorizontal: spacing.md, marginBottom: 6 }}>📍 Regio</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flexGrow: 0 }}
+            contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingBottom: 8, gap: 8, alignItems: 'center' }}
+          >
+            {LAYER_CHIPS.map(c => {
+              const isActive = activeLayer === c.key;
+              const count = c.key === 'all'
+                ? events.length
+                : events.filter(e => (e.tags ?? []).includes(c.key) || (e as any).scan_layer === c.key).length;
+              return (
+                <TouchableOpacity
+                  key={c.key}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+                    backgroundColor: isActive ? colors.primary : colors.background,
+                    borderWidth: 1.5,
+                    borderColor: isActive ? colors.primary : colors.border,
+                    opacity: count === 0 && c.key !== 'all' ? 0.4 : 1,
+                  }}
+                  onPress={() => setActiveLayer(c.key)}
+                >
+                  {c.emoji ? <Text style={{ fontSize: 14 }}>{c.emoji}</Text> : null}
+                  <Text style={{
+                    fontSize: 13,
+                    fontWeight: fontWeight.semibold,
+                    color: isActive ? '#fff' : colors.text,
+                  }}>
+                    {c.label}
+                  </Text>
+                  <View style={{
+                    backgroundColor: isActive ? '#ffffff40' : colors.primary + '18',
+                    borderRadius: 10, minWidth: 20, paddingHorizontal: 5, paddingVertical: 1, alignItems: 'center',
+                  }}>
+                    <Text style={{ fontSize: 10, fontWeight: fontWeight.bold, color: isActive ? '#fff' : colors.primary }}>{count}</Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
 
       {/* Filter chips - time horizon row */}
       {events.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={{ flexGrow: 0, maxHeight: 44, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}
-          contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingVertical: 6, gap: 6, alignItems: 'center' }}
-        >
-          {TIME_CHIPS.map(c => {
-            const isActive = activeTimeFilter === c.key;
-            return (
-              <TouchableOpacity
-                key={c.key}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 3,
-                  paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16,
-                  backgroundColor: isActive ? colors.primary + '20' : 'transparent',
-                  borderWidth: 1,
-                  borderColor: isActive ? colors.primary : colors.border + '80',
-                }}
-                onPress={() => setActiveTimeFilter(c.key)}
-              >
-                <Text style={{ fontSize: 12 }}>{c.emoji}</Text>
-                <Text style={{
-                  fontSize: 12,
-                  fontWeight: isActive ? fontWeight.bold : fontWeight.medium,
-                  color: isActive ? colors.primary : colors.textSecondary,
-                }}>
-                  {c.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
+        <View style={{ backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: 4 }}>
+          <Text style={{ fontSize: 11, fontWeight: fontWeight.semibold, color: colors.textSecondary, paddingHorizontal: spacing.md, marginBottom: 6 }}>⏰ Tijdlijn</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={{ flexGrow: 0 }}
+            contentContainerStyle={{ paddingHorizontal: spacing.sm, paddingBottom: 10, gap: 6, alignItems: 'center' }}
+          >
+            {TIME_CHIPS.map(c => {
+              const isActive = activeTimeFilter === c.key;
+              // Count events matching this time filter
+              const count = c.key === 'all_time'
+                ? layerFiltered.length
+                : layerFiltered.filter(e => {
+                    if (!e.date_start) return false;
+                    const eventDate = new Date(e.date_start);
+                    const now = new Date();
+                    const cutoff = new Date();
+                    cutoff.setMonth(cutoff.getMonth() + (c.months || 0));
+                    return eventDate >= now && eventDate <= cutoff;
+                  }).length;
+              return (
+                <TouchableOpacity
+                  key={c.key}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 4,
+                    paddingHorizontal: 12, paddingVertical: 7, borderRadius: 16,
+                    backgroundColor: isActive ? colors.primary + '20' : 'transparent',
+                    borderWidth: 1.5,
+                    borderColor: isActive ? colors.primary : colors.border + '80',
+                    opacity: count === 0 && c.key !== 'all_time' ? 0.4 : 1,
+                  }}
+                  onPress={() => setActiveTimeFilter(c.key)}
+                >
+                  <Text style={{ fontSize: 13 }}>{c.emoji}</Text>
+                  <Text style={{
+                    fontSize: 13,
+                    fontWeight: isActive ? fontWeight.bold : fontWeight.medium,
+                    color: isActive ? colors.primary : colors.textSecondary,
+                  }}>
+                    {c.label}
+                  </Text>
+                  <Text style={{ fontSize: 10, fontWeight: fontWeight.bold, color: isActive ? colors.primary : colors.textSecondary }}>
+                    ({count})
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        </View>
       )}
 
       {/* Metrics bar */}

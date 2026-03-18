@@ -4,7 +4,6 @@
 // and redirects the user back to the app.
 // Also supports fetching Facebook Pages and Instagram Business accounts.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
@@ -164,7 +163,7 @@ async function upsertSocialAccount(
   return socialAccountId;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const url = new URL(req.url);
   console.log('OAuth callback hit:', url.pathname + url.search);
 

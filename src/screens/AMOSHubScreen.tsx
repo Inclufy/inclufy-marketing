@@ -98,6 +98,19 @@ const GROUP_1: { label: string; modules: AMOSModule[] } = {
       route: 'ContentCreator',
     },
     {
+      id: 'proposals',
+      name: 'Content Proposals',
+      nameNl: 'Content Voorstellen',
+      description: 'Review & approve AI content',
+      descriptionNl: 'Beoordeel & keur AI content goed',
+      icon: 'file-document-check-outline',
+      iconLib: 'mci',
+      color: '#F59E0B',
+      gradientColors: ['#D97706', '#F59E0B'],
+      status: 'active',
+      route: 'ContentProposals',
+    },
+    {
       id: 'ai',
       name: 'AI Copilot',
       nameNl: 'AI Copiloot',
@@ -158,6 +171,51 @@ const GROUP_2: { label: string; modules: AMOSModule[] } = {
   ],
 };
 
+const GROUP_CONTENT: { label: string; modules: AMOSModule[] } = {
+  label: '📂 Content Hub',
+  modules: [
+    {
+      id: 'products',
+      name: 'Products',
+      nameNl: 'Producten',
+      description: 'Manage products & services catalog',
+      descriptionNl: 'Beheer producten & diensten catalogus',
+      icon: 'package-variant-closed',
+      iconLib: 'mci',
+      color: '#3B82F6',
+      gradientColors: ['#2563EB', '#3B82F6'],
+      status: 'active',
+      route: 'Products',
+    },
+    {
+      id: 'team',
+      name: 'Team Directory',
+      nameNl: 'Team',
+      description: 'Team members & expertise',
+      descriptionNl: 'Teamleden & expertise',
+      icon: 'account-group',
+      iconLib: 'mci',
+      color: '#8B5CF6',
+      gradientColors: ['#7C3AED', '#8B5CF6'],
+      status: 'active',
+      route: 'TeamDirectory',
+    },
+    {
+      id: 'organization',
+      name: 'Organization',
+      nameNl: 'Organisatie',
+      description: 'Company profile, pitch & boilerplate',
+      descriptionNl: 'Bedrijfsprofiel, pitch & boilerplate',
+      icon: 'office-building',
+      iconLib: 'mci',
+      color: '#F97316',
+      gradientColors: ['#EA580C', '#F97316'],
+      status: 'active',
+      route: 'Organization',
+    },
+  ],
+};
+
 const GROUP_3: { label: string; modules: AMOSModule[] } = {
   label: 'Beheer & Optimalisatie',
   modules: [
@@ -173,6 +231,19 @@ const GROUP_3: { label: string; modules: AMOSModule[] } = {
       gradientColors: ['#6D28D9', '#7C3AED'],
       status: 'active',
       route: 'AutonomousHub',
+    },
+    {
+      id: 'strategy',
+      name: 'Marketing Strategy',
+      nameNl: 'Marketing Strategie',
+      description: 'Plan goals, budget & content strategy',
+      descriptionNl: 'Plan doelen, budget & contentstrategie',
+      icon: 'chart-timeline-variant-shimmer',
+      iconLib: 'mci',
+      color: '#059669',
+      gradientColors: ['#047857', '#059669'],
+      status: 'active',
+      route: 'MarketingStrategy',
     },
     {
       id: 'budget',
@@ -232,7 +303,7 @@ const COMING_MODULES: AMOSModule[] = [
   },
 ];
 
-const ALL_ACTIVE_COUNT = HERO_MODULES.length + GROUP_1.modules.length + GROUP_2.modules.length + GROUP_3.modules.length;
+const ALL_ACTIVE_COUNT = HERO_MODULES.length + GROUP_1.modules.length + GROUP_2.modules.length + GROUP_CONTENT.modules.length + GROUP_3.modules.length;
 const ALL_TOTAL = ALL_ACTIVE_COUNT + COMING_MODULES.length;
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -675,6 +746,12 @@ export default function AMOSHubScreen() {
         {renderSectionHeader(t.amosHub.sectionNetwork)}
         <View style={styles.grid}>
           {GROUP_2.modules.map(renderGridCard)}
+        </View>
+
+        {/* ── Content Hub ────────────────────────────────────────────── */}
+        {renderSectionHeader('📂 Content Hub')}
+        <View style={styles.grid}>
+          {GROUP_CONTENT.modules.map(renderGridCard)}
         </View>
 
         {/* ── Group 3: Manage & Optimize ──────────────────────────────── */}

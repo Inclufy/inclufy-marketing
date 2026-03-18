@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useCreateCampaign, useConnectedChannels, type CampaignCreateInput } from '../hooks/useCampaigns';
 import type { RootStackParamList } from '../types';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
@@ -20,35 +20,43 @@ import { useThemedStyles } from '../utils/themedStyles';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-const CAMPAIGN_TYPES: Array<{ key: CampaignCreateInput['type']; icon: string; label: string }> = [
-  { key: 'email', icon: 'mail-outline', label: 'E-mail' },
-  { key: 'sms', icon: 'chatbubble-outline', label: 'SMS' },
-  { key: 'push', icon: 'notifications-outline', label: 'Push' },
-  { key: 'multi-channel', icon: 'layers-outline', label: 'Multi-channel' },
+// Icon helper — supports both Ionicons and MaterialCommunityIcons
+type IconLib = 'ion' | 'mci';
+interface IconDef { icon: string; lib?: IconLib }
+function LuxeIcon({ icon, lib, size, color }: IconDef & { size: number; color: string }) {
+  if (lib === 'mci') return <MaterialCommunityIcons name={icon as any} size={size} color={color} />;
+  return <Ionicons name={icon as any} size={size} color={color} />;
+}
+
+const CAMPAIGN_TYPES: Array<{ key: CampaignCreateInput['type']; icon: string; lib?: IconLib; label: string }> = [
+  { key: 'email', icon: 'email-fast', lib: 'mci', label: 'E-mail' },
+  { key: 'sms', icon: 'message-text', lib: 'mci', label: 'SMS' },
+  { key: 'push', icon: 'bell-ring', lib: 'mci', label: 'Push' },
+  { key: 'multi-channel', icon: 'hubspot', lib: 'mci', label: 'Multi-channel' },
 ];
 
-const GOALS = [
-  { key: 'leads', icon: 'people-outline', label: 'Meer leads' },
-  { key: 'awareness', icon: 'megaphone-outline', label: 'Brand awareness' },
-  { key: 'event', icon: 'calendar-outline', label: 'Event promotie' },
-  { key: 'retention', icon: 'heart-outline', label: 'Klantretentie' },
-  { key: 'launch', icon: 'rocket-outline', label: 'Product launch' },
+const GOALS: Array<{ key: string; icon: string; lib?: IconLib; label: string }> = [
+  { key: 'leads', icon: 'account-group', lib: 'mci', label: 'Meer leads' },
+  { key: 'awareness', icon: 'bullhorn-variant', lib: 'mci', label: 'Brand awareness' },
+  { key: 'event', icon: 'calendar-star', lib: 'mci', label: 'Event promotie' },
+  { key: 'retention', icon: 'heart-pulse', lib: 'mci', label: 'Klantretentie' },
+  { key: 'launch', icon: 'rocket-launch', lib: 'mci', label: 'Product launch' },
 ];
 
-const AUDIENCES = [
-  { key: 'all', icon: 'people', label: 'Alle contacten' },
-  { key: 'event_visitors', icon: 'calendar', label: 'Event bezoekers' },
-  { key: 'leads', icon: 'person-add', label: 'Leads' },
-  { key: 'customers', icon: 'star', label: 'Klanten' },
+const AUDIENCES: Array<{ key: string; icon: string; lib?: IconLib; label: string }> = [
+  { key: 'all', icon: 'account-multiple-check', lib: 'mci', label: 'Alle contacten' },
+  { key: 'event_visitors', icon: 'calendar-account', lib: 'mci', label: 'Event bezoekers' },
+  { key: 'leads', icon: 'account-plus', lib: 'mci', label: 'Leads' },
+  { key: 'customers', icon: 'star-circle', lib: 'mci', label: 'Klanten' },
 ];
 
-const CHANNEL_PLATFORMS = [
-  { key: 'linkedin', icon: 'logo-linkedin', label: 'LinkedIn', color: '#0077B5' },
-  { key: 'facebook', icon: 'logo-facebook', label: 'Facebook', color: '#1877F2' },
-  { key: 'instagram', icon: 'logo-instagram', label: 'Instagram', color: '#E4405F' },
-  { key: 'tiktok', icon: 'musical-notes', label: 'TikTok', color: '#000000' },
-  { key: 'email', icon: 'mail-outline', label: 'E-mail', color: '#6366F1' },
-  { key: 'sms', icon: 'chatbubble-outline', label: 'SMS', color: '#059669' },
+const CHANNEL_PLATFORMS: Array<{ key: string; icon: string; lib?: IconLib; label: string; color: string }> = [
+  { key: 'linkedin', icon: 'linkedin', lib: 'mci', label: 'LinkedIn', color: '#0077B5' },
+  { key: 'facebook', icon: 'facebook', lib: 'mci', label: 'Facebook', color: '#1877F2' },
+  { key: 'instagram', icon: 'instagram', lib: 'mci', label: 'Instagram', color: '#E4405F' },
+  { key: 'tiktok', icon: 'music-note', lib: 'mci', label: 'TikTok', color: '#000000' },
+  { key: 'email', icon: 'email-fast', lib: 'mci', label: 'E-mail', color: '#6366F1' },
+  { key: 'sms', icon: 'message-text', lib: 'mci', label: 'SMS', color: '#059669' },
 ];
 
 const TOTAL_STEPS = 3;
@@ -351,7 +359,7 @@ export default function CampaignCreateScreen() {
                     style={[styles.chip, selected && styles.chipSelected]}
                     onPress={() => setType(ct.key)}
                   >
-                    <Ionicons name={ct.icon as any} size={18} color={selected ? colors.primary : colors.textSecondary} />
+                    <LuxeIcon icon={ct.icon} lib={ct.lib} size={18} color={selected ? colors.primary : colors.textSecondary} />
                     <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{ct.label}</Text>
                   </TouchableOpacity>
                 );
@@ -370,7 +378,7 @@ export default function CampaignCreateScreen() {
                     style={[styles.chip, selected && styles.chipSelected]}
                     onPress={() => setGoal(g.key)}
                   >
-                    <Ionicons name={g.icon as any} size={16} color={selected ? colors.primary : colors.textSecondary} />
+                    <LuxeIcon icon={g.icon} lib={g.lib} size={16} color={selected ? colors.primary : colors.textSecondary} />
                     <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{g.label}</Text>
                   </TouchableOpacity>
                 );
@@ -465,7 +473,7 @@ export default function CampaignCreateScreen() {
                   activeOpacity={0.7}
                 >
                   <View style={[styles.channelIconWrap, { backgroundColor: ch.color + '18' }]}>
-                    <Ionicons name={ch.icon as any} size={22} color={ch.color} />
+                    <LuxeIcon icon={ch.icon} lib={ch.lib} size={22} color={ch.color} />
                   </View>
                   <View style={styles.channelInfo}>
                     <Text style={styles.channelName}>{ch.label}</Text>
@@ -498,7 +506,7 @@ export default function CampaignCreateScreen() {
                     style={[styles.chip, selected && styles.chipSelected]}
                     onPress={() => setAudience(a.key)}
                   >
-                    <Ionicons name={a.icon as any} size={16} color={selected ? colors.primary : colors.textSecondary} />
+                    <LuxeIcon icon={a.icon} lib={a.lib} size={16} color={selected ? colors.primary : colors.textSecondary} />
                     <Text style={[styles.chipText, selected && styles.chipTextSelected]}>{a.label}</Text>
                   </TouchableOpacity>
                 );

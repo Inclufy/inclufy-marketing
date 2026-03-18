@@ -271,18 +271,19 @@ export default function HomeScreen() {
     upcoming: t.status.upcoming ?? 'Upcoming',
   };
 
+  // Quick Actions — features NOT in the tab bar but useful for fast access
   const QUICK_ACTIONS_ROW1: QuickAction[] = [
-    { label: t.home.campaignAction, icon: 'megaphone-outline', route: 'CampaignList', color: colors.primary },
-    { label: t.home.contentAction,  icon: 'create-outline',    route: 'ContentCreator', color: colors.secondary },
-    { label: 'QR Scan',             icon: 'qr-code-outline',   route: 'QRScan',         color: colors.success },
-    { label: t.home.networkingAction, icon: 'people-outline',  route: 'NetworkingEngine', color: '#06B6D4' },
+    { label: 'Content Creator',  icon: 'creation',               route: 'ContentCreator',    color: colors.primary, isMaterial: true },
+    { label: 'Event Intel',      icon: 'radar',                  route: 'EventIntelligence', color: '#F97316', isMaterial: true },
+    { label: 'Lead Capture',     icon: 'account-search',         route: 'LeadCapture',       color: '#06B6D4', isMaterial: true },
+    { label: 'QR Scan',          icon: 'qrcode-scan',            route: 'QRScan',            color: colors.success, isMaterial: true },
   ];
 
   const QUICK_ACTIONS_ROW2: QuickAction[] = [
-    { label: '🤖 Copilot',             icon: 'robot',            route: 'NetworkTab' as any, color: '#E8317A', isMaterial: true },
-    { label: 'Event Intel',            icon: 'radar',            route: 'EventIntelligence', color: '#F97316', isMaterial: true },
-    { label: t.home.opportunityAction, icon: 'radio-outline',    route: 'OpportunityFeed',   color: colors.warning },
-    { label: t.home.budgetMonitor,     icon: 'bar-chart-outline', route: 'BudgetMonitor',    color: '#10B981' },
+    { label: 'Producten',        icon: 'package-variant-closed', route: 'Products',          color: '#3B82F6', isMaterial: true },
+    { label: 'Team',             icon: 'account-group',          route: 'TeamDirectory',     color: '#8B5CF6', isMaterial: true },
+    { label: 'Organisatie',      icon: 'office-building',        route: 'Organization',      color: '#F97316', isMaterial: true },
+    { label: 'Brand Kit',        icon: 'palette-swatch-variant', route: 'BrandKit',          color: '#EC4899', isMaterial: true },
   ];
 
   const upcomingEvents = allEvents
@@ -323,11 +324,7 @@ export default function HomeScreen() {
       activeOpacity={0.7}
     >
       <View style={[styles.actionIconWrap, { backgroundColor: action.color + '15' }]}>
-        {action.isMaterial ? (
-          <MaterialCommunityIcons name={action.icon as any} size={24} color={action.color} />
-        ) : (
-          <Ionicons name={action.icon as any} size={24} color={action.color} />
-        )}
+        <MaterialCommunityIcons name={action.icon as any} size={24} color={action.color} />
       </View>
       <Text style={styles.actionLabel} numberOfLines={1}>{action.label}</Text>
     </TouchableOpacity>
@@ -352,7 +349,7 @@ export default function HomeScreen() {
           </View>
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Notifications' as any)}>
-              <Ionicons name="notifications-outline" size={22} color={colors.text} />
+              <MaterialCommunityIcons name="bell-outline" size={22} color={colors.text} />
               {unreadNotifCount > 0 && (
                 <View style={styles.notifBadge}>
                   <Text style={styles.notifBadgeText}>{unreadNotifCount > 9 ? '9+' : String(unreadNotifCount)}</Text>
@@ -360,7 +357,7 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
             <TouchableOpacity style={styles.headerIconBtn} onPress={() => navigation.navigate('Settings' as any)}>
-              <Ionicons name="settings-outline" size={22} color={colors.text} />
+              <MaterialCommunityIcons name="cog-outline" size={22} color={colors.text} />
             </TouchableOpacity>
           </View>
         </View>
