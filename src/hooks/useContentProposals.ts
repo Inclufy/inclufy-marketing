@@ -324,11 +324,14 @@ const CONTENT_TEMPLATES: Record<string, Array<(ctx: any) => { title: string; tex
     }),
   ],
   promotional: [
-    (ctx) => ({
-      title: `Ontdek ${ctx.product?.name || ctx.org?.company_name || 'onze oplossing'}`,
-      text: `🚀 ${ctx.product?.name || ctx.org?.company_name || 'Onze nieuwe oplossing'} — ${ctx.product?.description || ctx.org?.tagline || 'de oplossing die je nodig hebt'}.\n\n${ctx.product?.usps?.map((u: string) => `✅ ${u}`).join('\n') || '✅ Bewezen resultaten\n✅ Persoonlijke aanpak'}\n\n${ctx.product?.price ? `Vanaf ${ctx.product.price}` : 'Vraag een demo aan!'} 🎯`,
-      hashtags: ['#nieuw', '#launch', `#${(ctx.product?.name || 'product').toLowerCase().replace(/\s/g, '')}`],
-    }),
+    (ctx) => {
+      const name = ctx.product?.name || ctx.org?.company_name || 'onze oplossing';
+      return {
+        title: `Ontdek ${name}`,
+        text: `🚀 ${name} — ${ctx.product?.description || ctx.org?.tagline || 'de oplossing die je nodig hebt'}.\n\n${ctx.product?.usps?.map((u: string) => `✅ ${u}`).join('\n') || '✅ Bewezen resultaten\n✅ Persoonlijke aanpak'}\n\n${ctx.product?.price ? `Vanaf ${ctx.product.price}` : 'Vraag een demo aan!'} 🎯`,
+        hashtags: ['#nieuw', '#launch', `#${name.toLowerCase().replace(/\s/g, '')}`],
+      };
+    },
   ],
   behind_scenes: [
     (ctx) => ({
@@ -356,6 +359,10 @@ const CONTENT_TEMPLATES: Record<string, Array<(ctx: any) => { title: string; tex
 const DAY_NAMES_NL: Record<string, number> = {
   monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
   friday: 5, saturday: 6, sunday: 0,
+  // Short Dutch names (used by mobile strategy config)
+  ma: 1, di: 2, wo: 3, do: 4, vr: 5, za: 6, zo: 0,
+  // Short English names
+  mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0,
 };
 
 function getNextDateForDay(dayName: string, weekOffset: number = 0): Date {
