@@ -1,189 +1,289 @@
 // src/screens/OnboardingScreen.tsx
-// Onboarding Wizard — step-by-step setup for new users
+// Interactive App Tour & Setup Guide
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, ScrollView, SafeAreaView, TextInput, Animated,
+  View, Text, TouchableOpacity, ScrollView, SafeAreaView, TextInput,
+  Dimensions, FlatList, Animated,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { supabase } from '../services/supabase';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 
-interface OnboardingStep {
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+// ─── Tour Slides ─────────────────────────────────────────────────────
+
+interface TourSlide {
   id: string;
+  icon: string;
+  iconColor: string;
+  gradient: [string, string];
   title: string;
   subtitle: string;
-  icon: string;
-  fields: Array<{ key: string; label: string; placeholder: string; multiline?: boolean }>;
-  table: string;
+  features: Array<{ icon: string; text: string }>;
 }
 
-const STEPS: OnboardingStep[] = [
+const TOUR_SLIDES: TourSlide[] = [
   {
-    id: 'organization',
-    title: 'Je Organisatie',
-    subtitle: 'Vertel ons over je bedrijf',
-    icon: 'office-building',
-    fields: [
-      { key: 'name', label: 'Bedrijfsnaam', placeholder: 'Inclufy' },
-      { key: 'industry', label: 'Industrie', placeholder: 'SaaS / Marketing Tech' },
-      { key: 'website', label: 'Website', placeholder: 'https://inclufy.com' },
-      { key: 'description', label: 'Beschrijving', placeholder: 'Wat doet je bedrijf?', multiline: true },
-      { key: 'pitch', label: 'Elevator Pitch', placeholder: '30 seconden pitch...', multiline: true },
+    id: 'welcome',
+    icon: 'robot-happy',
+    iconColor: '#7C3AED',
+    gradient: ['#7C3AED', '#A855F7'],
+    title: 'Welkom bij AMOS',
+    subtitle: 'Jouw AI Marketing Operating System',
+    features: [
+      { icon: 'brain', text: 'AI genereert content voor al je kanalen' },
+      { icon: 'lightning-bolt', text: 'Automatiseer je complete marketing' },
+      { icon: 'chart-line', text: 'Real-time analytics en inzichten' },
     ],
-    table: 'go_organization',
   },
   {
-    id: 'product',
-    title: 'Je Product/Dienst',
-    subtitle: 'Voeg je belangrijkste product toe',
-    icon: 'package-variant',
-    fields: [
-      { key: 'name', label: 'Product naam', placeholder: 'AMOS Marketing Platform' },
-      { key: 'description', label: 'Beschrijving', placeholder: 'Wat doet het product?', multiline: true },
-      { key: 'category', label: 'Categorie', placeholder: 'SaaS / Service / Product' },
+    id: 'capture',
+    icon: 'camera-plus',
+    iconColor: '#E8317A',
+    gradient: ['#E8317A', '#F7941D'],
+    title: 'Live Capture',
+    subtitle: 'Leg content vast tijdens events',
+    features: [
+      { icon: 'camera', text: 'Foto, video, audio & quotes vastleggen' },
+      { icon: 'auto-fix', text: 'AI maakt direct posts van je captures' },
+      { icon: 'share-variant', text: 'Publiceer naar LinkedIn, Instagram & meer' },
     ],
-    table: 'go_products',
   },
   {
-    id: 'team',
-    title: 'Je Team',
-    subtitle: 'Voeg een teamlid toe (optioneel)',
-    icon: 'account-group',
-    fields: [
-      { key: 'name', label: 'Naam', placeholder: 'Sami Loukile' },
-      { key: 'role', label: 'Functie', placeholder: 'CEO / Marketing Manager' },
+    id: 'campaigns',
+    icon: 'bullhorn',
+    iconColor: '#3B82F6',
+    gradient: ['#3B82F6', '#06B6D4'],
+    title: 'Campagnes & Events',
+    subtitle: 'Beheer al je marketing activiteiten',
+    features: [
+      { icon: 'calendar-star', text: 'Plan en beheer events met AI support' },
+      { icon: 'rocket-launch', text: 'Maak campagnes met budget tracking' },
+      { icon: 'account-group', text: 'Team samenwerking en lead management' },
     ],
-    table: 'go_team_directory',
   },
   {
-    id: 'strategy',
-    title: 'Marketing Strategie',
-    subtitle: 'Basis instellingen',
-    icon: 'target',
-    fields: [
-      { key: 'primary_goal', label: 'Belangrijkste doel', placeholder: 'Brand awareness / Lead generation' },
+    id: 'ai',
+    icon: 'head-snowflake',
+    iconColor: '#10B981',
+    gradient: ['#10B981', '#059669'],
+    title: 'AMOS AI Copilot',
+    subtitle: 'Je persoonlijke marketing assistent',
+    features: [
+      { icon: 'message-text', text: 'Chat met AI over je marketing strategie' },
+      { icon: 'file-document-edit', text: 'Content voorstellen die je kunt goedkeuren' },
+      { icon: 'shield-check', text: 'Vertrouwensniveau bepaalt AI autonomie' },
     ],
-    table: 'go_marketing_strategy',
   },
 ];
+
+// ─── Setup Steps ────────────────────────────────────────────────────
+
+interface SetupItem {
+  id: string;
+  icon: string;
+  color: string;
+  title: string;
+  description: string;
+  route: string;
+}
+
+const SETUP_ITEMS: SetupItem[] = [
+  { id: 'brand', icon: 'palette-swatch-variant', color: '#EC4899', title: 'Brand Kit', description: 'Kleuren, fonts & visuele identiteit', route: 'BrandKit' },
+  { id: 'product', icon: 'package-variant-closed', color: '#3B82F6', title: 'Producten & Diensten', description: 'Wat bied je aan?', route: 'Products' },
+  { id: 'social', icon: 'link-variant', color: '#8B5CF6', title: 'Social Media koppelen', description: 'LinkedIn, Instagram, Facebook', route: 'Settings' },
+  { id: 'strategy', icon: 'target', color: '#10B981', title: 'Marketing Strategie', description: 'Doelen, kanalen & planning', route: 'MarketingStrategy' },
+];
+
+// ─── Component ──────────────────────────────────────────────────────
 
 export default function OnboardingScreen() {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
-  const styles = useThemedStyles(colors);
-  const [currentStep, setCurrentStep] = useState(0);
-  const [formData, setFormData] = useState<Record<string, Record<string, string>>>({});
-  const [saving, setSaving] = useState(false);
-  const [completed, setCompleted] = useState(false);
+  const styles = useThemedStyles((c) => ({
+    container: { flex: 1, backgroundColor: c.background },
+  }));
 
-  const step = STEPS[currentStep];
-  const progress = ((currentStep + 1) / STEPS.length) * 100;
+  const [phase, setPhase] = useState<'tour' | 'setup'>('tour');
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const flatListRef = useRef<FlatList>(null);
+  const scrollX = useRef(new Animated.Value(0)).current;
 
-  const updateField = (key: string, value: string) => {
-    setFormData(prev => ({
-      ...prev,
-      [step.id]: { ...(prev[step.id] || {}), [key]: value },
-    }));
+  // ─── Tour Phase ─────────────────────────────────────────────────
+
+  const goToSlide = (index: number) => {
+    flatListRef.current?.scrollToIndex({ index, animated: true });
+    setCurrentSlide(index);
   };
 
-  const saveStep = async () => {
-    setSaving(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const data = formData[step.id] || {};
-      if (Object.values(data).every(v => !v.trim())) {
-        // Skip empty steps
-        goNext();
-        return;
-      }
-
-      if (step.id === 'strategy') {
-        // Strategy has special structure
-        const existing = await supabase.from('go_marketing_strategy').select('id').eq('user_id', user.id).maybeSingle();
-        if (existing.data) {
-          await supabase.from('go_marketing_strategy').update({
-            goals: [data.primary_goal].filter(Boolean),
-            channels: { linkedin: { active: true, priority: 1 } },
-            posts_per_week: 3,
-            posting_days: ['ma', 'wo', 'vr'],
-            autonomy_level: 'balanced',
-            content_mix: { educational: 30, promotional: 20, behind_scenes: 20, thought_leadership: 20, user_generated: 10 },
-          }).eq('id', existing.data.id);
-        } else {
-          await supabase.from('go_marketing_strategy').insert({
-            user_id: user.id,
-            goals: [data.primary_goal].filter(Boolean),
-            channels: { linkedin: { active: true, priority: 1 } },
-            posts_per_week: 3,
-            posting_days: ['ma', 'wo', 'vr'],
-            autonomy_level: 'balanced',
-            content_mix: { educational: 30, promotional: 20, behind_scenes: 20, thought_leadership: 20, user_generated: 10 },
-          });
-        }
-      } else if (step.id === 'team') {
-        await supabase.from(step.table).insert({
-          ...data,
-          expertise: [],
-          user_id: user.id,
-        });
-      } else {
-        // Check if record exists
-        const existing = await supabase.from(step.table).select('id').eq('user_id', user.id).maybeSingle();
-        if (existing.data) {
-          await supabase.from(step.table).update(data).eq('id', existing.data.id);
-        } else {
-          await supabase.from(step.table).insert({ ...data, user_id: user.id });
-        }
-      }
-      goNext();
-    } catch (err) {
-      console.warn('Onboarding save error:', err);
-      goNext(); // Still advance
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const goNext = () => {
-    if (currentStep < STEPS.length - 1) {
-      setCurrentStep(currentStep + 1);
+  const handleNext = () => {
+    if (currentSlide < TOUR_SLIDES.length - 1) {
+      goToSlide(currentSlide + 1);
     } else {
-      setCompleted(true);
+      setPhase('setup');
     }
   };
 
-  if (completed) {
+  const renderSlide = ({ item }: { item: TourSlide }) => (
+    <View style={{ width: SCREEN_WIDTH, paddingHorizontal: spacing.lg }}>
+      {/* Hero gradient card */}
+      <LinearGradient
+        colors={item.gradient}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={{
+          borderRadius: borderRadius.xl, padding: spacing.xl,
+          alignItems: 'center', marginTop: spacing.lg,
+        }}
+      >
+        <View style={{
+          width: 80, height: 80, borderRadius: 40,
+          backgroundColor: 'rgba(255,255,255,0.2)',
+          justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md,
+        }}>
+          <MaterialCommunityIcons name={item.icon as any} size={42} color="#fff" />
+        </View>
+        <Text style={{ fontSize: 26, fontWeight: '800', color: '#fff', textAlign: 'center' }}>
+          {item.title}
+        </Text>
+        <Text style={{ fontSize: fontSize.md, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginTop: spacing.xs }}>
+          {item.subtitle}
+        </Text>
+      </LinearGradient>
+
+      {/* Feature list */}
+      <View style={{ marginTop: spacing.xl, gap: spacing.md }}>
+        {item.features.map((f, i) => (
+          <View key={i} style={{
+            flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+            backgroundColor: colors.surface, borderRadius: borderRadius.lg,
+            padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+          }}>
+            <View style={{
+              width: 44, height: 44, borderRadius: 22,
+              backgroundColor: item.iconColor + '15',
+              justifyContent: 'center', alignItems: 'center',
+            }}>
+              <MaterialCommunityIcons name={f.icon as any} size={22} color={item.iconColor} />
+            </View>
+            <Text style={{ flex: 1, fontSize: fontSize.md, color: colors.text, lineHeight: 22 }}>
+              {f.text}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+
+  // ─── Setup Phase ────────────────────────────────────────────────
+
+  if (phase === 'setup') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xl }}>
-          <View style={{
-            width: 80, height: 80, borderRadius: 40, backgroundColor: '#10B981' + '20',
-            justifyContent: 'center', alignItems: 'center', marginBottom: spacing.lg,
-          }}>
-            <MaterialCommunityIcons name="check-circle" size={48} color="#10B981" />
+        <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: 120 }}>
+          {/* Header */}
+          <View style={{ alignItems: 'center', marginBottom: spacing.xl, marginTop: spacing.md }}>
+            <View style={{
+              width: 64, height: 64, borderRadius: 32,
+              backgroundColor: colors.primary + '15',
+              justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md,
+            }}>
+              <MaterialCommunityIcons name="rocket-launch" size={32} color={colors.primary} />
+            </View>
+            <Text style={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold as any, color: colors.text, textAlign: 'center' }}>
+              Stel je platform in
+            </Text>
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.xs, lineHeight: 20 }}>
+              Vul de stappen hieronder in zodat AMOS{'\n'}gepersonaliseerde content kan genereren
+            </Text>
           </View>
-          <Text style={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold as any, color: colors.text, textAlign: 'center' }}>
-            Platform Klaar!
-          </Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', marginTop: spacing.sm, lineHeight: 20 }}>
-            Je organisatie, product en strategie zijn ingesteld. AMOS kan nu gepersonaliseerde content genereren.
-          </Text>
+
+          {/* Setup cards */}
+          <View style={{ gap: spacing.sm }}>
+            {SETUP_ITEMS.map((item, index) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => navigation.navigate(item.route as any)}
+                activeOpacity={0.7}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+                  backgroundColor: colors.surface, borderRadius: borderRadius.lg,
+                  padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+                }}
+              >
+                <View style={{
+                  width: 28, height: 28, borderRadius: 14,
+                  backgroundColor: colors.border,
+                  justifyContent: 'center', alignItems: 'center',
+                }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: colors.textSecondary }}>
+                    {index + 1}
+                  </Text>
+                </View>
+                <View style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  backgroundColor: item.color + '12',
+                  justifyContent: 'center', alignItems: 'center',
+                }}>
+                  <MaterialCommunityIcons name={item.icon as any} size={24} color={item.color} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold as any, color: colors.text }}>
+                    {item.title}
+                  </Text>
+                  <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 }}>
+                    {item.description}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Tip */}
+          <View style={{
+            flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+            backgroundColor: colors.primary + '08', borderRadius: borderRadius.lg,
+            padding: spacing.md, marginTop: spacing.lg,
+            borderWidth: 1, borderColor: colors.primary + '20',
+          }}>
+            <MaterialCommunityIcons name="lightbulb-outline" size={20} color={colors.primary} />
+            <Text style={{ flex: 1, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 20 }}>
+              Je kunt deze stappen altijd later aanpassen via Instellingen. Begin met de stappen die je al weet.
+            </Text>
+          </View>
+        </ScrollView>
+
+        {/* Bottom buttons */}
+        <View style={{
+          position: 'absolute', bottom: 0, left: 0, right: 0,
+          padding: spacing.lg, paddingBottom: spacing.xl + 10,
+          backgroundColor: colors.background,
+          borderTopWidth: 1, borderTopColor: colors.border,
+        }}>
           <TouchableOpacity
             onPress={() => navigation.navigate('Main')}
             style={{
-              marginTop: spacing.xl, backgroundColor: colors.primary,
-              paddingHorizontal: spacing.xl, paddingVertical: spacing.md,
-              borderRadius: borderRadius.lg,
+              backgroundColor: colors.primary, borderRadius: borderRadius.lg,
+              paddingVertical: spacing.md, alignItems: 'center',
             }}
           >
-            <Text style={{ color: '#FFF', fontWeight: fontWeight.semibold as any, fontSize: fontSize.md }}>
-              Naar Dashboard →
+            <Text style={{ color: '#FFF', fontWeight: fontWeight.bold as any, fontSize: fontSize.md }}>
+              Naar Dashboard
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setPhase('tour')}
+            style={{ alignItems: 'center', marginTop: spacing.sm, paddingVertical: spacing.xs }}
+          >
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>
+              Terug naar tour
             </Text>
           </TouchableOpacity>
         </View>
@@ -191,80 +291,65 @@ export default function OnboardingScreen() {
     );
   }
 
+  // ─── Tour Phase Render ──────────────────────────────────────────
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm }}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.md }}>
-          <TouchableOpacity onPress={() => currentStep > 0 ? setCurrentStep(currentStep - 1) : navigation.goBack()}>
-            <Ionicons name="chevron-back" size={24} color={colors.text} />
-          </TouchableOpacity>
-          <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>
-            Stap {currentStep + 1} van {STEPS.length}
+      {/* Skip button */}
+      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+        <TouchableOpacity onPress={() => setPhase('setup')}>
+          <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.medium as any }}>
+            Overslaan
           </Text>
-          <TouchableOpacity onPress={goNext}>
-            <Text style={{ fontSize: fontSize.sm, color: colors.primary }}>Overslaan</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Progress Bar */}
-        <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.border, marginBottom: spacing.lg }}>
-          <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.primary, width: `${progress}%` }} />
-        </View>
+        </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.md }}>
-        {/* Step Icon + Title */}
-        <View style={{ alignItems: 'center', marginBottom: spacing.xl }}>
-          <View style={{
-            width: 64, height: 64, borderRadius: 32, backgroundColor: colors.primary + '15',
-            justifyContent: 'center', alignItems: 'center', marginBottom: spacing.md,
-          }}>
-            <MaterialCommunityIcons name={step.icon as any} size={32} color={colors.primary} />
-          </View>
-          <Text style={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold as any, color: colors.text }}>{step.title}</Text>
-          <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginTop: 4 }}>{step.subtitle}</Text>
+      {/* Slides */}
+      <FlatList
+        ref={flatListRef}
+        data={TOUR_SLIDES}
+        renderItem={renderSlide}
+        keyExtractor={(item) => item.id}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+          { useNativeDriver: false },
+        )}
+        onMomentumScrollEnd={(e) => {
+          const index = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
+          setCurrentSlide(index);
+        }}
+        getItemLayout={(_, index) => ({
+          length: SCREEN_WIDTH, offset: SCREEN_WIDTH * index, index,
+        })}
+      />
+
+      {/* Bottom: dots + button */}
+      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.xl + 10, paddingTop: spacing.md }}>
+        {/* Dots */}
+        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: spacing.lg }}>
+          {TOUR_SLIDES.map((_, i) => (
+            <TouchableOpacity key={i} onPress={() => goToSlide(i)}>
+              <View style={{
+                width: currentSlide === i ? 24 : 8, height: 8, borderRadius: 4,
+                backgroundColor: currentSlide === i ? colors.primary : colors.border,
+              }} />
+            </TouchableOpacity>
+          ))}
         </View>
 
-        {/* Fields */}
-        {step.fields.map(field => (
-          <View key={field.key} style={{ marginBottom: spacing.md }}>
-            <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium as any, color: colors.text, marginBottom: spacing.xs }}>
-              {field.label}
-            </Text>
-            <TextInput
-              value={formData[step.id]?.[field.key] || ''}
-              onChangeText={v => updateField(field.key, v)}
-              placeholder={field.placeholder}
-              placeholderTextColor={colors.textSecondary + '80'}
-              multiline={field.multiline}
-              numberOfLines={field.multiline ? 3 : 1}
-              style={{
-                backgroundColor: colors.surface, borderRadius: borderRadius.md,
-                borderWidth: 1, borderColor: colors.border,
-                paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-                fontSize: fontSize.md, color: colors.text,
-                minHeight: field.multiline ? 80 : undefined,
-                textAlignVertical: field.multiline ? 'top' : 'center',
-              }}
-            />
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* Bottom Button */}
-      <View style={{ padding: spacing.md, borderTopWidth: 1, borderTopColor: colors.border }}>
+        {/* Next / Start button */}
         <TouchableOpacity
-          onPress={saveStep}
-          disabled={saving}
+          onPress={handleNext}
           style={{
             backgroundColor: colors.primary, borderRadius: borderRadius.lg,
             paddingVertical: spacing.md, alignItems: 'center',
-            opacity: saving ? 0.7 : 1,
           }}
         >
-          <Text style={{ color: '#FFF', fontWeight: fontWeight.semibold as any, fontSize: fontSize.md }}>
-            {saving ? 'Opslaan...' : currentStep < STEPS.length - 1 ? 'Volgende →' : 'Afronden ✓'}
+          <Text style={{ color: '#FFF', fontWeight: fontWeight.bold as any, fontSize: fontSize.md }}>
+            {currentSlide < TOUR_SLIDES.length - 1 ? 'Volgende' : 'Platform instellen'}
           </Text>
         </TouchableOpacity>
       </View>

@@ -512,15 +512,6 @@ export default function SettingsScreen() {
           setShowManualConnect(true);
         },
       });
-      options.push({
-        text: '🏢 Bedrijfspagina toevoegen',
-        onPress: () => {
-          setManualPlatform(platformKey);
-          setManualAccountName('');
-          setManualAccountUrl('');
-          setShowManualConnect(true);
-        },
-      });
     } else {
       options.push({
         text: '🔗 Verbinden via OAuth',
@@ -568,10 +559,8 @@ export default function SettingsScreen() {
       authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email w_member_social')}&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'facebook' || platformKey === 'instagram') {
       const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
-      const scope = platformKey === 'instagram'
-        ? 'instagram_basic,instagram_content_publish,pages_show_list,pages_read_engagement'
-        : 'pages_show_list,pages_read_engagement,pages_manage_posts,public_profile';
-      authUrl = `https://www.facebook.com/v18.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
+      const scope = 'pages_show_list,pages_manage_posts,public_profile';
+      authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'tiktok') {
       const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
