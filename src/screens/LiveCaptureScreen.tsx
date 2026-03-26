@@ -557,6 +557,12 @@ export default function LiveCaptureScreen() {
   };
 
   const handleUploadFromLibrary = async () => {
+    // Check AI consent before opening picker — avoids stale closure after modal dismiss
+    if (!hasConsent) {
+      requestConsent(() => { handleUploadFromLibrary(); });
+      return;
+    }
+
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Geen toegang', 'Geef toegang tot je fotobibliotheek om een afbeelding te uploaden.');
