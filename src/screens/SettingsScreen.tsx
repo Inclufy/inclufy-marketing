@@ -301,6 +301,45 @@ export default function SettingsScreen() {
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Account verwijderen',
+      'Typ "VERWIJDER" om je account permanent te verwijderen. Dit kan niet ongedaan worden gemaakt.',
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        {
+          text: 'Doorgaan',
+          style: 'destructive',
+          onPress: () => {
+            Alert.prompt(
+              'Bevestig verwijdering',
+              'Typ VERWIJDER om door te gaan',
+              async (input) => {
+                if (input?.trim() !== 'VERWIJDER') {
+                  Alert.alert('Geannuleerd', 'De tekst komt niet overeen. Account is niet verwijderd.');
+                  return;
+                }
+                try {
+                  const { data: { user } = {} as any } = await supabase.auth.getUser();
+                  if (!user) throw new Error('Niet ingelogd');
+                  // Try RPC first, fall back to deleting profile row
+                  const { error: rpcError } = await supabase.rpc('delete_user');
+                  if (rpcError) {
+                    await supabase.from('profiles').delete().eq('id', user.id);
+                  }
+                  await supabase.auth.signOut();
+                } catch (err: any) {
+                  Alert.alert('Fout', err?.message ?? 'Account kon niet worden verwijderd.');
+                }
+              },
+              'plain-text',
+            );
+          },
+        },
+      ],
+    );
+  };
+
   const handleLogout = () => {
     Alert.alert(
       t.settings.logout,
@@ -1087,6 +1126,26 @@ export default function SettingsScreen() {
             label={t.settings.demoEnvironment ?? 'Demo Omgeving'}
             value={t.settings.demoEnvironmentDesc ?? 'Genereer demo-events'}
             onPress={() => navigation.navigate('DemoEnvironment')}
+          />
+        </View>
+
+        {/* ── Gegevensbeheer ────────────────────────────────────────── */}
+        <Text style={styles.sectionLabel}>Gegevensbeheer</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="download-outline"
+            iconColor={colors.success}
+            label="Mijn data exporteren"
+            value={exportLoading ? 'Exporteren...' : 'Posts, captures & events als JSON'}
+            onPress={exportLoading ? undefined : handleDataExport}
+          />
+          <View style={styles.separator} />
+          <SettingsRow
+            icon="trash-outline"
+            iconColor={colors.error}
+            label="Account verwijderen"
+            value="Verwijder account en alle data"
+            onPress={handleDeleteAccount}
           />
         </View>
 
