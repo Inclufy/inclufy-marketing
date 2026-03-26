@@ -16,10 +16,13 @@ echo "Node: $(node --version) | npm: $(npm --version)"
 echo "=== Installing npm dependencies ==="
 npm ci
 
-# Set Supabase env vars
-echo "=== Setting environment variables ==="
-export EXPO_PUBLIC_SUPABASE_URL="${EXPO_PUBLIC_SUPABASE_URL}"
-export EXPO_PUBLIC_SUPABASE_ANON_KEY="${EXPO_PUBLIC_SUPABASE_ANON_KEY}"
+# Write .env.local so Expo inlines the values at build time
+echo "=== Writing .env.local ==="
+cat > .env.local << 'ENVEOF'
+EXPO_PUBLIC_SUPABASE_URL=https://mpxkugfqzmxydxnlxqoj.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGt1Z2Zxem14eWR4bmx4cW9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY0NzY5MDEsImV4cCI6MjA4MjA1MjkwMX0.17YXD9I9fZulQGoGZFFFzQ-f-LW4E1lsT3SSpDC_GA0
+ENVEOF
+echo "Supabase URL: $(grep EXPO_PUBLIC_SUPABASE_URL .env.local | cut -d= -f2)"
 
 # Set buildNumber from Xcode Cloud build number
 echo "=== Setting buildNumber to $CI_BUILD_NUMBER ==="
