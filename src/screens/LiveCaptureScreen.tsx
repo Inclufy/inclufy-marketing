@@ -162,9 +162,9 @@ export default function LiveCaptureScreen() {
 
   // ── Free capture (no event required) — create capture + AI posts, navigate to PostReview ──
   const processFreeCapture = useCallback(
-    async (mediaUri: string, mediaType: MediaType, exif?: Record<string, any>) => {
+    async (mediaUri: string, mediaType: MediaType, exif?: Record<string, any>, transcript?: string) => {
       if (!hasConsent) {
-        requestConsent(() => { processFreeCapture(mediaUri, mediaType, exif); });
+        requestConsent(() => { processFreeCapture(mediaUri, mediaType, exif, transcript); });
         return;
       }
       setProcessing(true);
@@ -227,7 +227,7 @@ export default function LiveCaptureScreen() {
           ai_status: 'processing',
           ai_description: null,
           duration_seconds: null,
-          transcript: null,
+          transcript: transcript || null,
           captured_at: new Date().toISOString(),
         } as any);
 
@@ -242,6 +242,9 @@ export default function LiveCaptureScreen() {
         const brandCtx = toBrandContext(brandMemory);
         if (brandCtx) aiService.setBrandContext(brandCtx);
 
+        // For audio captures, use the transcript as AI context
+        const aiText = transcript || note.trim() || undefined;
+
         const activeChannels: Channel[] = selectedChannels.length
           ? selectedChannels
           : ['linkedin', 'instagram'];
@@ -251,7 +254,7 @@ export default function LiveCaptureScreen() {
           results = await aiService.generateAllChannelPosts(
             activeChannels,
             imageBase64,
-            note.trim() || undefined,
+            aiText,
             {
               name: captureCategory === 'product' ? (selectedProduct?.name || 'Product') :
                     captureCategory === 'behind_scenes' ? (selectedMember?.name || 'Behind the Scenes') :
@@ -542,11 +545,8 @@ export default function LiveCaptureScreen() {
       requestConsent(() => { handleAudioComplete(uri); });
       return;
     }
-    if (isFreeCapture) {
-      await processFreeCapture(uri, 'audio');
-      return;
-    }
     setProcessing(true);
+    // Transcribe audio for both free and event captures
     let transcript = '';
     try {
       const base64 = await FileSystem.readAsStringAsync(uri, {
@@ -556,6 +556,11 @@ export default function LiveCaptureScreen() {
       transcript = result.transcript;
     } catch (transcribeErr) {
       console.warn('[AudioCapture] transcription failed (non-fatal):', transcribeErr);
+    }
+    if (isFreeCapture) {
+      setProcessing(false);
+      await processFreeCapture(uri, 'audio', undefined, transcript || note.trim() || undefined);
+      return;
     }
     await processCapture(uri, 'audio', transcript || note.trim() || undefined);
   };
