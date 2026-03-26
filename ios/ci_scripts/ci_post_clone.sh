@@ -1,8 +1,7 @@
 #!/bin/sh
-set -eo pipefail
+set -e
 
 echo "=== Xcode Cloud ci_post_clone.sh (AMOS) ==="
-echo "macOS: $(sw_vers -productVersion) | Xcode: $(xcodebuild -version | head -1)"
 
 # Navigate to project root
 cd "$CI_PRIMARY_REPOSITORY_PATH"
@@ -13,7 +12,7 @@ export CI=1
 
 # Install Node.js
 echo "=== Installing Node.js ==="
-brew install node || brew upgrade node || true
+brew install node || true
 echo "Node: $(node --version) | npm: $(npm --version)"
 
 # Install dependencies
@@ -26,7 +25,6 @@ cat > .env.local << 'ENVEOF'
 EXPO_PUBLIC_SUPABASE_URL=https://mpxkugfqzmxydxnlxqoj.supabase.co
 EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1weGt1Z2Zxem14eWR4bmx4cW9qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY0NzY5MDEsImV4cCI6MjA4MjA1MjkwMX0.17YXD9I9fZulQGoGZFFFzQ-f-LW4E1lsT3SSpDC_GA0
 ENVEOF
-echo "Supabase URL: $(grep EXPO_PUBLIC_SUPABASE_URL .env.local | cut -d= -f2)"
 
 # Set buildNumber from Xcode Cloud build number
 echo "=== Setting buildNumber to $CI_BUILD_NUMBER ==="
@@ -40,15 +38,16 @@ if [ -n "$CI_BUILD_NUMBER" ]; then
   "
 fi
 
-# Run expo prebuild (clean regenerate to pick up any native config changes)
+# Run expo prebuild
 echo "=== Running Expo prebuild ==="
-npx expo prebuild --platform ios --clean
+npx expo prebuild --platform ios --no-install
 
 # Disable Explicitly Built Modules (Xcode 26 breaks Expo SDK 52 pods)
-echo "=== Disabling Explicitly Built Modules for Xcode 26 compatibility ==="
-ruby -i -e '
-  content = ARGF.read
-  injection = <<~RUBY
+echo "=== Patching Podfile for Xcode 26 compatibility ==="
+if grep -q "post_install do |installer|" ios/Podfile; then
+  ruby -i -e '
+    content = ARGF.read
+    injection = <<~RUBY
     # Xcode 26: disable Explicitly Built Modules for all pods
     installer.pods_project.build_configurations.each do |config|
       config.build_settings["SWIFT_ENABLE_EXPLICIT_MODULES"] = "NO"
@@ -58,12 +57,16 @@ ruby -i -e '
         config.build_settings["SWIFT_ENABLE_EXPLICIT_MODULES"] = "NO"
       end
     end
-  RUBY
-  content.sub!("post_install do |installer|\n", "post_install do |installer|\n#{injection}")
-  print content
-' ios/Podfile
+    RUBY
+    content.sub!("post_install do |installer|\n", "post_install do |installer|\n#{injection}")
+    print content
+  ' ios/Podfile
+  echo "Podfile patched successfully"
+else
+  echo "WARNING: post_install block not found in Podfile, skipping patch"
+fi
 
-# Re-run pod install with the updated Podfile
+# Install CocoaPods
 echo "=== Installing CocoaPods ==="
 cd ios && pod install
 
