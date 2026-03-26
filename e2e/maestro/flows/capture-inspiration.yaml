@@ -1,0 +1,69 @@
+appId: com.inclufy.go
+---
+# ═══ Inspiration Capture Flow ═══
+# FAB → Inspiratie → upload image → AI generation → PostReview
+
+# 1. Launch and go to Dashboard
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: inspiration_01_home
+
+# 2. Tap FAB (floating camera button)
+- tapOn:
+    point: "50%,88%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: inspiration_02_modal
+
+# 3. Tap "Inspiratie" card (bottom-left of 2x2 grid)
+- tapOn:
+    point: "25%,68%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: inspiration_03_live_capture
+
+# 4. Switch to Upload tab (rightmost mode tab at bottom)
+- tapOn:
+    point: "90%,95%"
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: inspiration_04_upload_tab
+
+# 5. Tap "Kies uit bibliotheek" button
+# Button bounds: [75,467][317,520] on 393x852 → center at 50%,58%
+- tapOn:
+    point: "50%,58%"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: inspiration_05_photo_picker
+
+# 6. In iOS photo picker — tap a photo to select it
+# Use specific photo accessibility text from the library
+- tapOn:
+    text: "Foto, 25 maart, 10:45"
+    optional: true
+# Fallback: tap center of first visible photo row
+- tapOn:
+    point: "50%,20%"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+- takeScreenshot: inspiration_06_photo_selected
+
+# 7. Tap "Voeg toe" (Add) to confirm
+- tapOn: "Voeg toe"
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# 8. Wait for AI processing (uploads image, generates posts — 10-45s)
+- takeScreenshot: inspiration_07_processing
+- waitForAnimationToEnd:
+    timeout: 60000
+
+# 9. Should arrive at PostReview screen
+- takeScreenshot: inspiration_08_post_review

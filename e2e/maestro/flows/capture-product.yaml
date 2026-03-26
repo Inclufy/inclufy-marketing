@@ -1,0 +1,97 @@
+appId: com.inclufy.go
+env:
+  E2E_EMAIL: ${E2E_EMAIL}
+  E2E_PASSWORD: ${E2E_PASSWORD}
+---
+# ═══ Product Capture Flow ═══
+# FAB → Product Capture → select product → upload image → AI → PostReview
+
+# 1. Launch and go to Dashboard (or Login first)
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 20000
+
+# Dismiss Expo dev menu if visible
+- tapOn:
+    text: "Sluit"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 10000
+
+# Handle login screen if visible
+- runFlow:
+    when:
+      visible: "Inloggen"
+    file: login.yaml
+
+- extendedWaitUntil:
+    visible: "Dashboard, tab, 1 of 5"
+    timeout: 30000
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: product_01_home
+
+# 2. Tap FAB
+- tapOn:
+    point: "50%,88%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: product_02_modal
+
+# 3. Tap "Product Capture" card (top-right of 2x2 grid)
+- tapOn:
+    point: "75%,55%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: product_03_product_select
+
+# 4. Product selection screen — tap the product card
+- extendedWaitUntil:
+    visible: "Kies een product of dienst"
+    timeout: 5000
+- tapOn: "Amos marketing platform"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: product_04_live_capture
+
+# 5. Switch to Upload tab
+- tapOn:
+    point: "90%,95%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 6. Tap "Kies uit bibliotheek" button
+- tapOn:
+    point: "50%,58%"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: product_05_photo_picker
+
+# 7. Select a photo in the iOS picker
+- waitForAnimationToEnd:
+    timeout: 3000
+- tapOn:
+    text: "Foto.*"
+    optional: true
+- tapOn:
+    point: "10%,25%"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 8. Tap "Voeg toe" (Add)
+- tapOn:
+    text: "Voeg toe"
+    optional: false
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# 9. Wait for AI processing
+- takeScreenshot: product_06_processing
+- waitForAnimationToEnd:
+    timeout: 60000
+
+# 10. PostReview
+- takeScreenshot: product_07_post_review

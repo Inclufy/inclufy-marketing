@@ -1,0 +1,25 @@
+appId: com.inclufy.go
+---
+# ═══ Post Review Flow ═══
+# Verify that AI-generated posts are displayed and editable
+# Run this AFTER a capture flow has navigated to PostReview
+
+# 1. Verify we're on the PostReview screen
+- takeScreenshot: review_01_screen
+
+# 2. Check that at least one channel post is visible
+- assertVisible:
+    text: "LinkedIn"
+    optional: true
+
+# 3. Scroll through posts to see all channels
+- scroll:
+    direction: "down"
+    duration: 1000
+- takeScreenshot: review_02_scrolled
+
+# 4. Scroll back up
+- scroll:
+    direction: "up"
+    duration: 1000
+- takeScreenshot: review_03_final

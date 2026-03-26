@@ -1,0 +1,64 @@
+appId: com.inclufy.go
+---
+# ═══ Create Campaign Flow ═══
+# Navigate to Campaigns tab → create a new test campaign
+
+# 1. Go to Campaigns tab
+- tapOn: "Campagnes"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: create_campaign_01_list
+
+# 2. Tap create button
+- tapOn:
+    text: "Nieuwe campagne"
+    optional: true
+- tapOn:
+    text: "+"
+    optional: true
+- tapOn:
+    text: "Campagne aanmaken"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: create_campaign_02_form
+
+# 3. Fill in campaign name
+- tapOn:
+    text: "Naam"
+    optional: true
+- inputText: "AMOS Test Campaign"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 4. Fill in description
+- tapOn:
+    text: "Beschrijving"
+    optional: true
+- inputText: "Automated test campaign by AMOS testing agent"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 5. Screenshot and save
+- scroll:
+    direction: "down"
+    duration: 800
+- takeScreenshot: create_campaign_03_pre_save
+
+- tapOn:
+    text: "Aanmaken"
+    optional: true
+- tapOn:
+    text: "Opslaan"
+    optional: true
+- tapOn:
+    text: "Save"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: create_campaign_04_saved
+
+# 6. Navigate back to Dashboard
+- tapOn: "Dashboard"
+- waitForAnimationToEnd
+- takeScreenshot: create_campaign_05_done

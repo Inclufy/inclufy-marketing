@@ -1,0 +1,31 @@
+appId: com.inclufy.go
+---
+# ═══ Publish Post Flow ═══
+# !! GATED — Only run after explicit user confirmation !!
+# Publishes all draft posts on the PostReview screen
+
+# 1. Verify we're on PostReview
+- takeScreenshot: publish_01_pre_publish
+
+# 2. Look for the "Publish All" / "Publiceer alles" button
+- tapOn:
+    text: "Publiceer"
+    optional: true
+- tapOn:
+    text: "Publish"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# 3. Confirm any alert dialog
+- tapOn:
+    text: "OK"
+    optional: true
+- tapOn:
+    text: "Ja"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# 4. Screenshot the result
+- takeScreenshot: publish_02_result

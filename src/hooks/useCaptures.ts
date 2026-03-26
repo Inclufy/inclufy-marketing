@@ -113,7 +113,9 @@ export async function uploadMedia(
   }
 
   const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
-  const storagePath = `events/${user.id}/${eventId}/${fileName}`;
+  const storagePath = eventId
+    ? `events/${user.id}/${eventId}/${fileName}`
+    : `content/${user.id}/${fileName}`;
 
   // Read file as blob
   const response = await fetch(uri);

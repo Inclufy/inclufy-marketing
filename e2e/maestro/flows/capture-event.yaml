@@ -1,0 +1,64 @@
+appId: com.inclufy.go
+---
+# ═══ Event Capture Flow ═══
+# FAB → Event Capture → upload image → AI generation → PostReview
+
+# 1. Launch and go to Dashboard
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: event_01_home
+
+# 2. Tap FAB
+- tapOn:
+    point: "50%,88%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: event_02_modal
+
+# 3. Tap "Event Capture" card (top-left of 2x2 grid)
+- tapOn:
+    point: "25%,55%"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: event_03_live_capture
+
+# 4. Switch to Upload tab (rightmost mode tab)
+- tapOn:
+    point: "90%,95%"
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 5. Tap "Kies uit bibliotheek" button
+- tapOn:
+    point: "50%,58%"
+- waitForAnimationToEnd:
+    timeout: 8000
+- takeScreenshot: event_04_photo_picker
+
+# 6. Select a photo in the iOS picker
+- tapOn:
+    text: "Foto, 25 maart, 10:45"
+    optional: true
+- tapOn:
+    point: "50%,20%"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 2000
+
+# 7. Tap "Voeg toe" (Add)
+- tapOn: "Voeg toe"
+- waitForAnimationToEnd:
+    timeout: 15000
+
+# 8. Wait for AI processing
+- takeScreenshot: event_05_processing
+- waitForAnimationToEnd:
+    timeout: 60000
+
+# 9. PostReview
+- takeScreenshot: event_06_post_review

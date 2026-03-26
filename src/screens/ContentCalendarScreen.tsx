@@ -24,7 +24,7 @@ const CHANNEL_COLORS: Record<string, string> = {
 export default function ContentCalendarScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const styles = useThemedStyles(colors);
+  const styles = useThemedStyles(() => ({ container: { flex: 1 } as const }));
   const { data: proposals } = useContentProposals();
   const { data: campaigns } = useCampaigns();
 
@@ -173,7 +173,7 @@ export default function ContentCalendarScreen() {
                 }}
               >
                 <Text style={{
-                  fontSize: 12, fontWeight: isToday ? (fontWeight.bold as any) : (fontWeight.regular as any),
+                  fontSize: 12, fontWeight: isToday ? (fontWeight.bold as any) : (fontWeight.normal as any),
                   color: isToday ? colors.primary : isCurrentMonth ? colors.text : colors.textSecondary + '60',
                   textAlign: 'center', marginBottom: 2,
                 }}>

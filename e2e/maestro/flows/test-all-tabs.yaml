@@ -1,0 +1,49 @@
+appId: com.inclufy.go
+---
+# ═══ Test All Tabs Flow ═══
+# Navigate through all bottom tabs and verify each loads
+
+# 0. Ensure app is launched and on Dashboard
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+
+# 1. Dashboard tab
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: tabs_01_dashboard
+
+# 2. Events tab
+- tapOn: "Events, tab, 2 of 5"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: tabs_02_events
+
+# 3. Campaigns tab
+- tapOn: "Campagnes, tab, 3 of 5"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: tabs_03_campaigns
+
+# 4. Posts tab
+- tapOn: "Posts, tab, 4 of 5"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: tabs_04_posts
+
+# 5. Copilot tab
+- tapOn: "Copilot, tab, 5 of 5"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: tabs_05_copilot
+
+# 6. Return to Dashboard
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertVisible:
+    text: "Welkom terug!"
+    optional: true
+- takeScreenshot: tabs_06_back_to_dashboard

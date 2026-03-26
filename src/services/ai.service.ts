@@ -107,6 +107,7 @@ class AIService {
       capture_note: request.capture_note,
       capture_tags: request.capture_tags,
       brand_context: request.brand_context || this.brandContext || undefined,
+      language: request.language || 'nl',
     }, {
       text: '',
       hashtags: [],

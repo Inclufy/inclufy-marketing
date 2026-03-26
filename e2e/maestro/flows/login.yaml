@@ -1,0 +1,12 @@
+appId: com.inclufy.go
+---
+# Login flow — uses E2E_EMAIL and E2E_PASSWORD env vars
+- tapOn: "E-mail"
+- inputText: ${E2E_EMAIL}
+- tapOn: "Wachtwoord"
+- inputText: ${E2E_PASSWORD}
+- hideKeyboard
+- tapOn: "Inloggen"
+- extendedWaitUntil:
+    visible: "Dashboard, tab, 1 of 5"
+    timeout: 30000

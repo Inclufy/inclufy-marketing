@@ -1,0 +1,17 @@
+{
+  "name": "amos-test-agent",
+  "version": "1.0.0",
+  "description": "AMOS E2E testing agent powered by Claude Agent SDK + Maestro",
+  "type": "module",
+  "scripts": {
+    "test": "npx tsx test-orchestrator.ts",
+    "test:capture": "npx tsx test-orchestrator.ts --capture-only",
+    "test:tabs": "npx tsx test-orchestrator.ts --tabs-only",
+    "test:events": "npx tsx test-orchestrator.ts --events-only",
+    "test:social": "npx tsx test-orchestrator.ts --social-setup"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0",
+    "tsx": "^4.19.0"
+  }
+}

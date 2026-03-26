@@ -1,0 +1,47 @@
+appId: com.inclufy.go
+---
+# ═══ Setup Facebook Account ═══
+# Home → Settings → Facebook → OAuth
+
+# 1. Launch and go to Dashboard
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# 2. Tap settings gear
+- tapOn: "gearshape.fill"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# 3. Scroll to Social Media
+- scroll:
+    direction: "down"
+    duration: 2000
+
+# 4. Tap Facebook
+- tapOn:
+    text: "Facebook"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: setup_facebook_01_options
+
+# 5. Select OAuth
+- tapOn:
+    text: "Verbinden via OAuth"
+    optional: true
+- tapOn:
+    text: "Opnieuw verbinden"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: setup_facebook_02_oauth
+
+# 6. User completes Facebook login
+- waitForAnimationToEnd:
+    timeout: 60000
+- takeScreenshot: setup_facebook_03_done

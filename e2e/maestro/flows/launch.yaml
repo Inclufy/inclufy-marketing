@@ -1,0 +1,11 @@
+appId: com.inclufy.go
+---
+# Launch AMOS app and verify home screen is ready
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 8000
+
+# Wait for home screen — check for greeting text
+- assertVisible: "Welkom terug!"
+- takeScreenshot: launch_success

@@ -1,0 +1,92 @@
+appId: com.inclufy.go
+---
+# ═══ Create Event Flow ═══
+# Navigate to Events tab → create a new test event
+
+# 1. Go to Events tab
+- tapOn: "Events"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: create_event_01_list
+
+# 2. Tap the "+" or "Nieuw event" button to create a new event
+- tapOn:
+    text: "Nieuw"
+    optional: true
+- tapOn:
+    text: "+"
+    optional: true
+- tapOn:
+    text: "Event aanmaken"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: create_event_02_form
+
+# 3. Fill in event name
+- tapOn:
+    text: "Naam van het event"
+    optional: true
+- inputText: "AMOS Test Event"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 4. Fill in description
+- tapOn:
+    text: "Beschrijving"
+    optional: true
+- inputText: "Automated test event created by AMOS testing agent"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 5. Fill in location
+- tapOn:
+    text: "Locatie"
+    optional: true
+- inputText: "Amsterdam, NL"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 6. Fill in date (DD-MM-YYYY format)
+- tapOn:
+    text: "DD-MM-JJJJ"
+    optional: true
+- inputText: "25-03-2026"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 7. Select channels (LinkedIn and Instagram should be default)
+- takeScreenshot: create_event_03_channels
+
+# 8. Add hashtags
+- tapOn:
+    text: "Hashtags"
+    optional: true
+- inputText: "#AMOStest #EventMarketing"
+- hideKeyboard
+- waitForAnimationToEnd
+
+# 9. Scroll down and save
+- scroll:
+    direction: "down"
+    duration: 1000
+- takeScreenshot: create_event_04_pre_save
+
+# 10. Tap save/create button
+- tapOn:
+    text: "Event aanmaken"
+    optional: true
+- tapOn:
+    text: "Opslaan"
+    optional: true
+- tapOn:
+    text: "Save"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: create_event_05_saved
+
+# 11. Navigate back to Dashboard
+- tapOn: "Dashboard"
+- waitForAnimationToEnd
+- takeScreenshot: create_event_06_done

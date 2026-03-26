@@ -298,8 +298,8 @@ const COMING_MODULES: AMOSModule[] = [
     iconLib: 'ionicons',
     color: '#A855F7',
     gradientColors: ['#9333EA', '#A855F7'],
-    status: 'coming',
-    route: null,
+    status: 'active',
+    route: 'MultiAgent',
   },
   {
     id: 'integrations',
@@ -311,8 +311,8 @@ const COMING_MODULES: AMOSModule[] = [
     iconLib: 'ionicons',
     color: '#64748B',
     gradientColors: ['#475569', '#64748B'],
-    status: 'coming',
-    route: null,
+    status: 'active',
+    route: 'Integrations',
   },
   {
     id: 'onboarding',

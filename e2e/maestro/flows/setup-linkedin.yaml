@@ -1,0 +1,50 @@
+appId: com.inclufy.go
+---
+# ═══ Setup LinkedIn Account ═══
+# Home → Settings → LinkedIn → OAuth
+
+# 1. Launch and go to Dashboard
+- launchApp:
+    clearState: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- tapOn: "Dashboard, tab, 1 of 5"
+- waitForAnimationToEnd:
+    timeout: 3000
+
+# 2. Tap settings gear icon (top-right)
+- tapOn: "gearshape.fill"
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: setup_linkedin_01_settings
+
+# 3. Scroll down to find Social Media section
+- scroll:
+    direction: "down"
+    duration: 2000
+- takeScreenshot: setup_linkedin_02_social
+
+# 4. Tap LinkedIn
+- tapOn:
+    text: "LinkedIn"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 3000
+- takeScreenshot: setup_linkedin_03_options
+
+# 5. Select connection method — tap OAuth option in alert
+- tapOn:
+    text: "Verbinden via OAuth"
+    optional: true
+- tapOn:
+    text: "Opnieuw verbinden"
+    optional: true
+- waitForAnimationToEnd:
+    timeout: 15000
+- takeScreenshot: setup_linkedin_04_oauth
+
+# 6. OAuth browser will open — user must complete login manually
+# Wait for user to finish and return to app
+- waitForAnimationToEnd:
+    timeout: 60000
+- takeScreenshot: setup_linkedin_05_done
