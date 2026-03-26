@@ -368,12 +368,12 @@ export default function LiveCaptureScreen() {
         }
 
         // 3. Create capture record
-        // media_url has a NOT NULL DB constraint — use empty string for quote/audio-no-upload
+        // media_url and storage_path have NOT NULL DB constraints — use empty string as fallback
         const capture = await createCapture.mutateAsync({
           event_id: eventId,
           media_type: mediaType,
           media_url: uploadUrl ?? '',
-          storage_path: uploadPath,
+          storage_path: uploadPath ?? '',
           thumbnail_url: mediaType === 'photo' ? uploadUrl : null,
           tags: selectedTags,
           note: note.trim(),
