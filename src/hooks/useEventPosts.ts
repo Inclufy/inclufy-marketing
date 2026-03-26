@@ -117,6 +117,10 @@ export function usePublishPost() {
 
       // OAuth account — call publish-social edge function
       const postText = post.text_content + (post.hashtags?.length > 0 ? '\n\n' + post.hashtags.join(' ') : '');
+      // Get selected account ID from engagement metadata (set by PostReviewScreen doPublish)
+      const selectedAccountId = (post.engagement as any)?.published_account?.id;
+      // Include extra images for multi-image posts (LinkedIn, Facebook carousel)
+      const extraImages: string[] = (post.engagement as any)?.extra_images || [];
       const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
         body: {
           post_id: postId,
@@ -124,6 +128,8 @@ export function usePublishPost() {
           channel: post.channel,
           text: postText,
           image_url: post.branded_image_url || undefined,
+          extra_image_urls: extraImages.length > 0 ? extraImages : undefined,
+          account_id: selectedAccountId || socialAccount.id,
         },
       });
 

@@ -23,19 +23,28 @@ async function publishToLinkedIn(
   profileId: string,
   text: string,
   imageUrl?: string,
+  accountType?: string, // 'personal' | 'company'
+  extraImageUrls?: string[], // additional images for multi-image posts
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
-    // Get LinkedIn user URN
-    const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
+    let authorUrn: string;
 
-    if (!profileRes.ok) {
-      return { success: false, error: `LinkedIn profile error: ${profileRes.status}` };
+    if (accountType === 'company' && profileId) {
+      // Company page — profileId contains the organization ID
+      authorUrn = profileId.startsWith('urn:') ? profileId : `urn:li:organization:${profileId}`;
+    } else {
+      // Personal profile — fetch user URN from LinkedIn API
+      const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!profileRes.ok) {
+        return { success: false, error: `LinkedIn profile error: ${profileRes.status}` };
+      }
+
+      const profile = await profileRes.json();
+      authorUrn = `urn:li:person:${profile.sub}`;
     }
-
-    const profile = await profileRes.json();
-    const authorUrn = `urn:li:person:${profile.sub}`;
 
     // Create post
     const postBody: any = {
@@ -52,10 +61,9 @@ async function publishToLinkedIn(
       },
     };
 
-    // If image URL, upload via LinkedIn Image Upload API for native image display
-    if (imageUrl) {
+    // Helper: upload a single image to LinkedIn and return its asset URN
+    async function uploadImageToLinkedIn(url: string): Promise<string | null> {
       try {
-        // Step 1: Register an image upload
         const registerRes = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
           method: 'POST',
           headers: {
@@ -66,67 +74,53 @@ async function publishToLinkedIn(
             registerUploadRequest: {
               recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
               owner: authorUrn,
-              serviceRelationships: [
-                {
-                  relationshipType: 'OWNER',
-                  identifier: 'urn:li:userGeneratedContent',
-                },
-              ],
+              serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
             },
           }),
         });
-
         if (!registerRes.ok) {
-          const regErr = await registerRes.text();
-          console.error('[LinkedIn] Register upload error:', registerRes.status, regErr);
-          // Fallback: post without image rather than failing entirely
-          console.warn('[LinkedIn] Falling back to text-only post');
-        } else {
-          const registerData = await registerRes.json();
-          const uploadUrl = registerData.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;
-          const assetUrn = registerData.value?.asset;
-
-          if (!uploadUrl || !assetUrn) {
-            console.error('[LinkedIn] Missing uploadUrl or asset from register response');
-          } else {
-            // Step 2: Download the image from our storage
-            const imgRes = await fetch(imageUrl);
-            if (!imgRes.ok) {
-              console.error('[LinkedIn] Failed to download image:', imgRes.status);
-            } else {
-              const imgBlob = await imgRes.blob();
-              const imgBuffer = await imgBlob.arrayBuffer();
-
-              // Step 3: Upload the image binary to LinkedIn
-              const uploadRes = await fetch(uploadUrl, {
-                method: 'PUT',
-                headers: {
-                  Authorization: `Bearer ${accessToken}`,
-                  'Content-Type': imgBlob.type || 'image/jpeg',
-                },
-                body: imgBuffer,
-              });
-
-              if (!uploadRes.ok) {
-                const uploadErr = await uploadRes.text();
-                console.error('[LinkedIn] Image upload error:', uploadRes.status, uploadErr);
-              } else {
-                // Step 4: Use IMAGE share category with the uploaded asset
-                postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'IMAGE';
-                postBody.specificContent['com.linkedin.ugc.ShareContent'].media = [
-                  {
-                    status: 'READY',
-                    media: assetUrn,
-                  },
-                ];
-                console.log('[LinkedIn] Image uploaded successfully, asset:', assetUrn);
-              }
-            }
-          }
+          console.error('[LinkedIn] Register upload error:', registerRes.status);
+          return null;
         }
-      } catch (imgErr: any) {
-        console.error('[LinkedIn] Image upload exception:', imgErr.message);
-        // Continue with text-only post
+        const registerData = await registerRes.json();
+        const uploadUrl = registerData.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;
+        const assetUrn = registerData.value?.asset;
+        if (!uploadUrl || !assetUrn) return null;
+
+        const imgRes = await fetch(url);
+        if (!imgRes.ok) return null;
+        const imgBlob = await imgRes.blob();
+        const imgBuffer = await imgBlob.arrayBuffer();
+
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': imgBlob.type || 'image/jpeg' },
+          body: imgBuffer,
+        });
+        if (!uploadRes.ok) return null;
+        console.log('[LinkedIn] Image uploaded successfully, asset:', assetUrn);
+        return assetUrn;
+      } catch (err: any) {
+        console.error('[LinkedIn] Image upload exception:', err.message);
+        return null;
+      }
+    }
+
+    // Upload all images (primary + extras) for multi-image LinkedIn posts
+    const allImageUrls = [imageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+    if (allImageUrls.length > 0) {
+      const uploadedAssets: string[] = [];
+      for (const url of allImageUrls) {
+        const assetUrn = await uploadImageToLinkedIn(url);
+        if (assetUrn) uploadedAssets.push(assetUrn);
+      }
+      if (uploadedAssets.length > 0) {
+        const category = uploadedAssets.length > 1 ? 'IMAGE' : 'IMAGE'; // LinkedIn uses IMAGE for both single and multi
+        postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = category;
+        postBody.specificContent['com.linkedin.ugc.ShareContent'].media = uploadedAssets.map(urn => ({
+          status: 'READY',
+          media: urn,
+        }));
       }
     }
 
@@ -196,12 +190,94 @@ async function publishToInstagram(
   igBusinessAccountId: string,
   text: string,
   imageUrl?: string,
+  extraImageUrls?: string[], // for carousel posts
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
     if (!imageUrl) {
       return { success: false, error: 'Instagram vereist een afbeelding voor publicatie' };
     }
 
+    // Ensure image URL is publicly accessible — generate fresh signed URL if needed
+    let publicImageUrl = imageUrl;
+    if (imageUrl.includes('supabase') && !imageUrl.includes('/public/')) {
+      // Extract storage path and generate a long-lived signed URL
+      const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      const pathMatch = imageUrl.match(/\/media\/(.+?)(\?|$)/);
+      if (pathMatch) {
+        const { data: signData } = await db.storage.from('media').createSignedUrl(pathMatch[1], 3600);
+        if (signData?.signedUrl) publicImageUrl = signData.signedUrl;
+      }
+    }
+
+    const allImages = [publicImageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+
+    // Multi-image: use carousel container
+    if (allImages.length > 1) {
+      // Step 1: Create individual media items
+      const childIds: string[] = [];
+      for (const url of allImages) {
+        const childRes = await fetch(
+          `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image_url: url,
+              is_carousel_item: true,
+              access_token: accessToken,
+            }),
+          },
+        );
+        if (childRes.ok) {
+          const { id } = await childRes.json();
+          childIds.push(id);
+        }
+      }
+
+      if (childIds.length === 0) {
+        return { success: false, error: 'Instagram carousel: geen items konden worden aangemaakt' };
+      }
+
+      // Step 2: Create carousel container
+      const carouselRes = await fetch(
+        `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            media_type: 'CAROUSEL',
+            children: childIds.join(','),
+            caption: text,
+            access_token: accessToken,
+          }),
+        },
+      );
+
+      if (!carouselRes.ok) {
+        const errBody = await carouselRes.text();
+        return { success: false, error: `Instagram carousel error: ${errBody}` };
+      }
+
+      const { id: containerId } = await carouselRes.json();
+
+      // Step 3: Publish carousel
+      const publishRes = await fetch(
+        `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media_publish`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creation_id: containerId, access_token: accessToken }),
+        },
+      );
+      if (!publishRes.ok) {
+        const errBody = await publishRes.text();
+        return { success: false, error: `Instagram carousel publish error: ${errBody}` };
+      }
+      const data = await publishRes.json();
+      return { success: true, postId: data.id };
+    }
+
+    // Single image post
     // Step 1: Create media container
     const createRes = await fetch(
       `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media`,
@@ -209,7 +285,7 @@ async function publishToInstagram(
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          image_url: imageUrl,
+          image_url: publicImageUrl,
           caption: text,
           access_token: accessToken,
         }),
@@ -269,7 +345,7 @@ Deno.serve(async (req: Request) => {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl } = body;
+    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, extra_image_urls: directExtraImageUrls, account_id: directAccountId } = body;
 
     // ── Direct post publish (from go_posts via mobile app) ──
     if (post_id && user_id) {
@@ -284,13 +360,17 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Find social account
-      const { data: socialAccount } = await db
+      // Find social account — use specific account_id if provided (for multi-account support)
+      let socialAccountQuery = db
         .from('social_accounts')
-        .select('id, platform, platform_account_id, account_type')
+        .select('id, platform, platform_account_id, account_type, account_name')
         .eq('user_id', user_id)
         .eq('platform', channel)
-        .eq('status', 'active')
+        .eq('status', 'active');
+      if (directAccountId) {
+        socialAccountQuery = socialAccountQuery.eq('id', directAccountId);
+      }
+      const { data: socialAccount } = await socialAccountQuery
         .limit(1)
         .maybeSingle();
 
@@ -329,13 +409,13 @@ Deno.serve(async (req: Request) => {
       let result: { success: boolean; postId?: string; error?: string };
       switch (channel) {
         case 'linkedin':
-          result = await publishToLinkedIn(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
+          result = await publishToLinkedIn(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, socialAccount.account_type === 'company' ? 'company' : 'personal', directExtraImageUrls);
           break;
         case 'facebook':
           result = await publishToFacebook(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
           break;
         case 'instagram':
-          result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
+          result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, directExtraImageUrls);
           break;
         default:
           result = { success: false, error: `Platform '${channel}' wordt nog niet ondersteund` };

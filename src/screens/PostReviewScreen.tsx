@@ -31,6 +31,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
+import ViewShot, { captureRef } from 'react-native-view-shot';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'PostReview'>;
@@ -62,6 +63,9 @@ export default function PostReviewScreen() {
   const deletePost = useDeletePost();
   const [flippingImage, setFlippingImage] = useState(false);
   const [rotatingImage, setRotatingImage] = useState(false);
+
+  // ViewShot refs for baking overlay into image before publishing
+  const viewShotRefs = useRef<Record<string, ViewShot | null>>({});
 
   // Fetch raw capture data to get storage_path for signed URL
   const { data: capture, isFetching: captureFetching } = useQuery({
@@ -826,6 +830,44 @@ export default function PostReviewScreen() {
     }
   };
 
+  // ── Bake overlay into image before publishing ─────────────────────────
+  // Captures the ViewShot (image + overlay) as a new image, uploads it,
+  // and updates the post's branded_image_url with the baked version.
+  const bakeOverlayIntoImage = async (post: EventPost): Promise<string | null> => {
+    const config = overlayConfig[post.id];
+    if (!config || (!config.text && !config.showLogo)) {
+      // No overlay configured — use existing image
+      return post.branded_image_url || null;
+    }
+
+    const viewShotRef = viewShotRefs.current[post.id];
+    if (!viewShotRef) {
+      console.warn('[bakeOverlay] No ViewShot ref for post', post.id);
+      return post.branded_image_url || null;
+    }
+
+    try {
+      // Capture the ViewShot as a local URI
+      const uri = await captureRef(viewShotRef as any, {
+        format: 'jpg',
+        quality: 0.9,
+      });
+
+      if (!uri) return post.branded_image_url || null;
+
+      // Upload the baked image to Supabase Storage
+      const { url } = await uploadMedia(uri, safeEventId, 'photo');
+
+      // Update the post's branded_image_url with the baked version
+      await updatePost.mutateAsync({ id: post.id, branded_image_url: url });
+
+      return url;
+    } catch (err: any) {
+      console.error('[bakeOverlay] Failed:', err.message);
+      return post.branded_image_url || null;
+    }
+  };
+
   const handlePublish = async (post: EventPost) => {
     // Check if user has accounts for this channel
     const accounts = await fetchAccountsForChannel(post.channel);
@@ -863,6 +905,9 @@ export default function PostReviewScreen() {
           text: t.postReview.publishButton,
           onPress: async () => {
             try {
+              // Bake overlay into image before publishing (if configured)
+              await bakeOverlayIntoImage(post);
+
               // Save any pending text changes first
               if (editingText[post.id]) {
                 await updatePost.mutateAsync({ id: post.id, text_content: editingText[post.id] });
@@ -1108,6 +1153,10 @@ export default function PostReviewScreen() {
                 </View>
               ) : imageUrl && !imageFailed ? (
                 <>
+                  <ViewShot
+                    ref={(ref) => { viewShotRefs.current[post.id] = ref; }}
+                    options={{ format: 'jpg', quality: 0.9 }}
+                  >
                   <TouchableOpacity
                     style={styles.postImageWrapper}
                     activeOpacity={0.92}
@@ -1180,6 +1229,7 @@ export default function PostReviewScreen() {
                       <Ionicons name="expand-outline" size={14} color="#fff" />
                     </View>
                   </TouchableOpacity>
+                  </ViewShot>
 
                   {/* ── Thumbnail strip ────────────────────────────────── */}
                   <ScrollView

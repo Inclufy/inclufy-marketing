@@ -109,6 +109,9 @@ export default function LiveCaptureScreen() {
   const [processing, setProcessing] = useState(false);
   const [saveToLibrary, setSaveToLibrary] = useState(true); // save photos to phone library
 
+  // Ref to pass extra image URLs from multi-photo upload to processCapture/processFreeCapture
+  const pendingExtraImagesRef = React.useRef<string[] | null>(null);
+
   // Per-capture channel selection — defaults to the event's channels, user can override
   const [selectedChannels, setSelectedChannels] = useState<Channel[]>([]);
 
@@ -275,7 +278,8 @@ export default function LiveCaptureScreen() {
           }
         }
 
-        // 6. Save generated posts
+        // 6. Save generated posts (include extra_images if multi-photo upload)
+        const pendingExtras = pendingExtraImagesRef.current || [];
         const postRows = Object.entries(results).map(([channel, result]) => ({
           capture_id: capture.id,
           event_id: null,
@@ -288,7 +292,10 @@ export default function LiveCaptureScreen() {
           published_at: null,
           scheduled_at: null,
           publish_error: null,
-          engagement: { likes: 0, comments: 0, shares: 0 },
+          engagement: {
+            likes: 0, comments: 0, shares: 0,
+            ...(pendingExtras.length > 0 ? { extra_images: pendingExtras } : {}),
+          },
         }));
 
         await createPosts.mutateAsync(postRows);
@@ -296,13 +303,15 @@ export default function LiveCaptureScreen() {
         // 7. Mark AI as completed
         supabase.from('go_captures').update({ ai_status: 'completed' }).eq('id', capture.id).then(() => {});
 
-        // 8. Navigate to PostReview (with overlay/mirror support)
+        // 8. Navigate to PostReview (with overlay/mirror support + extra images)
+        const extraImageUrlsToPass = pendingExtraImagesRef.current || [];
         setNote('');
         setSelectedTags([]);
         navigation.navigate('PostReview', {
           captureId: capture.id,
           localMediaUri: (mediaType === 'photo' || mediaType === 'video') ? finalUri : undefined,
-        });
+          ...(extraImageUrlsToPass.length > 0 ? { extraImageUrls: extraImageUrlsToPass } : {}),
+        } as any);
       } catch (error: any) {
         Alert.alert('Fout', error.message || 'Vastleggen mislukt.');
       } finally {
@@ -485,8 +494,8 @@ export default function LiveCaptureScreen() {
             .then(() => {});
         }
 
-        // 6. Attach pending extra images and navigate
-        const pendingExtra = (globalThis as any).__pendingExtraImageUrls as string[] | undefined;
+        // 6. Attach pending extra images from multi-photo upload
+        const pendingExtra = pendingExtraImagesRef.current;
         if (pendingExtra && pendingExtra.length > 0) {
           // Save extra images to all posts of this capture
           try {
@@ -503,7 +512,6 @@ export default function LiveCaptureScreen() {
           } catch (extraErr) {
             console.warn('[processCapture] Extra images attach failed:', extraErr);
           }
-          delete (globalThis as any).__pendingExtraImageUrls;
         }
 
         // 7. Navigate to review
@@ -587,7 +595,7 @@ export default function LiveCaptureScreen() {
           ? await processFreeCapture(normalizedUri, 'photo')
           : await processCapture(normalizedUri, 'photo');
       } else {
-        // Multi-photo — process first as primary, upload extras, then navigate
+        // Multi-photo — process first as primary, upload extras, then navigate with extraImageUrls
         setProcessing(true);
         try {
           // Normalize primary photo orientation
@@ -598,12 +606,12 @@ export default function LiveCaptureScreen() {
           const extraUrls: string[] = [];
           for (const asset of result.assets.slice(1)) {
             const normalizedUri = await normalizeImageOrientation(asset.uri, asset.exif ?? undefined);
-            const uploaded = await uploadMedia(normalizedUri, eventId, 'photo');
+            const uploaded = await uploadMedia(normalizedUri, eventId || '', 'photo');
             extraUrls.push(uploaded.url);
           }
 
-          // 2. Store extra URLs for processCapture to pass to PostReview
-          (globalThis as any).__pendingExtraImageUrls = extraUrls;
+          // 2. Store extra URLs in ref so processFreeCapture/processCapture can access them
+          pendingExtraImagesRef.current = extraUrls;
           if (isFreeCapture) {
             await processFreeCapture(primaryUri, 'photo');
           } else {
@@ -612,6 +620,7 @@ export default function LiveCaptureScreen() {
         } catch (err: any) {
           Alert.alert('Fout', err?.message || 'Multi-foto verwerking mislukt');
         } finally {
+          pendingExtraImagesRef.current = null;
           setProcessing(false);
         }
       }
