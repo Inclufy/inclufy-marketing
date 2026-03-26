@@ -198,10 +198,12 @@ export default function PostReviewScreen() {
   // Track failed URLs individually so we can fall back to the next candidate automatically
   const [previewFailedUrls, setPreviewFailedUrls] = useState<Set<string>>(new Set());
   const [previewImgLoaded, setPreviewImgLoaded] = useState(false);
+  const [previewSlideIdx, setPreviewSlideIdx] = useState(0);
   useEffect(() => {
     // Reset image state every time a new post is opened for preview
     setPreviewFailedUrls(new Set());
     setPreviewImgLoaded(false);
+    setPreviewSlideIdx(0);
   }, [previewPost?.id]);
 
   // ── Brand kit logo fetch ─────────────────────────────────────────────────
@@ -1980,9 +1982,13 @@ export default function PostReviewScreen() {
           {previewPost && (() => {
             const p = previewPost;
             const cfg = channelConfig[p.channel];
-            const text = editingText[p.id] ?? p.text_content;
+            const rawText = editingText[p.id] ?? p.text_content;
             // Guard against null hashtags (DB may return null for older rows)
             const tags = (p.hashtags || []).map((h: string) => `#${h.replace(/^#+/, '')}`).join(' ');
+            // Strip hashtags from text if they're already rendered separately below
+            const text = tags
+              ? rawText.replace(/(?:\s*#\w+)+\s*$/, '').trim()
+              : rawText;
 
             // Build an ordered candidate list for the preview image.
             // Priority: local file → branded_image_url (processed output, most reliable)
@@ -2075,7 +2081,6 @@ export default function PostReviewScreen() {
             };
 
             // Shared image renderer with swipeable carousel for multi-image
-            const [previewSlideIdx, setPreviewSlideIdx] = React.useState(0);
             const PreviewImage = ({ height, borderRadius: br }: { height: number; borderRadius?: number }) => {
               // Deduplicated preview images (already computed above)
               const imgs = previewImages.length > 0 ? previewImages : [];
