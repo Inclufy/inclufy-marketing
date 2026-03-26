@@ -2074,26 +2074,86 @@ export default function PostReviewScreen() {
               );
             };
 
-            // Shared image renderer with overlay baked in
-            const PreviewImage = ({ height, borderRadius: br }: { height: number; borderRadius?: number }) => (
-              <View style={{ width: '100%', height, borderRadius: br ?? 0, overflow: 'hidden' }}>
-                {previewImgOk && imgUrl ? (
-                  <Image
-                    source={{ uri: imgUrl }}
-                    style={{ width: '100%', height }}
-                    resizeMode="cover"
-                    onLoad={() => setPreviewImgLoaded(true)}
-                    onError={() => { if (imgUrl) setPreviewFailedUrls(prev => new Set([...prev, imgUrl])); }}
-                  />
-                ) : (
-                  <View style={{ width: '100%', height, backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
+            // Shared image renderer with swipeable carousel for multi-image
+            const [previewSlideIdx, setPreviewSlideIdx] = React.useState(0);
+            const PreviewImage = ({ height, borderRadius: br }: { height: number; borderRadius?: number }) => {
+              // Deduplicated preview images (already computed above)
+              const imgs = previewImages.length > 0 ? previewImages : [];
+              const hasMultiple = imgs.length > 1;
+
+              if (imgs.length === 0) {
+                return (
+                  <View style={{ width: '100%', height, borderRadius: br ?? 0, overflow: 'hidden', backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
                     <Ionicons name="image-outline" size={44} color="#555" />
                     <Text style={{ fontSize: 12, color: '#555' }}>Geen afbeelding</Text>
                   </View>
-                )}
-                <PreviewOverlay />
-              </View>
-            );
+                );
+              }
+
+              return (
+                <View style={{ width: '100%', height, borderRadius: br ?? 0, overflow: 'hidden' }}>
+                  {hasMultiple ? (
+                    <>
+                      <ScrollView
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        onMomentumScrollEnd={(e) => {
+                          const idx = Math.round(e.nativeEvent.contentOffset.x / e.nativeEvent.layoutMeasurement.width);
+                          setPreviewSlideIdx(idx);
+                        }}
+                        style={{ width: '100%', height }}
+                      >
+                        {imgs.map((url, i) => (
+                          <Image
+                            key={`${url}-${i}`}
+                            source={{ uri: url }}
+                            style={{ width: Dimensions.get('window').width - 32, height }}
+                            resizeMode="cover"
+                            onError={() => setPreviewFailedUrls(prev => new Set([...prev, url]))}
+                          />
+                        ))}
+                      </ScrollView>
+                      {/* Slide indicator dots */}
+                      <View style={{
+                        position: 'absolute', bottom: 8, left: 0, right: 0,
+                        flexDirection: 'row', justifyContent: 'center', gap: 5,
+                      }}>
+                        {imgs.map((_, i) => (
+                          <View key={i} style={{
+                            width: previewSlideIdx === i ? 18 : 6,
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: previewSlideIdx === i ? '#fff' : 'rgba(255,255,255,0.5)',
+                          }} />
+                        ))}
+                      </View>
+                      {/* Image counter badge */}
+                      <View style={{
+                        position: 'absolute', top: 8, left: 8,
+                        backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 10,
+                        paddingHorizontal: 8, paddingVertical: 3,
+                        flexDirection: 'row', alignItems: 'center', gap: 4,
+                      }}>
+                        <Ionicons name="images-outline" size={11} color="#fff" />
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>
+                          {previewSlideIdx + 1}/{imgs.length}
+                        </Text>
+                      </View>
+                    </>
+                  ) : (
+                    <Image
+                      source={{ uri: imgs[0] }}
+                      style={{ width: '100%', height }}
+                      resizeMode="cover"
+                      onLoad={() => setPreviewImgLoaded(true)}
+                      onError={() => { if (imgs[0]) setPreviewFailedUrls(prev => new Set([...prev, imgs[0]])); }}
+                    />
+                  )}
+                  <PreviewOverlay />
+                </View>
+              );
+            };
 
             const MockCard = () => {
               if (p.channel === 'linkedin') {
