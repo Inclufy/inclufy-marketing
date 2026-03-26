@@ -16,7 +16,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.inclufy.go",
+<<<<<<< Updated upstream
       "buildNumber": "155",
+=======
+      "buildNumber": "136",
       "infoPlist": {
         "NSCameraUsageDescription": "Inclufy GO needs camera access to capture photos and videos at events.",
         "NSMicrophoneUsageDescription": "Inclufy GO needs microphone access for video and audio recording.",
