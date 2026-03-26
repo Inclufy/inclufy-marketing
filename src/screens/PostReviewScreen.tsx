@@ -138,6 +138,49 @@ export default function PostReviewScreen() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
+  // ── Text style: luxury icons vs plain text ───────────────────────────────
+  const [textStyle, setTextStyle] = useState<Record<string, 'luxury' | 'plain'>>({});
+  const getTextStyle = (postId: string) => textStyle[postId] ?? 'luxury';
+
+  // Map of luxury icon replacements for common marketing keywords
+  const LUXURY_ICONS: Record<string, string> = {
+    'event': '🎯', 'marketing': '📣', 'strategy': '🧠', 'growth': '📈',
+    'team': '👥', 'innovation': '💡', 'success': '🏆', 'creative': '🎨',
+    'connect': '🤝', 'launch': '🚀', 'analytics': '📊', 'brand': '✨',
+    'social': '📱', 'content': '📝', 'campaign': '🎪', 'meeting': '💬',
+    'workshop': '🔧', 'networking': '🌐', 'design': '🖌️', 'insight': '🔍',
+    'goal': '🎯', 'deadline': '⏰', 'milestone': '🏁', 'budget': '💰',
+    'presentation': '🎤', 'feedback': '💭', 'collaboration': '🤝', 'training': '📚',
+  };
+
+  const addLuxuryIcons = (text: string): string => {
+    let result = text;
+    // Add bullet-point style icons at line starts
+    result = result.replace(/^[-•]\s*/gm, '✦ ');
+    // Add sparkle to hashtags
+    result = result.replace(/#(\w+)/g, '✨ #$1');
+    return result;
+  };
+
+  const removeLuxuryIcons = (text: string): string => {
+    // Remove common luxury emoji prefixes
+    let result = text;
+    result = result.replace(/[✦✨🎯📣🧠📈👥💡🏆🎨🤝🚀📊📱📝🎪💬🔧🌐🖌️🔍⏰🏁💰🎤💭📚]\s*/g, '');
+    // Restore bullet points
+    result = result.replace(/^\s*(?=#)/gm, '');
+    return result;
+  };
+
+  const toggleTextStyle = (post: EventPost) => {
+    const currentStyle = getTextStyle(post.id);
+    const newStyle = currentStyle === 'luxury' ? 'plain' : 'luxury';
+    setTextStyle((prev) => ({ ...prev, [post.id]: newStyle }));
+
+    const currentText = editingText[post.id] ?? post.text_content ?? '';
+    const newText = newStyle === 'luxury' ? addLuxuryIcons(currentText) : removeLuxuryIcons(currentText);
+    handleTextChange(post.id, newText);
+  };
+
   // ── Language select ───────────────────────────────────────────────────────
   const [postLang, setPostLang] = useState<Record<string, string>>({});
   const [translating, setTranslating] = useState<string | null>(null); // postId
@@ -1065,6 +1108,10 @@ export default function PostReviewScreen() {
           text: t.postReview.publishAll,
           onPress: async () => {
             try {
+              // Bake overlay into all posts before publishing
+              for (const post of draftPosts) {
+                await bakeOverlayIntoImage(post);
+              }
               const result = await batchPublish.mutateAsync(draftPosts.map((p) => p.id));
               if ((result as any)?.anyQueued && !(result as any)?.anyPublished) {
                 // All posts failed to publish — show connect modal
@@ -1565,6 +1612,7 @@ export default function PostReviewScreen() {
                   { icon: 'location-outline' as const, label: 'Locatie', insert: '📍 ' },
                   { icon: 'at-outline' as const, label: 'Hashtag', insert: '#' },
                 ];
+                const isLuxury = getTextStyle(post.id) === 'luxury';
                 return (
                   <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 4, marginTop: 2 }}>
                     {tagItems.map(({ icon, label, insert }) => (
@@ -1590,6 +1638,31 @@ export default function PostReviewScreen() {
                         </Text>
                       </TouchableOpacity>
                     ))}
+                    {/* Luxury icons toggle */}
+                    <TouchableOpacity
+                      onPress={() => toggleTextStyle(post)}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 4,
+                        paddingHorizontal: 10, paddingVertical: 5,
+                        borderRadius: borderRadius.full,
+                        backgroundColor: isLuxury ? (config?.color || colors.primary) + '18' : colors.surface,
+                        borderWidth: 1,
+                        borderColor: isLuxury ? (config?.color || colors.primary) : colors.border,
+                      }}
+                    >
+                      <Ionicons
+                        name={isLuxury ? 'sparkles' : 'text-outline'}
+                        size={13}
+                        color={isLuxury ? (config?.color || colors.primary) : colors.textSecondary}
+                      />
+                      <Text style={{
+                        fontSize: 11,
+                        fontWeight: isLuxury ? fontWeight.bold : fontWeight.medium,
+                        color: isLuxury ? (config?.color || colors.primary) : colors.textSecondary,
+                      }}>
+                        {isLuxury ? '✨ Luxe' : 'Plat'}
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 );
               })()}
