@@ -14,7 +14,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 
 interface Props {
-  onCapture: (uri: string) => void;
+  onCapture: (uri: string, exif?: Record<string, any>) => void;
   onVideoStart?: () => void;
   onVideoEnd?: (uri: string) => void;
   mode: 'photo' | 'video';
@@ -114,16 +114,11 @@ export default function CameraCapture({ onCapture, onVideoStart, onVideoEnd, mod
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8 });
+      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, exif: true });
       if (!photo) return;
 
-      // Resize to max 1920px on longest side for upload efficiency
-      const result = await ImageManipulator.manipulateAsync(
-        photo.uri,
-        [{ resize: { width: 1920 } }],
-        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
-      );
-      onCapture(result.uri);
+      // Pass raw URI + EXIF to parent so orientation can be corrected
+      onCapture(photo.uri, photo.exif ?? undefined);
     } catch {
       Alert.alert('Fout', 'Kon geen foto maken. Probeer opnieuw.');
     }

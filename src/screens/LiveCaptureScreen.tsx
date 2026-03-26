@@ -162,21 +162,17 @@ export default function LiveCaptureScreen() {
 
   // ── Free capture (no event required) — create capture + AI posts, navigate to PostReview ──
   const processFreeCapture = useCallback(
-    async (mediaUri: string, mediaType: MediaType) => {
+    async (mediaUri: string, mediaType: MediaType, exif?: Record<string, any>) => {
       if (!hasConsent) {
-        requestConsent(() => { processFreeCapture(mediaUri, mediaType); });
+        requestConsent(() => { processFreeCapture(mediaUri, mediaType, exif); });
         return;
       }
       setProcessing(true);
       try {
-        // 1. Normalise photo orientation
+        // 1. Normalise photo orientation using EXIF data
         let finalUri = mediaUri;
         if (mediaType === 'photo') {
-          const result = await ImageManipulator.manipulateAsync(
-            mediaUri, [],
-            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
-          );
-          finalUri = result.uri;
+          finalUri = await normalizeImageOrientation(mediaUri, exif);
         }
 
         // 2. Save to phone library
@@ -322,10 +318,10 @@ export default function LiveCaptureScreen() {
   );
 
   const processCapture = useCallback(
-    async (mediaUri: string, mediaType: MediaType, transcript?: string) => {
+    async (mediaUri: string, mediaType: MediaType, transcript?: string, exif?: Record<string, any>) => {
       if (!event) return;
       if (!hasConsent) {
-        requestConsent(() => { processCapture(mediaUri, mediaType, transcript); });
+        requestConsent(() => { processCapture(mediaUri, mediaType, transcript, exif); });
         return;
       }
       setProcessing(true);
@@ -334,7 +330,7 @@ export default function LiveCaptureScreen() {
         // 1. Normalise photo orientation using EXIF data
         let finalUri = mediaUri;
         if (mediaType === 'photo') {
-          finalUri = await normalizeImageOrientation(mediaUri);
+          finalUri = await normalizeImageOrientation(mediaUri, exif);
         }
 
         // 1b. Optionally save to phone photo library
@@ -535,8 +531,8 @@ export default function LiveCaptureScreen() {
   // Use free capture flow when no event is linked
   const isFreeCapture = !eventId && !needsEvent;
 
-  const handlePhotoCapture = (uri: string) =>
-    isFreeCapture ? processFreeCapture(uri, 'photo') : processCapture(uri, 'photo');
+  const handlePhotoCapture = (uri: string, exif?: Record<string, any>) =>
+    isFreeCapture ? processFreeCapture(uri, 'photo', exif) : processCapture(uri, 'photo', undefined, exif);
 
   const handleVideoEnd = (uri: string) =>
     isFreeCapture ? processFreeCapture(uri, 'video') : processCapture(uri, 'video');
