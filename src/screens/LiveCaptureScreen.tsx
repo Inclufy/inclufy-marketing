@@ -220,7 +220,7 @@ export default function LiveCaptureScreen() {
           event_id: null,
           media_type: mediaType,
           media_url: uploadUrl ?? '',
-          storage_path: uploadPath,
+          storage_path: uploadPath ?? '',
           thumbnail_url: mediaType === 'photo' ? uploadUrl : null,
           tags: selectedTags,
           note: note.trim(),
