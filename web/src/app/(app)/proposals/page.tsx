@@ -25,14 +25,22 @@ export default function ProposalsPage() {
   const update = useUpdateProposal();
 
   const handleApprove = async (id: string) => {
-    await approve.mutateAsync(id);
-    toast.success('Voorstel goedgekeurd!');
+    try {
+      await approve.mutateAsync(id);
+      toast.success('Voorstel goedgekeurd!');
+    } catch (err: any) {
+      toast.error(err.message || 'Kon voorstel niet goedkeuren');
+    }
   };
 
   const handleReject = async (id: string) => {
     const reason = prompt('Reden voor afwijzing (optioneel):');
-    await reject.mutateAsync({ id, reason: reason || undefined });
-    toast.info('Voorstel afgewezen');
+    try {
+      await reject.mutateAsync({ id, reason: reason || undefined });
+      toast.info('Voorstel afgewezen');
+    } catch (err: any) {
+      toast.error(err.message || 'Kon voorstel niet afwijzen');
+    }
   };
 
   const handleSaveEdit = async () => {

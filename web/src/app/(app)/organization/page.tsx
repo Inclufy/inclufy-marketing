@@ -7,13 +7,12 @@ import { Building2, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Organization } from '@/types';
 
-const supabase = createClient();
-
 export default function OrganizationPage() {
   const qc = useQueryClient();
   const { data: org, isLoading } = useQuery({
     queryKey: ['organization'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data } = await supabase.from('go_organization').select('*').limit(1).maybeSingle();
       return data as Organization | null;
     },
@@ -27,6 +26,7 @@ export default function OrganizationPage() {
 
   const save = useMutation({
     mutationFn: async () => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (org) {
         await supabase.from('go_organization').update(form).eq('id', org.id);

@@ -1,7 +1,7 @@
 'use client';
 
 import { useAutomations, useToggleAutomation, useAutomationStats } from '@/hooks/useAutomations';
-import { Zap, Play, Pause, Activity, CheckCircle2, XCircle } from 'lucide-react';
+import { Zap, Play, Pause, Activity, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AutomationsPage() {

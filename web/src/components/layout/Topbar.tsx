@@ -1,10 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { Bell, Search } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { useUnreadCount } from '@/hooks/useNotifications';
 
 export function Topbar() {
   const { user } = useAuth();
+  const { data: unreadCount } = useUnreadCount();
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-gray-200 bg-white/80 backdrop-blur-sm px-8">
@@ -20,10 +23,12 @@ export function Topbar() {
 
       {/* Right */}
       <div className="flex items-center gap-4">
-        <button className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors">
+        <Link href="/notifications" className="relative rounded-lg p-2 text-gray-500 hover:bg-gray-100 transition-colors">
           <Bell className="h-5 w-5" />
-          <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
-        </button>
+          {unreadCount && unreadCount > 0 && (
+            <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-red-500" />
+          )}
+        </Link>
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-sm font-bold">
             {user?.email?.charAt(0).toUpperCase() || 'U'}

@@ -8,8 +8,6 @@ import { toast } from 'sonner';
 import { channelIcon } from '@/lib/utils';
 import type { MarketingStrategy } from '@/types';
 
-const supabase = createClient();
-
 const CHANNELS = ['linkedin', 'instagram', 'facebook', 'tiktok', 'x'];
 const DAYS = ['ma', 'di', 'wo', 'do', 'vr', 'za', 'zo'];
 
@@ -18,6 +16,7 @@ export default function StrategyPage() {
   const { data: strategy, isLoading } = useQuery({
     queryKey: ['strategy'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data } = await supabase.from('go_marketing_strategy').select('*').limit(1).maybeSingle();
       return data as MarketingStrategy | null;
     },
@@ -47,6 +46,7 @@ export default function StrategyPage() {
 
   const save = useMutation({
     mutationFn: async () => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       const channels: Record<string, { active: boolean; priority: number }> = {};
       form.activeChannels.forEach((ch, i) => { channels[ch] = { active: true, priority: i + 1 }; });

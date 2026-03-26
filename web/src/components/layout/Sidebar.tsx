@@ -4,20 +4,26 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
-  LayoutDashboard, Calendar, Megaphone, FileCheck, Zap,
-  Target, Settings, Package, Users, Building2, Palette,
-  TrendingUp, Wallet, Bot, LogOut,
+  LayoutDashboard, Calendar, CalendarDays, Megaphone, FileCheck, Zap,
+  Target, Settings, Package, Users, Contact, Building2, Palette,
+  TrendingUp, Wallet, Bot, Bell, BarChart3, MessageSquare, LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Analytics', href: '/analytics', icon: BarChart3 },
   { label: 'Events', href: '/events', icon: Calendar },
+  { label: 'Calendar', href: '/calendar', icon: CalendarDays },
   { label: 'Campaigns', href: '/campaigns', icon: Megaphone },
   { label: 'Content Proposals', href: '/proposals', icon: FileCheck },
   { label: 'Automations', href: '/automations', icon: Zap },
   { label: 'Strategy', href: '/strategy', icon: Target },
   { label: 'Budget', href: '/budget', icon: Wallet },
+  { divider: true },
+  { label: 'Copilot', href: '/copilot', icon: MessageSquare },
+  { label: 'Notifications', href: '/notifications', icon: Bell },
+  { label: 'Contacts', href: '/contacts', icon: Contact },
   { divider: true },
   { label: 'Products', href: '/products', icon: Package },
   { label: 'Team', href: '/team', icon: Users },

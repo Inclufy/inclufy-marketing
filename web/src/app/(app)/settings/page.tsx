@@ -3,18 +3,17 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
-import { Settings, Globe, Palette, Link2, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
+import { Palette, Link2, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { SocialAccount } from '@/types';
 import { channelIcon } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 
-const supabase = createClient();
-
 function useSocialAccounts() {
   return useQuery({
     queryKey: ['social-accounts'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data } = await supabase.from('social_accounts').select('*').order('created_at', { ascending: false });
       return (data || []) as SocialAccount[];
     },
@@ -103,7 +102,7 @@ export default function SettingsPage() {
             <select className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
               <option value="nl">Nederlands</option>
               <option value="en">English</option>
-              <option value="fr">Fran&ccedil;ais</option>
+              <option value="fr">Français</option>
             </select>
           </div>
           <div className="flex items-center justify-between">

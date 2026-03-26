@@ -5,7 +5,7 @@ import { useCampaigns, useCampaignStats, useCreateCampaign } from '@/hooks/useCa
 import { formatDate, formatCurrency, statusColor, channelIcon } from '@/lib/utils';
 import { Megaphone, Plus, TrendingUp, Wallet, BarChart3 } from 'lucide-react';
 import { toast } from 'sonner';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const STATUS_FILTERS = ['all', 'draft', 'active', 'paused', 'completed'] as const;
 
@@ -16,6 +16,7 @@ export default function CampaignsPage() {
   const { data: campaigns, isLoading } = useCampaigns(filter);
   const { data: stats } = useCampaignStats();
   const createCampaign = useCreateCampaign();
+  const router = useRouter();
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +91,7 @@ export default function CampaignsPage() {
             </tr></thead>
             <tbody className="divide-y divide-gray-50">
               {campaigns?.map(c => (
-                <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => window.location.href = `/campaigns/${c.id}`}>
+                <tr key={c.id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => router.push(`/campaigns/${c.id}`)}>
                   <td className="px-6 py-4"><p className="font-medium text-gray-900 text-sm">{c.name}</p><p className="text-xs text-gray-500 truncate max-w-xs">{c.description}</p></td>
                   <td className="px-6 py-4 text-sm text-gray-600">{c.type}</td>
                   <td className="px-6 py-4 text-sm">{c.channels?.map(channelIcon).join(' ')}</td>

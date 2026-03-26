@@ -7,12 +7,11 @@ import { Users, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { TeamMember } from '@/types';
 
-const supabase = createClient();
-
 function useTeam() {
   return useQuery({
     queryKey: ['team'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data } = await supabase.from('go_team_directory').select('*').order('created_at', { ascending: false });
       return (data || []) as TeamMember[];
     },
@@ -27,6 +26,7 @@ export default function TeamPage() {
 
   const create = useMutation({
     mutationFn: async () => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('go_team_directory').insert({ name: form.name, role: form.role, expertise: form.expertise.split(',').map(e => e.trim()).filter(Boolean), user_id: user!.id });
     },
@@ -34,7 +34,7 @@ export default function TeamPage() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { await supabase.from('go_team_directory').delete().eq('id', id); },
+    mutationFn: async (id: string) => { const supabase = createClient(); await supabase.from('go_team_directory').delete().eq('id', id); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['team'] }); },
   });
 

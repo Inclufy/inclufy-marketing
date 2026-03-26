@@ -3,17 +3,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase';
 import { useState } from 'react';
-import { Package, Plus, Trash2, Edit3 } from 'lucide-react';
+import { Package, Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 import type { Product } from '@/types';
-
-const supabase = createClient();
 
 function useProducts() {
   return useQuery({
     queryKey: ['products'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data, error } = await supabase.from('go_products').select('*').order('created_at', { ascending: false });
       if (error) throw error;
       return data as Product[];
@@ -29,6 +28,7 @@ export default function ProductsPage() {
 
   const create = useMutation({
     mutationFn: async () => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase.from('go_products').insert({ ...form, price: form.price ? Number(form.price) : null, user_id: user!.id });
       if (error) throw error;
@@ -37,7 +37,7 @@ export default function ProductsPage() {
   });
 
   const remove = useMutation({
-    mutationFn: async (id: string) => { await supabase.from('go_products').delete().eq('id', id); },
+    mutationFn: async (id: string) => { const supabase = createClient(); await supabase.from('go_products').delete().eq('id', id); },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['products'] }); toast.success('Product verwijderd'); },
   });
 

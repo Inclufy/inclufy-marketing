@@ -3,8 +3,8 @@ import './globals.css';
 import { Providers } from './providers';
 
 export const metadata: Metadata = {
-  title: 'AMOS Dashboard — Inclufy GO',
-  description: 'Autonomous Marketing Operating System',
+  title: 'Inclufy Marketing',
+  description: 'AI-Powered Marketing Platform',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

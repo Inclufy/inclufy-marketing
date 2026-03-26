@@ -3,16 +3,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase';
 import { useState } from 'react';
-import { Palette, Plus, Star, Trash2 } from 'lucide-react';
+import { Palette, Plus, Star } from 'lucide-react';
 import { toast } from 'sonner';
 import type { BrandKit } from '@/types';
-
-const supabase = createClient();
 
 function useBrandKits() {
   return useQuery({
     queryKey: ['brand-kits'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data } = await supabase.from('brand_kits').select('*').order('is_default', { ascending: false });
       return (data || []) as BrandKit[];
     },
@@ -27,6 +26,7 @@ export default function BrandKitPage() {
 
   const create = useMutation({
     mutationFn: async () => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       await supabase.from('brand_kits').insert({ ...form, user_id: user!.id, is_default: (kits?.length ?? 0) === 0 });
     },

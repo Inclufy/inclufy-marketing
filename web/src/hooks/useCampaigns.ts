@@ -4,12 +4,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { createClient } from '@/lib/supabase';
 import type { Campaign } from '@/types';
 
-const supabase = createClient();
-
 export function useCampaigns(statusFilter?: string) {
   return useQuery({
     queryKey: ['campaigns', statusFilter],
     queryFn: async () => {
+      const supabase = createClient();
       let q = supabase.from('campaigns').select('*').order('created_at', { ascending: false });
       if (statusFilter && statusFilter !== 'all') q = q.eq('status', statusFilter);
       const { data, error } = await q;
@@ -23,6 +22,7 @@ export function useCampaign(id: string) {
   return useQuery({
     queryKey: ['campaign', id],
     queryFn: async () => {
+      const supabase = createClient();
       const { data, error } = await supabase.from('campaigns').select('*').eq('id', id).single();
       if (error) throw error;
       return data as Campaign;
@@ -35,7 +35,9 @@ export function useCampaignCosts(campaignId: string) {
   return useQuery({
     queryKey: ['campaign-costs', campaignId],
     queryFn: async () => {
-      const { data } = await supabase.from('campaign_costs').select('*').eq('campaign_id', campaignId).order('date', { ascending: false });
+      const supabase = createClient();
+      const { data, error } = await supabase.from('campaign_costs').select('*').eq('campaign_id', campaignId).order('date', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!campaignId,
@@ -46,7 +48,9 @@ export function useCampaignRevenue(campaignId: string) {
   return useQuery({
     queryKey: ['campaign-revenue', campaignId],
     queryFn: async () => {
-      const { data } = await supabase.from('campaign_revenue').select('*').eq('campaign_id', campaignId).order('date', { ascending: false });
+      const supabase = createClient();
+      const { data, error } = await supabase.from('campaign_revenue').select('*').eq('campaign_id', campaignId).order('date', { ascending: false });
+      if (error) throw error;
       return data || [];
     },
     enabled: !!campaignId,
@@ -57,8 +61,10 @@ export function useCreateCampaign() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (campaign: Partial<Campaign>) => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-      const { data, error } = await supabase.from('campaigns').insert({ ...campaign, user_id: user!.id }).select().single();
+      if (!user) throw new Error('Not authenticated');
+      const { data, error } = await supabase.from('campaigns').insert({ ...campaign, user_id: user.id }).select().single();
       if (error) throw error;
       return data;
     },
@@ -70,6 +76,7 @@ export function useCampaignStats() {
   return useQuery({
     queryKey: ['campaign-stats'],
     queryFn: async () => {
+      const supabase = createClient();
       const { data } = await supabase.from('campaigns').select('status, budget_amount, spent_amount');
       const campaigns = data || [];
       return {

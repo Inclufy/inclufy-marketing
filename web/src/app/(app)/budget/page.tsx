@@ -2,7 +2,7 @@
 
 import { useCampaignStats } from '@/hooks/useCampaigns';
 import { formatCurrency } from '@/lib/utils';
-import { Wallet, TrendingUp, TrendingDown, PieChart } from 'lucide-react';
+import { Wallet, TrendingUp, TrendingDown } from 'lucide-react';
 
 export default function BudgetPage() {
   const { data: stats } = useCampaignStats();

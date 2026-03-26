@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useEvents, useCreateEvent, useDeleteEvent } from '@/hooks/useEvents';
 import { formatDate, statusColor, channelIcon } from '@/lib/utils';
-import { Calendar, Plus, MapPin, Hash, Trash2, Eye, Search } from 'lucide-react';
+import { Calendar, Plus, MapPin, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
