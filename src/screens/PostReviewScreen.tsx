@@ -340,6 +340,65 @@ export default function PostReviewScreen() {
     return originalUrl;
   };
 
+  // Proactively refresh signed URLs for all extra images when posts load
+  const refreshedExtraRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!posts.length) return;
+    const allExtraUrls: string[] = [];
+    for (const post of posts) {
+      const extras = post.engagement?.extra_images;
+      if (Array.isArray(extras)) {
+        for (const url of extras) {
+          if (url && !refreshedExtraRef.current.has(url) && !refreshedUrls[url]) {
+            allExtraUrls.push(url);
+          }
+        }
+      }
+    }
+    if (allExtraUrls.length === 0) return;
+    // Mark as in-flight to avoid duplicate refreshes
+    for (const url of allExtraUrls) refreshedExtraRef.current.add(url);
+
+    // Batch-sign all extra image paths at once
+    const storagePaths: { url: string; path: string }[] = [];
+    for (const url of allExtraUrls) {
+      const pathMatch = url.match(/\/media\/(.+?)(\?|$)/);
+      if (pathMatch) storagePaths.push({ url, path: pathMatch[1] });
+    }
+    if (storagePaths.length === 0) return;
+
+    (async () => {
+      try {
+        const { data } = await supabase.storage.from('media').createSignedUrls(
+          storagePaths.map(p => p.path),
+          3600,
+        );
+        if (data && data.length > 0) {
+          const newMap: Record<string, string> = {};
+          data.forEach((item, idx) => {
+            if (item.signedUrl) {
+              newMap[storagePaths[idx].url] = item.signedUrl;
+            }
+          });
+          if (Object.keys(newMap).length > 0) {
+            setRefreshedUrls(prev => ({ ...prev, ...newMap }));
+            // Clear any of these URLs from failedUrls so images retry
+            setFailedUrls(prev => {
+              const next = new Set(prev);
+              let changed = false;
+              for (const origUrl of Object.keys(newMap)) {
+                if (next.has(origUrl)) { next.delete(origUrl); changed = true; }
+              }
+              return changed ? next : prev;
+            });
+          }
+        }
+      } catch {
+        // Signing failed — thumbnails will attempt individual refresh on error
+      }
+    })();
+  }, [posts]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Upload one or more extra images and append them to engagement.extra_images
   const handleAddExtraImage = async (post: EventPost) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -1275,6 +1334,14 @@ export default function PostReviewScreen() {
                             opacity: failedUrls.has(thumbUrl) ? 0.3 : 1,
                           }}
                           resizeMode="cover"
+                          onError={async () => {
+                            // Try refreshing the signed URL before marking as failed
+                            if (thumbUrl.includes('supabase') && !refreshedUrls[thumbUrl]) {
+                              const freshUrl = await refreshSignedUrl(thumbUrl);
+                              if (freshUrl !== thumbUrl) return; // Will re-render with fresh URL
+                            }
+                            setFailedUrls((prev) => new Set([...prev, thumbUrl]));
+                          }}
                         />
                         {i === safeIdx && (
                           <View style={{
