@@ -57,6 +57,7 @@ const en: Translations = {
     brandKit: 'Brand Kit',
     eventAttendees: 'Attendees',
     eventShare: 'Share Event',
+    allPosts: 'All Posts',
   },
 
   // ─── Login Screen ──────────────────────────────────────────────────
@@ -248,6 +249,29 @@ const en: Translations = {
     aiGeneratingSubtext: 'Photo is being analyzed and text generated per channel',
     processingError: 'Something went wrong during processing',
     audioTranscriptionFailed: 'Audio transcription failed',
+  },
+
+  // ─── All Posts Screen ──────────────────────────────────────────────
+  allPosts: {
+    title: 'All Posts',
+    filterAll: 'All',
+    draft: 'Draft',
+    approved: 'Approved',
+    scheduled: 'Scheduled',
+    published: 'Published',
+    failed: 'Failed',
+    inReview: 'In Review',
+    edit: 'Edit',
+    delete: 'Delete',
+    copy: 'Copy',
+    publish: 'Publish',
+    confirmDelete: 'Are you sure you want to delete this post?',
+    confirmDeleteTitle: 'Delete post',
+    deleted: 'Post deleted',
+    copied: 'Post copied as draft',
+    noPostsTitle: 'No posts found',
+    noPostsSubtitle: 'Create content via a capture or the Content Creator',
+    noEvent: 'No event',
   },
 
   // ─── Post Review Screen ────────────────────────────────────────────
@@ -775,6 +799,41 @@ const en: Translations = {
     registerHere: 'Register here',
     publishToSites: 'Publish to event sites',
     publishToSitesSub: 'Create your event on external platforms.',
+  },
+
+  // ─── AI Data Consent ──────────────────────────────────────────────
+  aiConsent: {
+    title: 'AI Data Processing',
+    subtitle: 'InclufyGO uses AI to generate content',
+    dataSentTitle: 'What data is processed',
+    dataItems: {
+      photos: 'Photos you take during events',
+      audio: 'Audio recordings (for transcription)',
+      text: 'Text, notes, and event information',
+      brand: 'Brand guidelines (name, tone of voice, target audience)',
+      cards: 'Business cards (for contact recognition)',
+    },
+    recipientTitle: 'Who the data is sent to',
+    recipientDesc: 'Your data is sent to OpenAI (GPT-4o and Whisper) for generating social media posts, transcriptions, translations, and content analysis. OpenAI processes this data in accordance with their privacy policy.',
+    purposeTitle: 'Purpose',
+    purposeItems: {
+      posts: 'Generate social media posts',
+      transcribe: 'Transcribe audio to text',
+      tags: 'Automatically tag photos',
+      translate: 'Translate content',
+      recap: 'Create event summaries',
+      audience: 'Audience targeting suggestions',
+    },
+    privacyNote: 'You can revoke your consent at any time via Settings. Read our privacy policy for more information.',
+    privacyPolicy: 'Privacy Policy',
+    accept: 'Agree & continue',
+    decline: 'Not now',
+    required: 'AI consent required',
+    requiredMsg: 'You must agree to AI data processing to use this feature.',
+    settingsLabel: 'AI Data Processing',
+    settingsDesc: 'Consent for sending data to OpenAI',
+    consentGiven: 'Consent given',
+    consentRevoked: 'Consent revoked',
   },
 };
 

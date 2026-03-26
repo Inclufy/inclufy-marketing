@@ -57,6 +57,7 @@ const fr: Translations = {
     brandKit: 'Brand Kit',
     eventAttendees: 'Participants',
     eventShare: 'Partager l\'événement',
+    allPosts: 'Tous les Posts',
   },
 
   // ─── Login Screen ──────────────────────────────────────────────────
@@ -248,6 +249,29 @@ const fr: Translations = {
     aiGeneratingSubtext: 'La photo est analys\u00E9e et le texte g\u00E9n\u00E9r\u00E9 par canal',
     processingError: 'Une erreur s\'est produite lors du traitement',
     audioTranscriptionFailed: '\u00C9chec de la transcription audio',
+  },
+
+  // ─── All Posts Screen ──────────────────────────────────────────────
+  allPosts: {
+    title: 'Tous les Posts',
+    filterAll: 'Tout',
+    draft: 'Brouillon',
+    approved: 'Approuvé',
+    scheduled: 'Planifié',
+    published: 'Publié',
+    failed: 'Échoué',
+    inReview: 'En révision',
+    edit: 'Modifier',
+    delete: 'Supprimer',
+    copy: 'Copier',
+    publish: 'Publier',
+    confirmDelete: 'Êtes-vous sûr de vouloir supprimer ce post ?',
+    confirmDeleteTitle: 'Supprimer le post',
+    deleted: 'Post supprimé',
+    copied: 'Post copié comme brouillon',
+    noPostsTitle: 'Aucun post trouvé',
+    noPostsSubtitle: 'Créez du contenu via une capture ou le Content Creator',
+    noEvent: 'Sans événement',
   },
 
   // ─── Post Review Screen ────────────────────────────────────────────
@@ -775,6 +799,41 @@ const fr: Translations = {
     registerHere: 'Inscrivez-vous ici',
     publishToSites: 'Publier sur les sites d\'\u00E9v\u00E9nements',
     publishToSitesSub: 'Cr\u00E9ez votre \u00E9v\u00E9nement sur des plateformes externes.',
+  },
+
+  // ─── AI Data Consent ──────────────────────────────────────────────
+  aiConsent: {
+    title: 'Traitement des donn\u00E9es IA',
+    subtitle: 'InclufyGO utilise l\'IA pour g\u00E9n\u00E9rer du contenu',
+    dataSentTitle: 'Quelles donn\u00E9es sont trait\u00E9es',
+    dataItems: {
+      photos: 'Photos prises lors d\'\u00E9v\u00E9nements',
+      audio: 'Enregistrements audio (pour la transcription)',
+      text: 'Texte, notes et informations sur l\'\u00E9v\u00E9nement',
+      brand: 'Directives de marque (nom, ton, public cible)',
+      cards: 'Cartes de visite (pour la reconnaissance de contacts)',
+    },
+    recipientTitle: '\u00C0 qui les donn\u00E9es sont envoy\u00E9es',
+    recipientDesc: 'Vos donn\u00E9es sont envoy\u00E9es \u00E0 OpenAI (GPT-4o et Whisper) pour g\u00E9n\u00E9rer des publications, des transcriptions, des traductions et des analyses de contenu. OpenAI traite ces donn\u00E9es conform\u00E9ment \u00E0 sa politique de confidentialit\u00E9.',
+    purposeTitle: 'Objectif',
+    purposeItems: {
+      posts: 'G\u00E9n\u00E9rer des publications pour les r\u00E9seaux sociaux',
+      transcribe: 'Transcrire l\'audio en texte',
+      tags: 'Taguer automatiquement les photos',
+      translate: 'Traduire le contenu',
+      recap: 'Cr\u00E9er des r\u00E9sum\u00E9s d\'\u00E9v\u00E9nements',
+      audience: 'Suggestions de ciblage d\'audience',
+    },
+    privacyNote: 'Vous pouvez r\u00E9voquer votre consentement \u00E0 tout moment via les Param\u00E8tres. Consultez notre politique de confidentialit\u00E9 pour plus d\'informations.',
+    privacyPolicy: 'Politique de confidentialit\u00E9',
+    accept: 'Accepter et continuer',
+    decline: 'Pas maintenant',
+    required: 'Consentement IA requis',
+    requiredMsg: 'Vous devez accepter le traitement des donn\u00E9es IA pour utiliser cette fonctionnalit\u00E9.',
+    settingsLabel: 'Traitement des donn\u00E9es IA',
+    settingsDesc: 'Consentement pour l\'envoi de donn\u00E9es \u00E0 OpenAI',
+    consentGiven: 'Consentement donn\u00E9',
+    consentRevoked: 'Consentement r\u00E9voqu\u00E9',
   },
 };
 

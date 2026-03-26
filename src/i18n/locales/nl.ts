@@ -55,6 +55,7 @@ const nl = {
     brandKit: 'Brand Kit',
     eventAttendees: 'Deelnemers',
     eventShare: 'Event Delen',
+    allPosts: 'Alle Posts',
   },
 
   // ─── Login Screen ──────────────────────────────────────────────────
@@ -260,6 +261,29 @@ const nl = {
     aiGeneratingSubtext: 'Foto wordt geanalyseerd en tekst per kanaal gegenereerd',
     processingError: 'Er ging iets mis bij het verwerken',
     audioTranscriptionFailed: 'Audio transcriptie mislukt',
+  },
+
+  // ─── All Posts Screen ──────────────────────────────────────────────
+  allPosts: {
+    title: 'Alle Posts',
+    filterAll: 'Alles',
+    draft: 'Concept',
+    approved: 'Goedgekeurd',
+    scheduled: 'Gepland',
+    published: 'Gepubliceerd',
+    failed: 'Mislukt',
+    inReview: 'In Review',
+    edit: 'Bewerken',
+    delete: 'Verwijderen',
+    copy: 'Kopiëren',
+    publish: 'Publiceren',
+    confirmDelete: 'Weet je zeker dat je deze post wilt verwijderen?',
+    confirmDeleteTitle: 'Post verwijderen',
+    deleted: 'Post verwijderd',
+    copied: 'Post gekopieerd als concept',
+    noPostsTitle: 'Geen posts gevonden',
+    noPostsSubtitle: 'Maak content via een capture of de Content Creator',
+    noEvent: 'Zonder event',
   },
 
   // ─── Post Review Screen ────────────────────────────────────────────
@@ -794,6 +818,41 @@ const nl = {
     registerHere: 'Meld je hier aan',
     publishToSites: 'Publiceer op event sites',
     publishToSitesSub: 'Maak je event aan op externe platforms.',
+  },
+
+  // ─── AI Data Consent ──────────────────────────────────────────────
+  aiConsent: {
+    title: 'AI-gegevensverwerking',
+    subtitle: 'InclufyGO gebruikt AI om content te genereren',
+    dataSentTitle: 'Welke gegevens worden verwerkt',
+    dataItems: {
+      photos: 'Foto\'s die je maakt tijdens events',
+      audio: 'Audio-opnames (voor transcriptie)',
+      text: 'Tekst, notities en event-informatie',
+      brand: 'Merkrichtlijnen (naam, tone of voice, doelgroep)',
+      cards: 'Visitekaartjes (voor contactherkenning)',
+    },
+    recipientTitle: 'Naar wie worden de gegevens verzonden',
+    recipientDesc: 'Je gegevens worden verzonden naar OpenAI (GPT-4o en Whisper) voor het genereren van social media posts, transcripties, vertalingen en inhoudsanalyse. OpenAI verwerkt deze gegevens volgens hun privacybeleid.',
+    purposeTitle: 'Waarvoor',
+    purposeItems: {
+      posts: 'Social media posts genereren',
+      transcribe: 'Audio transcriberen naar tekst',
+      tags: 'Foto\'s automatisch taggen',
+      translate: 'Content vertalen',
+      recap: 'Event samenvattingen maken',
+      audience: 'Doelgroep suggesties',
+    },
+    privacyNote: 'Je kunt je toestemming op elk moment intrekken via Instellingen. Lees ons privacybeleid voor meer informatie.',
+    privacyPolicy: 'Privacybeleid',
+    accept: 'Akkoord & doorgaan',
+    decline: 'Niet nu',
+    required: 'AI-toestemming vereist',
+    requiredMsg: 'Je moet akkoord gaan met de AI-gegevensverwerking om deze functie te gebruiken.',
+    settingsLabel: 'AI-gegevensverwerking',
+    settingsDesc: 'Toestemming voor het verzenden van gegevens naar OpenAI',
+    consentGiven: 'Toestemming gegeven',
+    consentRevoked: 'Toestemming ingetrokken',
   },
 } as const;
 
