@@ -65,6 +65,9 @@ import ContentProposalsScreen from '../screens/ContentProposalsScreen';
 import ContentCalendarScreen from '../screens/ContentCalendarScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import AllPostsScreen from '../screens/AllPostsScreen';
+import MultiAgentScreen from '../screens/MultiAgentScreen';
+import IntegrationsScreen from '../screens/IntegrationsScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -179,14 +182,14 @@ function MainTabsWrapper() {
           }}
         />
 
-        {/* Tab 4 — AMOS AI Hub */}
+        {/* Tab 4 — Alle Posts */}
         <Tab.Screen
-          name="AITab"
-          component={AIStack}
+          name="AllPostsTab"
+          component={AllPostsScreen}
           options={{
-            tabBarLabel: 'AMOS',
+            tabBarLabel: 'Posts',
             tabBarIcon: ({ focused, color }) => (
-              <MaterialCommunityIcons name={focused ? 'brain' : 'head-snowflake-outline'} size={22} color={color} />
+              <MaterialCommunityIcons name={focused ? 'post' : 'post-outline'} size={22} color={color} />
             ),
           }}
         />
@@ -206,6 +209,8 @@ function MainTabsWrapper() {
 
       {/* ── Floating Camera FAB ── */}
       <TouchableOpacity
+        testID="camera-fab"
+        accessibilityLabel="camera-fab"
         style={[fabStyles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
         onPress={() => setShowCaptureModal(true)}
         activeOpacity={0.85}
@@ -329,6 +334,9 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="ContentCalendar" component={ContentCalendarScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AllPosts" component={AllPostsScreen} options={{ title: t.screenTitles.allPosts ?? 'Alle Posts' }} />
+          <Stack.Screen name="MultiAgent" component={MultiAgentScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Integrations" component={IntegrationsScreen} options={{ headerShown: false }} />
 
           {/* ─── Settings & Notifications ─── */}
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t.screenTitles.settings }} />

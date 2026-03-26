@@ -23,6 +23,8 @@ import { supabase } from '../services/supabase';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import { useTranslation, LOCALE_LABELS, type Locale } from '../i18n';
+import { useAIConsent } from '../hooks/useAIConsent';
+import AIConsentModal from '../components/AIConsentModal';
 import type { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
@@ -52,6 +54,7 @@ export default function SettingsScreen() {
   const [biometricEnabled, setBiometricEnabled]   = useState(false);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [exportLoading, setExportLoading]         = useState(false);
+  const { hasConsent: aiConsentGiven, revokeConsent, requestConsent: grantAIConsent, showModal: showAIConsentModal, onAccept: onAIConsentAccept, onDecline: onAIConsentDecline } = useAIConsent();
 
   // ─── QR Card Profile ──────────────────────────────────────────────
   const [qrProfile, setQrProfile] = useState({
@@ -861,6 +864,28 @@ export default function SettingsScreen() {
             value={LOCALE_LABELS[locale]}
             onPress={handleLanguageSwitch}
           />
+          <View style={styles.separator} />
+          <SettingsRow
+            icon="shield-checkmark-outline"
+            iconColor="#10B981"
+            label={t.aiConsent?.settingsLabel ?? 'AI Data Processing'}
+            value={aiConsentGiven ? (t.aiConsent?.consentGiven ?? 'Consent given') : (t.aiConsent?.consentRevoked ?? 'Consent revoked')}
+            showChevron={false}
+            rightElement={
+              <Switch
+                value={aiConsentGiven}
+                onValueChange={(value) => {
+                  if (value) {
+                    grantAIConsent();
+                  } else {
+                    revokeConsent();
+                  }
+                }}
+                trackColor={{ false: colors.border, true: '#10B981' + '60' }}
+                thumbColor={aiConsentGiven ? '#10B981' : colors.textTertiary}
+              />
+            }
+          />
         </View>
 
         {/* ── My Location ─────────────────────────────────────────── */}
@@ -1087,6 +1112,11 @@ export default function SettingsScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* AI Consent Modal (shown when toggling consent ON from settings) */}
+      {showAIConsentModal && (
+        <AIConsentModal visible={showAIConsentModal} onAccept={onAIConsentAccept} onDecline={onAIConsentDecline} />
+      )}
     </View>
   );
 }

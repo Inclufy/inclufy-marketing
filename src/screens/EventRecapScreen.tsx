@@ -22,6 +22,8 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { cardShadow } from '../utils/shadows';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
+import AIConsentModal from '../components/AIConsentModal';
+import { useAIConsent } from '../hooks/useAIConsent';
 
 type Route = RouteProp<RootStackParamList, 'EventRecap'>;
 
@@ -60,6 +62,7 @@ export default function EventRecapScreen() {
   const { data: capturesData } = useCaptures(eventId);
   const { data: postsData }   = useEventPosts(eventId);
   const { data: brandMemory } = useBrandMemory();
+  const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
 
   const styles = useThemedStyles((c) => ({
     container: {
@@ -560,6 +563,10 @@ export default function EventRecapScreen() {
 
   // ─── Generate recap ──────────────────────────────────────────────
   const generateRecap = async (overrideLang?: Language, overrideTone?: Tone) => {
+    if (!hasConsent) {
+      requestConsent(() => { generateRecap(overrideLang, overrideTone); });
+      return;
+    }
     if (!event) return;
 
     const genLang = overrideLang ?? language;
@@ -994,6 +1001,7 @@ export default function EventRecapScreen() {
       ) : null}
 
       <View style={{ height: 40 }} />
+      <AIConsentModal visible={showConsentModal} onAccept={onConsentAccept} onDecline={onConsentDecline} />
     </ScrollView>
   );
 }

@@ -67,7 +67,7 @@ function BarItem({ label, value, maxValue, color }: { label: string; value: numb
 export default function AnalyticsScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
-  const styles = useThemedStyles(colors);
+  const styles = useThemedStyles(() => ({ container: { flex: 1 } as const }));
 
   const { data: proposals } = useContentProposals();
   const { data: proposalStats } = useProposalStats();
@@ -153,10 +153,10 @@ export default function AnalyticsScreen() {
 
         {/* Key Metrics Grid */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <StatCard label="Events" value={eventStats.total} icon="calendar" color="#3B82F6" bg={"#3B82F615"} />
-          <StatCard label="Campagnes" value={campaignStats.total} icon="rocket-launch" color="#8B5CF6" bg={"#8B5CF615"} />
-          <StatCard label="Content" value={proposalStats?.total ?? 0} icon="file-document-outline" color="#F59E0B" bg={"#F59E0B15"} />
-          <StatCard label="Automations" value={autoStats?.activeCount ?? 0} icon="lightning-bolt" color="#10B981" bg={"#10B98115"} />
+          <StatCard label="Events" value={eventStats.total} icon="calendar" color="#3B82F6" bg="#3B82F615" />
+          <StatCard label="Campagnes" value={campaignStats.total} icon="rocket-launch" color="#8B5CF6" bg="#8B5CF615" />
+          <StatCard label="Content" value={proposalStats?.total ?? 0} icon="file-document-outline" color="#F59E0B" bg="#F59E0B15" />
+          <StatCard label="Automations" value={autoStats?.activeCount ?? 0} icon="lightning-bolt" color="#10B981" bg="#10B98115" />
         </View>
 
         {/* Campaign Performance */}

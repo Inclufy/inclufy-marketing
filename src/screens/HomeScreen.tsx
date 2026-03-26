@@ -280,8 +280,8 @@ export default function HomeScreen() {
   ];
 
   const QUICK_ACTIONS_ROW2: QuickAction[] = [
+    { label: 'Alle Posts',       icon: 'post-outline',           route: 'AllPosts',          color: '#8B5CF6', isMaterial: true },
     { label: 'Producten',        icon: 'package-variant-closed', route: 'Products',          color: '#3B82F6', isMaterial: true },
-    { label: 'Team',             icon: 'account-group',          route: 'TeamDirectory',     color: '#8B5CF6', isMaterial: true },
     { label: 'Organisatie',      icon: 'office-building',        route: 'Organization',      color: '#F97316', isMaterial: true },
     { label: 'Brand Kit',        icon: 'palette-swatch-variant', route: 'BrandKit',          color: '#EC4899', isMaterial: true },
   ];

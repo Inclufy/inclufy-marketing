@@ -29,6 +29,8 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
+import AIConsentModal from '../components/AIConsentModal';
+import { useAIConsent } from '../hooks/useAIConsent';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'PostReview'>;
@@ -47,9 +49,11 @@ export default function PostReviewScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { captureId, eventId, localMediaUri } = route.params;
+  const { captureId, eventId, localMediaUri, extraImageUrls } = route.params ?? {} as any;
+  const safeEventId = eventId ?? '';
   const { colors } = useTheme();
   const queryClient = useQueryClient();
+  const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
 
   const { data: posts = [], isLoading } = useCapturePosts(captureId);
   const updatePost = useUpdatePost();
@@ -57,6 +61,7 @@ export default function PostReviewScreen() {
   const batchPublish = useBatchPublish();
   const deletePost = useDeletePost();
   const [flippingImage, setFlippingImage] = useState(false);
+  const [rotatingImage, setRotatingImage] = useState(false);
 
   // Fetch raw capture data to get storage_path for signed URL
   const { data: capture, isFetching: captureFetching } = useQuery({
@@ -120,7 +125,7 @@ export default function PostReviewScreen() {
     }
   }, [captureImageUrl]);
 
-  const { data: event } = useEvent(eventId);
+  const { data: event } = useEvent(safeEventId || undefined);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [editingText, setEditingText] = useState<Record<string, string>>({});
@@ -153,19 +158,30 @@ export default function PostReviewScreen() {
   }, [previewPost?.id]);
 
   // ── Brand kit logo fetch ─────────────────────────────────────────────────
+  // Try event's brand_kit_id first; if no event, load the user's default brand kit
   const { data: brandKit } = useQuery({
-    queryKey: ['brand-kit', (event as any)?.brand_kit_id],
+    queryKey: ['brand-kit', (event as any)?.brand_kit_id ?? 'default'],
     queryFn: async () => {
       const bkId = (event as any)?.brand_kit_id;
-      if (!bkId) return null;
+      if (bkId) {
+        const { data } = await supabase
+          .from('brand_kits')
+          .select('logo_url, name')
+          .eq('id', bkId)
+          .single();
+        return data ?? null;
+      }
+      // No event — load user's default brand kit
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
       const { data } = await supabase
         .from('brand_kits')
         .select('logo_url, name')
-        .eq('id', bkId)
+        .eq('user_id', user.id)
+        .eq('is_default', true)
         .single();
       return data ?? null;
     },
-    enabled: !!(event as any)?.brand_kit_id,
     staleTime: 10 * 60_000,
   });
   const brandLogoUrl: string | null = (brandKit as any)?.logo_url ?? null;
@@ -189,6 +205,34 @@ export default function PostReviewScreen() {
     logoType: 'brand' | 'event' | 'both';
     logoPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   }>({ text: '', textPosition: 'bottom', showLogo: false, logoType: 'brand', logoPosition: 'bottom-right' });
+
+  // ── Account selection for publishing ─────────────────────────────────
+  const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [pendingPublishPost, setPendingPublishPost] = useState<EventPost | null>(null);
+  const [availableAccounts, setAvailableAccounts] = useState<any[]>([]);
+  // Track which account was used to publish each post (postId → account info)
+  const [publishedAccounts, setPublishedAccounts] = useState<Record<string, { name: string; type: string; imageUrl?: string }>>({});
+  // Inline account connect modal (shown when no accounts exist for a channel)
+  const [showConnectModal, setShowConnectModal] = useState(false);
+  const [connectPlatform, setConnectPlatform] = useState('');
+  const [connectAccountName, setConnectAccountName] = useState('');
+  const [connectAccountUrl, setConnectAccountUrl] = useState('');
+  const [connecting, setConnecting] = useState(false);
+  const [pendingPublishAll, setPendingPublishAll] = useState(false);
+
+  const fetchAccountsForChannel = async (channel: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data } = await supabase
+        .from('social_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('platform', channel)
+        .eq('status', 'active');
+      return data || [];
+    } catch { return []; }
+  };
 
   // Seed overlayConfig from DB (engagement.overlay_config) once posts load
   useEffect(() => {
@@ -267,9 +311,11 @@ export default function PostReviewScreen() {
     // fallbackUrl encapsulates: localMediaUri → valid branded_image_url → captureImageUrl
     const primary = fallbackUrl || '';
     if (primary) images.push(primary);
+    // Use extra_images from DB, or from navigation params as fallback
     const extra = post.engagement?.extra_images;
-    if (Array.isArray(extra)) {
-      extra.forEach((url: string) => { if (url && !images.includes(url)) images.push(url); });
+    const extraSource = Array.isArray(extra) && extra.length > 0 ? extra : extraImageUrls;
+    if (Array.isArray(extraSource)) {
+      extraSource.forEach((url: string) => { if (url && !images.includes(url)) images.push(url); });
     }
     return images;
   };
@@ -282,7 +328,7 @@ export default function PostReviewScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsMultipleSelection: true,
       selectionLimit: 5,
       quality: 0.85,
@@ -294,7 +340,7 @@ export default function PostReviewScreen() {
     try {
       const uploadedUrls: string[] = [];
       for (const asset of result.assets) {
-        const { url } = await uploadMedia(asset.uri, eventId, 'photo');
+        const { url } = await uploadMedia(asset.uri, safeEventId, 'photo');
         uploadedUrls.push(url);
       }
       const currentExtra: string[] = post.engagement?.extra_images ?? [];
@@ -322,7 +368,7 @@ export default function PostReviewScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       quality: 0.85,
       allowsEditing: false,
     });
@@ -330,7 +376,7 @@ export default function PostReviewScreen() {
 
     setUploadingImage(true);
     try {
-      const { url, path } = await uploadMedia(result.assets[0].uri, eventId, 'photo');
+      const { url, path } = await uploadMedia(result.assets[0].uri, safeEventId, 'photo');
 
       // Update capture row with new media info so signed URLs work on reload
       await supabase
@@ -388,7 +434,7 @@ export default function PostReviewScreen() {
         [{ flip: ImageManipulator.FlipType.Horizontal }],
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
-      const { url, path } = await uploadMedia(result.uri, eventId, 'photo');
+      const { url, path } = await uploadMedia(result.uri, safeEventId, 'photo');
       // Update capture + all posts for this capture with the flipped image
       await supabase
         .from('go_captures')
@@ -406,6 +452,33 @@ export default function PostReviewScreen() {
     }
   };
 
+  // ── Rotate image 90° ─────────────────────────────────────────────────────
+  const handleRotateImage = async (post: EventPost, imageUrl: string) => {
+    if (rotatingImage) return;
+    setRotatingImage(true);
+    try {
+      const result = await ImageManipulator.manipulateAsync(
+        imageUrl,
+        [{ rotate: 90 }],
+        { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      const { url, path } = await uploadMedia(result.uri, safeEventId, 'photo');
+      await supabase
+        .from('go_captures')
+        .update({ media_url: url, storage_path: path, thumbnail_url: url })
+        .eq('id', captureId);
+      await Promise.all(
+        posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: url })),
+      );
+      queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
+      queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
+    } catch {
+      Alert.alert('Fout', 'Afbeelding draaien mislukt.');
+    } finally {
+      setRotatingImage(false);
+    }
+  };
+
   // ── Translate to language ─────────────────────────────────────────────────
   const LANG_OPTIONS = [
     { code: 'nl', label: 'NL', flag: '🇳🇱' },
@@ -417,6 +490,10 @@ export default function PostReviewScreen() {
 
   const handleSelectLang = async (post: EventPost, lang: string) => {
     if (postLang[post.id] === lang) return; // already this lang
+    if (!hasConsent) {
+      requestConsent(() => { handleSelectLang(post, lang) });
+      return;
+    }
     setTranslating(post.id);
     try {
       const currentText = editingText[post.id] ?? post.text_content;
@@ -442,16 +519,19 @@ export default function PostReviewScreen() {
 
   // ── Regenerate post ────────────────────────────────────────────────────
   const handleRegenerate = async (post: EventPost) => {
-    if (!event) return;
+    if (!hasConsent) {
+      requestConsent(() => { handleRegenerate(post) });
+      return;
+    }
     setRegenerating(post.id);
     try {
       const result = await aiService.generateEventPost({
         platform: post.channel as any,
         event_context: {
-          name: event.name,
-          description: event.description,
-          hashtags: event.hashtags,
-          location: event.location,
+          name: event?.name || 'Content',
+          description: event?.description || '',
+          hashtags: event?.hashtags || [],
+          location: event?.location || '',
         },
         capture_note: post.text_content?.slice(0, 100) || '',
         capture_tags: [],
@@ -675,9 +755,107 @@ export default function PostReviewScreen() {
     }
   };
 
+  const handleConnectAccount = async () => {
+    if (!connectAccountName.trim()) {
+      Alert.alert('Vul een accountnaam in');
+      return;
+    }
+    setConnecting(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+      const accountId = connectAccountUrl.trim() || connectAccountName.trim();
+      // Check if account already exists, then update or insert accordingly
+      const { data: existingAccount } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('platform', connectPlatform)
+        .eq('platform_account_id', accountId)
+        .maybeSingle();
+
+      if (existingAccount) {
+        // Update existing account
+        const { error: updateErr } = await supabase
+          .from('social_accounts')
+          .update({
+            account_name: connectAccountName.trim(),
+            account_type: 'manual',
+            status: 'active',
+          })
+          .eq('id', existingAccount.id);
+        if (updateErr) {
+          console.error('[connect] Update failed:', updateErr);
+          throw new Error(updateErr.message || 'Kon niet verbinden');
+        }
+      } else {
+        // Insert new account
+        const { error: insertErr } = await supabase
+          .from('social_accounts')
+          .insert({
+            user_id: user.id,
+            platform: connectPlatform,
+            account_name: connectAccountName.trim(),
+            platform_account_id: accountId,
+            account_type: 'manual',
+            status: 'active',
+          });
+        if (insertErr) {
+          console.error('[connect] Insert failed:', insertErr);
+          throw new Error(insertErr.message || 'Kon niet verbinden');
+        }
+      }
+      Alert.alert('✅ Verbonden', `${connectAccountName} is gekoppeld aan ${channelConfig[connectPlatform as Channel]?.label || connectPlatform}.`);
+      setShowConnectModal(false);
+      setConnectAccountName('');
+      setConnectAccountUrl('');
+      // Retry publish with the new account
+      if (pendingPublishAll) {
+        setPendingPublishAll(false);
+        // Re-run Publiceer Alles to check remaining channels
+        setTimeout(() => handlePublishAll(), 500);
+      } else if (pendingPublishPost) {
+        const accounts = await fetchAccountsForChannel(pendingPublishPost.channel);
+        const acc = accounts[0];
+        if (acc) doPublish(pendingPublishPost, acc.id, acc);
+      }
+    } catch (err: any) {
+      Alert.alert('Fout', err?.message ?? 'Verbinding mislukt');
+    } finally {
+      setConnecting(false);
+    }
+  };
+
   const handlePublish = async (post: EventPost) => {
+    // Check if user has accounts for this channel
+    const accounts = await fetchAccountsForChannel(post.channel);
+    if (accounts.length === 0) {
+      // No accounts — offer to connect one
+      setPendingPublishPost(post);
+      setPendingPublishAll(false);
+      setConnectPlatform(post.channel);
+      setShowConnectModal(true);
+      return;
+    }
+    if (accounts.length > 1) {
+      // Show account picker
+      setPendingPublishPost(post);
+      setAvailableAccounts(accounts);
+      setShowAccountPicker(true);
+      return;
+    }
+    // Single account — publish directly
+    const acc = accounts[0];
+    doPublish(post, acc?.id, acc);
+  };
+
+  const doPublish = async (post: EventPost, accountId?: string, account?: any) => {
+    const accountLabel = account?.account_name || account?.platform_account_id;
+    const confirmMsg = accountLabel
+      ? `Publiceren op ${channelConfig[post.channel]?.label} als "${accountLabel}"?`
+      : `${t.postReview.publishOn} ${channelConfig[post.channel]?.label}?`;
     Alert.alert(
-      `${t.postReview.publishOn} ${channelConfig[post.channel]?.label}?`,
+      confirmMsg,
       t.postReview.publishConfirm,
       [
         { text: t.common.cancel, style: 'cancel' },
@@ -689,8 +867,34 @@ export default function PostReviewScreen() {
               if (editingText[post.id]) {
                 await updatePost.mutateAsync({ id: post.id, text_content: editingText[post.id] });
               }
-              await publishPost.mutateAsync(post.id);
-              Alert.alert('✅ Gepubliceerd', `Post is gepubliceerd op ${channelConfig[post.channel]?.label}.`);
+              // Save account info in engagement for display
+              if (account) {
+                const eng = { ...(post.engagement ?? { likes: 0, comments: 0, shares: 0 }) };
+                (eng as any).published_account = {
+                  id: account.id,
+                  name: account.account_name || account.platform_account_id,
+                  type: account.account_type,
+                  image_url: account.profile_image_url,
+                };
+                await updatePost.mutateAsync({ id: post.id, engagement: eng });
+                setPublishedAccounts((prev) => ({
+                  ...prev,
+                  [post.id]: {
+                    name: account.account_name || account.platform_account_id,
+                    type: account.account_type,
+                    imageUrl: account.profile_image_url,
+                  },
+                }));
+              }
+              const pubResult = await publishPost.mutateAsync(post.id);
+              if ((pubResult as any)?.manual) {
+                Alert.alert(
+                  '📋 Klaar om te posten',
+                  `Post is opgeslagen als gepubliceerd. Kopieer de tekst en plak deze handmatig op ${channelConfig[post.channel]?.label}.\n\nVoor automatisch publiceren: koppel je account via OAuth in Instellingen.`,
+                );
+              } else {
+                Alert.alert('✅ Gepubliceerd', `Post is gepubliceerd op ${channelConfig[post.channel]?.label}${accountLabel ? ` als "${accountLabel}"` : ''}.`);
+              }
             } catch (err: any) {
               if (err?.message === 'SOCIAL_NOT_CONNECTED') {
                 Alert.alert(
@@ -708,10 +912,27 @@ export default function PostReviewScreen() {
     );
   };
 
-  const handlePublishAll = () => {
+  const handlePublishAll = async () => {
     const draftPosts = posts.filter((p) => p.status === 'draft' || p.status === 'approved');
     if (draftPosts.length === 0) {
       Alert.alert(t.postReview.noDrafts);
+      return;
+    }
+
+    // Check if any channel has no accounts — offer to connect first
+    const channelsWithoutAccounts: string[] = [];
+    for (const post of draftPosts) {
+      const accounts = await fetchAccountsForChannel(post.channel);
+      if (accounts.length === 0 && !channelsWithoutAccounts.includes(post.channel)) {
+        channelsWithoutAccounts.push(post.channel);
+      }
+    }
+    if (channelsWithoutAccounts.length > 0) {
+      // Show connect modal for the first missing channel
+      setPendingPublishPost(draftPosts[0]);
+      setPendingPublishAll(true);
+      setConnectPlatform(channelsWithoutAccounts[0]);
+      setShowConnectModal(true);
       return;
     }
 
@@ -726,10 +947,12 @@ export default function PostReviewScreen() {
             try {
               const result = await batchPublish.mutateAsync(draftPosts.map((p) => p.id));
               if ((result as any)?.anyQueued && !(result as any)?.anyPublished) {
-                Alert.alert(
-                  '⚠️ Opgeslagen als goedgekeurd',
-                  'Posts zijn opgeslagen als "Goedgekeurd". Verbind je social media accounts via Instellingen → Social Media om automatisch te publiceren.'
-                );
+                // All posts failed to publish — show connect modal
+                const firstFailed = draftPosts[0];
+                setPendingPublishPost(firstFailed);
+                setPendingPublishAll(true);
+                setConnectPlatform(firstFailed.channel);
+                setShowConnectModal(true);
               } else {
                 Alert.alert(t.postReview.publishAllSuccess);
               }
@@ -1039,7 +1262,8 @@ export default function PostReviewScreen() {
               )}
 
               {/* ── Image toolbar: overlay editor + flip (photo only) ── */}
-              {!mediaType || ['photo', 'image'].includes(mediaType) ? (
+              {/* Overlay & flip available for all capture types with images */}
+              {(
                 <View style={{ flexDirection: 'row', gap: 8 }}>
                   {/* Overlay editor */}
                   <TouchableOpacity
@@ -1061,30 +1285,49 @@ export default function PostReviewScreen() {
                     )}
                   </TouchableOpacity>
 
-                  {/* Flip image */}
+                  {/* Rotate + Flip image */}
                   {imageUrl ? (
-                    <TouchableOpacity
-                      onPress={() => handleFlipImage(post, imageUrl)}
-                      disabled={flippingImage}
-                      style={{
-                        flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
-                        borderWidth: 1.5, borderColor: colors.border, borderRadius: borderRadius.md,
-                        paddingVertical: 9, paddingHorizontal: 14,
-                        backgroundColor: colors.surface,
-                      }}
-                    >
-                      {flippingImage
-                        ? <ActivityIndicator size="small" color={colors.primary} />
-                        : <>
-                            <Ionicons name="swap-horizontal-outline" size={15} color={colors.textSecondary} />
-                            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium }}>Spiegelen</Text>
-                          </>}
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        onPress={() => handleRotateImage(post, imageUrl)}
+                        disabled={rotatingImage}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                          borderWidth: 1.5, borderColor: colors.border, borderRadius: borderRadius.md,
+                          paddingVertical: 9, paddingHorizontal: 14,
+                          backgroundColor: colors.surface,
+                        }}
+                      >
+                        {rotatingImage
+                          ? <ActivityIndicator size="small" color={colors.primary} />
+                          : <>
+                              <Ionicons name="refresh-outline" size={15} color={colors.textSecondary} />
+                              <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium }}>Draaien</Text>
+                            </>}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => handleFlipImage(post, imageUrl)}
+                        disabled={flippingImage}
+                        style={{
+                          flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5,
+                          borderWidth: 1.5, borderColor: colors.border, borderRadius: borderRadius.md,
+                          paddingVertical: 9, paddingHorizontal: 14,
+                          backgroundColor: colors.surface,
+                        }}
+                      >
+                        {flippingImage
+                          ? <ActivityIndicator size="small" color={colors.primary} />
+                          : <>
+                              <Ionicons name="swap-horizontal-outline" size={15} color={colors.textSecondary} />
+                              <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium }}>Spiegelen</Text>
+                            </>}
+                      </TouchableOpacity>
+                    </>
                   ) : null}
                 </View>
-              ) : null}
+              )}
 
-              {/* Status badge */}
+              {/* Status badge + account info */}
               <View style={styles.statusRow}>
                 <View
                   style={[
@@ -1099,6 +1342,27 @@ export default function PostReviewScreen() {
                 <Text style={styles.channelBadge}>
                   {config?.label || post.channel}
                 </Text>
+                {/* Show which account was used */}
+                {(() => {
+                  const acc = publishedAccounts[post.id] || (post.engagement as any)?.published_account;
+                  if (!acc) return null;
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 4 }}>
+                      <Text style={{ color: colors.textTertiary, fontSize: fontSize.xs }}>·</Text>
+                      {(acc.imageUrl || (acc as any).image_url) ? (
+                        <Image source={{ uri: acc.imageUrl || (acc as any).image_url }} style={{ width: 14, height: 14, borderRadius: 7 }} />
+                      ) : (
+                        <Ionicons name="person-circle-outline" size={14} color={colors.textTertiary} />
+                      )}
+                      <Text style={{ color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium }}>
+                        {acc.name}
+                      </Text>
+                      <Text style={{ color: colors.textTertiary, fontSize: 9 }}>
+                        {acc.type === 'page' ? '🏢' : acc.type === 'business' ? '💼' : '👤'}
+                      </Text>
+                    </View>
+                  );
+                })()}
               </View>
 
               {/* ── Language select ─────────────────────────────────── */}
@@ -1251,6 +1515,10 @@ export default function PostReviewScreen() {
                 <TouchableOpacity
                   style={[styles.audienceBtn, { flex: 1 }]}
                   onPress={async () => {
+                    if (!hasConsent) {
+                      requestConsent(() => {});
+                      return;
+                    }
                     try {
                       const result = await aiService.suggestAudience({
                         text_content: getEditedText(post),
@@ -1279,6 +1547,23 @@ export default function PostReviewScreen() {
                   </View>
                 </TouchableOpacity>
               </View>
+
+              {/* ── Content Creator with image ─────────────────────── */}
+              <TouchableOpacity
+                style={[styles.translateBtn, { borderColor: '#8B5CF6' + '80', backgroundColor: '#8B5CF680' + '10' }]}
+                onPress={() => {
+                  const allImages = getPostImages(post, imageUrl);
+                  navigation.navigate('ContentCreator' as any, {
+                    imageUri: imageUrl || undefined,
+                    imageUrls: allImages.length > 0 ? allImages : undefined,
+                  });
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                  <Ionicons name="brush-outline" size={14} color="#8B5CF6" />
+                  <Text style={[styles.translateBtnText, { color: '#8B5CF6' }]}>Content Creator</Text>
+                </View>
+              </TouchableOpacity>
 
               {/* ── Publish + Delete ─────────────────────────────────── */}
               <View style={styles.actions}>
@@ -1990,6 +2275,42 @@ export default function PostReviewScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+            {/* Apply to all channels */}
+            {posts.length > 1 && (
+              <TouchableOpacity
+                onPress={async () => {
+                  if (!editingOverlay) return;
+                  // Apply overlay to all posts
+                  for (const p of posts) {
+                    setOverlayConfig((prev) => ({ ...prev, [p.id]: { ...overlayDraft } }));
+                    try {
+                      await updatePost.mutateAsync({
+                        id: p.id,
+                        engagement: {
+                          ...(p.engagement ?? { likes: 0, comments: 0, shares: 0 }),
+                          overlay_config: { ...overlayDraft },
+                        } as any,
+                      });
+                    } catch { /* non-critical */ }
+                  }
+                  setEditingOverlay(null);
+                  Alert.alert('✅', `Overlay toegepast op alle ${posts.length} kanalen`);
+                }}
+                style={{
+                  marginTop: 8,
+                  paddingVertical: 11,
+                  borderRadius: borderRadius.md,
+                  borderWidth: 1.5,
+                  borderColor: colors.secondary,
+                  backgroundColor: (colors as any).secondary + '10',
+                  alignItems: 'center',
+                }}
+              >
+                <Text style={{ color: colors.secondary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm }}>
+                  Toepassen op alle kanalen ({posts.length})
+                </Text>
+              </TouchableOpacity>
+            )}
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
@@ -2054,6 +2375,117 @@ export default function PostReviewScreen() {
           </Text>
         </View>
       </Modal>
+
+      {/* ── Account Picker Modal ── */}
+      <Modal visible={showAccountPicker} transparent animationType="slide" onRequestClose={() => setShowAccountPicker(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowAccountPicker(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, paddingBottom: Platform.OS === 'ios' ? 40 : 20 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.md }} />
+              <Text style={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold as any, color: colors.text, marginBottom: 4 }}>
+                Kies account
+              </Text>
+              <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
+                Selecteer het account waarop je wilt publiceren
+              </Text>
+              {availableAccounts.map((acc) => (
+                <TouchableOpacity
+                  key={acc.id}
+                  onPress={() => {
+                    setShowAccountPicker(false);
+                    if (pendingPublishPost) doPublish(pendingPublishPost, acc.id, acc);
+                  }}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 12,
+                    backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.md,
+                    marginBottom: 8, borderWidth: 1, borderColor: colors.border,
+                  }}
+                >
+                  {acc.profile_image_url ? (
+                    <Image source={{ uri: acc.profile_image_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                  ) : (
+                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                      <Ionicons name="person" size={20} color={colors.primary} />
+                    </View>
+                  )}
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold as any }}>
+                      {acc.account_name || acc.platform_account_id}
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: fontSize.xs }}>
+                      {acc.account_type === 'page' ? '🏢 Bedrijfspagina' : acc.account_type === 'business' ? '💼 Zakelijk' : '👤 Persoonlijk'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity onPress={() => setShowAccountPicker(false)} style={{ alignItems: 'center', paddingVertical: spacing.sm, marginTop: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: fontSize.sm }}>Annuleren</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* ── Connect Account Modal (shown when no accounts for channel) ── */}
+      <Modal visible={showConnectModal} transparent animationType="slide" onRequestClose={() => setShowConnectModal(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }} activeOpacity={1} onPress={() => setShowConnectModal(false)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{ backgroundColor: colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: spacing.lg, paddingBottom: Platform.OS === 'ios' ? 40 : 20 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border, alignSelf: 'center', marginBottom: spacing.md }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <Ionicons name={channelConfig[connectPlatform as Channel]?.icon as any || 'link-outline'} size={22} color={channelConfig[connectPlatform as Channel]?.color || colors.primary} />
+                <Text style={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold as any, color: colors.text }}>
+                  {channelConfig[connectPlatform as Channel]?.label || connectPlatform} koppelen
+                </Text>
+              </View>
+              <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
+                Je hebt nog geen {channelConfig[connectPlatform as Channel]?.label} account gekoppeld. Voeg er een toe om direct te publiceren.
+              </Text>
+              <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 6 }}>ACCOUNTNAAM *</Text>
+              <TextInput
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.sm, fontSize: fontSize.md, color: colors.text, marginBottom: spacing.sm }}
+                placeholder={`Bijv. "Inclufy" of "@inclufy"`}
+                placeholderTextColor={colors.textTertiary}
+                value={connectAccountName}
+                onChangeText={setConnectAccountName}
+                autoFocus
+              />
+              <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 6 }}>PROFIEL URL (optioneel)</Text>
+              <TextInput
+                style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.sm, fontSize: fontSize.md, color: colors.text, marginBottom: spacing.md }}
+                placeholder="https://..."
+                placeholderTextColor={colors.textTertiary}
+                value={connectAccountUrl}
+                onChangeText={setConnectAccountUrl}
+                autoCapitalize="none"
+                keyboardType="url"
+              />
+              <TouchableOpacity
+                onPress={handleConnectAccount}
+                disabled={connecting || !connectAccountName.trim()}
+                style={{
+                  backgroundColor: channelConfig[connectPlatform as Channel]?.color || colors.primary,
+                  borderRadius: borderRadius.md, paddingVertical: 14, alignItems: 'center',
+                  opacity: connecting || !connectAccountName.trim() ? 0.6 : 1,
+                }}
+              >
+                {connecting ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={{ color: '#fff', fontSize: fontSize.md, fontWeight: fontWeight.semibold }}>
+                    Koppelen & publiceren
+                  </Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setShowConnectModal(false)} style={{ alignItems: 'center', paddingVertical: spacing.sm, marginTop: 4 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: fontSize.sm }}>Later</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+      <AIConsentModal visible={showConsentModal} onAccept={onConsentAccept} onDecline={onConsentDecline} />
     </View>
   );
 }

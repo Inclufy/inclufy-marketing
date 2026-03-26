@@ -18,6 +18,8 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { cardShadow } from '../utils/shadows';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
+import AIConsentModal from '../components/AIConsentModal';
+import { useAIConsent } from '../hooks/useAIConsent';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'StoryArc'>;
@@ -59,6 +61,7 @@ export default function StoryArcScreen() {
   const { data: event } = useEvent(eventId);
   const { data: capturesData } = useCaptures(eventId);
   const { data: brandMemory } = useBrandMemory();
+  const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
 
   const [arc, setArc] = useState<StoryArcPost[]>([]);
   const [narrative, setNarrative] = useState('');
@@ -287,6 +290,10 @@ export default function StoryArcScreen() {
   }, [event, brandMemory]);
 
   const generateArc = async () => {
+    if (!hasConsent) {
+      requestConsent(() => { generateArc(); });
+      return;
+    }
     if (!event) return;
 
     setLoading(true);
@@ -419,6 +426,7 @@ export default function StoryArcScreen() {
         <Ionicons name="refresh-outline" size={16} color={colors.primary} />
         <Text style={styles.regenerateText}>Nieuwe Story Arc genereren</Text>
       </TouchableOpacity>
+      <AIConsentModal visible={showConsentModal} onAccept={onConsentAccept} onDecline={onConsentDecline} />
     </ScrollView>
   );
 }

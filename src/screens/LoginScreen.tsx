@@ -151,6 +151,7 @@ export default function LoginScreen() {
               </View>
               <View style={styles.inputSeparator} />
               <TextInput
+                testID="email-input"
                 style={styles.input}
                 placeholder={t.login.emailPlaceholder}
                 placeholderTextColor={colors.textTertiary}
@@ -177,6 +178,7 @@ export default function LoginScreen() {
               </View>
               <View style={styles.inputSeparator} />
               <TextInput
+                testID="password-input"
                 style={styles.input}
                 placeholder={t.login.passwordPlaceholder}
                 placeholderTextColor={colors.textTertiary}
@@ -202,6 +204,7 @@ export default function LoginScreen() {
             style={[styles.loginButton, loading && styles.buttonDisabled]}
           >
             <TouchableOpacity
+              testID="login-button"
               style={styles.loginButtonInner}
               onPress={handleLogin}
               disabled={loading}

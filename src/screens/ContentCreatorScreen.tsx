@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   Image,
   KeyboardAvoidingView,
 } from 'react-native';
+import { useRoute, RouteProp } from '@react-navigation/native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import * as ImagePicker from 'expo-image-picker';
@@ -24,6 +25,9 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { subtleShadow } from '../utils/shadows';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
+import type { RootStackParamList } from '../types';
+import AIConsentModal from '../components/AIConsentModal';
+import { useAIConsent } from '../hooks/useAIConsent';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
@@ -86,7 +90,13 @@ const STEP_LABELS = [
 export default function ContentCreatorScreen() {
   const { t } = useTranslation();
   const { colors } = useTheme();
+  const route = useRoute<RouteProp<RootStackParamList, 'ContentCreator'>>();
   const scrollRef = useRef<ScrollView>(null);
+  const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
+
+  // Receive image preview from PostReview / LiveCapture
+  const passedImageUri = (route.params as any)?.imageUri as string | undefined;
+  const passedImageUrls = (route.params as any)?.imageUrls as string[] | undefined;
 
   // Wizard step
   const [step, setStep] = useState<WizardStep>(1);
@@ -112,6 +122,14 @@ export default function ContentCreatorScreen() {
 
   // Step 3 - Media
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+
+  // Seed selectedImages from navigation params (once)
+  useEffect(() => {
+    const incoming = passedImageUrls ?? (passedImageUri ? [passedImageUri] : []);
+    if (incoming.length > 0) {
+      setSelectedImages((prev) => prev.length === 0 ? incoming : prev);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [showAiImageSearch, setShowAiImageSearch] = useState(false);
   const [aiImageQuery, setAiImageQuery] = useState('');
   const [aiImageResults, setAiImageResults] = useState<Array<{ id: string; url: string; thumb: string; author: string; source: string }>>([]);
@@ -143,6 +161,10 @@ export default function ContentCreatorScreen() {
 
   // ─── Generate ────────────────────────────────────────────────────
   const handleGenerate = async () => {
+    if (!hasConsent) {
+      requestConsent(() => { handleGenerate(); });
+      return;
+    }
     const trimmedTopic = topic.trim();
     if (!trimmedTopic) {
       Alert.alert('Onderwerp vereist', 'Voer een onderwerp in om content te genereren.');
@@ -1429,6 +1451,7 @@ export default function ContentCreatorScreen() {
           {step === 4 && renderStep4()}
         </ScrollView>
       </KeyboardAvoidingView>
+      <AIConsentModal visible={showConsentModal} onAccept={onConsentAccept} onDecline={onConsentDecline} />
     </View>
   );
 }

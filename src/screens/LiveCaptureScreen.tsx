@@ -38,11 +38,47 @@ import type { RootStackParamList, MediaType, Channel } from '../types';
 import { CAPTURE_TAG_PRESETS } from '../types';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
+import AIConsentModal from '../components/AIConsentModal';
+import { useAIConsent } from '../hooks/useAIConsent';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'LiveCapture'>;
 
 type CaptureMode = 'photo' | 'video' | 'audio' | 'quote' | 'upload';
+
+/**
+ * Fix photo orientation using EXIF data.
+ * iOS cameras store portrait photos as landscape pixels with EXIF orientation flag.
+ * expo-image-manipulator doesn't always apply EXIF rotation automatically.
+ */
+async function normalizeImageOrientation(uri: string, exif?: Record<string, any>): Promise<string> {
+  try {
+    const transforms: ImageManipulator.Action[] = [];
+
+    // Apply EXIF rotation if available
+    const orientation = exif?.Orientation || exif?.orientation;
+    if (orientation) {
+      switch (orientation) {
+        case 3: transforms.push({ rotate: 180 }); break;
+        case 6: transforms.push({ rotate: 90 }); break;
+        case 8: transforms.push({ rotate: -90 }); break;
+        // 1 = normal, 2/4/5/7 = mirrored variants (rare)
+      }
+    }
+
+    // Always resize to cap file size
+    transforms.push({ resize: { width: 1920 } });
+
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      transforms,
+      { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+    );
+    return result.uri;
+  } catch {
+    return uri;
+  }
+}
 
 export default function LiveCaptureScreen() {
   const { t } = useTranslation();
@@ -84,6 +120,8 @@ export default function LiveCaptureScreen() {
   const needsProductSelection = captureCategory === 'product' && !selectedProduct && products.length > 0;
   const needsMemberSelection = captureCategory === 'behind_scenes' && !selectedMember && teamMembers.length > 0;
 
+  const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
+
   // Sync with event channels when the event loads (only if user hasn't manually changed them)
   useEffect(() => {
     if (event?.channels?.length) {
@@ -103,193 +141,11 @@ export default function LiveCaptureScreen() {
     { key: 'facebook',  label: 'Facebook',  color: '#1877F2', icon: 'logo-facebook'  },
   ];
 
-  // Guard: only "event" captures require an eventId — product/inspiration/behind_scenes go straight to camera
+  // Guard flags — actual early returns are placed AFTER all hooks to satisfy React rules
   const needsEvent = captureCategory === 'event' || captureCategory === 'quick';
-  if (!eventId && needsEvent) {
-    const goBack = () => {
-      if (navigation.canGoBack()) {
-        navigation.goBack();
-      } else {
-        (navigation as any).navigate('Main');
-      }
-    };
-    const goToEvents = () => {
-      // Navigate to Events tab inside Main tab navigator
-      try {
-        (navigation as any).navigate('Main', { screen: 'EventsTab' });
-      } catch {
-        navigation.goBack();
-      }
-    };
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        {/* Back button */}
-        <TouchableOpacity
-          onPress={goBack}
-          style={{ position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 }}
-        >
-          <Ionicons name="close" size={28} color={colors.text} />
-        </TouchableOpacity>
+  const showEventGuard = !eventId && needsEvent;
 
-        {/* Content centred */}
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surfaceElevated, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
-            <Ionicons name="camera-outline" size={40} color={colors.primary} />
-          </View>
-          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700', textAlign: 'center' }}>
-            Selecteer een event
-          </Text>
-          <Text style={{ color: colors.textSecondary, fontSize: 15, marginTop: 10, textAlign: 'center', lineHeight: 22 }}>
-            Open een event vanuit de Events-tab en tik op{' '}
-            <Text style={{ color: colors.primary, fontWeight: '600' }}>"Capture"</Text>
-            {' '}om te starten.
-          </Text>
-
-          <TouchableOpacity
-            onPress={goToEvents}
-            style={{ marginTop: 32, backgroundColor: colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 28, flexDirection: 'row', alignItems: 'center', gap: 8 }}
-          >
-            <Ionicons name="calendar-outline" size={18} color="#fff" />
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Naar Events</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            onPress={goBack}
-            style={{ marginTop: 16, paddingHorizontal: 32, paddingVertical: 12 }}
-          >
-            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Annuleer</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Guard: Product Capture — select a product/service first ──
-  if (needsProductSelection) {
-    const goBack = () => navigation.canGoBack() ? navigation.goBack() : (navigation as any).navigate('Main');
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <TouchableOpacity onPress={goBack} style={{ position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 }}>
-          <Ionicons name="close" size={28} color={colors.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, paddingTop: 100, paddingHorizontal: 20 }}>
-          <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#3B82F6' + '15', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="package-variant-closed" size={32} color="#3B82F6" />
-            </View>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' }}>
-              Kies een product of dienst
-            </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, textAlign: 'center' }}>
-              Selecteer waar deze content over gaat
-            </Text>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-            {products.filter((p) => p.status === 'active').map((product) => (
-              <TouchableOpacity
-                key={product.id}
-                onPress={() => setSelectedProduct(product)}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 12,
-                  backgroundColor: colors.surfaceElevated, borderRadius: 14, padding: 14,
-                  marginBottom: 10, borderWidth: 1, borderColor: colors.border,
-                }}
-              >
-                {product.image_url ? (
-                  <Image source={{ uri: product.image_url }} style={{ width: 48, height: 48, borderRadius: 10 }} />
-                ) : (
-                  <View style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: '#3B82F6' + '15', justifyContent: 'center', alignItems: 'center' }}>
-                    <MaterialCommunityIcons name={product.category === 'service' ? 'hand-heart-outline' : 'package-variant-closed'} size={24} color="#3B82F6" />
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{product.name}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-                    {product.category === 'service' ? 'Dienst' : product.category === 'solution' ? 'Oplossing' : 'Product'}
-                    {product.description ? ` · ${product.description}` : ''}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            ))}
-            {/* Skip option */}
-            <TouchableOpacity
-              onPress={() => setSelectedProduct({ id: 'none', name: 'Algemeen', category: 'product' } as any)}
-              style={{
-                alignItems: 'center', padding: 14, marginTop: 4,
-                borderRadius: 14, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-              }}
-            >
-              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Overslaan — algemene product content</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    );
-  }
-
-  // ── Guard: Behind the Scenes — select a team member first ──
-  if (needsMemberSelection) {
-    const goBack = () => navigation.canGoBack() ? navigation.goBack() : (navigation as any).navigate('Main');
-    return (
-      <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <TouchableOpacity onPress={goBack} style={{ position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 }}>
-          <Ionicons name="close" size={28} color={colors.text} />
-        </TouchableOpacity>
-        <View style={{ flex: 1, paddingTop: 100, paddingHorizontal: 20 }}>
-          <View style={{ alignItems: 'center', marginBottom: 24 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#10B981' + '15', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
-              <MaterialCommunityIcons name="account-group" size={32} color="#10B981" />
-            </View>
-            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' }}>
-              Wie staat centraal?
-            </Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, textAlign: 'center' }}>
-              Selecteer het teamlid voor deze behind-the-scenes content
-            </Text>
-          </View>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-            {teamMembers.filter((m) => m.is_active).map((member) => (
-              <TouchableOpacity
-                key={member.id}
-                onPress={() => setSelectedMember(member)}
-                style={{
-                  flexDirection: 'row', alignItems: 'center', gap: 12,
-                  backgroundColor: colors.surfaceElevated, borderRadius: 14, padding: 14,
-                  marginBottom: 10, borderWidth: 1, borderColor: colors.border,
-                }}
-              >
-                {member.photo_url ? (
-                  <Image source={{ uri: member.photo_url }} style={{ width: 48, height: 48, borderRadius: 24 }} />
-                ) : (
-                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#10B981' + '15', justifyContent: 'center', alignItems: 'center' }}>
-                    <Ionicons name="person" size={24} color="#10B981" />
-                  </View>
-                )}
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{member.name}</Text>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
-                    {member.role}{member.expertise?.length ? ` · ${member.expertise[0]}` : ''}
-                  </Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
-              </TouchableOpacity>
-            ))}
-            {/* Skip option */}
-            <TouchableOpacity
-              onPress={() => setSelectedMember({ id: 'none', name: 'Team algemeen' } as any)}
-              style={{
-                alignItems: 'center', padding: 14, marginTop: 4,
-                borderRadius: 14, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed',
-              }}
-            >
-              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Overslaan — algemene team content</Text>
-            </TouchableOpacity>
-          </ScrollView>
-        </View>
-      </View>
-    );
-  }
+  // Guard screens are rendered below (after all hooks) to satisfy React rules of hooks
 
   const tags = event?.default_tags?.length
     ? event.default_tags
@@ -301,9 +157,13 @@ export default function LiveCaptureScreen() {
     );
   };
 
-  // ── Free capture (no event required) — save to library + navigate to ContentCreator ──
+  // ── Free capture (no event required) — create capture + AI posts, navigate to PostReview ──
   const processFreeCapture = useCallback(
     async (mediaUri: string, mediaType: MediaType) => {
+      if (!hasConsent) {
+        requestConsent(() => { processFreeCapture(mediaUri, mediaType); });
+        return;
+      }
       setProcessing(true);
       try {
         // 1. Normalise photo orientation
@@ -328,88 +188,144 @@ export default function LiveCaptureScreen() {
           }
         }
 
-        // 3. Upload to Supabase Storage under general path
+        // 3. Upload to Supabase Storage
         let uploadUrl: string | null = null;
-        try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const ext = mediaType === 'photo' ? 'jpg' : mediaType === 'video' ? 'mp4' : 'm4a';
-            const fileName = `${captureCategory}_${Date.now()}.${ext}`;
-            const storagePath = `content/${user.id}/${fileName}`;
-            const fileBase64 = await FileSystem.readAsStringAsync(finalUri, { encoding: 'base64' as any });
-            const { error: upErr } = await supabase.storage
-              .from('media')
-              .upload(storagePath, Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0)), {
-                contentType: mediaType === 'photo' ? 'image/jpeg' : mediaType === 'video' ? 'video/mp4' : 'audio/m4a',
-                upsert: true,
-              });
-            if (!upErr) {
-              const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
-              uploadUrl = urlData?.publicUrl ?? null;
+        let uploadPath: string | null = null;
+        if (mediaType !== 'quote') {
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const ext = mediaType === 'photo' ? 'jpg' : mediaType === 'video' ? 'mp4' : 'm4a';
+              const fileName = `${captureCategory}_${Date.now()}.${ext}`;
+              const storagePath = `content/${user.id}/${fileName}`;
+              const fileBase64 = await FileSystem.readAsStringAsync(finalUri, { encoding: 'base64' as any });
+              const { error: upErr } = await supabase.storage
+                .from('media')
+                .upload(storagePath, Uint8Array.from(atob(fileBase64), c => c.charCodeAt(0)), {
+                  contentType: mediaType === 'photo' ? 'image/jpeg' : mediaType === 'video' ? 'video/mp4' : 'audio/m4a',
+                  upsert: true,
+                });
+              if (!upErr) {
+                const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
+                uploadUrl = urlData?.publicUrl ?? null;
+                uploadPath = storagePath;
+              }
             }
+          } catch (uploadErr) {
+            console.warn('[processFreeCapture] Upload failed (non-fatal):', uploadErr);
           }
-        } catch (uploadErr) {
-          console.warn('[processFreeCapture] Upload failed (non-fatal):', uploadErr);
         }
 
-        // 4. Save as content draft
+        // 4. Create capture record (event_id is null for free captures)
+        const capture = await createCapture.mutateAsync({
+          event_id: null,
+          media_type: mediaType,
+          media_url: uploadUrl ?? '',
+          storage_path: uploadPath,
+          thumbnail_url: mediaType === 'photo' ? uploadUrl : null,
+          tags: selectedTags,
+          note: note.trim(),
+          ai_status: 'processing',
+          ai_description: null,
+          duration_seconds: null,
+          transcript: null,
+          captured_at: new Date().toISOString(),
+        } as any);
+
+        // 5. Generate AI posts for default channels
+        let imageBase64: string | undefined;
+        if (mediaType === 'photo') {
+          try {
+            imageBase64 = await FileSystem.readAsStringAsync(finalUri, { encoding: 'base64' as any });
+          } catch {}
+        }
+
+        const brandCtx = toBrandContext(brandMemory);
+        if (brandCtx) aiService.setBrandContext(brandCtx);
+
+        const activeChannels: Channel[] = selectedChannels.length
+          ? selectedChannels
+          : ['linkedin', 'instagram'];
+
+        let results: Record<string, any> = {};
         try {
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            await supabase.from('content_posts').insert({
-              user_id: user.id,
-              content_type: captureCategory,
-              platform: 'linkedin',
-              content: '',
-              hashtags: selectedTags,
-              tone: 'professional',
-              status: 'draft',
-              media_urls: uploadUrl ? [uploadUrl] : [],
-            });
+          results = await aiService.generateAllChannelPosts(
+            activeChannels,
+            imageBase64,
+            note.trim() || undefined,
+            {
+              name: captureCategory === 'product' ? (selectedProduct?.name || 'Product') :
+                    captureCategory === 'behind_scenes' ? (selectedMember?.name || 'Behind the Scenes') :
+                    captureCategory === 'inspiration' ? 'Inspiratie' : 'Content',
+              description: '',
+              hashtags: [],
+              location: '',
+            },
+            note.trim(),
+            selectedTags,
+          );
+        } catch {
+          for (const channel of activeChannels) {
+            results[channel] = {
+              text: note.trim() || captureCategory,
+              hashtags: [],
+              image_description: '',
+              optimal_post_time: '',
+            };
           }
-        } catch (draftErr) {
-          console.warn('[processFreeCapture] Draft save failed (non-fatal):', draftErr);
         }
 
-        // 5. Navigate to ContentCreator with media
+        // 6. Save generated posts
+        const postRows = Object.entries(results).map(([channel, result]) => ({
+          capture_id: capture.id,
+          event_id: null,
+          channel: channel as any,
+          text_content: result.text,
+          hashtags: result.hashtags,
+          branded_image_url: mediaType === 'photo' ? uploadUrl : null,
+          image_format: channel === 'instagram' ? 'square' as const : 'landscape' as const,
+          status: 'draft' as const,
+          published_at: null,
+          scheduled_at: null,
+          publish_error: null,
+          engagement: { likes: 0, comments: 0, shares: 0 },
+        }));
+
+        await createPosts.mutateAsync(postRows);
+
+        // 7. Mark AI as completed
+        supabase.from('go_captures').update({ ai_status: 'completed' }).eq('id', capture.id).then(() => {});
+
+        // 8. Navigate to PostReview (with overlay/mirror support)
         setNote('');
         setSelectedTags([]);
-        Alert.alert(
-          '✅ Vastgelegd!',
-          `${captureCategory === 'product' ? 'Product' : captureCategory === 'inspiration' ? 'Inspiratie' : 'Behind the Scenes'} content opgeslagen.`,
-          [
-            { text: 'Nog een', style: 'cancel' },
-            {
-              text: 'Content maken →',
-              onPress: () => navigation.navigate('ContentCreator' as any),
-            },
-          ]
-        );
+        navigation.navigate('PostReview', {
+          captureId: capture.id,
+          localMediaUri: (mediaType === 'photo' || mediaType === 'video') ? finalUri : undefined,
+        });
       } catch (error: any) {
         Alert.alert('Fout', error.message || 'Vastleggen mislukt.');
       } finally {
         setProcessing(false);
       }
     },
-    [captureCategory, saveToLibrary, selectedTags, navigation],
+    [captureCategory, saveToLibrary, selectedTags, selectedChannels, note, brandMemory, selectedProduct, selectedMember, createCapture, createPosts, navigation, hasConsent, requestConsent],
   );
 
   const processCapture = useCallback(
     async (mediaUri: string, mediaType: MediaType, transcript?: string) => {
       if (!event) return;
+      if (!hasConsent) {
+        requestConsent(() => { processCapture(mediaUri, mediaType, transcript); });
+        return;
+      }
       setProcessing(true);
 
       try {
-        // 1. Normalise photo orientation (bakes EXIF rotation into pixels so
-        //    React Native's Image component displays it upright on all devices)
+        // 1. Normalise photo orientation using EXIF data
         let finalUri = mediaUri;
         if (mediaType === 'photo') {
-          const result = await ImageManipulator.manipulateAsync(
-            mediaUri,
-            [], // no explicit transforms — re-encoding normalises the EXIF rotation
-            { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
-          );
-          finalUri = result.uri;
+          finalUri = await normalizeImageOrientation(mediaUri);
         }
 
         // 1b. Optionally save to phone photo library
@@ -569,14 +485,35 @@ export default function LiveCaptureScreen() {
             .then(() => {});
         }
 
-        // 6. Navigate to review — pass local URI for instant image display (no network wait)
+        // 6. Attach pending extra images and navigate
+        const pendingExtra = (globalThis as any).__pendingExtraImageUrls as string[] | undefined;
+        if (pendingExtra && pendingExtra.length > 0) {
+          // Save extra images to all posts of this capture
+          try {
+            const { data: capturePosts } = await supabase
+              .from('go_posts')
+              .select('id, engagement')
+              .eq('capture_id', capture.id);
+            if (capturePosts) {
+              for (const p of capturePosts) {
+                const eng = { ...(p.engagement ?? { likes: 0, comments: 0, shares: 0 }), extra_images: pendingExtra };
+                await supabase.from('go_posts').update({ engagement: eng }).eq('id', p.id);
+              }
+            }
+          } catch (extraErr) {
+            console.warn('[processCapture] Extra images attach failed:', extraErr);
+          }
+          delete (globalThis as any).__pendingExtraImageUrls;
+        }
+
+        // 7. Navigate to review
         setNote('');
         setSelectedTags([]);
         navigation.navigate('PostReview', {
           captureId: capture.id,
           eventId,
-          // Use finalUri (orientation-corrected) so PostReview shows the image upright
           localMediaUri: (mediaType === 'photo' || mediaType === 'video') ? finalUri : undefined,
+          extraImageUrls: pendingExtra || undefined,
         });
       } catch (error: any) {
         Alert.alert(t.common.error, error.message || t.liveCapture.processingError);
@@ -584,7 +521,7 @@ export default function LiveCaptureScreen() {
         setProcessing(false);
       }
     },
-    [event, eventId, selectedTags, selectedChannels, note, brandMemory, createCapture, createPosts, navigation],
+    [event, eventId, selectedTags, selectedChannels, note, brandMemory, createCapture, createPosts, navigation, hasConsent, requestConsent],
   );
 
   // Use free capture flow when no event is linked
@@ -597,6 +534,10 @@ export default function LiveCaptureScreen() {
     isFreeCapture ? processFreeCapture(uri, 'video') : processCapture(uri, 'video');
 
   const handleAudioComplete = async (uri: string) => {
+    if (!hasConsent) {
+      requestConsent(() => { handleAudioComplete(uri); });
+      return;
+    }
     if (isFreeCapture) {
       await processFreeCapture(uri, 'audio');
       return;
@@ -623,14 +564,51 @@ export default function LiveCaptureScreen() {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
       quality: 0.85,
       allowsEditing: false,
+      exif: true,
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      const uri = result.assets[0].uri;
-      isFreeCapture ? await processFreeCapture(uri, 'photo') : await processCapture(uri, 'photo');
+      if (result.assets.length === 1) {
+        // Single photo — normalize orientation with EXIF, then process
+        const asset = result.assets[0];
+        const normalizedUri = await normalizeImageOrientation(asset.uri, asset.exif ?? undefined);
+        isFreeCapture
+          ? await processFreeCapture(normalizedUri, 'photo')
+          : await processCapture(normalizedUri, 'photo');
+      } else {
+        // Multi-photo — process first as primary, upload extras, then navigate
+        setProcessing(true);
+        try {
+          // Normalize primary photo orientation
+          const primaryAsset = result.assets[0];
+          const primaryUri = await normalizeImageOrientation(primaryAsset.uri, primaryAsset.exif ?? undefined);
+
+          // 1. Upload extra images first (normalize each with EXIF)
+          const extraUrls: string[] = [];
+          for (const asset of result.assets.slice(1)) {
+            const normalizedUri = await normalizeImageOrientation(asset.uri, asset.exif ?? undefined);
+            const uploaded = await uploadMedia(normalizedUri, eventId, 'photo');
+            extraUrls.push(uploaded.url);
+          }
+
+          // 2. Store extra URLs for processCapture to pass to PostReview
+          (globalThis as any).__pendingExtraImageUrls = extraUrls;
+          if (isFreeCapture) {
+            await processFreeCapture(primaryUri, 'photo');
+          } else {
+            await processCapture(primaryUri, 'photo');
+          }
+        } catch (err: any) {
+          Alert.alert('Fout', err?.message || 'Multi-foto verwerking mislukt');
+        } finally {
+          setProcessing(false);
+        }
+      }
     }
   };
 
@@ -656,12 +634,137 @@ export default function LiveCaptureScreen() {
       } catch {}
       Alert.alert('✅ Vastgelegd!', 'Quote opgeslagen als draft.', [
         { text: 'Nog een', style: 'cancel' },
-        { text: 'Content maken →', onPress: () => navigation.navigate('ContentCreator' as any) },
+        { text: 'Content maken →', onPress: () => navigation.navigate('ContentCreator' as any, {}) },
       ]);
       return;
     }
     await processCapture('', 'quote', text);
   };
+
+  // ── Guard: Event required but no eventId ──
+  if (showEventGuard) {
+    const goBack = () => {
+      if (navigation.canGoBack()) navigation.goBack();
+      else (navigation as any).navigate('Main');
+    };
+    const goToEvents = () => {
+      try { (navigation as any).navigate('Main', { screen: 'EventsTab' }); }
+      catch { navigation.goBack(); }
+    };
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <TouchableOpacity onPress={goBack} style={{ position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 }}>
+          <Ionicons name="close" size={28} color={colors.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+          <View style={{ width: 80, height: 80, borderRadius: 40, backgroundColor: colors.surfaceElevated, justifyContent: 'center', alignItems: 'center', marginBottom: 20 }}>
+            <Ionicons name="camera-outline" size={40} color={colors.primary} />
+          </View>
+          <Text style={{ color: colors.text, fontSize: 22, fontWeight: '700', textAlign: 'center' }}>Selecteer een event</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 15, marginTop: 10, textAlign: 'center', lineHeight: 22 }}>
+            Open een event vanuit de Events-tab en tik op{' '}
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>"Capture"</Text>{' '}om te starten.
+          </Text>
+          <TouchableOpacity onPress={goToEvents} style={{ marginTop: 32, backgroundColor: colors.primary, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 28, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Ionicons name="calendar-outline" size={18} color="#fff" />
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Naar Events</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={goBack} style={{ marginTop: 16, paddingHorizontal: 32, paddingVertical: 12 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Annuleer</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Guard: Product Capture — select a product/service first ──
+  if (needsProductSelection) {
+    const goBack = () => navigation.canGoBack() ? navigation.goBack() : (navigation as any).navigate('Main');
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <TouchableOpacity onPress={goBack} style={{ position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 }}>
+          <Ionicons name="close" size={28} color={colors.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, paddingTop: 100, paddingHorizontal: 20 }}>
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#3B82F615', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="package-variant-closed" size={32} color="#3B82F6" />
+            </View>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' }}>Kies een product of dienst</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, textAlign: 'center' }}>Selecteer waar deze content over gaat</Text>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            {products.filter((p) => p.status === 'active').map((product) => (
+              <TouchableOpacity key={product.id} onPress={() => setSelectedProduct(product)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surfaceElevated, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border }}>
+                {product.image_url ? (
+                  <Image source={{ uri: product.image_url }} style={{ width: 48, height: 48, borderRadius: 10 }} />
+                ) : (
+                  <View style={{ width: 48, height: 48, borderRadius: 10, backgroundColor: '#3B82F615', justifyContent: 'center', alignItems: 'center' }}>
+                    <MaterialCommunityIcons name={product.category === 'service' ? 'hand-heart-outline' : 'package-variant-closed'} size={24} color="#3B82F6" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{product.name}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                    {product.category === 'service' ? 'Dienst' : product.category === 'solution' ? 'Oplossing' : 'Product'}
+                    {product.description ? ` · ${product.description}` : ''}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setSelectedProduct({ id: 'none', name: 'Algemeen', category: 'product' } as any)} style={{ alignItems: 'center', padding: 14, marginTop: 4, borderRadius: 14, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Overslaan — algemene product content</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    );
+  }
+
+  // ── Guard: Behind the Scenes — select a team member first ──
+  if (needsMemberSelection) {
+    const goBack = () => navigation.canGoBack() ? navigation.goBack() : (navigation as any).navigate('Main');
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <TouchableOpacity onPress={goBack} style={{ position: 'absolute', top: 56, left: 20, zIndex: 10, padding: 8 }}>
+          <Ionicons name="close" size={28} color={colors.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, paddingTop: 100, paddingHorizontal: 20 }}>
+          <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#10B98115', justifyContent: 'center', alignItems: 'center', marginBottom: 12 }}>
+              <MaterialCommunityIcons name="account-group" size={32} color="#10B981" />
+            </View>
+            <Text style={{ color: colors.text, fontSize: 20, fontWeight: '700', textAlign: 'center' }}>Wie staat centraal?</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 14, marginTop: 6, textAlign: 'center' }}>Selecteer het teamlid voor deze behind-the-scenes content</Text>
+          </View>
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+            {teamMembers.filter((m) => m.is_active).map((member) => (
+              <TouchableOpacity key={member.id} onPress={() => setSelectedMember(member)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surfaceElevated, borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: colors.border }}>
+                {member.photo_url ? (
+                  <Image source={{ uri: member.photo_url }} style={{ width: 48, height: 48, borderRadius: 24 }} />
+                ) : (
+                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#10B98115', justifyContent: 'center', alignItems: 'center' }}>
+                    <Ionicons name="person" size={24} color="#10B981" />
+                  </View>
+                )}
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: colors.text, fontSize: 15, fontWeight: '600' }}>{member.name}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 2 }} numberOfLines={1}>
+                    {member.role}{member.expertise?.length ? ` · ${member.expertise[0]}` : ''}
+                  </Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity onPress={() => setSelectedMember({ id: 'none', name: 'Team algemeen' } as any)} style={{ alignItems: 'center', padding: 14, marginTop: 4, borderRadius: 14, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>Overslaan — algemene team content</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </View>
+    );
+  }
 
   if (processing) {
     return (
@@ -843,6 +946,7 @@ export default function LiveCaptureScreen() {
           ))}
         </ScrollView>
       )}
+      <AIConsentModal visible={showConsentModal} onAccept={onConsentAccept} onDecline={onConsentDecline} />
     </KeyboardAvoidingView>
   );
 }

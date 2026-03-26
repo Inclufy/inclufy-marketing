@@ -20,6 +20,8 @@ import { useCreateContact } from '../hooks/useContacts';
 import { supabase } from '../services/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
+import AIConsentModal from '../components/AIConsentModal';
+import { useAIConsent } from '../hooks/useAIConsent';
 
 interface ParsedContact {
   firstName: string;
@@ -44,6 +46,7 @@ export default function CardScanScreen() {
   const [showModal, setShowModal] = useState(false);
   const [saving, setSaving] = useState(false);
   const createContact = useCreateContact();
+  const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: '#000' },
@@ -97,6 +100,10 @@ export default function CardScanScreen() {
   }));
 
   const handleCapture = async () => {
+    if (!hasConsent) {
+      requestConsent(() => { handleCapture(); });
+      return;
+    }
     if (!cameraRef.current || capturing) return;
     setCapturing(true);
     try {
@@ -290,6 +297,7 @@ export default function CardScanScreen() {
           </View>
         </View>
       </Modal>
+      <AIConsentModal visible={showConsentModal} onAccept={onConsentAccept} onDecline={onConsentDecline} />
     </View>
   );
 }

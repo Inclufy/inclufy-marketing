@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import api from '../services/api';
-import type { EventPost, PostUpdate } from '../types';
+import type { EventPost, PostUpdate, PostStatus, Channel } from '../types';
 
 export function useEventPosts(eventId: string | undefined) {
   return useQuery<EventPost[]>({
@@ -67,25 +67,79 @@ export function usePublishPost() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (postId: string) => {
-      try {
-        // Try backend first (handles actual social publishing via OAuth + connected accounts)
-        const response = await api.post(`/event-posts/${postId}/publish`);
-        return { ...response.data, _actuallyPublished: true };
-      } catch {
-        // Backend unreachable (no social accounts connected, local server offline, etc.)
-        // Mark as 'approved' (queued/ready) — NOT published — to avoid false "published" status
-        const { data, error } = await supabase
+      // Fetch the post to get channel, text, image, user_id
+      const { data: post, error: fetchErr } = await supabase
+        .from('go_posts')
+        .select('*')
+        .eq('id', postId)
+        .single();
+      if (fetchErr || !post) throw new Error('Post niet gevonden');
+
+      // Check if user has a social account for this channel
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+
+      const { data: socialAccount } = await supabase
+        .from('social_accounts')
+        .select('id, platform, account_type, account_name, platform_account_id')
+        .eq('user_id', user.id)
+        .eq('platform', post.channel)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (!socialAccount) {
+        // No account for this channel — mark as approved, throw connect error
+        await supabase
           .from('go_posts')
           .update({ status: 'approved' })
+          .eq('id', postId);
+        throw Object.assign(
+          new Error('SOCIAL_NOT_CONNECTED'),
+          { data: post, status: 'approved' }
+        );
+      }
+
+      // Manual account — mark as published (user copies text manually)
+      if (socialAccount.account_type === 'manual') {
+        const { data: updated, error: updateErr } = await supabase
+          .from('go_posts')
+          .update({
+            status: 'published' as PostStatus,
+            published_at: new Date().toISOString(),
+          })
           .eq('id', postId)
           .select('*')
           .single();
-        if (error) throw error;
-        // Throw a descriptive error so the UI can show the right message
-        throw Object.assign(
-          new Error('SOCIAL_NOT_CONNECTED'),
-          { data, status: 'approved' }
-        );
+        if (updateErr) throw updateErr;
+        return { ...updated, _actuallyPublished: true, manual: true };
+      }
+
+      // OAuth account — call publish-social edge function
+      const postText = post.text_content + (post.hashtags?.length > 0 ? '\n\n' + post.hashtags.join(' ') : '');
+      const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
+        body: {
+          post_id: postId,
+          user_id: user.id,
+          channel: post.channel,
+          text: postText,
+          image_url: post.branded_image_url || undefined,
+        },
+      });
+
+      if (pubErr) throw pubErr;
+
+      if (result?.success) {
+        await supabase
+          .from('go_posts')
+          .update({
+            status: 'published' as PostStatus,
+            published_at: new Date().toISOString(),
+          })
+          .eq('id', postId);
+        return { ...result, _actuallyPublished: true };
+      } else {
+        throw new Error(result?.error || 'Publicatie mislukt');
       }
     },
     onError: () => {
@@ -177,6 +231,52 @@ export function useCreatePosts() {
         qc.invalidateQueries({ queryKey: ['event-posts', data[0].event_id] });
         qc.invalidateQueries({ queryKey: ['event-posts', 'capture', data[0].capture_id] });
       }
+    },
+  });
+}
+
+export function useAllPosts(filters?: { status?: PostStatus; channel?: Channel }) {
+  return useQuery<EventPost[]>({
+    queryKey: ['event-posts', 'all', filters?.status, filters?.channel],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [];
+
+      let query = supabase
+        .from('go_posts')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.channel) query = query.eq('channel', filters.channel);
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as EventPost[];
+    },
+    staleTime: 30_000,
+  });
+}
+
+export function useDuplicatePost() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (sourcePost: EventPost) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { id, created_at, updated_at, published_at, scheduled_at, publish_error, ...rest } = sourcePost;
+      const { data, error } = await supabase
+        .from('go_posts')
+        .insert({ ...rest, user_id: user.id, status: 'draft' as PostStatus, published_at: null, scheduled_at: null, publish_error: null })
+        .select('*')
+        .single();
+      if (error) throw error;
+      return data as EventPost;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['event-posts'] });
     },
   });
 }

@@ -209,18 +209,19 @@ export function useCreateAutomationLog() {
 
       // Update automation stats
       if (log.automation_id) {
-        await supabase.rpc('update_automation_stats', {
+        const rpcResult = await supabase.rpc('update_automation_stats', {
           p_automation_id: log.automation_id,
-        }).catch(() => {
+        });
+        if (rpcResult.error) {
           // Fallback: manual update if RPC doesn't exist yet
-          supabase
+          await supabase
             .from('go_automations')
             .update({
               total_runs: (data as any)?.total_runs ?? 0,
               last_run_at: new Date().toISOString(),
             })
             .eq('id', log.automation_id!);
-        });
+        }
       }
 
       return data as AutomationLog;

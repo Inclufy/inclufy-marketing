@@ -57,7 +57,7 @@ export type CaptureInsert = Omit<EventCapture, 'id' | 'user_id' | 'created_at'>;
 export interface EventPost {
   id: string;
   capture_id: string;
-  event_id: string;
+  event_id: string | null;
   user_id: string;
   channel: Channel;
   text_content: string;
@@ -121,6 +121,7 @@ export interface GenerateEventPostRequest {
   capture_note: string;
   capture_tags: string[];
   brand_context?: BrandContext;
+  language?: string;
 }
 
 export interface GenerateEventPostResponse {
@@ -144,7 +145,7 @@ export type RootStackParamList = {
   // Events
   EventSetup: { eventId?: string };
   LiveCapture: { eventId: string };
-  PostReview: { captureId: string; eventId: string; localMediaUri?: string };
+  PostReview: { captureId: string; eventId?: string; localMediaUri?: string; extraImageUrls?: string[] };
   EventDashboard: { eventId: string };
   StoryArc: { eventId: string };
   EventRecap: { eventId: string };
@@ -154,7 +155,7 @@ export type RootStackParamList = {
   CampaignCreate: undefined;
   CampaignDetail: { campaignId: string };
   // AI & Content
-  ContentCreator: undefined;
+  ContentCreator: { imageUri?: string; imageUrls?: string[] } | undefined;
   AICommand: undefined;
   // Leads & Smart Contact
   LeadCapture: undefined;
@@ -180,6 +181,8 @@ export type RootStackParamList = {
   DemoEnvironment: undefined;
   // AMOS Hub
   AMOSHub: undefined;
+  MultiAgent: undefined;
+  Integrations: undefined;
   // Event Scanner (attendee QR scanning)
   EventScanner: { eventId: string };
   // AMOS Intelligence Screens
@@ -200,6 +203,8 @@ export type RootStackParamList = {
   ContentCalendar: undefined;
   Analytics: undefined;
   Onboarding: undefined;
+  // All Posts management
+  AllPosts: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────
