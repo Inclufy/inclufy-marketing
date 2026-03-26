@@ -37,7 +37,7 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
+# /ios  # committed for Xcode Cloud
 /android
 .env
 
