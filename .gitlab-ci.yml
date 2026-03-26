@@ -1,0 +1,34 @@
+stages:
+  - validate
+
+variables:
+  NODE_VERSION: "20"
+
+typecheck:mobile:
+  stage: validate
+  image: node:${NODE_VERSION}
+  cache:
+    key: mobile-${CI_COMMIT_REF_SLUG}
+    paths:
+      - node_modules/
+  script:
+    - npm ci
+    - npx tsc --noEmit
+  only:
+    - main
+    - merge_requests
+
+typecheck:web:
+  stage: validate
+  image: node:${NODE_VERSION}
+  cache:
+    key: web-${CI_COMMIT_REF_SLUG}
+    paths:
+      - web/node_modules/
+  script:
+    - cd web
+    - npm ci
+    - npm run build
+  only:
+    - main
+    - merge_requests
