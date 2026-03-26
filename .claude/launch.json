@@ -2,13 +2,24 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dev",
-      "runtimeExecutable": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin/node",
-      "runtimeArgs": ["node_modules/.bin/vite", "--host", "--port", "5199"],
-      "port": 5199,
+      "name": "inclufy-marketing",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "cd '/Users/samiloukile/Library/Mobile Documents/com~apple~CloudDocs/Inclufy Marketing-main' && /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port 8082 --host"],
+      "port": 8082,
       "env": {
         "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
       }
+    },
+    {
+      "name": "marketing-web",
+      "runtimeExecutable": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx",
+      "runtimeArgs": ["next", "dev", "--port", "8081"],
+      "port": 8081,
+      "autoPort": false,
+      "env": {
+        "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
+      },
+      "cwd": "web"
     },
     {
       "name": "inclufy-go",
@@ -17,8 +28,7 @@
       "port": 8085,
       "env": {
         "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
-      },
-      "cwd": "inclufy-go"
+      }
     },
     {
       "name": "finance-dev",
