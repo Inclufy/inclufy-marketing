@@ -63,3 +63,7 @@ web/test-results/
 
 # Claude
 .claude/
+
+# Allow Xcode Cloud ci_scripts (inside gitignored ios/)
+!ios/ci_scripts/
+!ios/ci_scripts/**
