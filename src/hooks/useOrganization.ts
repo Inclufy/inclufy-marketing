@@ -4,6 +4,7 @@ import { supabase } from '../services/supabase';
 export interface OrganizationProfile {
   id: string;
   user_id: string;
+  organization_id?: string;
   company_name: string;
   tagline: string;
   description: string;

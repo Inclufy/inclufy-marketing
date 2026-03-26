@@ -82,6 +82,9 @@ export default function LoginScreen() {
 
     if (error) {
       Alert.alert(t.login.loginFailed, error.message);
+    } else {
+      // Lazy org sync (fire-and-forget)
+      import('../utils/resolveOrganizationId').then(m => m.resolveOrganizationId()).catch(() => {});
     }
   };
 

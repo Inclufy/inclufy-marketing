@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../services/api';
 import { supabase } from '../services/supabase';
+import { resolveOrganizationId } from '../utils/resolveOrganizationId';
 
 export interface Campaign {
   id: string;
@@ -169,6 +170,8 @@ export function useCreateCampaign() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const orgId = await resolveOrganizationId();
+
       const { data, error } = await supabase
         .from('campaigns')
         .insert({
@@ -189,6 +192,7 @@ export function useCreateCampaign() {
             channels: input.channels,
           },
           user_id: user.id,
+          organization_id: orgId,
         })
         .select()
         .single();

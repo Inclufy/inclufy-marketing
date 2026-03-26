@@ -549,7 +549,17 @@ export default function SettingsScreen() {
 
     const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
     const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
-    const state = `${user.id}:${user.id}:${platformKey}`;
+    // Resolve real organization_id for OAuth state
+    let orgIdForState = user.id; // fallback
+    try {
+      const { data: goOrg } = await supabase
+        .from('go_organization')
+        .select('organization_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      if (goOrg?.organization_id) orgIdForState = goOrg.organization_id;
+    } catch {}
+    const state = `${user.id}:${orgIdForState}:${platformKey}`;
 
     let authUrl = '';
 
