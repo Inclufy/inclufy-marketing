@@ -44,3 +44,22 @@ yarn-error.*
 # Web dashboard
 web/.next/
 web/node_modules/
+
+# Play Store AAB bundles
+*.aab
+assets/playstore-aabs/
+
+# Screenshots & debug images
+*.png
+!assets/**/*.png
+!src/**/*.png
+!web/public/**/*.png
+
+# Test results
+web/test-results/
+
+# Expo
+.expo/
+
+# Claude
+.claude/
