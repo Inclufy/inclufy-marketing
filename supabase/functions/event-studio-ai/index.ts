@@ -57,11 +57,22 @@ function buildBrandPrompt(base: string, brand?: Record<string, unknown>): string
 
 // ─── Action: event-post ────────────────────────────────────────────
 async function handleEventPost(body: Record<string, unknown>) {
-  const { platform, event_context, capture_note, capture_tags, image_base64, transcript, brand_context } = body;
+  const { platform, event_context, capture_note, capture_tags, image_base64, transcript, brand_context, language = 'nl' } = body;
   const ctx = (event_context || {}) as Record<string, unknown>;
+
+  // Language mapping for post generation
+  const langMap: Record<string, string> = {
+    nl: 'Dutch (Nederlands). Write the post text ENTIRELY in Dutch.',
+    en: 'English. Write the post text entirely in English.',
+    de: 'German (Deutsch). Write the post text entirely in German.',
+    fr: 'French (Français). Write the post text entirely in French.',
+    es: 'Spanish (Español). Write the post text entirely in Spanish.',
+  };
+  const langInstruction = langMap[language as string] || langMap.nl;
 
   const systemPrompt = buildBrandPrompt(
     `You are a social media content expert for events. Generate engaging, platform-optimized posts.
+Language: ${langInstruction}
 Always respond with valid JSON: {"text": string, "hashtags": string[], "image_description": string, "optimal_post_time": string}`,
     brand_context as Record<string, unknown>,
   );
@@ -69,7 +80,7 @@ Always respond with valid JSON: {"text": string, "hashtags": string[], "image_de
   const userContent: object[] = [
     {
       type: 'text',
-      text: `Create a ${platform} post for this event capture.
+      text: `Create a ${platform} post for this event capture. Write the post in ${language || 'nl'}.
 Event: ${ctx.name || 'Event'}
 Description: ${ctx.description || ''}
 Location: ${ctx.location || ''}
@@ -78,7 +89,7 @@ Capture note: ${capture_note || ''}
 Tags: ${((capture_tags as string[]) || []).join(', ')}
 ${transcript ? `Audio transcript: ${transcript}` : ''}
 
-Return JSON with: text (ready to post), hashtags (array, max 10), image_description (what you see), optimal_post_time (suggestion).`,
+Return JSON with: text (ready to post, in ${language || 'nl'}), hashtags (array, max 10), image_description (what you see), optimal_post_time (suggestion).`,
     },
   ];
 

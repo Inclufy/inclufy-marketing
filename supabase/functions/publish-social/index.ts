@@ -52,15 +52,82 @@ async function publishToLinkedIn(
       },
     };
 
-    // If image URL, include as article share
+    // If image URL, upload via LinkedIn Image Upload API for native image display
     if (imageUrl) {
-      postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'ARTICLE';
-      postBody.specificContent['com.linkedin.ugc.ShareContent'].media = [
-        {
-          status: 'READY',
-          originalUrl: imageUrl,
-        },
-      ];
+      try {
+        // Step 1: Register an image upload
+        const registerRes = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            registerUploadRequest: {
+              recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
+              owner: authorUrn,
+              serviceRelationships: [
+                {
+                  relationshipType: 'OWNER',
+                  identifier: 'urn:li:userGeneratedContent',
+                },
+              ],
+            },
+          }),
+        });
+
+        if (!registerRes.ok) {
+          const regErr = await registerRes.text();
+          console.error('[LinkedIn] Register upload error:', registerRes.status, regErr);
+          // Fallback: post without image rather than failing entirely
+          console.warn('[LinkedIn] Falling back to text-only post');
+        } else {
+          const registerData = await registerRes.json();
+          const uploadUrl = registerData.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;
+          const assetUrn = registerData.value?.asset;
+
+          if (!uploadUrl || !assetUrn) {
+            console.error('[LinkedIn] Missing uploadUrl or asset from register response');
+          } else {
+            // Step 2: Download the image from our storage
+            const imgRes = await fetch(imageUrl);
+            if (!imgRes.ok) {
+              console.error('[LinkedIn] Failed to download image:', imgRes.status);
+            } else {
+              const imgBlob = await imgRes.blob();
+              const imgBuffer = await imgBlob.arrayBuffer();
+
+              // Step 3: Upload the image binary to LinkedIn
+              const uploadRes = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  'Content-Type': imgBlob.type || 'image/jpeg',
+                },
+                body: imgBuffer,
+              });
+
+              if (!uploadRes.ok) {
+                const uploadErr = await uploadRes.text();
+                console.error('[LinkedIn] Image upload error:', uploadRes.status, uploadErr);
+              } else {
+                // Step 4: Use IMAGE share category with the uploaded asset
+                postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'IMAGE';
+                postBody.specificContent['com.linkedin.ugc.ShareContent'].media = [
+                  {
+                    status: 'READY',
+                    media: assetUrn,
+                  },
+                ];
+                console.log('[LinkedIn] Image uploaded successfully, asset:', assetUrn);
+              }
+            }
+          }
+        }
+      } catch (imgErr: any) {
+        console.error('[LinkedIn] Image upload exception:', imgErr.message);
+        // Continue with text-only post
+      }
     }
 
     const publishRes = await fetch('https://api.linkedin.com/v2/ugcPosts', {
@@ -202,11 +269,88 @@ Deno.serve(async (req: Request) => {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { proposal_id, user_id } = body;
+    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl } = body;
 
+    // ── Direct post publish (from go_posts via mobile app) ──
+    if (post_id && user_id) {
+      const channel = directChannel;
+      const text = directText;
+      const imageUrl = directImageUrl;
+
+      if (!channel || !text) {
+        return new Response(
+          JSON.stringify({ error: 'channel and text are required' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Find social account
+      const { data: socialAccount } = await db
+        .from('social_accounts')
+        .select('id, platform, platform_account_id, account_type')
+        .eq('user_id', user_id)
+        .eq('platform', channel)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle();
+
+      if (!socialAccount) {
+        return new Response(
+          JSON.stringify({ error: `Geen ${channel} account gekoppeld`, action: 'connect_account', channel }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Manual account — mark as published
+      if (socialAccount.account_type === 'manual') {
+        return new Response(
+          JSON.stringify({ success: true, published: false, manual: true, message: `Content klaar om te kopiëren naar ${channel}.` }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Fetch OAuth token
+      const { data: tokenData } = await db
+        .from('oauth_tokens')
+        .select('access_token')
+        .eq('social_account_id', socialAccount.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!tokenData?.access_token) {
+        return new Response(
+          JSON.stringify({ error: 'Geen geldig OAuth token. Koppel je account opnieuw.' }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Publish
+      let result: { success: boolean; postId?: string; error?: string };
+      switch (channel) {
+        case 'linkedin':
+          result = await publishToLinkedIn(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
+          break;
+        case 'facebook':
+          result = await publishToFacebook(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
+          break;
+        case 'instagram':
+          result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
+          break;
+        default:
+          result = { success: false, error: `Platform '${channel}' wordt nog niet ondersteund` };
+      }
+
+      return new Response(
+        JSON.stringify(result.success ? { success: true, published: true, postId: result.postId, channel } : { success: false, error: result.error }),
+        { status: result.success ? 200 : 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // ── Legacy proposal publish (from go_content_proposals) ──
     if (!proposal_id || !user_id) {
       return new Response(
-        JSON.stringify({ error: 'proposal_id and user_id are required' }),
+        JSON.stringify({ error: 'proposal_id/post_id and user_id are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }

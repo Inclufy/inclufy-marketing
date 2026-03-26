@@ -82,7 +82,7 @@ async function upsertSocialAccount(
   pageAccessToken?: string,
 ) {
   // Try to find existing account by user_id + platform + platform_account_id
-  const { data: existing } = await db
+  let { data: existing } = await db
     .from('social_accounts')
     .select('id')
     .eq('user_id', userId)
@@ -90,11 +90,31 @@ async function upsertSocialAccount(
     .eq('platform_account_id', profileId)
     .maybeSingle();
 
+  // Also check for any existing account on the same platform (e.g. manual account with different platform_account_id)
+  // If found, delete it first to avoid unique constraint violations, then insert fresh
+  if (!existing) {
+    const { data: anyExisting } = await db
+      .from('social_accounts')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('platform', platform)
+      .limit(1)
+      .maybeSingle();
+    if (anyExisting) {
+      // Delete old oauth_tokens for this account first
+      await db.from('oauth_tokens').delete().eq('social_account_id', anyExisting.id);
+      // Delete the old account
+      await db.from('social_accounts').delete().eq('id', anyExisting.id);
+      console.log(`Deleted old ${platform} account ${anyExisting.id} to replace with OAuth`);
+    }
+  }
+
   let socialAccountId: string;
 
   const accountData: any = {
     account_name: profileName,
     profile_image_url: profilePicture,
+    platform_account_id: profileId,
     status: 'active',
     account_type: accountType,
   };
