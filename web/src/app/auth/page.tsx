@@ -11,6 +11,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const { signIn, signUp, user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -28,8 +29,22 @@ export default function AuthPage() {
     );
   }
 
+  const validate = () => {
+    const newErrors: { email?: string; password?: string } = {};
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      newErrors.email = 'Voer een geldig e-mailadres in.';
+    }
+    if (password.length < 6) {
+      newErrors.password = 'Wachtwoord moet minimaal 6 tekens bevatten.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validate()) return;
     setLoading(true);
     const { error } = isLogin ? await signIn(email, password) : await signUp(email, password);
     setLoading(false);
@@ -80,12 +95,12 @@ export default function AuthPage() {
               <input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={e => { setEmail(e.target.value); setErrors(prev => ({ ...prev, email: undefined })); }}
                 placeholder="naam@bedrijf.nl"
-                required
-                className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className={`w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 ${errors.email ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500'}`}
               />
             </div>
+            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
           </div>
 
           <div>
@@ -95,13 +110,12 @@ export default function AuthPage() {
               <input
                 type="password"
                 value={password}
-                onChange={e => setPassword(e.target.value)}
+                onChange={e => { setPassword(e.target.value); setErrors(prev => ({ ...prev, password: undefined })); }}
                 placeholder="Minimaal 6 tekens"
-                required
-                minLength={6}
-                className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className={`w-full rounded-lg border py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-1 ${errors.password ? 'border-red-400 focus:border-red-400 focus:ring-red-400' : 'border-gray-300 focus:border-brand-500 focus:ring-brand-500'}`}
               />
             </div>
+            {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
           </div>
 
           <button
