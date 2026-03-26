@@ -308,11 +308,8 @@ export default function PostReviewScreen() {
   const [activeImageIndex, setActiveImageIndex] = useState<Record<string, number>>({});
 
   // Returns all image URLs for a post: fallbackUrl (freshness-aware) first, then extras.
-  // fallbackUrl is already computed to skip expired/failed branded_image_url and use
-  // captureImageUrl (fresh signed URL) when needed — so we trust it over the raw DB value.
   const getPostImages = (post: EventPost, fallbackUrl: string | null | undefined): string[] => {
     const images: string[] = [];
-    // fallbackUrl encapsulates: localMediaUri → valid branded_image_url → captureImageUrl
     const primary = fallbackUrl || '';
     if (primary) images.push(primary);
     // Use extra_images from DB, or from navigation params as fallback
@@ -322,6 +319,25 @@ export default function PostReviewScreen() {
       extraSource.forEach((url: string) => { if (url && !images.includes(url)) images.push(url); });
     }
     return images;
+  };
+
+  // Refresh signed URLs for extra images that may have expired
+  const [refreshedUrls, setRefreshedUrls] = useState<Record<string, string>>({});
+
+  const refreshSignedUrl = async (originalUrl: string): Promise<string> => {
+    if (refreshedUrls[originalUrl]) return refreshedUrls[originalUrl];
+    try {
+      // Extract storage path from Supabase URL
+      const pathMatch = originalUrl.match(/\/media\/(.+?)(\?|$)/);
+      if (pathMatch) {
+        const { data } = await supabase.storage.from('media').createSignedUrl(pathMatch[1], 3600);
+        if (data?.signedUrl) {
+          setRefreshedUrls(prev => ({ ...prev, [originalUrl]: data.signedUrl }));
+          return data.signedUrl;
+        }
+      }
+    } catch {}
+    return originalUrl;
   };
 
   // Upload one or more extra images and append them to engagement.extra_images
@@ -1088,7 +1104,9 @@ export default function PostReviewScreen() {
                null);
 
           // Multi-image: build ordered list and pick the active one
-          const postImages = isVideo || isAudio ? [] : getPostImages(post, fallbackImageUrl);
+          const postImages = isVideo || isAudio ? [] : getPostImages(post, fallbackImageUrl).map(
+            url => refreshedUrls[url] || url // Use refreshed signed URL if available
+          );
           const currentImgIdx = activeImageIndex[post.id] ?? 0;
           const safeIdx = Math.min(currentImgIdx, Math.max(0, postImages.length - 1));
           const imageUrl = postImages[safeIdx] ?? null;
@@ -1166,9 +1184,13 @@ export default function PostReviewScreen() {
                       source={{ uri: imageUrl }}
                       style={styles.postImage}
                       resizeMode="cover"
-                      onError={() => {
+                      onError={async () => {
+                        // Try refreshing signed URL before marking as failed
+                        if (imageUrl.includes('supabase') && !refreshedUrls[imageUrl]) {
+                          const freshUrl = await refreshSignedUrl(imageUrl);
+                          if (freshUrl !== imageUrl) return; // Will re-render with fresh URL
+                        }
                         setFailedUrls((prev) => new Set([...prev, imageUrl]));
-                        // If the captureImageUrl itself failed, invalidate to get a fresh signed URL
                         if (imageUrl === captureImageUrl) {
                           queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId, storagePath] });
                         }
