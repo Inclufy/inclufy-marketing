@@ -1280,7 +1280,7 @@ export default function PostReviewScreen() {
               ) : imageUrl && !imageFailed ? (
                 <>
                   <ViewShot
-                    ref={(ref) => { viewShotRefs.current[post.id] = ref; }}
+                    ref={(ref: ViewShot | null) => { viewShotRefs.current[post.id] = ref; }}
                     options={{ format: 'jpg', quality: 0.9 }}
                   >
                   <TouchableOpacity

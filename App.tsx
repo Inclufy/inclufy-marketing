@@ -2,15 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, Platform } from 'react-native';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+import { initSentry } from './src/lib/sentry';
 import { supabase } from './src/services/supabase';
 import AppNavigator from './src/navigation/AppNavigator';
 import BiometricScreen from './src/screens/BiometricScreen';
 import { I18nContext, useI18nProvider } from './src/i18n';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+
+// Initialize Sentry as early as possible
+initSentry();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +64,46 @@ function AppInner({ session, biometricPassed, showBiometric, onBiometricSuccess,
       <StatusBar style={isDark ? 'light' : 'dark'} />
     </NavigationContainer>
   );
+}
+
+// ─── Error Boundary ──────────────────────────────────────────────────
+interface ErrorBoundaryState { hasError: boolean; error: Error | null }
+
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error('AppErrorBoundary caught:', error, errorInfo);
+    // Sentry will auto-capture if initialized, but log explicitly too
+    try {
+      const Sentry = require('@sentry/react-native');
+      Sentry.captureException(error, { extra: { componentStack: errorInfo.componentStack } });
+    } catch {}
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorTitle}>Er ging iets mis</Text>
+          <Text style={styles.errorMessage}>
+            {this.state.error?.message || 'Onbekende fout'}
+          </Text>
+          <Text
+            style={styles.errorRetry}
+            onPress={() => this.setState({ hasError: false, error: null })}
+          >
+            Opnieuw proberen
+          </Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
 }
 
 // ─── Root App ────────────────────────────────────────────────────────
@@ -132,27 +176,29 @@ export default function App() {
   }
 
   return (
-    <ThemeProvider>
-      <I18nContext.Provider value={i18n}>
-        <QueryClientProvider client={queryClient}>
-          <AppInner
-            session={session}
-            biometricPassed={biometricPassed}
-            showBiometric={showBiometric}
-            onBiometricSuccess={async () => {
-              try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true'); } catch {}
-              setBiometricPassed(true);
-              setShowBiometric(false);
-            }}
-            onBiometricSkip={async () => {
-              try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'false'); } catch {}
-              setBiometricPassed(true);
-              setShowBiometric(false);
-            }}
-          />
-        </QueryClientProvider>
-      </I18nContext.Provider>
-    </ThemeProvider>
+    <AppErrorBoundary>
+      <ThemeProvider>
+        <I18nContext.Provider value={i18n}>
+          <QueryClientProvider client={queryClient}>
+            <AppInner
+              session={session}
+              biometricPassed={biometricPassed}
+              showBiometric={showBiometric}
+              onBiometricSuccess={async () => {
+                try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true'); } catch {}
+                setBiometricPassed(true);
+                setShowBiometric(false);
+              }}
+              onBiometricSkip={async () => {
+                try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'false'); } catch {}
+                setBiometricPassed(true);
+                setShowBiometric(false);
+              }}
+            />
+          </QueryClientProvider>
+        </I18nContext.Provider>
+      </ThemeProvider>
+    </AppErrorBoundary>
   );
 }
 
@@ -162,5 +208,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#09090F',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#0D1428',
+    padding: 32,
+  },
+  errorTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#F4F0FF',
+    marginBottom: 12,
+  },
+  errorMessage: {
+    fontSize: 14,
+    color: '#8890B8',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  errorRetry: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#E8317A',
+    padding: 12,
   },
 });

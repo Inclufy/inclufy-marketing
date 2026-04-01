@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "scheme": "inclufy-go",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -127,7 +126,10 @@
           "photosPermission": "Inclufy GO heeft toegang nodig tot je fotobibliotheek om een logo te selecteren."
         }
       ],
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font",
+      "expo-asset",
+      "@sentry/react-native"
     ]
   }
 }
