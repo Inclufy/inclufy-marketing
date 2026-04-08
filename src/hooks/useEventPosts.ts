@@ -79,17 +79,33 @@ export function usePublishPost() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Niet ingelogd');
 
-      const { data: socialAccount } = await supabase
+      // Normalize channel to lowercase (DB stores 'linkedin', post might have 'LinkedIn')
+      const normalizedChannel = post.channel?.toLowerCase();
+
+      const { data: socialAccount, error: socialErr } = await supabase
         .from('social_accounts')
-        .select('id, platform, account_type, account_name, platform_account_id')
+        .select('id, platform, account_type, account_name, platform_account_id, status')
         .eq('user_id', user.id)
-        .eq('platform', post.channel)
-        .eq('status', 'active')
+        .ilike('platform', normalizedChannel)
         .limit(1)
         .maybeSingle();
 
-      if (!socialAccount) {
+      // If no active account found, try without status filter (account might be connected but not 'active')
+      let finalAccount = socialAccount;
+      if (!finalAccount || (finalAccount.status !== 'active' && finalAccount.status !== 'connected')) {
+        const { data: anyAccount } = await supabase
+          .from('social_accounts')
+          .select('id, platform, account_type, account_name, platform_account_id, status')
+          .eq('user_id', user.id)
+          .ilike('platform', normalizedChannel)
+          .limit(1)
+          .maybeSingle();
+        if (anyAccount) finalAccount = anyAccount;
+      }
+
+      if (!finalAccount) {
         // No account for this channel — mark as approved, throw connect error
+        console.error(`[Publish] No social account found for user=${user.id}, channel=${normalizedChannel}`);
         await supabase
           .from('go_posts')
           .update({ status: 'approved' })
@@ -100,8 +116,11 @@ export function usePublishPost() {
         );
       }
 
+      // Use finalAccount from here
+      const socialAccount2 = finalAccount;
+
       // Manual account — mark as published (user copies text manually)
-      if (socialAccount.account_type === 'manual') {
+      if (socialAccount2.account_type === 'manual') {
         const { data: updated, error: updateErr } = await supabase
           .from('go_posts')
           .update({
@@ -118,7 +137,7 @@ export function usePublishPost() {
       // OAuth account — call publish-social edge function
       const postText = post.text_content + (post.hashtags?.length > 0 ? '\n\n' + post.hashtags.join(' ') : '');
       // Get selected account ID from engagement metadata (set by PostReviewScreen doPublish)
-      const selectedAccountId = (post.engagement as any)?.published_account?.id;
+      const selectedAccountId = (post.engagement as any)?.published_account?.id || socialAccount2.id;
       // Include extra images for multi-image posts (LinkedIn, Facebook carousel)
       const extraImages: string[] = (post.engagement as any)?.extra_images || [];
       const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
@@ -129,7 +148,7 @@ export function usePublishPost() {
           text: postText,
           image_url: post.branded_image_url || undefined,
           extra_image_urls: extraImages.length > 0 ? extraImages : undefined,
-          account_id: selectedAccountId || socialAccount.id,
+          account_id: selectedAccountId,
         },
       });
 
