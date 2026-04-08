@@ -133,7 +133,13 @@ export function usePublishPost() {
         },
       });
 
-      if (pubErr) throw pubErr;
+      if (pubErr) {
+        // Edge function returned an error — try to get the detailed message
+        const errorMsg = typeof pubErr === 'object' && 'message' in pubErr
+          ? (pubErr as any).message
+          : String(pubErr);
+        throw new Error(errorMsg || 'Publicatie mislukt — edge function fout');
+      }
 
       if (result?.success) {
         await supabase
@@ -141,11 +147,18 @@ export function usePublishPost() {
           .update({
             status: 'published' as PostStatus,
             published_at: new Date().toISOString(),
+            published_error: null,
           })
           .eq('id', postId);
         return { ...result, _actuallyPublished: true };
       } else {
-        throw new Error(result?.error || 'Publicatie mislukt');
+        // Store the error on the post for debugging
+        const errorMessage = result?.error || 'Publicatie mislukt';
+        await supabase
+          .from('go_posts')
+          .update({ published_error: errorMessage })
+          .eq('id', postId);
+        throw new Error(errorMessage);
       }
     },
     onError: () => {

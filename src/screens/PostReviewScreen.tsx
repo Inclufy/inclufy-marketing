@@ -1067,8 +1067,23 @@ export default function PostReviewScreen() {
                   `Post is opgeslagen als "Goedgekeurd" maar nog niet gepubliceerd op ${channelConfig[post.channel]?.label}.\n\nVerbind je social media accounts via Instellingen → Social Media om automatisch te publiceren.`,
                   [{ text: 'OK' }]
                 );
+              } else if (err?.message?.includes('reconnect') || err?.message?.includes('verlopen')) {
+                Alert.alert(
+                  '🔑 Token verlopen',
+                  `Je ${channelConfig[post.channel]?.label} verbinding is verlopen.\n\nGa naar Instellingen → Social Media en koppel je account opnieuw.`,
+                  [{ text: 'OK' }]
+                );
+              } else if (err?.message?.includes('afbeelding') || err?.message?.includes('image')) {
+                Alert.alert(
+                  '📸 Afbeelding vereist',
+                  `Instagram vereist een afbeelding bij elke post.\n\nVoeg een foto toe en probeer opnieuw.`,
+                  [{ text: 'OK' }]
+                );
               } else {
-                Alert.alert(t.common.error, t.postReview.publishError);
+                Alert.alert(
+                  t.common.error,
+                  err?.message || t.postReview.publishError,
+                );
               }
             }
           },

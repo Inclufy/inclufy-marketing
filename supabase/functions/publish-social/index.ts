@@ -389,10 +389,10 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Fetch OAuth token
+      // Fetch OAuth token (check expiry)
       const { data: tokenData } = await db
         .from('oauth_tokens')
-        .select('access_token')
+        .select('access_token, refresh_token, expires_at')
         .eq('social_account_id', socialAccount.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -400,7 +400,82 @@ Deno.serve(async (req: Request) => {
 
       if (!tokenData?.access_token) {
         return new Response(
-          JSON.stringify({ error: 'Geen geldig OAuth token. Koppel je account opnieuw.' }),
+          JSON.stringify({ error: 'Geen geldig OAuth token. Koppel je account opnieuw.', action: 'reconnect', channel }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // Check if token is expired
+      if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
+        // Try to refresh if we have a refresh_token
+        if (tokenData.refresh_token && channel === 'linkedin') {
+          try {
+            const refreshRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+              body: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: tokenData.refresh_token,
+                client_id: Deno.env.get('LINKEDIN_CLIENT_ID') ?? '',
+                client_secret: Deno.env.get('LINKEDIN_CLIENT_SECRET') ?? '',
+              }),
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              tokenData.access_token = refreshData.access_token;
+              // Update token in database
+              await db
+                .from('oauth_tokens')
+                .update({
+                  access_token: refreshData.access_token,
+                  expires_at: new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString(),
+                  refresh_token: refreshData.refresh_token || tokenData.refresh_token,
+                })
+                .eq('social_account_id', socialAccount.id);
+            } else {
+              return new Response(
+                JSON.stringify({ error: 'OAuth token verlopen en refresh mislukt. Koppel je account opnieuw.', action: 'reconnect', channel }),
+                { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+              );
+            }
+          } catch {
+            return new Response(
+              JSON.stringify({ error: 'Token refresh mislukt. Koppel je account opnieuw.', action: 'reconnect', channel }),
+              { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+            );
+          }
+        } else if (tokenData.refresh_token && (channel === 'facebook' || channel === 'instagram')) {
+          // Facebook/Instagram: exchange for long-lived token
+          try {
+            const refreshRes = await fetch(
+              `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${Deno.env.get('META_APP_ID')}&client_secret=${Deno.env.get('META_APP_SECRET')}&fb_exchange_token=${tokenData.access_token}`
+            );
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              tokenData.access_token = refreshData.access_token;
+              await db
+                .from('oauth_tokens')
+                .update({
+                  access_token: refreshData.access_token,
+                  expires_at: new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString(),
+                })
+                .eq('social_account_id', socialAccount.id);
+            }
+          } catch {
+            // Continue with existing token — it might still work
+          }
+        } else {
+          return new Response(
+            JSON.stringify({ error: 'OAuth token verlopen. Koppel je account opnieuw in Instellingen.', action: 'reconnect', channel }),
+            { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+          );
+        }
+      }
+
+      // Check Instagram requires an image
+      if (channel === 'instagram' && !imageUrl) {
+        return new Response(
+          JSON.stringify({ error: 'Instagram vereist een afbeelding. Voeg een foto toe aan je post.', action: 'add_image', channel }),
           { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
@@ -492,10 +567,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // 3. Fetch OAuth token
+    // 3. Fetch OAuth token (with expiry check)
     const { data: tokenData } = await db
       .from('oauth_tokens')
-      .select('access_token')
+      .select('access_token, refresh_token, expires_at')
       .eq('social_account_id', socialAccount.id)
       .order('created_at', { ascending: false })
       .limit(1)
