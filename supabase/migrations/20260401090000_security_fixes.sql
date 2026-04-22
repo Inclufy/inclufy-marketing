@@ -84,7 +84,9 @@ END $$;
 -- Organization members
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'organization_members' AND policyname = 'org_members_select_auth') THEN
-    CREATE POLICY org_members_select_auth ON public.organization_members FOR SELECT TO authenticated USING (true);
+    -- NOTE: Restricting to user_id = auth.uid() (users only see their own membership rows).
+    -- A broader "all members of same org" subquery would cause RLS recursion on this table.
+    CREATE POLICY org_members_select_auth ON public.organization_members FOR SELECT TO authenticated USING (user_id = auth.uid());
   END IF;
 END $$;
 
@@ -98,7 +100,11 @@ END $$;
 -- API keys - authenticated can read their own org's keys
 DO $$ BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'api_keys' AND policyname = 'api_keys_select_auth') THEN
-    CREATE POLICY api_keys_select_auth ON public.api_keys FOR SELECT TO authenticated USING (true);
+    CREATE POLICY api_keys_select_auth ON public.api_keys FOR SELECT TO authenticated USING (
+      organization_id IN (
+        SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid()
+      )
+    );
   END IF;
 END $$;
 
@@ -246,7 +252,7 @@ CREATE POLICY invoices_insert ON public.invoices
     EXISTS (
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.organization_id = organization_id
+        AND om.organization_id = invoices.organization_id
     )
   );
 
@@ -256,14 +262,14 @@ CREATE POLICY invoices_update ON public.invoices
     EXISTS (
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.organization_id = organization_id
+        AND om.organization_id = invoices.organization_id
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.organization_id = organization_id
+        AND om.organization_id = invoices.organization_id
     )
   );
 
@@ -277,7 +283,7 @@ CREATE POLICY subscriptions_insert ON public.subscriptions
     EXISTS (
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.organization_id = organization_id
+        AND om.organization_id = subscriptions.organization_id
     )
   );
 
@@ -287,14 +293,14 @@ CREATE POLICY subscriptions_update ON public.subscriptions
     EXISTS (
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.organization_id = organization_id
+        AND om.organization_id = subscriptions.organization_id
     )
   )
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.organization_members om
       WHERE om.user_id = auth.uid()
-        AND om.organization_id = organization_id
+        AND om.organization_id = subscriptions.organization_id
     )
   );
 
