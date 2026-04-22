@@ -273,13 +273,21 @@ export default function PostReviewScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
-      const { data } = await supabase
+      // First try with status = 'active'
+      const { data: activeData } = await supabase
         .from('social_accounts')
         .select('*')
         .eq('user_id', user.id)
         .eq('platform', channel)
         .eq('status', 'active');
-      return data || [];
+      if (activeData && activeData.length > 0) return activeData;
+      // Fallback: no status filter (catches 'connected' and other values)
+      const { data: fallbackData } = await supabase
+        .from('social_accounts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('platform', channel);
+      return fallbackData || [];
     } catch { return []; }
   };
 

@@ -31,7 +31,6 @@ type Route = RouteProp<RootStackParamList, 'EventSetup'>;
 const CHANNEL_KEYS: { key: Channel; label: string; lightColor: string; icon: string }[] = [
   { key: 'linkedin', label: 'LinkedIn', lightColor: '#0077B5', icon: 'logo-linkedin' },
   { key: 'instagram', label: 'Instagram', lightColor: '#E4405F', icon: 'logo-instagram' },
-  { key: 'x', label: 'X / Twitter', lightColor: '#1DA1F2', icon: 'logo-twitter' },
   { key: 'facebook', label: 'Facebook', lightColor: '#1877F2', icon: 'logo-facebook' },
 ];
 

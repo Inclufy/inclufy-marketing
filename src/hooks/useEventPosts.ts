@@ -86,9 +86,12 @@ export function usePublishPost() {
         .from('social_accounts')
         .select('id, platform, account_type, account_name, platform_account_id, status')
         .eq('user_id', user.id)
+        .eq('status', 'active')
         .ilike('platform', normalizedChannel)
         .limit(1)
         .maybeSingle();
+
+      if (socialErr) throw socialErr;
 
       // If no active account found, try without status filter (account might be connected but not 'active')
       let finalAccount = socialAccount;
@@ -116,11 +119,8 @@ export function usePublishPost() {
         );
       }
 
-      // Use finalAccount from here
-      const socialAccount2 = finalAccount;
-
       // Manual account — mark as published (user copies text manually)
-      if (socialAccount2.account_type === 'manual') {
+      if (finalAccount.account_type === 'manual') {
         const { data: updated, error: updateErr } = await supabase
           .from('go_posts')
           .update({
@@ -137,7 +137,7 @@ export function usePublishPost() {
       // OAuth account — call publish-social edge function
       const postText = post.text_content + (post.hashtags?.length > 0 ? '\n\n' + post.hashtags.join(' ') : '');
       // Get selected account ID from engagement metadata (set by PostReviewScreen doPublish)
-      const selectedAccountId = (post.engagement as any)?.published_account?.id || socialAccount2.id;
+      const selectedAccountId = (post.engagement as any)?.published_account?.id || finalAccount.id;
       // Include extra images for multi-image posts (LinkedIn, Facebook carousel)
       const extraImages: string[] = (post.engagement as any)?.extra_images || [];
       const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
@@ -154,10 +154,19 @@ export function usePublishPost() {
 
       if (pubErr) {
         // Edge function returned an error — try to get the detailed message
-        const errorMsg = typeof pubErr === 'object' && 'message' in pubErr
-          ? (pubErr as any).message
-          : String(pubErr);
+        console.error('[publish-social] edge function error:', pubErr, 'result:', result);
+        const rawCtxBody = (pubErr as any)?.context?.body;
+        const ctxBody = typeof rawCtxBody === 'string' ? rawCtxBody : JSON.stringify(rawCtxBody);
+        const errorMsg = ctxBody
+          || (typeof pubErr === 'object' && 'message' in pubErr ? (pubErr as any).message : null)
+          || String(pubErr);
         throw new Error(errorMsg || 'Publicatie mislukt — edge function fout');
+      }
+
+      // Edge function succeeded but returned { error: ... } in the body
+      if (result && !result.success && result.error) {
+        console.error('[publish-social] result error:', result);
+        throw new Error(result.error);
       }
 
       if (result?.success) {
@@ -166,7 +175,8 @@ export function usePublishPost() {
           .update({
             status: 'published' as PostStatus,
             published_at: new Date().toISOString(),
-            published_error: null,
+            publish_error: null,
+            published_post_id: (result as any).postId ?? null,
           })
           .eq('id', postId);
         return { ...result, _actuallyPublished: true };
@@ -175,7 +185,7 @@ export function usePublishPost() {
         const errorMessage = result?.error || 'Publicatie mislukt';
         await supabase
           .from('go_posts')
-          .update({ published_error: errorMessage })
+          .update({ publish_error: errorMessage })
           .eq('id', postId);
         throw new Error(errorMessage);
       }

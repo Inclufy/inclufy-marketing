@@ -80,6 +80,8 @@ async function upsertSocialAccount(
   accessToken: string,
   accountType: string = 'personal',
   pageAccessToken?: string,
+  expiresAt?: string | null,
+  refreshToken?: string | null,
 ) {
   // Try to find existing account by user_id + platform + platform_account_id
   let { data: existing } = await db
@@ -168,10 +170,18 @@ async function upsertSocialAccount(
     .eq('social_account_id', socialAccountId)
     .maybeSingle();
 
-  const tokenRecord = {
+  if (expiresAt === undefined) {
+    console.warn(`upsertSocialAccount: expires_at not provided for platform=${platform} account=${socialAccountId}`);
+  }
+
+  const now = new Date().toISOString();
+  const tokenRecord: any = {
     social_account_id: socialAccountId,
     platform,
     access_token: tokenToStore,
+    expires_at: expiresAt ?? null,
+    refresh_token: refreshToken ?? null,
+    updated_at: now,
   };
 
   if (existingToken) {
@@ -268,6 +278,9 @@ Deno.serve(async (req) => {
     let profilePicture: string;
     let pages: Array<{id: string, name: string, access_token: string, ig_id?: string}> = [];
 
+    let tokenExpiresAt: string | null = null;
+    let tokenRefreshToken: string | null = null;
+
     if (platform === 'linkedin') {
       // ─── LinkedIn ─────────────────────────────────────────────────
       const LINKEDIN_CLIENT_ID = Deno.env.get('LINKEDIN_CLIENT_ID') ?? '';
@@ -294,6 +307,13 @@ Deno.serve(async (req) => {
       }
       const tokenData = await tokenRes.json();
       accessToken = tokenData.access_token;
+      // LinkedIn returns expires_in (seconds); refresh_token only for r_email+offline_access scopes
+      if (tokenData.expires_in) {
+        tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+      } else {
+        console.warn('LinkedIn token response missing expires_in');
+      }
+      tokenRefreshToken = tokenData.refresh_token ?? null;
 
       const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -332,6 +352,13 @@ Deno.serve(async (req) => {
       const tokenData = await tokenRes.json();
       accessToken = tokenData.access_token ?? tokenData.data?.access_token ?? '';
       const openId = tokenData.open_id ?? tokenData.data?.open_id ?? '';
+      const ttExpiresIn = tokenData.expires_in ?? tokenData.data?.expires_in;
+      if (ttExpiresIn) {
+        tokenExpiresAt = new Date(Date.now() + ttExpiresIn * 1000).toISOString();
+      } else {
+        console.warn('TikTok token response missing expires_in');
+      }
+      tokenRefreshToken = tokenData.refresh_token ?? tokenData.data?.refresh_token ?? null;
 
       const profileRes = await fetch('https://open.tiktokapis.com/v2/user/info/?fields=open_id,display_name,avatar_url', {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -346,7 +373,7 @@ Deno.serve(async (req) => {
       // ─── Meta (Facebook/Instagram) ────────────────────────────────
       console.log('Meta token exchange for platform:', platform);
 
-      const tokenUrl = new URL('https://graph.facebook.com/v18.0/oauth/access_token');
+      const tokenUrl = new URL('https://graph.facebook.com/v20.0/oauth/access_token');
       tokenUrl.searchParams.set('client_id', META_APP_ID);
       tokenUrl.searchParams.set('client_secret', META_APP_SECRET);
       tokenUrl.searchParams.set('redirect_uri', REDIRECT_URI);
@@ -361,9 +388,9 @@ Deno.serve(async (req) => {
       const tokenData = await tokenRes.json();
       accessToken = tokenData.access_token;
 
-      // Get long-lived token
+      // Get long-lived token (~60 days, expires_in ≈ 5184000 s); Meta does not issue refresh tokens
       try {
-        const longLivedUrl = new URL('https://graph.facebook.com/v18.0/oauth/access_token');
+        const longLivedUrl = new URL('https://graph.facebook.com/v20.0/oauth/access_token');
         longLivedUrl.searchParams.set('grant_type', 'fb_exchange_token');
         longLivedUrl.searchParams.set('client_id', META_APP_ID);
         longLivedUrl.searchParams.set('client_secret', META_APP_SECRET);
@@ -372,13 +399,19 @@ Deno.serve(async (req) => {
         if (longLivedRes.ok) {
           const longLivedData = await longLivedRes.json();
           accessToken = longLivedData.access_token || accessToken;
+          if (longLivedData.expires_in) {
+            tokenExpiresAt = new Date(Date.now() + longLivedData.expires_in * 1000).toISOString();
+          } else {
+            console.warn('Meta long-lived token response missing expires_in');
+          }
+          tokenRefreshToken = null; // Meta does not issue refresh tokens
           console.log('Got long-lived token');
         }
       } catch { /* keep short-lived token */ }
 
       // Fetch user profile
       const profileRes = await fetch(
-        `https://graph.facebook.com/v18.0/me?fields=id,name,picture.type(large)&access_token=${accessToken}`,
+        `https://graph.facebook.com/v20.0/me?fields=id,name,picture.type(large)&access_token=${accessToken}`,
       );
       if (!profileRes.ok) {
         const err = await profileRes.text();
@@ -393,7 +426,7 @@ Deno.serve(async (req) => {
       // ─── Fetch Facebook Pages (for business page support) ────────
       try {
         const pagesRes = await fetch(
-          `https://graph.facebook.com/v18.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username,profile_picture_url}&access_token=${accessToken}`,
+          `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username,profile_picture_url}&access_token=${accessToken}`,
         );
         if (pagesRes.ok) {
           const pagesData = await pagesRes.json();
@@ -416,7 +449,7 @@ Deno.serve(async (req) => {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Store main personal account
-    await upsertSocialAccount(db, userId, platform, profileId, profileName, profilePicture, accessToken, 'personal');
+    await upsertSocialAccount(db, userId, platform, profileId, profileName, profilePicture, accessToken, 'personal', undefined, tokenExpiresAt, tokenRefreshToken);
 
     // Store Facebook Pages as separate accounts
     const connectedPages: Array<{id: string, name: string}> = [];
@@ -425,20 +458,24 @@ Deno.serve(async (req) => {
         await upsertSocialAccount(
           db, userId, 'facebook',
           page.id, `${page.name} (Pagina)`, '',
-          accessToken, 'page', page.access_token,
+          accessToken, 'page', page.access_token, tokenExpiresAt, null,
         );
         connectedPages.push({ id: page.id, name: page.name });
 
         // Also connect Instagram Business Account if linked to this page
         if ((page as any).ig_id) {
-          await upsertSocialAccount(
-            db, userId, 'instagram',
-            (page as any).ig_id,
-            (page as any).ig_name || `${page.name} Instagram`,
-            (page as any).ig_picture || '',
-            accessToken, 'business', page.access_token,
-          );
-          connectedPages.push({ id: (page as any).ig_id, name: `${(page as any).ig_name || page.name} (Instagram)` });
+          if (!page.access_token) {
+            console.warn(`[oauth-callback] Skipping IG account ${(page as any).ig_id} for page "${page.name}" — page.access_token is missing. Re-authorize with pages_read_engagement permission.`);
+          } else {
+            await upsertSocialAccount(
+              db, userId, 'instagram',
+              (page as any).ig_id,
+              (page as any).ig_name || `${page.name} Instagram`,
+              (page as any).ig_picture || '',
+              accessToken, 'business', page.access_token, tokenExpiresAt, null,
+            );
+            connectedPages.push({ id: (page as any).ig_id, name: `${(page as any).ig_name || page.name} (Instagram)` });
+          }
         }
       } catch (e) {
         console.error(`Failed to store page ${page.name}:`, e);

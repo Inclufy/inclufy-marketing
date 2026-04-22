@@ -34,7 +34,7 @@ export type EventUpdate = Partial<EventInsert>;
 
 export interface EventCapture {
   id: string;
-  event_id: string;
+  event_id: string | null;
   user_id: string;
   media_type: MediaType;
   media_url: string;

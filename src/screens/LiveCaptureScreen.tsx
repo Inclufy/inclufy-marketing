@@ -140,7 +140,6 @@ export default function LiveCaptureScreen() {
   const CHANNEL_OPTIONS: { key: Channel; label: string; color: string; icon: string }[] = [
     { key: 'linkedin',  label: 'LinkedIn',  color: '#0077B5', icon: 'logo-linkedin'  },
     { key: 'instagram', label: 'Instagram', color: '#E4405F', icon: 'logo-instagram' },
-    { key: 'x',         label: 'X',         color: '#e0e0e0', icon: 'logo-twitter'   },
     { key: 'facebook',  label: 'Facebook',  color: '#1877F2', icon: 'logo-facebook'  },
   ];
 

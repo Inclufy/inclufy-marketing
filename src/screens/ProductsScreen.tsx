@@ -15,6 +15,26 @@ import {
   useProducts, useCreateProduct, useUpdateProduct, useDeleteProduct, Product,
 } from '../hooks/useProducts';
 import * as ImagePicker from 'expo-image-picker';
+import { supabase } from '../services/supabase';
+
+// ── Upload product image ──────────────────────────────────────────────────────
+
+async function uploadProductImage(localUri: string): Promise<string> {
+  const { data: { user } = {} as any } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not authenticated');
+  const ext = localUri.split('.').pop()?.split('?')[0] || 'jpg';
+  const storagePath = `products/${user.id}/product_${Date.now()}.${ext}`;
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+  const contentType = blob.type || 'image/jpeg';
+  const { error } = await supabase.storage
+    .from('media').upload(storagePath, blob, { contentType, upsert: true });
+  if (error) throw error;
+  const { data: signData } = await supabase.storage.from('media').createSignedUrl(storagePath, 60 * 60 * 24 * 365);
+  if (signData?.signedUrl) return signData.signedUrl;
+  const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
+  return urlData.publicUrl;
+}
 
 type CategoryFilter = 'all' | 'product' | 'service' | 'solution';
 const FILTERS: { key: CategoryFilter; label: string }[] = [
@@ -115,12 +135,24 @@ export default function ProductsScreen() {
 
   const handleSave = useCallback(async () => {
     if (!form.name.trim()) { Alert.alert('Fout', 'Naam is verplicht'); return; }
+
+    // Upload local image to Supabase storage before saving
+    let finalImageUrl = form.image_url;
+    if (finalImageUrl && finalImageUrl.startsWith('file://')) {
+      try {
+        finalImageUrl = await uploadProductImage(finalImageUrl);
+      } catch (e: any) {
+        Alert.alert('Upload mislukt', e.message || 'Afbeelding kon niet worden geüpload.');
+        return;
+      }
+    }
+
     const payload: Partial<Product> = {
       name: form.name.trim(), description: form.description.trim(), category: form.category,
       price: form.price.trim(), status: form.status,
       usps: form.usps.split(',').map((x) => x.trim()).filter(Boolean),
       tags: form.tags.split(',').map((x) => x.trim()).filter(Boolean),
-      website_url: form.website_url.trim() || null, image_url: form.image_url,
+      website_url: form.website_url.trim() || null, image_url: finalImageUrl,
     };
     try {
       if (editing) await updateM.mutateAsync({ id: editing.id, ...payload });

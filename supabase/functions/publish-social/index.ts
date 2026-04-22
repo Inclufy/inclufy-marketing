@@ -7,6 +7,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -154,14 +155,14 @@ async function publishToFacebook(
   imageUrl?: string,
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
-    let url = `https://graph.facebook.com/v18.0/${pageId}/feed`;
+    let url = `https://graph.facebook.com/v20.0/${pageId}/feed`;
     const params: any = {
       message: text,
       access_token: accessToken,
     };
 
     if (imageUrl) {
-      url = `https://graph.facebook.com/v18.0/${pageId}/photos`;
+      url = `https://graph.facebook.com/v20.0/${pageId}/photos`;
       params.url = imageUrl;
       params.caption = text;
     }
@@ -174,8 +175,9 @@ async function publishToFacebook(
 
     if (!res.ok) {
       const errBody = await res.text();
-      console.error('[Facebook] Publish error:', res.status, errBody);
-      return { success: false, error: `Facebook API error ${res.status}: ${errBody}` };
+      const safeErrBody = errBody.replace(/"access_token"\s*:\s*"[^"]*"/g, '"access_token":"[REDACTED]"');
+      console.error('[Facebook] Publish error:', res.status, safeErrBody);
+      return { success: false, error: `Facebook API error ${res.status}: ${safeErrBody}` };
     }
 
     const data = await res.json();
@@ -202,10 +204,12 @@ async function publishToInstagram(
     if (imageUrl.includes('supabase') && !imageUrl.includes('/public/')) {
       // Extract storage path and generate a long-lived signed URL
       const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const pathMatch = imageUrl.match(/\/media\/(.+?)(\?|$)/);
+      const pathMatch = imageUrl.match(/\/(?:sign\/)?media\/(.+?)(\?|$)/);
       if (pathMatch) {
         const { data: signData } = await db.storage.from('media').createSignedUrl(pathMatch[1], 3600);
         if (signData?.signedUrl) publicImageUrl = signData.signedUrl;
+      } else {
+        console.warn('[publish-social] Could not extract storage path from image URL — using original URL:', imageUrl);
       }
     }
 
@@ -217,7 +221,7 @@ async function publishToInstagram(
       const childIds: string[] = [];
       for (const url of allImages) {
         const childRes = await fetch(
-          `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media`,
+          `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -240,7 +244,7 @@ async function publishToInstagram(
 
       // Step 2: Create carousel container
       const carouselRes = await fetch(
-        `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media`,
+        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -262,7 +266,7 @@ async function publishToInstagram(
 
       // Step 3: Publish carousel
       const publishRes = await fetch(
-        `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media_publish`,
+        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -280,7 +284,7 @@ async function publishToInstagram(
     // Single image post
     // Step 1: Create media container
     const createRes = await fetch(
-      `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media`,
+      `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -301,7 +305,7 @@ async function publishToInstagram(
 
     // Step 2: Publish the container
     const publishRes = await fetch(
-      `https://graph.facebook.com/v18.0/${igBusinessAccountId}/media_publish`,
+      `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -325,6 +329,72 @@ async function publishToInstagram(
 }
 
 // ═══════════════════════════════════════════════════════
+// Token Validation Helper
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Ensures the stored OAuth token is still valid.
+ * - LinkedIn: attempts a real refresh_token flow if expired.
+ * - Facebook/Instagram: marks token as expired and signals reconnect (Meta
+ *   does not allow server-side refresh with an already-expired token).
+ * Returns { valid: true, token } on success or { valid: false, action: 'reconnect' }.
+ */
+async function ensureValidToken(
+  db: ReturnType<typeof createClient>,
+  tokenData: { access_token: string; refresh_token?: string | null; expires_at?: string | null },
+  socialAccountId: string,
+  channel: string,
+): Promise<{ valid: boolean; token?: string; action?: 'reconnect'; error?: string }> {
+  // Token not yet expired (or no expiry stored) — all good
+  if (!tokenData.expires_at || new Date(tokenData.expires_at) >= new Date()) {
+    return { valid: true, token: tokenData.access_token };
+  }
+
+  // LinkedIn: try real refresh_token grant
+  if (channel === 'linkedin' && tokenData.refresh_token) {
+    try {
+      const refreshRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: tokenData.refresh_token,
+          client_id: Deno.env.get('LINKEDIN_CLIENT_ID') ?? '',
+          client_secret: Deno.env.get('LINKEDIN_CLIENT_SECRET') ?? '',
+        }),
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        await db
+          .from('oauth_tokens')
+          .update({
+            access_token: refreshData.access_token,
+            expires_at: new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString(),
+            refresh_token: refreshData.refresh_token || tokenData.refresh_token,
+          })
+          .eq('social_account_id', socialAccountId);
+        return { valid: true, token: refreshData.access_token };
+      }
+    } catch {
+      // fall through to reconnect
+    }
+    return { valid: false, action: 'reconnect', error: 'OAuth token verlopen en refresh mislukt. Koppel je account opnieuw.' };
+  }
+
+  // Facebook / Instagram: expired token cannot be refreshed server-side
+  if (channel === 'facebook' || channel === 'instagram') {
+    await db
+      .from('social_accounts')
+      .update({ status: 'expired' })
+      .eq('id', socialAccountId);
+    return { valid: false, action: 'reconnect', error: `${channel} token expired — please reconnect your account` };
+  }
+
+  // Any other channel without refresh support
+  return { valid: false, action: 'reconnect', error: 'OAuth token verlopen. Koppel je account opnieuw in Instellingen.' };
+}
+
+// ═══════════════════════════════════════════════════════
 // Main Handler
 // ═══════════════════════════════════════════════════════
 
@@ -341,11 +411,39 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  // ── JWT authentication ──
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+  const jwt = authHeader.slice(7);
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: `Bearer ${jwt}` } },
+  });
+  const { data: { user: jwtUser }, error: jwtErr } = await authClient.auth.getUser();
+  if (jwtErr || !jwtUser) {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+      status: 401,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
   try {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
     const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, extra_image_urls: directExtraImageUrls, account_id: directAccountId } = body;
+
+    // Assert JWT user matches request body user_id
+    if (user_id && jwtUser.id !== user_id) {
+      return new Response(JSON.stringify({ error: 'Forbidden: user_id mismatch' }), {
+        status: 403,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
 
     // ── Direct post publish (from go_posts via mobile app) ──
     if (post_id && user_id) {
@@ -361,20 +459,40 @@ Deno.serve(async (req: Request) => {
       }
 
       // Find social account — use specific account_id if provided (for multi-account support)
+      // Case-insensitive platform match + fallback without status filter (mirrors mobile fix 6548a90)
+      const normalizedChannel = String(channel).toLowerCase();
       let socialAccountQuery = db
         .from('social_accounts')
-        .select('id, platform, platform_account_id, account_type, account_name')
+        .select('id, platform, platform_account_id, account_type, account_name, status')
         .eq('user_id', user_id)
-        .eq('platform', channel)
+        .ilike('platform', normalizedChannel)
         .eq('status', 'active');
       if (directAccountId) {
         socialAccountQuery = socialAccountQuery.eq('id', directAccountId);
       }
-      const { data: socialAccount } = await socialAccountQuery
+      let { data: socialAccount } = await socialAccountQuery
         .limit(1)
         .maybeSingle();
 
+      // Fallback: retry without status filter (accounts may be 'connected' instead of 'active')
       if (!socialAccount) {
+        console.log(`[publish-social] No active ${channel} account — retrying without status filter`);
+        let fallbackQuery = db
+          .from('social_accounts')
+          .select('id, platform, platform_account_id, account_type, account_name, status')
+          .eq('user_id', user_id)
+          .ilike('platform', normalizedChannel);
+        if (directAccountId) {
+          fallbackQuery = fallbackQuery.eq('id', directAccountId);
+        }
+        const { data: fallbackAccount } = await fallbackQuery
+          .limit(1)
+          .maybeSingle();
+        socialAccount = fallbackAccount;
+      }
+
+      if (!socialAccount) {
+        console.error(`[publish-social] No ${channel} account found for user ${user_id} (directAccountId=${directAccountId || 'none'})`);
         return new Response(
           JSON.stringify({ error: `Geen ${channel} account gekoppeld`, action: 'connect_account', channel }),
           { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -405,72 +523,16 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Check if token is expired
-      if (tokenData.expires_at && new Date(tokenData.expires_at) < new Date()) {
-        // Try to refresh if we have a refresh_token
-        if (tokenData.refresh_token && channel === 'linkedin') {
-          try {
-            const refreshRes = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-              body: new URLSearchParams({
-                grant_type: 'refresh_token',
-                refresh_token: tokenData.refresh_token,
-                client_id: Deno.env.get('LINKEDIN_CLIENT_ID') ?? '',
-                client_secret: Deno.env.get('LINKEDIN_CLIENT_SECRET') ?? '',
-              }),
-            });
-            if (refreshRes.ok) {
-              const refreshData = await refreshRes.json();
-              tokenData.access_token = refreshData.access_token;
-              // Update token in database
-              await db
-                .from('oauth_tokens')
-                .update({
-                  access_token: refreshData.access_token,
-                  expires_at: new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString(),
-                  refresh_token: refreshData.refresh_token || tokenData.refresh_token,
-                })
-                .eq('social_account_id', socialAccount.id);
-            } else {
-              return new Response(
-                JSON.stringify({ error: 'OAuth token verlopen en refresh mislukt. Koppel je account opnieuw.', action: 'reconnect', channel }),
-                { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-              );
-            }
-          } catch {
-            return new Response(
-              JSON.stringify({ error: 'Token refresh mislukt. Koppel je account opnieuw.', action: 'reconnect', channel }),
-              { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-            );
-          }
-        } else if (tokenData.refresh_token && (channel === 'facebook' || channel === 'instagram')) {
-          // Facebook/Instagram: exchange for long-lived token
-          try {
-            const refreshRes = await fetch(
-              `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${Deno.env.get('META_APP_ID')}&client_secret=${Deno.env.get('META_APP_SECRET')}&fb_exchange_token=${tokenData.access_token}`
-            );
-            if (refreshRes.ok) {
-              const refreshData = await refreshRes.json();
-              tokenData.access_token = refreshData.access_token;
-              await db
-                .from('oauth_tokens')
-                .update({
-                  access_token: refreshData.access_token,
-                  expires_at: new Date(Date.now() + (refreshData.expires_in || 5184000) * 1000).toISOString(),
-                })
-                .eq('social_account_id', socialAccount.id);
-            }
-          } catch {
-            // Continue with existing token — it might still work
-          }
-        } else {
-          return new Response(
-            JSON.stringify({ error: 'OAuth token verlopen. Koppel je account opnieuw in Instellingen.', action: 'reconnect', channel }),
-            { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-          );
-        }
+      // Check if token is expired / refresh if needed
+      const tokenCheck = await ensureValidToken(db, tokenData, socialAccount.id, channel);
+      if (!tokenCheck.valid) {
+        const status = (channel === 'facebook' || channel === 'instagram') ? 401 : 422;
+        return new Response(
+          JSON.stringify({ success: false, action: tokenCheck.action, error: tokenCheck.error, channel }),
+          { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
       }
+      tokenData.access_token = tokenCheck.token!;
 
       // Check Instagram requires an image
       if (channel === 'instagram' && !imageUrl) {
@@ -533,18 +595,33 @@ Deno.serve(async (req: Request) => {
     }
 
     const channel = proposal.channel; // linkedin, facebook, instagram, etc.
-    const text = proposal.content_text + (proposal.hashtags?.length > 0 ? '\n\n' + proposal.hashtags.join(' ') : '');
+    const text = proposal.content_text + ((proposal.hashtags ?? []).length > 0 ? '\n\n' + proposal.hashtags.join(' ') : '');
     const imageUrl = proposal.media_url || undefined;
 
     // 2. Find social account for this channel
-    const { data: socialAccount } = await db
+    // Case-insensitive platform match + fallback without status filter (mirrors mobile fix 6548a90)
+    const normalizedChannel = String(channel).toLowerCase();
+    let { data: socialAccount } = await db
       .from('social_accounts')
-      .select('id, platform, platform_account_id, account_type')
+      .select('id, platform, platform_account_id, account_type, status')
       .eq('user_id', user_id)
-      .eq('platform', channel)
+      .ilike('platform', normalizedChannel)
       .eq('status', 'active')
       .limit(1)
       .maybeSingle();
+
+    // Fallback: retry without status filter
+    if (!socialAccount) {
+      console.log(`[publish-social:legacy] No active ${channel} account — retrying without status filter`);
+      const { data: fallbackAccount } = await db
+        .from('social_accounts')
+        .select('id, platform, platform_account_id, account_type, status')
+        .eq('user_id', user_id)
+        .ilike('platform', normalizedChannel)
+        .limit(1)
+        .maybeSingle();
+      socialAccount = fallbackAccount;
+    }
 
     if (!socialAccount) {
       // Update proposal with error
@@ -605,6 +682,17 @@ Deno.serve(async (req: Request) => {
         { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
+
+    // 3b. Check token expiry / refresh
+    const legacyTokenCheck = await ensureValidToken(db, tokenData, socialAccount.id, channel);
+    if (!legacyTokenCheck.valid) {
+      const status = (channel === 'facebook' || channel === 'instagram') ? 401 : 422;
+      return new Response(
+        JSON.stringify({ success: false, action: legacyTokenCheck.action, error: legacyTokenCheck.error, channel }),
+        { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+    tokenData.access_token = legacyTokenCheck.token!;
 
     // 4. Publish to the platform
     let result: { success: boolean; postId?: string; error?: string };
@@ -693,13 +781,13 @@ Deno.serve(async (req: Request) => {
           error: result.error,
           channel,
         }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
   } catch (err: any) {
-    console.error('[publish-social] Unhandled error:', err);
+    console.error('[publish-social] Unhandled error:', err.message ?? err);
     return new Response(
-      JSON.stringify({ error: 'Server error', details: err.message }),
+      JSON.stringify({ error: 'Server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
