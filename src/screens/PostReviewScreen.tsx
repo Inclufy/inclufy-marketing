@@ -985,10 +985,21 @@ export default function PostReviewScreen() {
       return post.branded_image_url || null;
     }
 
-    const viewShotRef = viewShotRefs.current[post.id];
+    // Wait for ViewShot ref to be available. On duplicated or freshly-
+    // inserted posts, the ViewShot may not be mounted yet at the moment
+    // the user taps publish — a silent null here meant the post published
+    // without the overlay. Retry up to 1s (10×100ms) before giving up.
+    let viewShotRef = viewShotRefs.current[post.id];
     if (!viewShotRef) {
-      console.warn('[bakeOverlay] No ViewShot ref for post', post.id);
-      return post.branded_image_url || null;
+      for (let attempt = 0; attempt < 10 && !viewShotRef; attempt++) {
+        await new Promise((r) => setTimeout(r, 100));
+        viewShotRef = viewShotRefs.current[post.id];
+      }
+    }
+    if (!viewShotRef) {
+      console.error('[bakeOverlay] ViewShot ref still null after retry for post', post.id);
+      // Fail loudly instead of silently publishing without overlay.
+      throw new Error('Overlay kon niet worden verwerkt: preview is nog niet geladen. Scroll naar de post en probeer opnieuw.');
     }
 
     try {
@@ -998,7 +1009,10 @@ export default function PostReviewScreen() {
         quality: 0.9,
       });
 
-      if (!uri) return post.branded_image_url || null;
+      if (!uri) {
+        console.error('[bakeOverlay] captureRef returned empty URI for post', post.id);
+        throw new Error('Overlay-snapshot mislukt. Probeer opnieuw.');
+      }
 
       // Upload the baked image to Supabase Storage
       const { url } = await uploadMedia(uri, safeEventId, 'photo');
@@ -1006,10 +1020,13 @@ export default function PostReviewScreen() {
       // Update the post's branded_image_url with the baked version
       await updatePost.mutateAsync({ id: post.id, branded_image_url: url });
 
+      console.log('[bakeOverlay] Success — baked overlay into image for post', post.id);
       return url;
     } catch (err: any) {
       console.error('[bakeOverlay] Failed:', err.message);
-      return post.branded_image_url || null;
+      // Re-throw so doPublish knows the overlay failed and can surface it to the user
+      // instead of silently publishing without overlay.
+      throw err;
     }
   };
 
