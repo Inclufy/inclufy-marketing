@@ -16,11 +16,25 @@ const TIKTOK_CLIENT_SECRET = Deno.env.get('TIKTOK_CLIENT_SECRET') ?? '';
 // The redirect URI must exactly match what's registered in developer consoles
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/oauth-callback`;
 
+// Escape user-supplied text for safe HTML interpolation. Without this, error
+// messages containing quotes (e.g. LinkedIn: `Scope "w_organization_social"
+// is not authorized`) broke HTML attribute context and caused Safari to
+// render the response as plain source text instead of rendered HTML.
+function esc(s: string | null | undefined): string {
+  if (s == null) return '';
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function successPage(platform: string, accountName: string, pages?: Array<{id: string, name: string}>) {
   const pagesHtml = pages && pages.length > 0
     ? `<div style="margin-top:16px;text-align:left">
         <p style="font-size:14px;color:#333;font-weight:600;margin-bottom:8px">Bedrijfspagina's gevonden:</p>
-        ${pages.map(p => `<div style="padding:8px 12px;background:#F3F0FF;border-radius:8px;margin-bottom:6px;font-size:13px;color:#5B21B6">✅ ${p.name}</div>`).join('')}
+        ${pages.map(p => `<div style="padding:8px 12px;background:#F3F0FF;border-radius:8px;margin-bottom:6px;font-size:13px;color:#5B21B6">&#10004; ${esc(p.name)}</div>`).join('')}
        </div>`
     : '';
 
@@ -37,9 +51,9 @@ function successPage(platform: string, accountName: string, pages?: Array<{id: s
   p{color:#666;margin:0 0 16px;line-height:1.5}
 </style></head>
 <body><div class="card">
-  <div class="icon">✅</div>
+  <div class="icon">&#10004;</div>
   <h1>Verbonden!</h1>
-  <p><strong>${platform.charAt(0).toUpperCase() + platform.slice(1)}</strong> is succesvol verbonden met AMOS${accountName ? ` als <strong>${accountName}</strong>` : ''}.</p>
+  <p><strong>${esc(platform.charAt(0).toUpperCase() + platform.slice(1))}</strong> is succesvol verbonden met AMOS${accountName ? ` als <strong>${esc(accountName)}</strong>` : ''}.</p>
   ${pagesHtml}
   <p style="font-size:14px;color:#999;margin-top:16px">Je kunt dit venster sluiten en teruggaan naar de app.</p>
 </div></body></html>`;
@@ -61,11 +75,11 @@ function errorPage(platform: string, reason: string, details?: string) {
   .detail{font-size:11px;color:#aaa;word-break:break-all;margin-top:8px;padding:8px;background:#f5f5f5;border-radius:8px;text-align:left}
 </style></head>
 <body><div class="card">
-  <div class="icon">❌</div>
+  <div class="icon">&#10060;</div>
   <h1>Verbinding mislukt</h1>
-  <p>Er ging iets mis bij het verbinden van <strong>${platform}</strong>.</p>
-  <p style="font-size:13px;color:#999">Fout: ${reason}<br>Probeer het opnieuw vanuit de app.</p>
-  ${details ? `<div class="detail">${details}</div>` : ''}
+  <p>Er ging iets mis bij het verbinden van <strong>${esc(platform)}</strong>.</p>
+  <p style="font-size:13px;color:#999">Fout: ${esc(reason)}<br>Probeer het opnieuw vanuit de app.</p>
+  ${details ? `<div class="detail">${esc(details)}</div>` : ''}
 </div></body></html>`;
   return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
 }
@@ -92,24 +106,13 @@ async function upsertSocialAccount(
     .eq('platform_account_id', profileId)
     .maybeSingle();
 
-  // Also check for any existing account on the same platform (e.g. manual account with different platform_account_id)
-  // If found, delete it first to avoid unique constraint violations, then insert fresh
-  if (!existing) {
-    const { data: anyExisting } = await db
-      .from('social_accounts')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('platform', platform)
-      .limit(1)
-      .maybeSingle();
-    if (anyExisting) {
-      // Delete old oauth_tokens for this account first
-      await db.from('oauth_tokens').delete().eq('social_account_id', anyExisting.id);
-      // Delete the old account
-      await db.from('social_accounts').delete().eq('id', anyExisting.id);
-      console.log(`Deleted old ${platform} account ${anyExisting.id} to replace with OAuth`);
-    }
-  }
+  // NOTE: Previous code deleted any other account on the same platform here to
+  // "avoid unique constraint violations". That was wrong — the UNIQUE constraint
+  // is on (user_id, platform, platform_account_id), so different platform_account_id
+  // values on the same platform don't violate it. Deleting old rows also prevented
+  // the user from connecting multiple accounts per platform (e.g. a personal LinkedIn
+  // AND a company page). Removed to enable multi-account publishing with a picker
+  // at publish time in the app.
 
   let socialAccountId: string;
 

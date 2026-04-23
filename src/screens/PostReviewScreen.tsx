@@ -273,6 +273,22 @@ export default function PostReviewScreen() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
+      // Filter out account types that cannot actually publish via API:
+      // - Instagram 'personal' — Meta Graph API requires Business/Creator accounts
+      // - any 'manual' — no OAuth token, can't API-publish
+      const isPublishable = (acc: any) => {
+        if (acc.account_type === 'manual') return false;
+        if (channel === 'instagram' && acc.account_type === 'personal') return false;
+        return true;
+      };
+      // Sort: pages/business first, then personal. Used as default preference
+      // when the user has multiple accounts connected for a channel.
+      const accountPriority = (t: string | null) => {
+        if (t === 'page' || t === 'business') return 0;
+        if (t === 'personal') return 1;
+        return 2;
+      };
+      const sortByPriority = (a: any, b: any) => accountPriority(a.account_type) - accountPriority(b.account_type);
       // First try with status = 'active'
       const { data: activeData } = await supabase
         .from('social_accounts')
@@ -280,14 +296,15 @@ export default function PostReviewScreen() {
         .eq('user_id', user.id)
         .eq('platform', channel)
         .eq('status', 'active');
-      if (activeData && activeData.length > 0) return activeData;
+      const activeFiltered = (activeData || []).filter(isPublishable).sort(sortByPriority);
+      if (activeFiltered.length > 0) return activeFiltered;
       // Fallback: no status filter (catches 'connected' and other values)
       const { data: fallbackData } = await supabase
         .from('social_accounts')
         .select('*')
         .eq('user_id', user.id)
         .eq('platform', channel);
-      return fallbackData || [];
+      return (fallbackData || []).filter(isPublishable).sort(sortByPriority);
     } catch { return []; }
   };
 
