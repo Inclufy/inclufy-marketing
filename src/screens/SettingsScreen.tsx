@@ -598,7 +598,13 @@ export default function SettingsScreen() {
 
     if (platformKey === 'linkedin') {
       const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '789493c65q6j5e';
-      authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email w_member_social r_organization_social w_organization_social rw_organization_admin')}&state=${encodeURIComponent(state)}`;
+      // NOTE: Only basic scopes here. The organization-level scopes
+      // (r_organization_social, w_organization_social, rw_organization_admin)
+      // require LinkedIn Marketing Developer Platform approval via App Review.
+      // Requesting them before approval causes LinkedIn to reject the entire
+      // auth request with "Er ging iets fout" — not a friendly per-scope error.
+      // Add them back once the LinkedIn app is approved for LMDP.
+      authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('openid profile email w_member_social')}&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'facebook' || platformKey === 'instagram') {
       const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
       const scope = 'pages_show_list,pages_manage_posts,public_profile';
