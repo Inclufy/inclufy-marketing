@@ -1013,6 +1013,17 @@ export default function PostReviewScreen() {
     }
   };
 
+  // Per-category account preference. Driven by captureCategory stored in
+  // post.engagement.category at post-creation time (LiveCaptureScreen).
+  // Returns 'page' | 'personal' | 'any' indicating which account type to auto-pick.
+  const preferredAccountTypeForPost = (post: EventPost): 'page' | 'personal' | 'any' => {
+    const cat = (post.engagement as any)?.category;
+    if (cat === 'product' || cat === 'organisation' || cat === 'organization') return 'page';
+    if (cat === 'inspiration' || cat === 'inspiratie') return 'personal';
+    // events, quick, behind_scenes, content, or undefined → no strong preference
+    return 'any';
+  };
+
   const handlePublish = async (post: EventPost) => {
     // Check if user has accounts for this channel
     const accounts = await fetchAccountsForChannel(post.channel);
@@ -1024,16 +1035,25 @@ export default function PostReviewScreen() {
       setShowConnectModal(true);
       return;
     }
-    if (accounts.length > 1) {
-      // Show account picker
-      setPendingPublishPost(post);
-      setAvailableAccounts(accounts);
-      setShowAccountPicker(true);
+    if (accounts.length === 1) {
+      // Single account — publish directly
+      const acc = accounts[0];
+      doPublish(post, acc?.id, acc);
       return;
     }
-    // Single account — publish directly
-    const acc = accounts[0];
-    doPublish(post, acc?.id, acc);
+    // Multiple accounts — try to apply per-category preference first
+    const pref = preferredAccountTypeForPost(post);
+    if (pref === 'page') {
+      const pageAcc = accounts.find((a: any) => a.account_type === 'page' || a.account_type === 'business');
+      if (pageAcc) { doPublish(post, pageAcc.id, pageAcc); return; }
+    } else if (pref === 'personal') {
+      const personalAcc = accounts.find((a: any) => a.account_type === 'personal');
+      if (personalAcc) { doPublish(post, personalAcc.id, personalAcc); return; }
+    }
+    // No strong preference, or preferred type not found — show picker
+    setPendingPublishPost(post);
+    setAvailableAccounts(accounts);
+    setShowAccountPicker(true);
   };
 
   const doPublish = async (post: EventPost, accountId?: string, account?: any) => {
@@ -1395,11 +1415,13 @@ export default function PostReviewScreen() {
                         )}
                       </>
                     )}
-                    <View style={styles.zoomHint}>
-                      <Ionicons name="expand-outline" size={14} color="#fff" />
-                    </View>
                   </TouchableOpacity>
                   </ViewShot>
+                  {/* Zoom-hint intentionally rendered OUTSIDE the ViewShot so it
+                      is NOT baked into the published image. */}
+                  <View style={[styles.zoomHint, { position: 'absolute', right: 8, bottom: 8 }]} pointerEvents="none">
+                    <Ionicons name="expand-outline" size={14} color="#fff" />
+                  </View>
 
                   {/* ── Thumbnail strip ────────────────────────────────── */}
                   <ScrollView
@@ -2062,7 +2084,12 @@ export default function PostReviewScreen() {
             // Image is renderable if we have a URL that hasn't already failed
             const previewImgOk = !!imgUrl && !previewFailedUrls.has(imgUrl);
 
-            // Overlay elements to layer on top of the image in mock cards
+            // Overlay elements to layer on top of the image in mock cards.
+            // IMPORTANT: sizes/positions/fonts MUST match the ViewShot-wrapped
+            // feed render (lines ~1381-1417). That ViewShot IS what gets baked
+            // into the published image via bakeOverlayIntoImage(). If these
+            // diverge, the modal preview shows something different from what
+            // actually gets posted to LinkedIn/FB/IG.
             const ov = overlayConfig[p.id];
             const PreviewOverlay = () => {
               if (!ov) return null;
@@ -2077,41 +2104,41 @@ export default function PostReviewScreen() {
                                                       { bottom: 8, right: 8 };
               return (
                 <>
-                  {/* Top text */}
+                  {/* Top text — matches ViewShot style */}
                   {ov.text && ov.textPosition === 'top' && (
                     <View style={{
                       position: 'absolute', top: 0, left: 0, right: 0,
-                      backgroundColor: 'rgba(0,0,0,0.55)',
-                      paddingHorizontal: 10, paddingVertical: 6,
+                      backgroundColor: 'rgba(0,0,0,0.52)',
+                      paddingHorizontal: 10, paddingVertical: 7,
                     }}>
-                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }} numberOfLines={2}>
+                      <Text style={{ color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }} numberOfLines={2}>
                         {ov.text}
                       </Text>
                     </View>
                   )}
-                  {/* Logo */}
+                  {/* Logo — matches ViewShot: 32x32, borderRadius 6 */}
                   {ov.showLogo && (
                     <View style={{ position: 'absolute', flexDirection: 'row', gap: 4, ...posStyle }}>
                       {logos.length > 0 ? logos.map((lu, li) => (
                         <Image key={li} source={{ uri: lu }}
-                          style={{ width: 28, height: 28, borderRadius: 5, backgroundColor: 'rgba(0,0,0,0.35)' }}
+                          style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.4)' }}
                           resizeMode="contain"
                         />
                       )) : (
-                        <View style={{ backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 7, padding: 5 }}>
-                          <Ionicons name="business-outline" size={14} color="#fff" />
+                        <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, padding: 6 }}>
+                          <Ionicons name="business-outline" size={16} color="#fff" />
                         </View>
                       )}
                     </View>
                   )}
-                  {/* Bottom text */}
+                  {/* Bottom text — matches ViewShot style */}
                   {ov.text && ov.textPosition === 'bottom' && (
                     <View style={{
                       position: 'absolute', bottom: 0, left: 0, right: 0,
-                      backgroundColor: 'rgba(0,0,0,0.55)',
-                      paddingHorizontal: 10, paddingVertical: 6,
+                      backgroundColor: 'rgba(0,0,0,0.52)',
+                      paddingHorizontal: 10, paddingVertical: 7,
                     }}>
-                      <Text style={{ color: '#fff', fontSize: 12, fontWeight: '700' }} numberOfLines={2}>
+                      <Text style={{ color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }} numberOfLines={2}>
                         {ov.text}
                       </Text>
                     </View>

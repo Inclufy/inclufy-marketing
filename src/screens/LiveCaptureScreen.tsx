@@ -292,6 +292,9 @@ export default function LiveCaptureScreen() {
           publish_error: null,
           engagement: {
             likes: 0, comments: 0, shares: 0,
+            // Store the capture category so PostReviewScreen can apply
+            // per-category account preferences (e.g. product→page, inspiratie→personal).
+            category: captureCategory,
             ...(pendingExtras.length > 0 ? { extra_images: pendingExtras } : {}),
           },
         }));
@@ -451,7 +454,7 @@ export default function LiveCaptureScreen() {
           published_at: null,
           scheduled_at: null,
           publish_error: null,
-          engagement: { likes: 0, comments: 0, shares: 0 },
+          engagement: { likes: 0, comments: 0, shares: 0, category: captureCategory },
         }));
 
         await createPosts.mutateAsync(postRows);
