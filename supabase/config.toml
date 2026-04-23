@@ -1,0 +1,24 @@
+# Supabase project config
+# Docs: https://supabase.com/docs/guides/cli/config
+
+project_id = "InclufyMarketing"
+
+# ═══════════════════════════════════════════════════════
+# Edge Functions
+# ═══════════════════════════════════════════════════════
+
+# oauth-callback: verify_jwt must be FALSE.
+# OAuth providers (LinkedIn, Meta, TikTok) redirect the user's browser to this
+# endpoint after auth. The redirect is a top-level navigation from the
+# provider's domain — no Authorization header is (or can be) attached.
+# If verify_jwt is true, the Supabase gateway rejects the callback with
+# UNAUTHORIZED_NO_AUTH_HEADER before our code runs, and OAuth is impossible.
+[functions.oauth-callback]
+verify_jwt = false
+
+# publish-social: verify_jwt MUST stay true.
+# Requests come from the authenticated mobile app with a user JWT. The
+# function additionally asserts body.user_id matches the JWT subject to
+# prevent service-role auth bypass (see commit f7b54b4 fix).
+[functions.publish-social]
+verify_jwt = true
