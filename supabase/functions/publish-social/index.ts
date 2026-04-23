@@ -341,11 +341,33 @@ async function publishToInstagram(
  */
 async function ensureValidToken(
   db: ReturnType<typeof createClient>,
-  tokenData: { access_token: string; refresh_token?: string | null; expires_at?: string | null },
+  tokenData: { access_token: string; refresh_token?: string | null; expires_at?: string | null; created_at?: string | null; updated_at?: string | null },
   socialAccountId: string,
   channel: string,
 ): Promise<{ valid: boolean; token?: string; action?: 'reconnect'; error?: string }> {
-  // Token not yet expired (or no expiry stored) — all good
+  // Zombie token detection: expires_at is null (from oauth-callback before v22)
+  // AND the token row is older than 45 days → treat as expired (platforms typically
+  // invalidate after 60 days). This prevents silently sending a dead token to the API.
+  const now = Date.now();
+  const ZOMBIE_AGE_MS = 45 * 24 * 60 * 60 * 1000;
+  const tokenAgeRef = tokenData.updated_at || tokenData.created_at;
+  const isZombie = !tokenData.expires_at
+    && tokenAgeRef
+    && (now - new Date(tokenAgeRef).getTime() > ZOMBIE_AGE_MS);
+
+  if (isZombie) {
+    // Force reconnect flow
+    if (channel === 'facebook' || channel === 'instagram') {
+      await db.from('social_accounts').update({ status: 'expired' }).eq('id', socialAccountId);
+    }
+    return {
+      valid: false,
+      action: 'reconnect',
+      error: `${channel} token is zombie (geen expires_at, >${Math.floor(ZOMBIE_AGE_MS / (24*60*60*1000))} dagen oud). Koppel je account opnieuw in Instellingen.`,
+    };
+  }
+
+  // Token not yet expired (or no expiry stored and young enough) — all good
   if (!tokenData.expires_at || new Date(tokenData.expires_at) >= new Date()) {
     return { valid: true, token: tokenData.access_token };
   }
@@ -510,7 +532,7 @@ Deno.serve(async (req: Request) => {
       // Fetch OAuth token (check expiry)
       const { data: tokenData } = await db
         .from('oauth_tokens')
-        .select('access_token, refresh_token, expires_at')
+        .select('access_token, refresh_token, expires_at, created_at, updated_at')
         .eq('social_account_id', socialAccount.id)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -647,7 +669,7 @@ Deno.serve(async (req: Request) => {
     // 3. Fetch OAuth token (with expiry check)
     const { data: tokenData } = await db
       .from('oauth_tokens')
-      .select('access_token, refresh_token, expires_at')
+      .select('access_token, refresh_token, expires_at, created_at, updated_at')
       .eq('social_account_id', socialAccount.id)
       .order('created_at', { ascending: false })
       .limit(1)

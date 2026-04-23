@@ -160,12 +160,22 @@ export function usePublishPost() {
         const errorMsg = ctxBody
           || (typeof pubErr === 'object' && 'message' in pubErr ? (pubErr as any).message : null)
           || String(pubErr);
-        throw new Error(errorMsg || 'Publicatie mislukt — edge function fout');
+        const finalMsg = errorMsg || 'Publicatie mislukt — edge function fout';
+        // Persist error so it's visible in the DB for debugging (previously lost on throw path)
+        await supabase
+          .from('go_posts')
+          .update({ publish_error: finalMsg })
+          .eq('id', postId);
+        throw new Error(finalMsg);
       }
 
       // Edge function succeeded but returned { error: ... } in the body
       if (result && !result.success && result.error) {
         console.error('[publish-social] result error:', result);
+        await supabase
+          .from('go_posts')
+          .update({ publish_error: result.error })
+          .eq('id', postId);
         throw new Error(result.error);
       }
 
