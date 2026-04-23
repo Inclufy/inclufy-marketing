@@ -454,8 +454,59 @@ Deno.serve(async (req) => {
     // Store main personal account
     await upsertSocialAccount(db, userId, platform, profileId, profileName, profilePicture, accessToken, 'personal', undefined, tokenExpiresAt, tokenRefreshToken);
 
-    // Store Facebook Pages as separate accounts
+    // ─── LinkedIn: discover company pages the user can administer ───
+    // Requires w_organization_social + rw_organization_admin scopes,
+    // which need LinkedIn Marketing Developer Platform (LMDP) approval.
+    // Without LMDP, the ACL call returns 403 — we log & gracefully
+    // continue. After LMDP approval, add the scopes in
+    // SettingsScreen.tsx and reconnect; org rows will appear here.
     const connectedPages: Array<{id: string, name: string}> = [];
+    if (platform === 'linkedin') {
+      try {
+        const aclsUrl = 'https://api.linkedin.com/v2/organizationAcls'
+          + '?q=roleAssignee&role=ADMINISTRATOR&state=APPROVED'
+          + '&projection=(elements*(organization~(id,localizedName,logoV2(original~:playableStreams))))';
+        const aclsRes = await fetch(aclsUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (aclsRes.ok) {
+          const aclsData = await aclsRes.json();
+          const orgs = (aclsData.elements ?? []) as any[];
+          for (const el of orgs) {
+            const org = el['organization~'];
+            if (!org?.id) continue;
+            const orgId = String(org.id);
+            const orgName = org.localizedName ?? `Organization ${orgId}`;
+            let logoUrl = '';
+            try {
+              const streams = org.logoV2?.['original~']?.elements?.[0]?.identifiers;
+              logoUrl = streams?.[0]?.identifier ?? '';
+            } catch { /* logo is best-effort */ }
+            try {
+              await upsertSocialAccount(
+                db, userId, 'linkedin',
+                orgId, `${orgName} (Bedrijf)`, logoUrl,
+                accessToken, 'company', undefined, tokenExpiresAt, tokenRefreshToken,
+              );
+              connectedPages.push({ id: orgId, name: orgName });
+            } catch (e) {
+              console.error(`Failed to store LinkedIn company page ${orgName}:`, e);
+            }
+          }
+          console.log(`LinkedIn: discovered ${orgs.length} admin company pages for user ${userId}`);
+        } else {
+          const errBody = await aclsRes.text();
+          console.warn(
+            `LinkedIn organizationAcls fetch returned ${aclsRes.status} — expected until LMDP approved. `
+            + `Body: ${errBody.substring(0, 200)}`,
+          );
+        }
+      } catch (e: any) {
+        console.warn('LinkedIn organization discovery failed (graceful):', e.message);
+      }
+    }
+
+    // Store Facebook Pages as separate accounts
     for (const page of pages) {
       try {
         await upsertSocialAccount(
