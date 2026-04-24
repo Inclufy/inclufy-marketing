@@ -433,24 +433,44 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  // ── JWT authentication ──
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  // ── Internal-call escape (scheduled-publisher / system cron) ──
+  // Trusted server-side callers (like the scheduled publish worker) hit
+  // this endpoint via pg_cron and cannot produce a user JWT. They pass
+  // the service-role key as Bearer + a shared INTERNAL_CALL_SECRET.
+  // In that mode we skip the per-user JWT check but still trust body.user_id
+  // for DB scoping (service-role bypasses RLS).
+  const internalSecret = Deno.env.get('INTERNAL_CALL_SECRET') ?? '';
+  const xInternalCall = req.headers.get('x-internal-call') ?? '';
+  const authHeader = req.headers.get('Authorization') ?? '';
+  const isInternalCall = !!internalSecret
+    && xInternalCall === internalSecret
+    && authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+
+  let jwtUser: { id: string } | null = null;
+
+  if (isInternalCall) {
+    // Trusted internal caller — skip JWT check.
+    console.log('[publish-social] internal call accepted');
+  } else {
+    // ── JWT authentication (normal app calls) ──
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const jwt = authHeader.slice(7);
+    const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: `Bearer ${jwt}` } },
     });
-  }
-  const jwt = authHeader.slice(7);
-  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    global: { headers: { Authorization: `Bearer ${jwt}` } },
-  });
-  const { data: { user: jwtUser }, error: jwtErr } = await authClient.auth.getUser();
-  if (jwtErr || !jwtUser) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    const { data: { user: jwtUserData }, error: jwtErr } = await authClient.auth.getUser();
+    if (jwtErr || !jwtUserData) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    jwtUser = jwtUserData;
   }
 
   try {
@@ -459,8 +479,8 @@ Deno.serve(async (req: Request) => {
     const body = await req.json();
     const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, extra_image_urls: directExtraImageUrls, account_id: directAccountId } = body;
 
-    // Assert JWT user matches request body user_id
-    if (user_id && jwtUser.id !== user_id) {
+    // Assert JWT user matches request body user_id (skipped for internal calls)
+    if (!isInternalCall && user_id && jwtUser && jwtUser.id !== user_id) {
       return new Response(JSON.stringify({ error: 'Forbidden: user_id mismatch' }), {
         status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

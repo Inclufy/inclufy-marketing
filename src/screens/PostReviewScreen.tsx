@@ -12,6 +12,7 @@ import {
   Modal,
   StatusBar,
   Platform,
+  Linking,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -1120,7 +1121,28 @@ export default function PostReviewScreen() {
                   `Post is opgeslagen als gepubliceerd. Kopieer de tekst en plak deze handmatig op ${channelConfig[post.channel]?.label}.\n\nVoor automatisch publiceren: koppel je account via OAuth in Instellingen.`,
                 );
               } else {
-                Alert.alert('✅ Gepubliceerd', `Post is gepubliceerd op ${channelConfig[post.channel]?.label}${accountLabel ? ` als "${accountLabel}"` : ''}.`);
+                // Feature B: build live URL button for LinkedIn / Facebook when postId is returned
+                const publishedPostId: string | null | undefined = (pubResult as any)?.postId ?? null;
+                const liveUrl = (() => {
+                  if (!publishedPostId) return null;
+                  const ch = post.channel?.toLowerCase();
+                  if (ch === 'linkedin') return `https://www.linkedin.com/feed/update/urn:li:activity:${publishedPostId}/`;
+                  if (ch === 'facebook') return `https://www.facebook.com/${publishedPostId}`;
+                  return null;
+                })();
+                const platformLabel = channelConfig[post.channel]?.label ?? post.channel;
+                const successMsg = `Post is gepubliceerd op ${platformLabel}${accountLabel ? ` als "${accountLabel}"` : ''}.`;
+                if (liveUrl) {
+                  Alert.alert('✅ Gepubliceerd', successMsg, [
+                    { text: 'OK', style: 'cancel' },
+                    {
+                      text: `Bekijk op ${platformLabel}`,
+                      onPress: () => Linking.openURL(liveUrl),
+                    },
+                  ]);
+                } else {
+                  Alert.alert('✅ Gepubliceerd', successMsg);
+                }
               }
             } catch (err: any) {
               if (err?.message === 'SOCIAL_NOT_CONNECTED') {
@@ -1186,24 +1208,87 @@ export default function PostReviewScreen() {
         {
           text: t.postReview.publishAll,
           onPress: async () => {
-            try {
-              // Bake overlay into all posts before publishing
-              for (const post of draftPosts) {
+            // Feature A: iterate every post individually; one failure must not abort the rest.
+            const succeeded: EventPost[] = [];
+            const failed: Array<{ post: EventPost; error: string }> = [];
+
+            for (const post of draftPosts) {
+              try {
+                // Bake overlay (throws on hard failure; non-critical path already returns null)
                 await bakeOverlayIntoImage(post);
+                // Save any pending text edit before publishing
+                if (editingText[post.id]) {
+                  await updatePost.mutateAsync({ id: post.id, text_content: editingText[post.id] });
+                }
+                await publishPost.mutateAsync(post.id);
+                succeeded.push(post);
+              } catch (err: any) {
+                // Fetch the publish_error from DB for a richer message (may be null, use err.message fallback)
+                let errMsg: string = err?.message || 'Onbekende fout';
+                try {
+                  const { data: dbPost } = await supabase
+                    .from('go_posts')
+                    .select('publish_error')
+                    .eq('id', post.id)
+                    .single();
+                  if (dbPost?.publish_error) errMsg = dbPost.publish_error;
+                } catch { /* ignore — use errMsg already set */ }
+                failed.push({ post, error: errMsg });
               }
-              const result = await batchPublish.mutateAsync(draftPosts.map((p) => p.id));
-              if ((result as any)?.anyQueued && !(result as any)?.anyPublished) {
-                // All posts failed to publish — show connect modal
-                const firstFailed = draftPosts[0];
+            }
+
+            const total = draftPosts.length;
+            const nOk = succeeded.length;
+            const nFail = failed.length;
+
+            if (nFail === 0) {
+              // All succeeded
+              Alert.alert(t.postReview.publishAllSuccess);
+            } else if (nOk === 0) {
+              // All failed — fall back to existing connect-modal flow for the first post
+              const firstFailed = failed[0].post;
+              const accounts = await fetchAccountsForChannel(firstFailed.channel);
+              if (accounts.length === 0) {
                 setPendingPublishPost(firstFailed);
                 setPendingPublishAll(true);
                 setConnectPlatform(firstFailed.channel);
                 setShowConnectModal(true);
               } else {
-                Alert.alert(t.postReview.publishAllSuccess);
+                Alert.alert(
+                  t.common.error,
+                  `${nOk}/${total} gepubliceerd. ${nFail} mislukt.`,
+                  [
+                    { text: 'OK', style: 'cancel' },
+                    {
+                      text: 'Bekijk fouten',
+                      onPress: () => {
+                        const details = failed
+                          .map((f) => `• ${channelConfig[f.post.channel]?.label ?? f.post.channel}: ${f.error}`)
+                          .join('\n');
+                        Alert.alert('Mislukte posts', details);
+                      },
+                    },
+                  ],
+                );
               }
-            } catch {
-              Alert.alert(t.common.error, t.postReview.publishAllError);
+            } else {
+              // Partial success
+              Alert.alert(
+                `${nOk}/${total} gepubliceerd. ${nFail} mislukt.`,
+                undefined,
+                [
+                  { text: 'OK', style: 'cancel' },
+                  {
+                    text: 'Bekijk fouten',
+                    onPress: () => {
+                      const details = failed
+                        .map((f) => `• ${channelConfig[f.post.channel]?.label ?? f.post.channel}: ${f.error}`)
+                        .join('\n');
+                      Alert.alert('Mislukte posts', details);
+                    },
+                  },
+                ],
+              );
             }
           },
         },
