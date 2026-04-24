@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useAllPosts, useDeletePost, useDuplicatePost, usePublishPost } from '../hooks/useEventPosts';
+import { useAllPosts, useDeletePost, useDuplicatePost, usePublishPost, useFetchEngagement } from '../hooks/useEventPosts';
 import { useEvents } from '../hooks/useEvents';
 import type { RootStackParamList, EventPost, Channel, PostStatus } from '../types';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -55,6 +55,10 @@ export default function AllPostsScreen() {
   const deletePost = useDeletePost();
   const duplicatePost = useDuplicatePost();
   const publishPost = usePublishPost();
+  const fetchEngagement = useFetchEngagement();
+
+  // Track which post IDs are currently fetching engagement (for per-card spinner)
+  const [fetchingEngagementIds, setFetchingEngagementIds] = useState<Set<string>>(new Set());
 
   const eventMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -133,6 +137,25 @@ export default function AllPostsScreen() {
     }
   };
 
+  const handleRefreshEngagement = async (post: EventPost) => {
+    if (fetchingEngagementIds.has(post.id)) return;
+    setFetchingEngagementIds((prev) => new Set(prev).add(post.id));
+    try {
+      const result = await fetchEngagement.mutateAsync(post.id);
+      if (result?.action === 'reconnect') {
+        Alert.alert('Account vernieuwen', `Je ${post.channel} account is verlopen. Ga naar Instellingen om het opnieuw te koppelen.`);
+      }
+    } catch {
+      Alert.alert('Fout', 'Kon engagement niet ophalen. Probeer later opnieuw.');
+    } finally {
+      setFetchingEngagementIds((prev) => {
+        const next = new Set(prev);
+        next.delete(post.id);
+        return next;
+      });
+    }
+  };
+
   const renderPost = ({ item: post }: { item: EventPost }) => {
     const ch = channelConfig[post.channel];
     const eventName = post.event_id ? eventMap[post.event_id] : null;
@@ -187,6 +210,36 @@ export default function AllPostsScreen() {
               <Text style={styles.hashtagCount}>{post.hashtags.length} tags</Text>
             )}
           </View>
+
+          {/* Engagement row — only for published posts with metrics */}
+          {post.status === 'published' && (
+            <View style={styles.engagementRow}>
+              <View style={styles.engagementStat}>
+                <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
+                <Text style={styles.engagementValue}>{post.engagement?.likes ?? 0}</Text>
+              </View>
+              <View style={styles.engagementStat}>
+                <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
+                <Text style={styles.engagementValue}>{post.engagement?.comments ?? 0}</Text>
+              </View>
+              <View style={styles.engagementStat}>
+                <Ionicons name="share-social-outline" size={13} color={colors.textSecondary} />
+                <Text style={styles.engagementValue}>{post.engagement?.shares ?? 0}</Text>
+              </View>
+              <View style={{ flex: 1 }} />
+              {fetchingEngagementIds.has(post.id) ? (
+                <ActivityIndicator size="small" color={colors.textSecondary} style={styles.engagementRefresh} />
+              ) : (
+                <TouchableOpacity
+                  style={styles.engagementRefresh}
+                  onPress={() => handleRefreshEngagement(post)}
+                  accessibilityLabel="Engagement vernieuwen"
+                >
+                  <Ionicons name="refresh-outline" size={15} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           {/* Actions — icon buttons */}
           <View style={styles.actionsRow}>
@@ -446,6 +499,30 @@ const createStyles = (colors: any) => ({
     fontSize: 11,
     color: colors.primary,
     fontWeight: fontWeight.medium as any,
+  },
+  // Engagement
+  engagementRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    marginBottom: 8,
+    paddingVertical: 4,
+    paddingHorizontal: 2,
+    backgroundColor: colors.background,
+    borderRadius: 6,
+  },
+  engagementStat: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 3,
+  },
+  engagementValue: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    fontWeight: fontWeight.medium as any,
+  },
+  engagementRefresh: {
+    padding: 3,
   },
   // Actions
   actionsRow: {

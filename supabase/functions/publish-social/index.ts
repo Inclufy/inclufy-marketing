@@ -351,8 +351,119 @@ async function publishToInstagram(
   text: string,
   imageUrl?: string,
   extraImageUrls?: string[], // for carousel posts
+  igFormat: 'feed' | 'story' | 'reel' = 'feed',
+  videoUrl?: string,
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
+    // ── Story ──────────────────────────────────────────────────────────────
+    if (igFormat === 'story') {
+      const hasMedia = !!(imageUrl || videoUrl);
+      if (!hasMedia) {
+        return { success: false, error: 'Story vereist een afbeelding of video.' };
+      }
+
+      const storyBody: Record<string, string> = { media_type: 'STORIES', access_token: accessToken };
+      if (videoUrl) {
+        storyBody.video_url = videoUrl;
+      } else {
+        let publicImageUrl = imageUrl!;
+        if (imageUrl!.includes('supabase') && !imageUrl!.includes('/public/')) {
+          const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+          const pathMatch = imageUrl!.match(/\/(?:sign\/)?media\/(.+?)(\?|$)/);
+          if (pathMatch) {
+            const { data: signData } = await db.storage.from('media').createSignedUrl(pathMatch[1], 3600);
+            if (signData?.signedUrl) publicImageUrl = signData.signedUrl;
+          }
+        }
+        storyBody.image_url = publicImageUrl;
+      }
+
+      const storyCreateRes = await fetch(
+        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(storyBody),
+        },
+      );
+
+      if (!storyCreateRes.ok) {
+        const errBody = await storyCreateRes.text();
+        return { success: false, error: `Instagram Story upload error: ${errBody}` };
+      }
+
+      const { id: storyContainerId } = await storyCreateRes.json();
+
+      const storyPublishRes = await fetch(
+        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creation_id: storyContainerId, access_token: accessToken }),
+        },
+      );
+
+      if (!storyPublishRes.ok) {
+        const errBody = await storyPublishRes.text();
+        return { success: false, error: `Instagram Story publish error: ${errBody}` };
+      }
+
+      const storyData = await storyPublishRes.json();
+      return { success: true, postId: storyData.id };
+    }
+
+    // ── Reel ───────────────────────────────────────────────────────────────
+    if (igFormat === 'reel') {
+      if (!videoUrl) {
+        return {
+          success: false,
+          error: 'Reels vereisen een video. Schakel naar Feed of Story, of upload een video.',
+        };
+      }
+
+      const reelBody: Record<string, string> = {
+        media_type: 'REELS',
+        video_url: videoUrl,
+        caption: text.slice(0, 2200), // Reels support captions up to 2200 chars
+        share_to_feed: 'true',
+        access_token: accessToken,
+      };
+
+      const reelCreateRes = await fetch(
+        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(reelBody),
+        },
+      );
+
+      if (!reelCreateRes.ok) {
+        const errBody = await reelCreateRes.text();
+        return { success: false, error: `Instagram Reel upload error: ${errBody}` };
+      }
+
+      const { id: reelContainerId } = await reelCreateRes.json();
+
+      const reelPublishRes = await fetch(
+        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creation_id: reelContainerId, access_token: accessToken }),
+        },
+      );
+
+      if (!reelPublishRes.ok) {
+        const errBody = await reelPublishRes.text();
+        return { success: false, error: `Instagram Reel publish error: ${errBody}` };
+      }
+
+      const reelData = await reelPublishRes.json();
+      return { success: true, postId: reelData.id };
+    }
+
+    // ── Feed (default) ────────────────────────────────────────────────────
     if (!imageUrl) {
       return { success: false, error: 'Instagram vereist een afbeelding voor publicatie' };
     }
@@ -483,6 +594,84 @@ async function publishToInstagram(
     return { success: true, postId: data.id };
   } catch (err: any) {
     return { success: false, error: `Instagram exception: ${err.message}` };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// First-Comment Publishers
+// ═══════════════════════════════════════════════════════
+
+/**
+ * Post a first comment on a LinkedIn UGC post right after publishing.
+ * Endpoint: POST https://api.linkedin.com/v2/socialActions/urn:li:ugcPost:{postId}/comments
+ * Requires x-restli-protocol-version 2.0.0 header and the author URN used during publish.
+ */
+async function postLinkedInFirstComment(
+  accessToken: string,
+  publishedPostId: string,
+  authorUrn: string,
+  commentText: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const commentRes = await fetch(
+      `https://api.linkedin.com/v2/socialActions/urn:li:ugcPost:${publishedPostId}/comments`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-Restli-Protocol-Version': '2.0.0',
+        },
+        body: JSON.stringify({
+          actor: authorUrn,
+          object: `urn:li:ugcPost:${publishedPostId}`,
+          message: { text: commentText },
+        }),
+      },
+    );
+    if (!commentRes.ok) {
+      const errBody = await commentRes.text();
+      console.error('[LinkedIn] First-comment error:', commentRes.status, errBody);
+      return { success: false, error: `LinkedIn comment API error ${commentRes.status}: ${errBody}` };
+    }
+    console.log('[LinkedIn] First comment posted successfully on post', publishedPostId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: `LinkedIn comment exception: ${err.message}` };
+  }
+}
+
+/**
+ * Post a first comment on a Facebook post right after publishing.
+ * Endpoint: POST https://graph.facebook.com/v20.0/{postId}/comments
+ */
+async function postFacebookFirstComment(
+  accessToken: string,
+  publishedPostId: string,
+  commentText: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const commentRes = await fetch(
+      `https://graph.facebook.com/v20.0/${publishedPostId}/comments`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: commentText,
+          access_token: accessToken,
+        }),
+      },
+    );
+    if (!commentRes.ok) {
+      const errBody = await commentRes.text();
+      const safeErrBody = errBody.replace(/"access_token"\s*:\s*"[^"]*"/g, '"access_token":"[REDACTED]"');
+      console.error('[Facebook] First-comment error:', commentRes.status, safeErrBody);
+      return { success: false, error: `Facebook comment API error ${commentRes.status}: ${safeErrBody}` };
+    }
+    console.log('[Facebook] First comment posted successfully on post', publishedPostId);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: `Facebook comment exception: ${err.message}` };
   }
 }
 
@@ -635,7 +824,7 @@ Deno.serve(async (req: Request) => {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, video_url: directVideoUrl, media_type: directMediaType, extra_image_urls: directExtraImageUrls, account_id: directAccountId } = body;
+    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, video_url: directVideoUrl, media_type: directMediaType, extra_image_urls: directExtraImageUrls, account_id: directAccountId, ig_format: directIgFormat } = body;
 
     // Assert JWT user matches request body user_id (skipped for internal calls)
     if (!isInternalCall && user_id && jwtUser && jwtUser.id !== user_id) {
@@ -652,6 +841,7 @@ Deno.serve(async (req: Request) => {
       const imageUrl = directImageUrl;
       const videoUrl = directVideoUrl as string | undefined;
       const mediaType = (directMediaType as string | undefined) ?? 'photo';
+      const igFormat = (directIgFormat as 'feed' | 'story' | 'reel' | undefined) ?? 'feed';
 
       if (!channel || !text) {
         return new Response(
@@ -709,6 +899,14 @@ Deno.serve(async (req: Request) => {
         );
       }
 
+      // Fetch first_comment from go_posts row (may be null if not set)
+      const { data: postRow } = await db
+        .from('go_posts')
+        .select('first_comment')
+        .eq('id', post_id)
+        .maybeSingle();
+      const firstCommentText: string | null = (postRow as any)?.first_comment ?? null;
+
       // Fetch OAuth token (check expiry)
       const { data: tokenData } = await db
         .from('oauth_tokens')
@@ -736,16 +934,8 @@ Deno.serve(async (req: Request) => {
       }
       tokenData.access_token = tokenCheck.token!;
 
-      // Instagram: video not yet supported — give a clear error instead of silently failing
-      if (channel === 'instagram' && mediaType === 'video') {
-        return new Response(
-          JSON.stringify({ error: 'Video naar Instagram wordt nog niet ondersteund (Reels API coming soon).', action: 'not_supported', channel }),
-          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-        );
-      }
-
-      // Check Instagram requires an image
-      if (channel === 'instagram' && !imageUrl) {
+      // Instagram feed requires an image; Story/Reel have their own media checks inside publishToInstagram
+      if (channel === 'instagram' && igFormat === 'feed' && !imageUrl) {
         return new Response(
           JSON.stringify({ error: 'Instagram vereist een afbeelding. Voeg een foto toe aan je post.', action: 'add_image', channel }),
           { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -762,15 +952,91 @@ Deno.serve(async (req: Request) => {
           result = await publishToFacebook(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, videoUrl);
           break;
         case 'instagram':
-          result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, directExtraImageUrls);
+          result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, directExtraImageUrls, igFormat, videoUrl);
           break;
         default:
           result = { success: false, error: `Platform '${channel}' wordt nog niet ondersteund` };
       }
 
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ success: false, error: result.error }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
+      // ── First-comment auto-post ──────────────────────────────────────────
+      // Post a first comment on the just-published post if configured.
+      // Failures are non-fatal: we log them and report status in the response
+      // but never roll back or fail the entire publish.
+      let firstCommentStatus: 'posted' | 'skipped' | 'failed' = 'skipped';
+
+      if (firstCommentText && result.postId) {
+        let commentResult: { success: boolean; error?: string };
+
+        if (channel === 'linkedin') {
+          // Determine the author URN — must match the one used during publish.
+          // Company page: platform_account_id is the org ID or full URN.
+          // Personal: fetch sub from /userinfo (same logic as publishToLinkedIn).
+          let authorUrn: string;
+          if (socialAccount.account_type === 'company' && socialAccount.platform_account_id) {
+            authorUrn = socialAccount.platform_account_id.startsWith('urn:')
+              ? socialAccount.platform_account_id
+              : `urn:li:organization:${socialAccount.platform_account_id}`;
+          } else {
+            try {
+              const profileRes = await fetch('https://api.linkedin.com/v2/userinfo', {
+                headers: { Authorization: `Bearer ${tokenData.access_token}` },
+              });
+              const profile = profileRes.ok ? await profileRes.json() : {};
+              authorUrn = `urn:li:person:${profile.sub ?? socialAccount.platform_account_id}`;
+            } catch {
+              authorUrn = `urn:li:person:${socialAccount.platform_account_id}`;
+            }
+          }
+          commentResult = await postLinkedInFirstComment(
+            tokenData.access_token,
+            result.postId,
+            authorUrn,
+            firstCommentText,
+          );
+        } else if (channel === 'facebook') {
+          commentResult = await postFacebookFirstComment(
+            tokenData.access_token,
+            result.postId,
+            firstCommentText,
+          );
+        } else {
+          // Instagram: the Meta Graph API does not support posting comments on
+          // media published by third-party apps (including Business API clients).
+          // Attempting it returns a (200 #15) permissions error. Skip silently.
+          console.log('[publish-social] First-comment skipped for Instagram — not supported by Meta Graph API');
+          commentResult = { success: false };
+          firstCommentStatus = 'skipped';
+        }
+
+        if (channel !== 'instagram') {
+          if (commentResult.success) {
+            firstCommentStatus = 'posted';
+            // Stamp first_comment_posted_at in DB (best-effort, non-fatal)
+            try {
+              await db
+                .from('go_posts')
+                .update({ first_comment_posted_at: new Date().toISOString() })
+                .eq('id', post_id);
+            } catch (dbErr: any) {
+              console.warn('[publish-social] Could not update first_comment_posted_at:', dbErr.message);
+            }
+          } else {
+            firstCommentStatus = 'failed';
+            console.error('[publish-social] First-comment failed (non-fatal):', commentResult.error);
+          }
+        }
+      }
+
       return new Response(
-        JSON.stringify(result.success ? { success: true, published: true, postId: result.postId, channel } : { success: false, error: result.error }),
-        { status: result.success ? 200 : 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        JSON.stringify({ success: true, published: true, postId: result.postId, channel, firstComment: firstCommentStatus }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
 

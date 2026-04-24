@@ -155,6 +155,7 @@ export function usePublishPost() {
           media_type: postAny.media_type ?? 'photo',
           extra_image_urls: extraImages.length > 0 ? extraImages : undefined,
           account_id: selectedAccountId,
+          ig_format: postAny.ig_format ?? 'feed',
         },
       });
 
@@ -338,6 +339,29 @@ export function useDuplicatePost() {
         .single();
       if (error) throw error;
       return data as EventPost;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['event-posts'] });
+    },
+  });
+}
+
+export function useFetchEngagement() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (postId: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+      const { data, error } = await supabase.functions.invoke('fetch-post-engagement', {
+        body: { post_id: postId, user_id: user.id },
+      });
+      if (error) throw error;
+      return data as {
+        success: boolean;
+        engagement?: { likes: number; comments: number; shares: number; fetched_at: string };
+        action?: string;
+        error?: string;
+      };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['event-posts'] });

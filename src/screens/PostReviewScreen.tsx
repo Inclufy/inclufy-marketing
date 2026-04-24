@@ -186,6 +186,18 @@ export default function PostReviewScreen() {
   const [postLang, setPostLang] = useState<Record<string, string>>({});
   const [translating, setTranslating] = useState<string | null>(null); // postId
 
+  // ── First comment draft ───────────────────────────────────────────────────
+  // Keyed by post.id; seeded from post.first_comment on load
+  const [firstCommentDraft, setFirstCommentDraft] = useState<Record<string, string>>({});
+  const [firstCommentExpanded, setFirstCommentExpanded] = useState<Record<string, boolean>>({});
+
+  // Max character limits per platform for the first comment
+  const FIRST_COMMENT_MAX: Record<string, number> = {
+    linkedin: 1250,
+    instagram: 2200,
+    facebook: 8000,
+  };
+
   // ── Schedule ─────────────────────────────────────────────────────────────
   const [schedulingPost, setSchedulingPost] = useState<EventPost | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -256,6 +268,33 @@ export default function PostReviewScreen() {
     logoPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   }>({ text: '', textPosition: 'bottom', showLogo: false, logoType: 'brand', logoPosition: 'bottom-right' });
 
+  // ── Instagram format picker (feed / story / reel) ────────────────────
+  const [igFormatDraft, setIgFormatDraft] = useState<Record<string, 'feed' | 'story' | 'reel'>>({});
+
+  // Seed igFormatDraft from DB once posts load
+  useEffect(() => {
+    if (!posts.length) return;
+    setIgFormatDraft((prev) => {
+      const next = { ...prev };
+      for (const post of posts) {
+        if (next[post.id] === undefined) {
+          next[post.id] = ((post as any).ig_format as 'feed' | 'story' | 'reel') ?? 'feed';
+        }
+      }
+      return next;
+    });
+  }, [posts]);
+
+  const handleIgFormatChange = async (post: EventPost, value: 'feed' | 'story' | 'reel') => {
+    setIgFormatDraft((prev) => ({ ...prev, [post.id]: value }));
+    try {
+      await updatePost.mutateAsync({ id: post.id, ...(({ ig_format: value } as any)) });
+    } catch {
+      // non-critical — revert optimistic update
+      setIgFormatDraft((prev) => ({ ...prev, [post.id]: ((post as any).ig_format as 'feed' | 'story' | 'reel') ?? 'feed' }));
+    }
+  };
+
   // ── Account selection for publishing ─────────────────────────────────
   const [showAccountPicker, setShowAccountPicker] = useState(false);
   const [pendingPublishPost, setPendingPublishPost] = useState<EventPost | null>(null);
@@ -309,7 +348,7 @@ export default function PostReviewScreen() {
     } catch { return []; }
   };
 
-  // Seed overlayConfig from DB (engagement.overlay_config) once posts load
+  // Seed overlayConfig and firstCommentDraft from DB once posts load
   useEffect(() => {
     if (!posts.length) return;
     setOverlayConfig((prev) => {
@@ -318,6 +357,16 @@ export default function PostReviewScreen() {
         if (!next[post.id]) {
           const saved = (post.engagement as any)?.overlay_config;
           if (saved?.text || saved?.showLogo) next[post.id] = saved;
+        }
+      }
+      return next;
+    });
+    setFirstCommentDraft((prev) => {
+      const next = { ...prev };
+      for (const post of posts) {
+        // Only seed if we don't already have an in-progress draft for this post
+        if (!(post.id in next)) {
+          next[post.id] = (post as any).first_comment ?? '';
         }
       }
       return next;
@@ -1131,7 +1180,14 @@ export default function PostReviewScreen() {
                   return null;
                 })();
                 const platformLabel = channelConfig[post.channel]?.label ?? post.channel;
-                const successMsg = `Post is gepubliceerd op ${platformLabel}${accountLabel ? ` als "${accountLabel}"` : ''}.`;
+                // Build success message, appending first-comment status if relevant
+                const firstCommentStatus: string | undefined = (pubResult as any)?.firstComment;
+                let successMsg = `Post is gepubliceerd op ${platformLabel}${accountLabel ? ` als "${accountLabel}"` : ''}.`;
+                if (firstCommentStatus === 'posted') {
+                  successMsg += '\n\n\uD83D\uDCAC Eerste reactie geplaatst.';
+                } else if (firstCommentStatus === 'failed') {
+                  successMsg += '\n\n\u26A0\uFE0F Eerste reactie mislukt \u2014 plaats handmatig.';
+                }
                 if (liveUrl) {
                   Alert.alert('✅ Gepubliceerd', successMsg, [
                     { text: 'OK', style: 'cancel' },
@@ -1833,12 +1889,180 @@ export default function PostReviewScreen() {
                 );
               })()}
 
+              {/* ── Instagram format picker (feed / story / reel) ────── */}
+              {post.channel === 'instagram' && (() => {
+                const igFmt = igFormatDraft[post.id] ?? 'feed';
+                const IG_FORMATS: Array<{ value: 'feed' | 'story' | 'reel'; label: string; icon: string }> = [
+                  { value: 'feed', label: 'Feed', icon: 'grid-outline' },
+                  { value: 'story', label: 'Story', icon: 'phone-portrait-outline' },
+                  { value: 'reel', label: 'Reel', icon: 'film-outline' },
+                ];
+                const hint = igFmt === 'story'
+                  ? 'Story: geen caption, alleen afbeelding of video'
+                  : igFmt === 'reel'
+                  ? 'Reel: alleen video (15-90s)'
+                  : null;
+                return (
+                  <View style={{ gap: 6 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="logo-instagram" size={14} color={config?.color || '#E4405F'} />
+                      <Text style={{ fontSize: 11, color: colors.textSecondary, fontWeight: fontWeight.medium }}>
+                        Formaat
+                      </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', gap: 6 }}>
+                      {IG_FORMATS.map(({ value, label, icon }) => {
+                        const isActive = igFmt === value;
+                        return (
+                          <TouchableOpacity
+                            key={value}
+                            onPress={() => handleIgFormatChange(post, value)}
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: 4,
+                              paddingVertical: 7,
+                              borderRadius: borderRadius.md,
+                              borderWidth: 1.5,
+                              borderColor: isActive ? (config?.color || '#E4405F') : colors.border,
+                              backgroundColor: isActive ? (config?.color || '#E4405F') + '18' : 'transparent',
+                            }}
+                          >
+                            <Ionicons
+                              name={icon as any}
+                              size={13}
+                              color={isActive ? (config?.color || '#E4405F') : colors.textSecondary}
+                            />
+                            <Text style={{
+                              fontSize: 11,
+                              fontWeight: isActive ? fontWeight.bold : fontWeight.medium,
+                              color: isActive ? (config?.color || '#E4405F') : colors.textSecondary,
+                            }}>
+                              {label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                    {hint && (
+                      <View style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 5,
+                        backgroundColor: (config?.color || '#E4405F') + '12',
+                        borderRadius: borderRadius.sm,
+                        paddingHorizontal: 10, paddingVertical: 6,
+                      }}>
+                        <Ionicons name="information-circle-outline" size={13} color={config?.color || '#E4405F'} />
+                        <Text style={{ fontSize: 11, color: config?.color || '#E4405F', fontWeight: fontWeight.medium }}>
+                          {hint}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
               {/* Hashtags — strip any leading # already present before adding one */}
               {(post.hashtags?.length ?? 0) > 0 && (
                 <Text style={styles.hashtags}>
                   {(post.hashtags || []).map((h) => `#${h.replace(/^#+/, '')}`).join(' ')}
                 </Text>
               )}
+
+              {/* ── Eerste reactie (first comment) ───────────────────── */}
+              {(() => {
+                const isExpanded = !!firstCommentExpanded[post.id];
+                const draft = firstCommentDraft[post.id] ?? '';
+                const maxLen = FIRST_COMMENT_MAX[post.channel] ?? 1250;
+                const charCount = draft.length;
+                const isOverLimit = charCount > maxLen;
+                const hasComment = draft.trim().length > 0;
+                return (
+                  <View>
+                    {/* Toggle button */}
+                    <TouchableOpacity
+                      onPress={() =>
+                        setFirstCommentExpanded((prev) => ({ ...prev, [post.id]: !isExpanded }))
+                      }
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 8,
+                        paddingHorizontal: 2,
+                      }}
+                    >
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+                        size={14}
+                        color={hasComment ? colors.success : colors.textSecondary}
+                      />
+                      <Text style={{
+                        fontSize: fontSize.sm,
+                        color: hasComment ? colors.success : colors.textSecondary,
+                        fontWeight: hasComment ? fontWeight.semibold : fontWeight.medium,
+                      }}>
+                        {`\uD83D\uDCAC Eerste reactie toevoegen (optioneel)`}
+                      </Text>
+                      {hasComment && !isExpanded && (
+                        <View style={{
+                          width: 8, height: 8, borderRadius: 4,
+                          backgroundColor: colors.success, marginLeft: 2,
+                        }} />
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Expanded editor */}
+                    {isExpanded && (
+                      <View style={{
+                        borderWidth: 1,
+                        borderColor: isOverLimit ? colors.error : colors.border,
+                        borderRadius: borderRadius.md,
+                        backgroundColor: colors.surface,
+                        padding: spacing.md,
+                        gap: 6,
+                      }}>
+                        <TextInput
+                          style={{
+                            fontSize: fontSize.sm,
+                            color: colors.text,
+                            minHeight: 80,
+                            textAlignVertical: 'top',
+                          }}
+                          value={draft}
+                          onChangeText={(val) =>
+                            setFirstCommentDraft((prev) => ({ ...prev, [post.id]: val }))
+                          }
+                          onBlur={async () => {
+                            const value = (firstCommentDraft[post.id] ?? '').trim();
+                            // Save to DB (accepts null to clear the field)
+                            try {
+                              await updatePost.mutateAsync({
+                                id: post.id,
+                                first_comment: value || null,
+                              } as any);
+                            } catch {
+                              // Non-fatal — draft stays in local state
+                            }
+                          }}
+                          multiline
+                          placeholder="Bijv. hashtags of een CTA die je uit de hoofdtekst wilt houden…"
+                          placeholderTextColor={colors.textTertiary}
+                        />
+                        {/* Character counter */}
+                        <Text style={{
+                          fontSize: 11,
+                          color: isOverLimit ? colors.error : colors.textTertiary,
+                          alignSelf: 'flex-end',
+                        }}>
+                          {charCount}/{maxLen}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
 
               {/* ── 2-column utility buttons ────────────────────────── */}
               <View style={{ flexDirection: 'row', gap: 8 }}>
