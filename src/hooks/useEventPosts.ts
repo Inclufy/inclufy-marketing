@@ -140,6 +140,10 @@ export function usePublishPost() {
       const selectedAccountId = (post.engagement as any)?.published_account?.id || finalAccount.id;
       // Include extra images for multi-image posts (LinkedIn, Facebook carousel)
       const extraImages: string[] = (post.engagement as any)?.extra_images || [];
+      // Pass video_url and media_type so the edge function can route video posts correctly.
+      // post.video_url / post.media_type come from the new DB columns; cast to any because
+      // the EventPost type doesn't yet include these fields (added by migration 20260424020000).
+      const postAny = post as any;
       const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
         body: {
           post_id: postId,
@@ -147,6 +151,8 @@ export function usePublishPost() {
           channel: post.channel,
           text: postText,
           image_url: post.branded_image_url || undefined,
+          video_url: postAny.video_url ?? undefined,
+          media_type: postAny.media_type ?? 'photo',
           extra_image_urls: extraImages.length > 0 ? extraImages : undefined,
           account_id: selectedAccountId,
         },

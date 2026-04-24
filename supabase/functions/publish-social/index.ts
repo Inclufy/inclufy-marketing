@@ -26,6 +26,8 @@ async function publishToLinkedIn(
   imageUrl?: string,
   accountType?: string, // 'personal' | 'company'
   extraImageUrls?: string[], // additional images for multi-image posts
+  videoUrl?: string, // video URL for video posts
+  mediaType?: string, // 'photo' | 'video' | 'audio'
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
     let authorUrn: string;
@@ -107,21 +109,149 @@ async function publishToLinkedIn(
       }
     }
 
-    // Upload all images (primary + extras) for multi-image LinkedIn posts
-    const allImageUrls = [imageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
-    if (allImageUrls.length > 0) {
-      const uploadedAssets: string[] = [];
-      for (const url of allImageUrls) {
-        const assetUrn = await uploadImageToLinkedIn(url);
-        if (assetUrn) uploadedAssets.push(assetUrn);
+    // Helper: upload a video to LinkedIn and return its asset URN.
+    // Steps: (1) HEAD the video to get Content-Length, (2) registerUpload with fileSizeBytes,
+    // (3) PUT the video bytes to LinkedIn's upload URL, (4) poll until asset is AVAILABLE.
+    // Falls back gracefully — returns null on any failure so caller can post text-only.
+    async function uploadVideoToLinkedIn(url: string): Promise<string | null> {
+      try {
+        // Step 1 — determine file size via HEAD request (LinkedIn requires fileSizeBytes).
+        // If HEAD is not supported by the storage provider we fall back to fetching the body
+        // and using the blob size, which works but is slower for large files.
+        let fileSizeBytes = 0;
+        try {
+          const headRes = await fetch(url, { method: 'HEAD' });
+          const cl = headRes.headers.get('content-length');
+          if (cl) fileSizeBytes = parseInt(cl, 10);
+        } catch {
+          // HEAD not supported — will fall back below after fetching blob
+        }
+
+        // Step 2 — register upload with LinkedIn
+        const registerBody: any = {
+          registerUploadRequest: {
+            recipes: ['urn:li:digitalmediaRecipe:feedshare-video'],
+            owner: authorUrn,
+            serviceRelationships: [{ relationshipType: 'OWNER', identifier: 'urn:li:userGeneratedContent' }],
+          },
+        };
+        // fileSizeBytes is optional in the LinkedIn API but improves upload reliability
+        if (fileSizeBytes > 0) {
+          registerBody.registerUploadRequest.supportedUploadMechanism = ['SYNCHRONOUS_UPLOAD'];
+          registerBody.registerUploadRequest.fileSizeBytes = fileSizeBytes;
+        }
+
+        const registerRes = await fetch('https://api.linkedin.com/v2/assets?action=registerUpload', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(registerBody),
+        });
+        if (!registerRes.ok) {
+          console.error('[LinkedIn] Video register upload error:', registerRes.status, await registerRes.text());
+          return null;
+        }
+        const registerData = await registerRes.json();
+        const uploadUrl = registerData.value?.uploadMechanism?.['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest']?.uploadUrl;
+        const assetUrn: string | undefined = registerData.value?.asset;
+        if (!uploadUrl || !assetUrn) {
+          console.error('[LinkedIn] Video register upload: missing uploadUrl or assetUrn');
+          return null;
+        }
+
+        // Step 3 — fetch video bytes and PUT to LinkedIn
+        const videoRes = await fetch(url);
+        if (!videoRes.ok) {
+          console.error('[LinkedIn] Could not fetch video from storage:', videoRes.status);
+          return null;
+        }
+        const videoBlob = await videoRes.blob();
+        const videoBuffer = await videoBlob.arrayBuffer();
+        // Use content-type from source; default to mp4 if unknown
+        const contentType = videoBlob.type && videoBlob.type !== 'application/octet-stream'
+          ? videoBlob.type
+          : 'video/mp4';
+
+        const putRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': contentType,
+          },
+          body: videoBuffer,
+        });
+        if (!putRes.ok) {
+          console.error('[LinkedIn] Video PUT upload error:', putRes.status, await putRes.text());
+          return null;
+        }
+        console.log('[LinkedIn] Video PUT complete, asset:', assetUrn);
+
+        // Step 4 — poll until asset status is AVAILABLE (max 90s, 5s interval)
+        const MAX_POLLS = 18; // 18 × 5s = 90s
+        for (let i = 0; i < MAX_POLLS; i++) {
+          await new Promise((r) => setTimeout(r, 5000));
+          try {
+            const assetId = assetUrn.split(':').pop();
+            const pollRes = await fetch(`https://api.linkedin.com/v2/assets/${assetId}`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            if (pollRes.ok) {
+              const assetData = await pollRes.json();
+              const status = assetData.recipes?.[0]?.status ?? assetData.status;
+              console.log(`[LinkedIn] Video asset poll ${i + 1}/${MAX_POLLS}: status=${status}`);
+              if (status === 'AVAILABLE') {
+                return assetUrn;
+              }
+              if (status === 'PROCESSING_FAILED') {
+                console.error('[LinkedIn] Video processing failed on LinkedIn side');
+                return null;
+              }
+            }
+          } catch (pollErr: any) {
+            console.warn('[LinkedIn] Poll error (non-fatal):', pollErr.message);
+          }
+        }
+        // Polling timed out — LinkedIn sometimes still accepts the post with a not-yet-AVAILABLE
+        // asset (it finishes processing asynchronously). Log a warning and continue.
+        console.warn('[LinkedIn] Video asset polling timed out after 90s — proceeding with asset:', assetUrn);
+        return assetUrn;
+      } catch (err: any) {
+        console.error('[LinkedIn] uploadVideoToLinkedIn exception:', err.message);
+        return null;
       }
-      if (uploadedAssets.length > 0) {
-        const category = uploadedAssets.length > 1 ? 'IMAGE' : 'IMAGE'; // LinkedIn uses IMAGE for both single and multi
-        postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = category;
-        postBody.specificContent['com.linkedin.ugc.ShareContent'].media = uploadedAssets.map(urn => ({
-          status: 'READY',
-          media: urn,
-        }));
+    }
+
+    // ── Video post branch ──
+    if (mediaType === 'video' && videoUrl) {
+      const videoAssetUrn = await uploadVideoToLinkedIn(videoUrl);
+      if (videoAssetUrn) {
+        postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'VIDEO';
+        postBody.specificContent['com.linkedin.ugc.ShareContent'].media = [
+          { status: 'READY', media: videoAssetUrn },
+        ];
+      } else {
+        // Video upload failed — fall back to text-only with a warning
+        console.warn('[LinkedIn] Video upload failed, posting as text-only');
+      }
+    } else {
+      // ── Image post branch ──
+      // Upload all images (primary + extras) for multi-image LinkedIn posts
+      const allImageUrls = [imageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+      if (allImageUrls.length > 0) {
+        const uploadedAssets: string[] = [];
+        for (const url of allImageUrls) {
+          const assetUrn = await uploadImageToLinkedIn(url);
+          if (assetUrn) uploadedAssets.push(assetUrn);
+        }
+        if (uploadedAssets.length > 0) {
+          postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'IMAGE';
+          postBody.specificContent['com.linkedin.ugc.ShareContent'].media = uploadedAssets.map(urn => ({
+            status: 'READY',
+            media: urn,
+          }));
+        }
       }
     }
 
@@ -153,8 +283,36 @@ async function publishToFacebook(
   pageId: string,
   text: string,
   imageUrl?: string,
+  videoUrl?: string, // video URL for video posts
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
   try {
+    // ── Video post branch ──
+    // Facebook /videos endpoint accepts a publicly accessible file_url and publishes it
+    // as a native video post. The response includes { id } which is the video object ID.
+    if (videoUrl) {
+      const videoRes = await fetch(`https://graph.facebook.com/v20.0/${pageId}/videos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_url: videoUrl,
+          description: text,
+          access_token: accessToken,
+        }),
+      });
+
+      if (!videoRes.ok) {
+        const errBody = await videoRes.text();
+        const safeErrBody = errBody.replace(/"access_token"\s*:\s*"[^"]*"/g, '"access_token":"[REDACTED]"');
+        console.error('[Facebook] Video publish error:', videoRes.status, safeErrBody);
+        return { success: false, error: `Facebook video API error ${videoRes.status}: ${safeErrBody}` };
+      }
+
+      const videoData = await videoRes.json();
+      console.log('[Facebook] Video published, id:', videoData.id);
+      return { success: true, postId: videoData.id };
+    }
+
+    // ── Photo / text post branch (unchanged) ──
     let url = `https://graph.facebook.com/v20.0/${pageId}/feed`;
     const params: any = {
       message: text,
@@ -477,7 +635,7 @@ Deno.serve(async (req: Request) => {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, extra_image_urls: directExtraImageUrls, account_id: directAccountId } = body;
+    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, video_url: directVideoUrl, media_type: directMediaType, extra_image_urls: directExtraImageUrls, account_id: directAccountId } = body;
 
     // Assert JWT user matches request body user_id (skipped for internal calls)
     if (!isInternalCall && user_id && jwtUser && jwtUser.id !== user_id) {
@@ -492,6 +650,8 @@ Deno.serve(async (req: Request) => {
       const channel = directChannel;
       const text = directText;
       const imageUrl = directImageUrl;
+      const videoUrl = directVideoUrl as string | undefined;
+      const mediaType = (directMediaType as string | undefined) ?? 'photo';
 
       if (!channel || !text) {
         return new Response(
@@ -576,6 +736,14 @@ Deno.serve(async (req: Request) => {
       }
       tokenData.access_token = tokenCheck.token!;
 
+      // Instagram: video not yet supported — give a clear error instead of silently failing
+      if (channel === 'instagram' && mediaType === 'video') {
+        return new Response(
+          JSON.stringify({ error: 'Video naar Instagram wordt nog niet ondersteund (Reels API coming soon).', action: 'not_supported', channel }),
+          { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+
       // Check Instagram requires an image
       if (channel === 'instagram' && !imageUrl) {
         return new Response(
@@ -588,10 +756,10 @@ Deno.serve(async (req: Request) => {
       let result: { success: boolean; postId?: string; error?: string };
       switch (channel) {
         case 'linkedin':
-          result = await publishToLinkedIn(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, socialAccount.account_type === 'company' ? 'company' : 'personal', directExtraImageUrls);
+          result = await publishToLinkedIn(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, socialAccount.account_type === 'company' ? 'company' : 'personal', directExtraImageUrls, videoUrl, mediaType);
           break;
         case 'facebook':
-          result = await publishToFacebook(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl);
+          result = await publishToFacebook(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, videoUrl);
           break;
         case 'instagram':
           result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, directExtraImageUrls);
