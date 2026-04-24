@@ -135,7 +135,17 @@ export function usePublishPost() {
       }
 
       // OAuth account — call publish-social edge function
-      const postText = post.text_content + (post.hashtags?.length > 0 ? '\n\n' + post.hashtags.join(' ') : '');
+      let postText = post.text_content + (post.hashtags?.length > 0 ? '\n\n' + post.hashtags.join(' ') : '');
+
+      // Append WhatsApp CTA if enabled
+      const postAny = post as any;
+      if (postAny.whatsapp_cta_enabled && postAny.whatsapp_cta_phone) {
+        const phone = String(postAny.whatsapp_cta_phone).replace(/^\+/, '').replace(/\D/g, '');
+        const msg = encodeURIComponent(postAny.whatsapp_cta_message || 'Hi, ik zag je post');
+        const ctaLine = `\n\n💬 Chat met ons: https://wa.me/${phone}?text=${msg}`;
+        postText = postText + ctaLine;
+      }
+
       // Get selected account ID from engagement metadata (set by PostReviewScreen doPublish)
       const selectedAccountId = (post.engagement as any)?.published_account?.id || finalAccount.id;
       // Include extra images for multi-image posts (LinkedIn, Facebook carousel)
@@ -143,7 +153,6 @@ export function usePublishPost() {
       // Pass video_url and media_type so the edge function can route video posts correctly.
       // post.video_url / post.media_type come from the new DB columns; cast to any because
       // the EventPost type doesn't yet include these fields (added by migration 20260424020000).
-      const postAny = post as any;
       const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
         body: {
           post_id: postId,

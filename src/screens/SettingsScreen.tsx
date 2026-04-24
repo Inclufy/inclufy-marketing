@@ -1142,6 +1142,18 @@ export default function SettingsScreen() {
           </View>
         </Modal>
 
+        {/* ── WhatsApp Business ─────────────────────────────────────── */}
+        <Text style={styles.sectionLabel}>WhatsApp Business</Text>
+        <View style={styles.card}>
+          <SettingsRow
+            icon="logo-whatsapp"
+            iconColor="#25D366"
+            label="WhatsApp Business API"
+            value="Templates, ontvangers & verzendingen"
+            onPress={() => navigation.navigate('WhatsAppSettings' as any)}
+          />
+        </View>
+
         {/* ── Demo ──────────────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>{t.settings.demo ?? 'DEMO'}</Text>
         <View style={styles.card}>

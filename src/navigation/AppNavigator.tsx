@@ -68,6 +68,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import AllPostsScreen from '../screens/AllPostsScreen';
 import MultiAgentScreen from '../screens/MultiAgentScreen';
 import IntegrationsScreen from '../screens/IntegrationsScreen';
+import WhatsAppSettingsScreen from '../screens/WhatsAppSettingsScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -340,6 +341,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
 
           {/* ─── Settings & Notifications ─── */}
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t.screenTitles.settings }} />
+          <Stack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: 'WhatsApp Business' }} />
           <Stack.Screen name="BrandKit" component={BrandKitScreen} options={{ title: t.screenTitles.brandKit ?? 'Brand Kit' }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: t.screenTitles.notifications }} />
           <Stack.Screen name="DemoEnvironment" component={DemoEnvironmentScreen} options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }} />

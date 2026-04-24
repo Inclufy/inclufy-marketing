@@ -32,6 +32,7 @@ const CHANNEL_KEYS: { key: Channel; label: string; lightColor: string; icon: str
   { key: 'linkedin', label: 'LinkedIn', lightColor: '#0077B5', icon: 'logo-linkedin' },
   { key: 'instagram', label: 'Instagram', lightColor: '#E4405F', icon: 'logo-instagram' },
   { key: 'facebook', label: 'Facebook', lightColor: '#1877F2', icon: 'logo-facebook' },
+  { key: 'whatsapp', label: 'WhatsApp', lightColor: '#25D366', icon: 'logo-whatsapp' },
 ];
 
 const GOAL_PRESETS = [

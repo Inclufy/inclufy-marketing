@@ -45,6 +45,7 @@ const channelConfig: Record<Channel, { label: string; color: string; icon: strin
   x: { label: 'X', color: '#000000', icon: 'logo-twitter' },
   facebook: { label: 'Facebook', color: '#1877F2', icon: 'logo-facebook' },
   tiktok: { label: 'TikTok', color: '#000000', icon: 'logo-tiktok' },
+  whatsapp: { label: 'WhatsApp', color: '#25D366', icon: 'logo-whatsapp' },
 };
 
 export default function PostReviewScreen() {
@@ -198,6 +199,18 @@ export default function PostReviewScreen() {
     facebook: 8000,
   };
 
+  // ── WhatsApp CTA ─────────────────────────────────────────────────────────
+  // Keyed by post.id; seeded from post.whatsapp_cta_* fields on load
+  const [whatsappCtaExpanded, setWhatsappCtaExpanded] = useState<Record<string, boolean>>({});
+  const [whatsappCtaEnabled, setWhatsappCtaEnabled] = useState<Record<string, boolean>>({});
+  const [whatsappCtaPhone, setWhatsappCtaPhone] = useState<Record<string, string>>({});
+  const [whatsappCtaMessage, setWhatsappCtaMessage] = useState<Record<string, string>>({});
+
+  // Helper function to validate E164 phone format
+  const isValidE164 = (phone: string): boolean => {
+    return /^\+\d{7,15}$/.test(phone.trim());
+  };
+
   // ── Schedule ─────────────────────────────────────────────────────────────
   const [schedulingPost, setSchedulingPost] = useState<EventPost | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
@@ -348,7 +361,7 @@ export default function PostReviewScreen() {
     } catch { return []; }
   };
 
-  // Seed overlayConfig and firstCommentDraft from DB once posts load
+  // Seed overlayConfig, firstCommentDraft, and whatsappCta from DB once posts load
   useEffect(() => {
     if (!posts.length) return;
     setOverlayConfig((prev) => {
@@ -367,6 +380,34 @@ export default function PostReviewScreen() {
         // Only seed if we don't already have an in-progress draft for this post
         if (!(post.id in next)) {
           next[post.id] = (post as any).first_comment ?? '';
+        }
+      }
+      return next;
+    });
+    // Seed WhatsApp CTA fields
+    setWhatsappCtaEnabled((prev) => {
+      const next = { ...prev };
+      for (const post of posts) {
+        if (!(post.id in next)) {
+          next[post.id] = (post as any).whatsapp_cta_enabled ?? false;
+        }
+      }
+      return next;
+    });
+    setWhatsappCtaPhone((prev) => {
+      const next = { ...prev };
+      for (const post of posts) {
+        if (!(post.id in next)) {
+          next[post.id] = (post as any).whatsapp_cta_phone ?? '';
+        }
+      }
+      return next;
+    });
+    setWhatsappCtaMessage((prev) => {
+      const next = { ...prev };
+      for (const post of posts) {
+        if (!(post.id in next)) {
+          next[post.id] = (post as any).whatsapp_cta_message ?? 'Hi, ik zag je post';
         }
       }
       return next;
@@ -1165,10 +1206,28 @@ export default function PostReviewScreen() {
               }
               const pubResult = await publishPost.mutateAsync(post.id);
               if ((pubResult as any)?.manual) {
-                Alert.alert(
-                  '📋 Klaar om te posten',
-                  `Post is opgeslagen als gepubliceerd. Kopieer de tekst en plak deze handmatig op ${channelConfig[post.channel]?.label}.\n\nVoor automatisch publiceren: koppel je account via OAuth in Instellingen.`,
-                );
+                const manualMsg = `Post is opgeslagen als gepubliceerd. Kopieer de tekst en plak deze handmatig op ${channelConfig[post.channel]?.label}.\n\nVoor automatisch publiceren: koppel je account via OAuth in Instellingen.`;
+                if (post.channel === 'whatsapp') {
+                  const postText = post.text_content + ((post.hashtags?.length ?? 0) > 0 ? '\n\n' + post.hashtags.join(' ') : '');
+                  const waUrl = `whatsapp://send?text=${encodeURIComponent(postText)}`;
+                  const waWebUrl = `https://wa.me/?text=${encodeURIComponent(postText)}`;
+                  Alert.alert(
+                    '📋 Klaar om te posten',
+                    manualMsg,
+                    [
+                      { text: 'OK', style: 'cancel' },
+                      {
+                        text: 'Open WhatsApp',
+                        onPress: () =>
+                          Linking.canOpenURL(waUrl)
+                            .then((supported) => Linking.openURL(supported ? waUrl : waWebUrl))
+                            .catch(() => Linking.openURL(waWebUrl)),
+                      },
+                    ],
+                  );
+                } else {
+                  Alert.alert('📋 Klaar om te posten', manualMsg);
+                }
               } else {
                 // Feature B: build live URL button for LinkedIn / Facebook when postId is returned
                 const publishedPostId: string | null | undefined = (pubResult as any)?.postId ?? null;
@@ -2058,6 +2117,243 @@ export default function PostReviewScreen() {
                         }}>
                           {charCount}/{maxLen}
                         </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
+
+              {/* ── WhatsApp CTA ────────────────────────────────────── */}
+              {(() => {
+                const isExpanded = !!whatsappCtaExpanded[post.id];
+                const isEnabled = whatsappCtaEnabled[post.id] ?? false;
+                const phone = whatsappCtaPhone[post.id] ?? '';
+                const message = whatsappCtaMessage[post.id] ?? 'Hi, ik zag je post';
+                const isPhoneValid = isEnabled && phone.trim() && isValidE164(phone);
+                const waLink = isPhoneValid
+                  ? `https://wa.me/${phone.replace(/^\+/, '').replace(/\D/g, '')}?text=${encodeURIComponent(message)}`
+                  : null;
+
+                return (
+                  <View>
+                    {/* Toggle button */}
+                    <TouchableOpacity
+                      onPress={() =>
+                        setWhatsappCtaExpanded((prev) => ({ ...prev, [post.id]: !isExpanded }))
+                      }
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingVertical: 8,
+                        paddingHorizontal: 2,
+                      }}
+                    >
+                      <Ionicons
+                        name={isExpanded ? 'chevron-up-outline' : 'chevron-down-outline'}
+                        size={14}
+                        color={isEnabled ? colors.success : colors.textSecondary}
+                      />
+                      <Text style={{
+                        fontSize: fontSize.sm,
+                        color: isEnabled ? colors.success : colors.textSecondary,
+                        fontWeight: isEnabled ? fontWeight.semibold : fontWeight.medium,
+                      }}>
+                        {`💬 WhatsApp CTA toevoegen`}
+                      </Text>
+                      {isEnabled && !isExpanded && (
+                        <View style={{
+                          width: 8, height: 8, borderRadius: 4,
+                          backgroundColor: colors.success, marginLeft: 2,
+                        }} />
+                      )}
+                    </TouchableOpacity>
+
+                    {/* Expanded editor */}
+                    {isExpanded && (
+                      <View style={{
+                        borderWidth: 1,
+                        borderColor: !isPhoneValid && isEnabled ? colors.error : colors.border,
+                        borderRadius: borderRadius.md,
+                        backgroundColor: colors.surface,
+                        padding: spacing.md,
+                        gap: 12,
+                      }}>
+                        {/* Toggle enable/disable */}
+                        <TouchableOpacity
+                          onPress={() => {
+                            const newEnabled = !isEnabled;
+                            setWhatsappCtaEnabled((prev) => ({ ...prev, [post.id]: newEnabled }));
+                          }}
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <Text style={{
+                            fontSize: fontSize.sm,
+                            color: colors.text,
+                            fontWeight: fontWeight.medium,
+                          }}>
+                            CTA inschakelen
+                          </Text>
+                          <View style={{
+                            width: 50,
+                            height: 28,
+                            borderRadius: 14,
+                            backgroundColor: isEnabled ? colors.success + '30' : colors.textTertiary + '20',
+                            borderWidth: 1,
+                            borderColor: isEnabled ? colors.success : colors.border,
+                            justifyContent: 'center',
+                            paddingHorizontal: 2,
+                          }}>
+                            <View
+                              style={{
+                                width: 24,
+                                height: 24,
+                                borderRadius: 12,
+                                backgroundColor: isEnabled ? colors.success : colors.textTertiary,
+                                alignSelf: isEnabled ? 'flex-end' : 'flex-start',
+                              }}
+                            />
+                          </View>
+                        </TouchableOpacity>
+
+                        {/* Phone and message fields (visible only when enabled) */}
+                        {isEnabled && (
+                          <>
+                            {/* Phone number input */}
+                            <View style={{ gap: 4 }}>
+                              <Text style={{
+                                fontSize: fontSize.xs,
+                                color: colors.textSecondary,
+                                fontWeight: fontWeight.semibold,
+                              }}>
+                                Telefoonnummer (E164 formaat)
+                              </Text>
+                              <TextInput
+                                style={{
+                                  fontSize: fontSize.sm,
+                                  color: colors.text,
+                                  borderWidth: 1,
+                                  borderColor: !isPhoneValid && phone.trim() ? colors.error : colors.border,
+                                  borderRadius: borderRadius.sm,
+                                  paddingHorizontal: spacing.sm,
+                                  paddingVertical: spacing.xs,
+                                  backgroundColor: colors.surface,
+                                }}
+                                value={phone}
+                                onChangeText={(val) =>
+                                  setWhatsappCtaPhone((prev) => ({ ...prev, [post.id]: val }))
+                                }
+                                placeholder="+31612345678"
+                                placeholderTextColor={colors.textTertiary}
+                                keyboardType="phone-pad"
+                              />
+                              {phone.trim() && !isValidE164(phone) && (
+                                <Text style={{
+                                  fontSize: 11,
+                                  color: colors.error,
+                                }}>
+                                  Ongeldig format. Gebruik +1234567890 of +31612345678
+                                </Text>
+                              )}
+                            </View>
+
+                            {/* Prefill message input */}
+                            <View style={{ gap: 4 }}>
+                              <Text style={{
+                                fontSize: fontSize.xs,
+                                color: colors.textSecondary,
+                                fontWeight: fontWeight.semibold,
+                              }}>
+                                Voorgevulde bericht (optioneel)
+                              </Text>
+                              <TextInput
+                                style={{
+                                  fontSize: fontSize.sm,
+                                  color: colors.text,
+                                  borderWidth: 1,
+                                  borderColor: colors.border,
+                                  borderRadius: borderRadius.sm,
+                                  paddingHorizontal: spacing.sm,
+                                  paddingVertical: spacing.xs,
+                                  backgroundColor: colors.surface,
+                                  minHeight: 60,
+                                  textAlignVertical: 'top',
+                                }}
+                                value={message}
+                                onChangeText={(val) =>
+                                  setWhatsappCtaMessage((prev) => ({ ...prev, [post.id]: val }))
+                                }
+                                placeholder="Bijv. Hi, ik zag je post op LinkedIn"
+                                placeholderTextColor={colors.textTertiary}
+                                multiline
+                              />
+                            </View>
+
+                            {/* Preview WhatsApp link */}
+                            {waLink && (
+                              <View style={{
+                                backgroundColor: colors.success + '10',
+                                borderRadius: borderRadius.sm,
+                                padding: spacing.sm,
+                                borderLeftWidth: 3,
+                                borderLeftColor: colors.success,
+                              }}>
+                                <Text style={{
+                                  fontSize: 10,
+                                  color: colors.textSecondary,
+                                  marginBottom: 4,
+                                }}>
+                                  Preview link:
+                                </Text>
+                                <Text style={{
+                                  fontSize: 11,
+                                  color: colors.info,
+                                  fontFamily: 'Courier New',
+                                  fontWeight: fontWeight.medium,
+                                }}>
+                                  {waLink}
+                                </Text>
+                              </View>
+                            )}
+
+                            {/* Save button */}
+                            <TouchableOpacity
+                              style={{
+                                backgroundColor: colors.primary,
+                                borderRadius: borderRadius.sm,
+                                paddingVertical: 8,
+                                alignItems: 'center',
+                                opacity: isPhoneValid ? 1 : 0.5,
+                              }}
+                              onPress={async () => {
+                                try {
+                                  await updatePost.mutateAsync({
+                                    id: post.id,
+                                    whatsapp_cta_enabled: isEnabled,
+                                    whatsapp_cta_phone: isPhoneValid ? phone : null,
+                                    whatsapp_cta_message: isPhoneValid ? message : null,
+                                  } as any);
+                                } catch {
+                                  // Non-fatal — draft stays in local state
+                                }
+                              }}
+                              disabled={!isPhoneValid}
+                            >
+                              <Text style={{
+                                fontSize: fontSize.sm,
+                                color: isPhoneValid ? colors.surface : colors.textTertiary,
+                                fontWeight: fontWeight.semibold,
+                              }}>
+                                {isPhoneValid ? 'Opslaan' : 'Voer geldig nummer in'}
+                              </Text>
+                            </TouchableOpacity>
+                          </>
+                        )}
                       </View>
                     )}
                   </View>
@@ -3110,12 +3406,16 @@ export default function PostReviewScreen() {
                 </Text>
               </View>
               <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Je hebt nog geen {channelConfig[connectPlatform as Channel]?.label} account gekoppeld. Voeg er een toe om direct te publiceren.
+                {connectPlatform === 'whatsapp'
+                  ? 'Voeg je telefoonnummer of bedrijfsnaam toe. Posts worden handmatig gedeeld via WhatsApp.'
+                  : `Je hebt nog geen ${channelConfig[connectPlatform as Channel]?.label} account gekoppeld. Voeg er een toe om direct te publiceren.`}
               </Text>
-              <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 6 }}>ACCOUNTNAAM *</Text>
+              <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginBottom: 6 }}>
+                {connectPlatform === 'whatsapp' ? 'TELEFOONNUMMER OF NAAM *' : 'ACCOUNTNAAM *'}
+              </Text>
               <TextInput
                 style={{ backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, padding: spacing.sm, fontSize: fontSize.md, color: colors.text, marginBottom: spacing.sm }}
-                placeholder={`Bijv. "Inclufy" of "@inclufy"`}
+                placeholder={connectPlatform === 'whatsapp' ? 'Bijv. "+31612345678" of "Inclufy Support"' : `Bijv. "Inclufy" of "@inclufy"`}
                 placeholderTextColor={colors.textTertiary}
                 value={connectAccountName}
                 onChangeText={setConnectAccountName}

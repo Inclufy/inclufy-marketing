@@ -22,7 +22,7 @@ export interface Event {
 }
 
 export type EventStatus = 'upcoming' | 'active' | 'completed' | 'archived';
-export type Channel = 'linkedin' | 'instagram' | 'x' | 'facebook' | 'tiktok';
+export type Channel = 'linkedin' | 'instagram' | 'x' | 'facebook' | 'tiktok' | 'whatsapp';
 export type MediaType = 'photo' | 'video' | 'audio' | 'quote';
 export type AIStatus = 'pending' | 'processing' | 'completed' | 'error';
 export type PostStatus = 'draft' | 'approved' | 'scheduled' | 'published' | 'failed' | 'in_review';
@@ -69,11 +69,14 @@ export interface EventPost {
   scheduled_at: string | null;
   publish_error: string | null;
   engagement: { likes: number; comments: number; shares: number; extra_images?: string[] };
+  whatsapp_cta_enabled?: boolean;
+  whatsapp_cta_phone?: string | null;
+  whatsapp_cta_message?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type PostUpdate = Partial<Pick<EventPost, 'text_content' | 'hashtags' | 'status' | 'scheduled_at' | 'branded_image_url' | 'engagement'>>;
+export type PostUpdate = Partial<Pick<EventPost, 'text_content' | 'hashtags' | 'status' | 'scheduled_at' | 'branded_image_url' | 'engagement' | 'whatsapp_cta_enabled' | 'whatsapp_cta_phone' | 'whatsapp_cta_message'>>;
 
 // ─── Brand Types ─────────────────────────────────────────────────────
 
@@ -205,6 +208,8 @@ export type RootStackParamList = {
   Onboarding: undefined;
   // All Posts management
   AllPosts: undefined;
+  // WhatsApp Business settings
+  WhatsAppSettings: undefined;
 };
 
 // ─── Capture Tags Presets ────────────────────────────────────────────

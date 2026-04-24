@@ -141,6 +141,7 @@ export default function LiveCaptureScreen() {
     { key: 'linkedin',  label: 'LinkedIn',  color: '#0077B5', icon: 'logo-linkedin'  },
     { key: 'instagram', label: 'Instagram', color: '#E4405F', icon: 'logo-instagram' },
     { key: 'facebook',  label: 'Facebook',  color: '#1877F2', icon: 'logo-facebook'  },
+    { key: 'whatsapp',  label: 'WhatsApp',  color: '#25D366', icon: 'logo-whatsapp'  },
   ];
 
   // Guard flags — actual early returns are placed AFTER all hooks to satisfy React rules

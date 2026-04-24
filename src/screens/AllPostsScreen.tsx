@@ -29,10 +29,11 @@ const channelConfig: Record<Channel, { label: string; color: string; icon: strin
   x: { label: 'X', color: '#1DA1F2', icon: 'logo-twitter' },
   facebook: { label: 'Facebook', color: '#1877F2', icon: 'logo-facebook' },
   tiktok: { label: 'TikTok', color: '#FF0050', icon: 'logo-tiktok' },
+  whatsapp: { label: 'WhatsApp', color: '#25D366', icon: 'logo-whatsapp' },
 };
 
 const STATUS_FILTERS: (PostStatus | null)[] = [null, 'draft', 'approved', 'scheduled', 'published', 'failed'];
-const CHANNEL_FILTERS: (Channel | null)[] = [null, 'linkedin', 'instagram', 'facebook', 'x', 'tiktok'];
+const CHANNEL_FILTERS: (Channel | null)[] = [null, 'linkedin', 'instagram', 'facebook', 'x', 'tiktok', 'whatsapp'];
 
 export default function AllPostsScreen() {
   const { t } = useTranslation();

@@ -954,6 +954,11 @@ Deno.serve(async (req: Request) => {
         case 'instagram':
           result = await publishToInstagram(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, directExtraImageUrls, igFormat, videoUrl);
           break;
+        case 'whatsapp':
+          // WhatsApp Cloud API publishing not yet active — manual copy-paste only.
+          // A separate agent will extend this case with WABA / Cloud API support.
+          result = { success: false, error: 'WhatsApp API publishing nog niet actief. Ondersteunt nu alleen manual copy-paste.' };
+          break;
         default:
           result = { success: false, error: `Platform '${channel}' wordt nog niet ondersteund` };
       }
