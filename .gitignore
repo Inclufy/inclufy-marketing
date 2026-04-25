@@ -54,6 +54,8 @@ assets/playstore-aabs/
 !assets/**/*.png
 !src/**/*.png
 !web/public/**/*.png
+!ios/**/Images.xcassets/**/*.png
+!android/**/res/**/*.png
 
 # Test results
 web/test-results/
