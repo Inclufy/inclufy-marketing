@@ -2,7 +2,7 @@
   "expo": {
     "name": "AMOS",
     "slug": "inclufy-go",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.inclufy.go",
-      "buildNumber": "200",
+      "buildNumber": "202",
       "infoPlist": {
         "NSCameraUsageDescription": "Inclufy GO needs camera access to capture photos and videos at events.",
         "NSMicrophoneUsageDescription": "Inclufy GO needs microphone access for video and audio recording.",
