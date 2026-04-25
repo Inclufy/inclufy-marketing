@@ -69,6 +69,9 @@ import AllPostsScreen from '../screens/AllPostsScreen';
 import MultiAgentScreen from '../screens/MultiAgentScreen';
 import IntegrationsScreen from '../screens/IntegrationsScreen';
 import WhatsAppSettingsScreen from '../screens/WhatsAppSettingsScreen';
+import LibraryScreen from '../screens/LibraryScreen';
+import LibraryImportScreen from '../screens/LibraryImportScreen';
+import LibraryPostDetailScreen from '../screens/LibraryPostDetailScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -338,6 +341,11 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="AllPosts" component={AllPostsScreen} options={{ title: t.screenTitles.allPosts ?? 'Alle Posts' }} />
           <Stack.Screen name="MultiAgent" component={MultiAgentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Integrations" component={IntegrationsScreen} options={{ headerShown: false }} />
+
+          {/* ─── Content Library ─── */}
+          <Stack.Screen name="Library" component={LibraryScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="LibraryImport" component={LibraryImportScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="LibraryPostDetail" component={LibraryPostDetailScreen} options={{ headerShown: false }} />
 
           {/* ─── Settings & Notifications ─── */}
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t.screenTitles.settings }} />
