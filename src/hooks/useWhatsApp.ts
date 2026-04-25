@@ -286,3 +286,212 @@ export function useSendWhatsAppTemplate() {
     },
   });
 }
+
+// ─── Upsert WABA configuration (in-app WABA setup) ───────────────────
+
+export interface UpsertWhatsAppConfigParams {
+  waba_id:              string;
+  phone_number_id:      string;
+  display_phone_number?: string | null;
+  business_name?:       string | null;
+  access_token:         string;
+  /** Optional: row id when editing existing config (vs inserting new) */
+  id?:                  string;
+}
+
+/**
+ * Upserts the user's WhatsApp Business Account credentials.
+ * Stored in `whatsapp_config` table with status='active' so existing queries pick it up.
+ * Note: access_token is stored as plaintext today — encrypt server-side in a future migration.
+ */
+export function useUpsertWhatsAppConfig() {
+  const qc = useQueryClient();
+  return useMutation<WhatsAppConfig, Error, UpsertWhatsAppConfigParams>({
+    mutationFn: async (params) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+
+      const trimmedToken = params.access_token.trim();
+      const keepExistingToken = trimmedToken === '__KEEP__' || trimmedToken === '';
+
+      // Base payload (no token field)
+      const basePayload = {
+        user_id:              user.id,
+        waba_id:              params.waba_id.trim(),
+        phone_number_id:      params.phone_number_id.trim(),
+        display_phone_number: params.display_phone_number?.trim() || null,
+        business_name:        params.business_name?.trim() || null,
+        status:               'active' as const,
+        updated_at:           new Date().toISOString(),
+      };
+
+      // On insert OR token rotation: include access_token
+      const payload = keepExistingToken && params.id
+        ? basePayload
+        : { ...basePayload, access_token: trimmedToken };
+
+      if (!params.id && keepExistingToken) {
+        throw new Error('Access token is verplicht bij eerste WABA setup.');
+      }
+
+      const query = params.id
+        ? supabase.from('whatsapp_config').update(payload).eq('id', params.id).eq('user_id', user.id)
+        : supabase.from('whatsapp_config').upsert(payload, { onConflict: 'user_id,phone_number_id' });
+
+      const { data, error } = await query.select().single();
+      if (error) throw error;
+      return data as WhatsAppConfig;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['whatsapp-config'] });
+      qc.invalidateQueries({ queryKey: ['whatsapp-templates'] });
+    },
+  });
+}
+
+// ─── Sync templates from Meta Graph API ─────────────────────────────
+
+export interface SyncTemplatesResult {
+  ok: boolean;
+  waba_id: string;
+  synced: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: Array<{ name: string; language: string; error: string }>;
+}
+
+export function useSyncWhatsAppTemplates() {
+  const qc = useQueryClient();
+  return useMutation<SyncTemplatesResult, Error, { wabaConfigId?: string } | void>({
+    mutationFn: async (params) => {
+      const { data, error } = await supabase.functions.invoke('whatsapp-sync-templates', {
+        body: params ?? {},
+      });
+      if (error) {
+        const rawBody = (error as { context?: { body?: string } })?.context?.body;
+        const msg = typeof rawBody === 'string' ? rawBody : (error as Error).message;
+        throw new Error(msg || 'sync mislukt');
+      }
+      if (!data?.ok) throw new Error(data?.error ?? 'sync mislukt');
+      return data as SyncTemplatesResult;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['whatsapp-templates'] });
+    },
+  });
+}
+
+// ─── Bulk add recipients (CSV import support) ────────────────────────
+
+export interface BulkRecipient {
+  phone_e164: string;
+  display_name?: string;
+  tags?: string[];
+}
+
+export interface BulkAddResult {
+  inserted: number;
+  duplicates: number;
+  invalid: number;
+  errors: Array<{ phone: string; error: string }>;
+}
+
+/**
+ * Bulk-add recipients. Validates E.164 client-side, dedupes against existing,
+ * inserts in chunks of 100 to avoid Supabase row-limit edge cases.
+ */
+export function useBulkAddWhatsAppRecipients() {
+  const qc = useQueryClient();
+  return useMutation<BulkAddResult, Error, { recipients: BulkRecipient[]; source?: string }>({
+    mutationFn: async ({ recipients, source = 'csv_import' }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+
+      // Resolve active WABA config
+      const { data: cfg } = await supabase
+        .from('whatsapp_config')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('status', 'active')
+        .maybeSingle();
+      if (!cfg) throw new Error('Geen actieve WhatsApp Business Account.');
+
+      // Normalize + validate
+      const e164 = /^\+[1-9]\d{6,14}$/;
+      const cleaned: BulkRecipient[] = [];
+      const invalidEntries: Array<{ phone: string; error: string }> = [];
+
+      for (const r of recipients) {
+        const phone = (r.phone_e164 ?? '').replace(/[\s\-\(\)]/g, '');
+        if (!e164.test(phone)) {
+          invalidEntries.push({ phone: r.phone_e164, error: 'Geen geldig E.164 formaat (+...)' });
+          continue;
+        }
+        cleaned.push({
+          phone_e164: phone,
+          display_name: r.display_name?.trim() || undefined,
+          tags: r.tags ?? [],
+        });
+      }
+
+      // Insert in batches with onConflict ignore to count duplicates
+      const CHUNK = 100;
+      let inserted = 0;
+      let duplicates = 0;
+      const insertErrors: Array<{ phone: string; error: string }> = [];
+
+      for (let i = 0; i < cleaned.length; i += CHUNK) {
+        const batch = cleaned.slice(i, i + CHUNK).map((r) => ({
+          user_id: user.id,
+          waba_config_id: cfg.id,
+          phone_e164: r.phone_e164,
+          display_name: r.display_name ?? null,
+          source,
+          tags: r.tags ?? [],
+        }));
+
+        const { data: ins, error: insErr } = await supabase
+          .from('whatsapp_recipients')
+          .upsert(batch, { onConflict: 'user_id,phone_e164', ignoreDuplicates: true })
+          .select('id');
+
+        if (insErr) {
+          for (const r of batch) insertErrors.push({ phone: r.phone_e164, error: insErr.message });
+          continue;
+        }
+
+        const insertedThisBatch = ins?.length ?? 0;
+        inserted += insertedThisBatch;
+        duplicates += batch.length - insertedThisBatch;
+      }
+
+      return {
+        inserted,
+        duplicates,
+        invalid: invalidEntries.length,
+        errors: [...invalidEntries, ...insertErrors],
+      };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['whatsapp-recipients'] });
+    },
+  });
+}
+
+/** Disconnect WABA (set status='disabled'). Keeps row for audit. */
+export function useDisconnectWhatsAppConfig() {
+  const qc = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: async (configId) => {
+      const { error } = await supabase
+        .from('whatsapp_config')
+        .update({ status: 'disabled', updated_at: new Date().toISOString() })
+        .eq('id', configId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['whatsapp-config'] });
+    },
+  });
+}
