@@ -226,6 +226,19 @@ const GROUP_CONTENT: { label: string; modules: AMOSModule[] } = {
       status: 'active',
       route: 'Organization',
     },
+    {
+      id: 'library',
+      name: 'Content Library',
+      nameNl: 'Content Library',
+      description: 'Pre-designed product posts (LinkedIn/IG/FB)',
+      descriptionNl: 'Vooraf ontworpen productposts (LinkedIn/IG/FB)',
+      icon: 'images',
+      iconLib: 'ionicons',
+      color: '#10B981',
+      gradientColors: ['#059669', '#10B981'],
+      status: 'active',
+      route: 'Library',
+    },
   ],
 };
 
