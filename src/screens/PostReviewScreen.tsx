@@ -664,24 +664,28 @@ export default function PostReviewScreen() {
   };
 
   // ── Flip image ────────────────────────────────────────────────────────────
+  // Always operate on the RAW capture image (not the branded one) — otherwise
+  // any baked-in text/logo overlay gets mirror-flipped (looks like backwards text).
+  // After flipping the raw, clear branded_image_url so the next render re-bakes
+  // the overlay fresh on top of the flipped image.
   const handleFlipImage = async (post: EventPost, imageUrl: string) => {
     if (flippingImage) return;
     setFlippingImage(true);
     try {
-      // Flip horizontally using expo-image-manipulator
+      const sourceUrl = captureImageUrl ?? imageUrl;
       const result = await ImageManipulator.manipulateAsync(
-        imageUrl,
+        sourceUrl,
         [{ flip: ImageManipulator.FlipType.Horizontal }],
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
       const { url, path } = await uploadMedia(result.uri, safeEventId, 'photo');
-      // Update capture + all posts for this capture with the flipped image
       await supabase
         .from('go_captures')
         .update({ media_url: url, storage_path: path, thumbnail_url: url })
         .eq('id', captureId);
+      // Clear branded URLs so overlay re-bakes on top of the flipped raw image
       await Promise.all(
-        posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: url })),
+        posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
@@ -693,12 +697,14 @@ export default function PostReviewScreen() {
   };
 
   // ── Rotate image 90° ─────────────────────────────────────────────────────
+  // Same pattern as flip: rotate raw, clear branded so overlay re-bakes.
   const handleRotateImage = async (post: EventPost, imageUrl: string) => {
     if (rotatingImage) return;
     setRotatingImage(true);
     try {
+      const sourceUrl = captureImageUrl ?? imageUrl;
       const result = await ImageManipulator.manipulateAsync(
-        imageUrl,
+        sourceUrl,
         [{ rotate: 90 }],
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
@@ -708,7 +714,7 @@ export default function PostReviewScreen() {
         .update({ media_url: url, storage_path: path, thumbnail_url: url })
         .eq('id', captureId);
       await Promise.all(
-        posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: url })),
+        posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
