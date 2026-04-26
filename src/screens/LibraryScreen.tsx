@@ -233,7 +233,7 @@ const styles = StyleSheet.create({
   },
   importBtnText: { color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.semibold as '600' },
 
-  chipsRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.sm },
+  chipsRow: { paddingHorizontal: spacing.lg, gap: spacing.sm, paddingBottom: spacing.sm, alignItems: 'center' },
   chip: {
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,

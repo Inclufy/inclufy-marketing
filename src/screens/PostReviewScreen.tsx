@@ -52,7 +52,8 @@ export default function PostReviewScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<Route>();
-  const { captureId, eventId, localMediaUri, extraImageUrls } = route.params ?? {} as any;
+  const { captureId, eventId, localMediaUri: routeLocalMediaUri, extraImageUrls } = route.params ?? {} as any;
+  const [localMediaUri, setLocalMediaUri] = useState<string | null>(routeLocalMediaUri ?? null);
   const safeEventId = eventId ?? '';
   const { colors } = useTheme();
   const queryClient = useQueryClient();
@@ -687,6 +688,9 @@ export default function PostReviewScreen() {
       await Promise.all(
         posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
+      // Drop the stale localMediaUri (un-flipped local file from LiveCapture) so
+      // the resolution falls through to the new flipped captureImageUrl.
+      setLocalMediaUri(null);
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
     } catch {
@@ -716,6 +720,7 @@ export default function PostReviewScreen() {
       await Promise.all(
         posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
+      setLocalMediaUri(null);
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
     } catch {
