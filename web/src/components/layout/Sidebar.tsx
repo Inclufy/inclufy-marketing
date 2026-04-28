@@ -7,6 +7,7 @@ import {
   LayoutDashboard, Calendar, CalendarDays, Megaphone, FileCheck, Zap,
   Target, Settings, Package, Users, Contact, Building2, Palette,
   TrendingUp, Wallet, Bot, Bell, BarChart3, MessageSquare, LogOut,
+  GraduationCap, Library, UserCircle,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -17,8 +18,10 @@ const navItems = [
   { label: 'Calendar', href: '/calendar', icon: CalendarDays },
   { label: 'Campaigns', href: '/campaigns', icon: Megaphone },
   { label: 'Content Proposals', href: '/proposals', icon: FileCheck },
+  { label: 'Content Library', href: '/library', icon: Library },
   { label: 'Automations', href: '/automations', icon: Zap },
   { label: 'Strategy', href: '/strategy', icon: Target },
+  { label: "Persona's", href: '/personas', icon: UserCircle },
   { label: 'Budget', href: '/budget', icon: Wallet },
   { divider: true },
   { label: 'Copilot', href: '/copilot', icon: MessageSquare },
@@ -29,6 +32,8 @@ const navItems = [
   { label: 'Team', href: '/team', icon: Users },
   { label: 'Organization', href: '/organization', icon: Building2 },
   { label: 'Brand Kit', href: '/brand-kit', icon: Palette },
+  { divider: true },
+  { label: 'Academy', href: '/academy', icon: GraduationCap },
   { divider: true },
   { label: 'Settings', href: '/settings', icon: Settings },
 ] as const;

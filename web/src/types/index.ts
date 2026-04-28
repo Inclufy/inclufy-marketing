@@ -115,7 +115,54 @@ export interface MarketingStrategy {
   posts_per_week: number;
   posting_days: string[];
   autonomy_level: 'conservative' | 'balanced' | 'aggressive';
+  personas: Persona[];
   created_at: string;
+}
+
+export type PersonaTone = 'formal' | 'casual' | 'inspirational';
+
+export interface Persona {
+  id: string;
+  name: string;
+  role: string;
+  pain_points: string[];
+  tone: PersonaTone;
+  channels: Channel[];
+}
+
+// ─── Library Posts (imported pre-designed product posts) ────────────────
+
+export type LibraryPostType = 'single' | 'carousel' | 'video';
+export type LibraryPostStatus = 'draft' | 'scheduled' | 'publishing' | 'published' | 'failed' | 'archived';
+export type LibraryLanguage = 'nl' | 'en' | 'fr';
+
+export interface LibraryPostTranslation {
+  image_url: string | null;
+  caption: string;
+  hashtags: string[];
+  cta: string;
+}
+
+export interface LibraryPost {
+  id: string;
+  user_id: string;
+  import_id: string | null;
+  product_id: string | null;
+  external_id: string | null;
+  campaign: string | null;
+  post_type: LibraryPostType;
+  translations: Record<LibraryLanguage, LibraryPostTranslation>;
+  channels: Channel[];
+  primary_language: LibraryLanguage;
+  overlay_config: Record<string, unknown>;
+  scheduled_for: string | null;
+  status: LibraryPostStatus;
+  published_at: string | null;
+  publish_results: Record<string, { post_id?: string; url?: string; error?: string }>;
+  sort_order: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SocialAccount {
