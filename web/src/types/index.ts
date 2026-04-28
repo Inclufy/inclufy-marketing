@@ -130,6 +130,49 @@ export interface Persona {
   channels: Channel[];
 }
 
+// ─── Event Posts (per-channel posts created from captures/events) ──────
+
+export interface EventPost {
+  id: string;
+  capture_id: string | null;
+  event_id: string | null;
+  user_id: string;
+  channel: Channel;
+  text_content: string;
+  hashtags: string[];
+  branded_image_url: string | null;
+  video_url?: string | null;
+  media_type?: 'photo' | 'video' | null;
+  image_format: 'square' | 'story' | 'landscape';
+  status: PostStatus;
+  scheduled_at: string | null;
+  published_at: string | null;
+  publish_error: string | null;
+  published_post_id?: string | null;
+  first_comment?: string | null;
+  engagement: {
+    likes?: number;
+    comments?: number;
+    shares?: number;
+    extra_images?: string[];
+    fetched_at?: string;
+  };
+  whatsapp_cta_enabled?: boolean;
+  whatsapp_cta_phone?: string | null;
+  whatsapp_cta_message?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type PostUpdate = Partial<
+  Pick<
+    EventPost,
+    | 'text_content' | 'hashtags' | 'status' | 'scheduled_at'
+    | 'branded_image_url' | 'engagement' | 'first_comment'
+    | 'whatsapp_cta_enabled' | 'whatsapp_cta_phone' | 'whatsapp_cta_message'
+  >
+>;
+
 // ─── Library Posts (imported pre-designed product posts) ────────────────
 
 export type LibraryPostType = 'single' | 'carousel' | 'video';

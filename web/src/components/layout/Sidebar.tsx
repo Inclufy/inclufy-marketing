@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, CalendarDays, Megaphone, FileCheck, Zap,
   Target, Settings, Package, Users, Contact, Building2, Palette,
   TrendingUp, Wallet, Bot, Bell, BarChart3, MessageSquare, LogOut,
-  GraduationCap, Library, UserCircle, Plug,
+  GraduationCap, Library, UserCircle, Plug, Newspaper,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -17,6 +17,7 @@ const navItems = [
   { label: 'Events', href: '/events', icon: Calendar },
   { label: 'Calendar', href: '/calendar', icon: CalendarDays },
   { label: 'Campaigns', href: '/campaigns', icon: Megaphone },
+  { label: 'Posts', href: '/posts', icon: Newspaper },
   { label: 'Content Proposals', href: '/proposals', icon: FileCheck },
   { label: 'Content Library', href: '/library', icon: Library },
   { label: 'Automations', href: '/automations', icon: Zap },
