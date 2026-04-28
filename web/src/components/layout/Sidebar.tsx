@@ -7,7 +7,7 @@ import {
   LayoutDashboard, Calendar, CalendarDays, Megaphone, FileCheck, Zap,
   Target, Settings, Package, Users, Contact, Building2, Palette,
   TrendingUp, Wallet, Bot, Bell, BarChart3, MessageSquare, LogOut,
-  GraduationCap, Library, UserCircle,
+  GraduationCap, Library, UserCircle, Plug,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -32,6 +32,7 @@ const navItems = [
   { label: 'Team', href: '/team', icon: Users },
   { label: 'Organization', href: '/organization', icon: Building2 },
   { label: 'Brand Kit', href: '/brand-kit', icon: Palette },
+  { label: 'Integraties', href: '/integrations', icon: Plug },
   { divider: true },
   { label: 'Academy', href: '/academy', icon: GraduationCap },
   { divider: true },
