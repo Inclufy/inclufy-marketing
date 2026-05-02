@@ -3,6 +3,15 @@
 # dependencies
 node_modules/
 
+# Python
+backend/venv/
+backend/venv_test/
+**/__pycache__/
+*.pyc
+
+# Supabase CLI cache
+supabase/.temp/
+
 # Expo
 .expo/
 dist/

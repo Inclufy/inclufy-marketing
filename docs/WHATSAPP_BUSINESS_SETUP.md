@@ -83,7 +83,7 @@ Dashboard → Project Settings → Edge Functions → Secrets → Add:
 
 #### Stap 7 — Webhook configureren
 1. Meta App Dashboard → WhatsApp → Configuration → **Webhooks**
-2. Callback URL: `https://mpxkugfqzmxydxnlxqoj.supabase.co/functions/v1/whatsapp-webhook`
+2. Callback URL: `${SUPABASE_URL}/functions/v1/whatsapp-webhook` (vervang `${SUPABASE_URL}` door de waarde uit je `.env`)
 3. Verify Token: dezelfde string als in stap 6
 4. Klik **Verify and Save** — Meta doet een GET naar je webhook, onze code geeft de challenge terug
 5. Subscribe webhook events: `messages` (om delivery/read status te krijgen)

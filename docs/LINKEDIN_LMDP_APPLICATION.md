@@ -183,7 +183,7 @@ Before clicking "Submit" in LinkedIn Developer Portal:
 - [ ] Contact email (privacy@inclufy.com, support@inclufy.com) is monitored
 - [ ] App logo uploaded in LinkedIn app settings (1024×1024 PNG)
 - [ ] OAuth redirect URIs match production + testing:
-      `https://mpxkugfqzmxydxnlxqoj.supabase.co/functions/v1/oauth-callback`
+      `${SUPABASE_URL}/functions/v1/oauth-callback` (use the value from your project's `.env`)
 - [ ] Demo video recorded, uploaded to YouTube (unlisted) or Vimeo
 - [ ] Demo video URL added to application form
 - [ ] Use case document (section 1 above) pasted into application form
