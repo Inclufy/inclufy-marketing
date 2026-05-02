@@ -498,7 +498,8 @@ export default function SettingsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Niet ingelogd');
 
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error('EXPO_PUBLIC_SUPABASE_URL is required');
       const res = await fetch(`${supabaseUrl}/functions/v1/oauth-callback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -580,7 +581,11 @@ export default function SettingsScreen() {
       return;
     }
 
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) {
+      Alert.alert('Error', 'EXPO_PUBLIC_SUPABASE_URL is not configured.');
+      return;
+    }
     const redirectUri = `${supabaseUrl}/functions/v1/oauth-callback`;
     // Resolve real organization_id for OAuth state
     let orgIdForState = user.id; // fallback

@@ -1,8 +1,16 @@
 /** @type {import('next').NextConfig} */
+const supabaseHostname = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname;
+  } catch {
+    return null;
+  }
+})();
+
 const nextConfig = {
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'mpxkugfqzmxydxnlxqoj.supabase.co' },
+      ...(supabaseHostname ? [{ protocol: 'https', hostname: supabaseHostname }] : []),
       { protocol: 'https', hostname: 'images.pexels.com' },
     ],
   },

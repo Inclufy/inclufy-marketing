@@ -274,7 +274,8 @@ export function usePublishProposal() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Niet ingelogd');
 
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
+      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) throw new Error('EXPO_PUBLIC_SUPABASE_URL is required');
       const { data: { session } } = await supabase.auth.getSession();
 
       const res = await fetch(`${supabaseUrl}/functions/v1/publish-social`, {

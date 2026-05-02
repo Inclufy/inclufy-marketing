@@ -78,8 +78,8 @@ export default function EventShareScreen() {
   const [calendarEventId, setCalendarEventId] = useState<string | null>(null);
 
   // Registration link — points to Supabase edge function that serves a registration form
-  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://mpxkugfqzmxydxnlxqoj.supabase.co';
-  const registrationUrl = event
+  const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const registrationUrl = event && supabaseUrl
     ? `${supabaseUrl}/functions/v1/event-register?id=${event.id}`
     : '';
 
