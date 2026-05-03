@@ -72,8 +72,12 @@ web/test-results/
 # Expo
 .expo/
 
-# Claude
-.claude/
+# Claude (local-only by default)
+.claude/*
+# ...except the data-leak audit agent (committed for cross-repo install)
+!.claude/agents/
+.claude/agents/*
+!.claude/agents/data-leak-auditor.md
 
 # Allow Xcode Cloud ci_scripts (inside gitignored ios/)
 !ios/ci_scripts/
