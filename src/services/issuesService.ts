@@ -151,7 +151,19 @@ export async function fetchPrimaryOrgId(): Promise<string | null> {
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle();
-  return (omRow as { organization_id?: string } | null)?.organization_id ?? null;
+  const omOrgId = (omRow as { organization_id?: string } | null)?.organization_id;
+  if (omOrgId) return omOrgId;
+
+  // 3. Last resort: create a minimal go_organization row for this user.
+  //    Handles edge case where the user signed up but never went through
+  //    onboarding to populate their company profile. RLS on go_organization
+  //    allows users to insert their own row (auth.uid() = user_id).
+  const { data: created } = await supabase
+    .from('go_organization')
+    .insert({ user_id: user.id, company_name: '' })
+    .select('id')
+    .single();
+  return (created as { id?: string } | null)?.id ?? null;
 }
 
 export async function createIssueFromMobile(
