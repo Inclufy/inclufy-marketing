@@ -184,23 +184,36 @@ export function captureEnvironment(
 /* ─── Org lookup ────────────────────────────────────────────────────────── */
 
 /**
- * Fetch the primary organization the current user belongs to. Marketing
- * doesn't have a centralized OrgContext; we cache once per session.
+ * Fetch the primary organization the current user belongs to. AMOS uses
+ * `go_organization` as the canonical user→organization mapping (one row per
+ * user, see useOrganization hook). We fall back to `organization_members`
+ * for users who only exist in the team-invite table.
  */
 export async function fetchPrimaryOrgId(): Promise<string | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase
+  // 1. AMOS-canonical: go_organization (per-user company profile).
+  //    Schema reality: go_organization has no organization_id column —
+  //    each user's go_organization.id IS their tenant identifier.
+  const { data: goRow } = await supabase
+    .from("go_organization")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const goOrgId = (goRow as { id?: string } | null)?.id;
+  if (goOrgId) return goOrgId;
+
+  // 2. Fallback: organization_members (users invited via team UI)
+  const { data: omRow } = await supabase
     .from("organization_members")
     .select("organization_id")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true })
     .limit(1)
     .maybeSingle();
-  if (error) return null;
-  return data?.organization_id ?? null;
+  return (omRow as { organization_id?: string } | null)?.organization_id ?? null;
 }
 
 /* ─── API ────────────────────────────────────────────────────────────────── */
