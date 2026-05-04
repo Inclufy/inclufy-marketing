@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 200" fill="none">
+  <!-- Personalized Learning Paths -->
+  <rect width="280" height="200" rx="16" fill="#F3E5F9"/>
+  <!-- Path/Road -->
+  <path d="M40 160 Q80 120 120 130 Q160 140 180 100 Q200 60 240 50" stroke="#9C27B0" stroke-width="4" stroke-linecap="round" stroke-dasharray="0" fill="none"/>
+  <path d="M40 160 Q80 120 120 130 Q160 140 180 100 Q200 60 240 50" stroke="#CE93D8" stroke-width="12" stroke-linecap="round" opacity="0.3" fill="none"/>
+  <!-- Milestone dots -->
+  <circle cx="40" cy="160" r="8" fill="#9C27B0"/>
+  <circle cx="120" cy="130" r="8" fill="#9C27B0"/>
+  <circle cx="180" cy="100" r="8" fill="#9C27B0"/>
+  <circle cx="240" cy="50" r="8" fill="#9C27B0"/>
+  <!-- Star at end -->
+  <path d="M240 30 l3 6 7 1-5 5 1 7-6-3-6 3 1-7-5-5 7-1z" fill="#FFB74D"/>
+  <!-- Person icon at start -->
+  <circle cx="40" cy="140" r="6" fill="#7B1FA2"/>
+  <path d="M34 152 a6 6 0 0 1 12 0" fill="#7B1FA2"/>
+  <!-- Flag icons at milestones -->
+  <rect x="118" y="112" width="2" height="14" rx="1" fill="#7B1FA2"/>
+  <path d="M120 112 l10 4-10 4z" fill="#CE93D8"/>
+  <rect x="178" y="82" width="2" height="14" rx="1" fill="#7B1FA2"/>
+  <path d="M180 82 l10 4-10 4z" fill="#CE93D8"/>
+</svg>

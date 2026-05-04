@@ -10,6 +10,7 @@ import {
   GraduationCap, Library, UserCircle, Plug, Newspaper,
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { ThemeToggle } from '@/components/theme/ThemeToggle';
 
 const navItems = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -45,15 +46,15 @@ export function Sidebar() {
   const { signOut } = useAuth();
 
   return (
-    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-gray-200 bg-white">
+    <aside className="fixed left-0 top-0 z-40 flex h-screen w-64 flex-col border-r border-[hsl(var(--border))] bg-[hsl(var(--card))]">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-3 border-b border-gray-200 px-6">
+      <div className="flex h-16 items-center gap-3 border-b border-[hsl(var(--border))] px-6">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand-500 to-brand-700">
           <Bot className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="text-lg font-bold text-gray-900">AMOS</h1>
-          <p className="text-[10px] text-gray-500 -mt-1">Inclufy GO</p>
+          <h1 className="text-lg font-bold text-[hsl(var(--foreground))]">AMOS</h1>
+          <p className="text-[10px] text-[hsl(var(--muted-foreground))] -mt-1">Inclufy GO</p>
         </div>
       </div>
 
@@ -69,8 +70,8 @@ export function Sidebar() {
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
                 pathname.startsWith(item.href)
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300'
+                  : 'text-[hsl(var(--muted-foreground))] hover:bg-[hsl(var(--muted))] hover:text-[hsl(var(--foreground))]'
               )}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
@@ -80,11 +81,15 @@ export function Sidebar() {
         )}
       </nav>
 
-      {/* Sign out */}
-      <div className="border-t border-gray-200 p-3">
+      {/* Theme + Sign out */}
+      <div className="border-t border-[hsl(var(--border))] p-3 space-y-2">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-[hsl(var(--muted-foreground))]">Thema</span>
+          <ThemeToggle />
+        </div>
         <button
           onClick={() => signOut()}
-          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+          className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-[hsl(var(--muted-foreground))] hover:bg-red-50 hover:text-red-700 dark:hover:bg-red-950/30 dark:hover:text-red-400 transition-colors"
         >
           <LogOut className="h-5 w-5" />
           Uitloggen

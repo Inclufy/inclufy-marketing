@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { Bot, Mail, Lock, ArrowRight } from 'lucide-react';
+import { Bot, Mail, Lock, ArrowRight, ShieldCheck, FileCheck, KeyRound, LockKeyhole, Clock, ScrollText } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function AuthPage() {
@@ -127,6 +127,23 @@ export default function AuthPage() {
             <ArrowRight className="h-4 w-4" />
           </button>
         </form>
+
+        {/* Trust Badges */}
+        <div className="mt-6 grid grid-cols-3 gap-2">
+          {[
+            { icon: ShieldCheck, label: 'GDPR' },
+            { icon: FileCheck, label: 'ISO 27001' },
+            { icon: KeyRound, label: 'SSO & MFA' },
+            { icon: LockKeyhole, label: 'Encrypted' },
+            { icon: Clock, label: '99.9% SLA' },
+            { icon: ScrollText, label: 'Audit Trails' },
+          ].map(({ icon: Icon, label }) => (
+            <div key={label} className="flex items-center gap-1.5 rounded-lg bg-gray-50 px-2 py-1.5">
+              <Icon className="h-3.5 w-3.5 text-brand-600 shrink-0" />
+              <span className="text-[10px] font-medium text-gray-500">{label}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

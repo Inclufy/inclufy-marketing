@@ -2,6 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Inclufy Marketing (AMOS) — Brand: Orange #FF6B35 */
+@layer base {
+  :root {
+    --primary: 16 100% 60%;           /* #FF6B35 */
+    --primary-foreground: 0 0% 100%;
+    --background: 225 40% 98%;        /* #F8F9FC */
+    --foreground: 217 33% 17%;        /* #1E293B */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;  /* #64748B */
+    --card: 0 0% 100%;
+    --card-foreground: 217 33% 17%;
+    --accent: 16 100% 95%;
+    --accent-foreground: 16 100% 35%;
+    --destructive: 0 84% 60%;         /* #EF4444 */
+    --border: 220 13% 91%;
+    --ring: 16 100% 60%;
+
+    /* Inclufy Ecosystem Brandbook Colors */
+    --inclufy-primary: 235 66% 30%;
+    --inclufy-green: 122 39% 49%;
+    --inclufy-blue: 207 90% 54%;
+    --inclufy-orange: 16 100% 60%;
+    --inclufy-purple: 291 64% 42%;
+    --inclufy-operations: 21 100% 45%;
+    --inclufy-teal: 174 100% 27%;
+    --inclufy-hub: 200 18% 26%;
+    --inclufy-navy: 232 53% 25%;
+  }
+
+  .dark {
+    --primary: 16 100% 60%;           /* #FF6B35 — werkt in beide modes */
+    --primary-foreground: 0 0% 100%;
+    --background: 222 47% 8%;         /* near-black slate */
+    --foreground: 210 20% 98%;        /* off-white */
+    --muted: 217 33% 14%;
+    --muted-foreground: 215 20% 65%;
+    --card: 222 47% 11%;              /* slate-900 */
+    --card-foreground: 210 20% 98%;
+    --accent: 16 100% 18%;
+    --accent-foreground: 16 100% 75%;
+    --destructive: 0 72% 55%;
+    --border: 217 33% 22%;
+    --ring: 16 100% 60%;
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }

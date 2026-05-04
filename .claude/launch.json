@@ -13,9 +13,9 @@
     {
       "name": "marketing-web",
       "runtimeExecutable": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx",
-      "runtimeArgs": ["next", "dev", "--port", "8081"],
-      "port": 8081,
-      "autoPort": false,
+      "runtimeArgs": ["next", "dev", "--port", "8086"],
+      "port": 8086,
+      "autoPort": true,
       "env": {
         "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
       },
@@ -33,7 +33,7 @@
     {
       "name": "finance-dev",
       "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": ["-c", "cd /Users/samiloukile/Projects/inclufy-finance && /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port 8080 --force"],
+      "runtimeArgs": ["-c", "cd /Users/samiloukile/Projects/inclufy-auto-finance-main && /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port 8080 --force"],
       "port": 8080,
       "env": {
         "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
@@ -51,8 +51,18 @@
     {
       "name": "ignite-dev",
       "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": ["-c", "cd /Users/samiloukile/Dropbox/inclufy-ignite && /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port 8082 --force"],
+      "runtimeArgs": ["-c", "cd /Users/samiloukile/Dropbox/inclufy-ignite && PORT=${PORT:-8082} /Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx vite --port $PORT --force"],
       "port": 8082,
+      "autoPort": true,
+      "env": {
+        "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
+      }
+    },
+    {
+      "name": "campaigns-preview",
+      "runtimeExecutable": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin/npx",
+      "runtimeArgs": ["serve", "-l", "8090", "campaigns"],
+      "port": 8090,
       "env": {
         "PATH": "/Users/samiloukile/.nvm/versions/node/v20.19.5/bin:/usr/local/bin:/usr/bin:/bin"
       }

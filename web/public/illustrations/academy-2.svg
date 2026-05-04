@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 200" fill="none">
+  <!-- Action-Oriented / Project-Based -->
+  <rect width="280" height="200" rx="16" fill="#E8F5E9"/>
+  <!-- Clipboard/Project board -->
+  <rect x="80" y="30" width="120" height="140" rx="10" fill="white" stroke="#4CAF50" stroke-width="2"/>
+  <rect x="120" y="22" width="40" height="16" rx="8" fill="#4CAF50"/>
+  <!-- Checklist items -->
+  <rect x="100" y="60" width="14" height="14" rx="3" fill="#4CAF50"/>
+  <path d="M103 67 l3 3 5-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="122" y="63" width="60" height="6" rx="3" fill="#C8E6C9"/>
+  <rect x="100" y="86" width="14" height="14" rx="3" fill="#4CAF50"/>
+  <path d="M103 93 l3 3 5-6" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="122" y="89" width="50" height="6" rx="3" fill="#C8E6C9"/>
+  <rect x="100" y="112" width="14" height="14" rx="3" stroke="#4CAF50" stroke-width="2" fill="none"/>
+  <rect x="122" y="115" width="55" height="6" rx="3" fill="#E8F5E9"/>
+  <rect x="100" y="138" width="14" height="14" rx="3" stroke="#4CAF50" stroke-width="2" fill="none"/>
+  <rect x="122" y="141" width="45" height="6" rx="3" fill="#E8F5E9"/>
+  <!-- Gear/cog overlay -->
+  <circle cx="220" cy="50" r="18" fill="#4CAF50" opacity="0.15"/>
+  <circle cx="220" cy="50" r="10" stroke="#4CAF50" stroke-width="2" fill="none"/>
+  <rect x="218" y="34" width="4" height="8" rx="2" fill="#4CAF50"/>
+  <rect x="218" y="58" width="4" height="8" rx="2" fill="#4CAF50"/>
+  <rect x="234" y="48" width="8" height="4" rx="2" fill="#4CAF50"/>
+  <rect x="198" y="48" width="8" height="4" rx="2" fill="#4CAF50"/>
+  <!-- Rocket -->
+  <g transform="translate(48, 60)">
+    <path d="M12 0 Q12 12 6 24 L18 24 Q12 12 12 0z" fill="#388E3C"/>
+    <rect x="6" y="24" width="12" height="4" rx="2" fill="#2E7D32"/>
+    <path d="M8 28 l4 8 4-8" fill="#FFB74D"/>
+  </g>
+</svg>
