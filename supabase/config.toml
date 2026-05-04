@@ -22,3 +22,6 @@ verify_jwt = false
 # prevent service-role auth bypass (see commit f7b54b4 fix).
 [functions.publish-social]
 verify_jwt = true
+
+[functions.product-issues]
+verify_jwt = true

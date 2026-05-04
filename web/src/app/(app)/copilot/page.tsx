@@ -1,8 +1,12 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, Sparkles, Loader2, Lightbulb, Target, FileText, BarChart3 } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { Bot, Send, User, Sparkles, Loader2, Lightbulb, Target, FileText, BarChart3, MessageSquare, AlertTriangle } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { IssuesTab } from '@/components/copilot/IssuesTab';
+
+type CopilotTab = 'chat' | 'issues';
 
 interface Message {
   id: string;
@@ -19,6 +23,8 @@ const SUGGESTIONS = [
 ];
 
 export default function CopilotPage() {
+  const pathname = usePathname();
+  const [activeTab, setActiveTab] = useState<CopilotTab>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -112,6 +118,40 @@ export default function CopilotPage() {
         </div>
       </div>
 
+      {/* Tab bar */}
+      <div className="flex shrink-0 border-b border-gray-200">
+        <button
+          type="button"
+          onClick={() => setActiveTab('chat')}
+          className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2.5 text-xs font-medium transition-all ${
+            activeTab === 'chat'
+              ? 'border-purple-500 bg-purple-50/50 text-purple-600'
+              : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+          }`}
+        >
+          <MessageSquare className="h-3.5 w-3.5" />
+          Chat
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('issues')}
+          className={`flex flex-1 items-center justify-center gap-1.5 border-b-2 py-2.5 text-xs font-medium transition-all ${
+            activeTab === 'issues'
+              ? 'border-purple-500 bg-purple-50/50 text-purple-600'
+              : 'border-transparent text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+          }`}
+        >
+          <AlertTriangle className="h-3.5 w-3.5" />
+          Issues
+        </button>
+      </div>
+
+      {activeTab === 'issues' ? (
+        <div className="flex-1 overflow-hidden">
+          <IssuesTab pathname={pathname || '/copilot'} isActive={activeTab === 'issues'} />
+        </div>
+      ) : (
+      <>
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-6 py-6">
         {messages.length === 0 ? (
@@ -207,6 +247,8 @@ export default function CopilotPage() {
           </button>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }
