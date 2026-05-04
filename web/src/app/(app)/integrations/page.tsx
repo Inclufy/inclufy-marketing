@@ -16,7 +16,7 @@ type PlatformDef = {
   oauthKey?: ConnectablePlatform;
   label: string;
   description: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   color: string;
   manualOnly?: boolean;
   comingSoon?: boolean;
