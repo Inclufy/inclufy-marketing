@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { NavigationContainer } from '@react-navigation/native';
+import React, { useEffect, useRef, useState } from 'react';
+import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View, Text, StyleSheet, Platform } from 'react-native';
@@ -12,6 +12,9 @@ import AppNavigator from './src/navigation/AppNavigator';
 import BiometricScreen from './src/screens/BiometricScreen';
 import { I18nContext, useI18nProvider } from './src/i18n';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useShakeToReport } from './src/hooks/useShakeToReport';
+import { ShakeReportSheet } from './src/components/ShakeReportSheet';
 
 // Initialize Sentry as early as possible
 initSentry();
@@ -46,6 +49,16 @@ function AppInner({ session, biometricPassed, showBiometric, onBiometricSuccess,
   onBiometricSkip: () => void;
 }) {
   const { isDark, themeKey, colors } = useTheme();
+  const navigationRef = useNavigationContainerRef();
+  const [routeName, setRouteName] = useState<string | null>(null);
+  const [shakeSheetVisible, setShakeSheetVisible] = useState(false);
+  const routeNameRef = useRef<string | null>(null);
+
+  // Shake-to-report — only active when signed in & sheet is closed.
+  useShakeToReport({
+    enabled: !!session && !shakeSheetVisible && biometricPassed,
+    onShake: () => setShakeSheetVisible(true),
+  });
 
   if (session && showBiometric && !biometricPassed) {
     return (
@@ -59,10 +72,32 @@ function AppInner({ session, biometricPassed, showBiometric, onBiometricSuccess,
   return (
     // key={themeKey} forces NavigationContainer + all screens to remount on theme change
     // This makes ALL StyleSheet.create() calls pick up new colors immediately
-    <NavigationContainer key={themeKey}>
-      <AppNavigator isLoggedIn={!!session} />
-      <StatusBar style={isDark ? 'light' : 'dark'} />
-    </NavigationContainer>
+    <>
+      <NavigationContainer
+        key={themeKey}
+        ref={navigationRef}
+        onReady={() => {
+          const r = navigationRef.getCurrentRoute()?.name ?? null;
+          routeNameRef.current = r;
+          setRouteName(r);
+        }}
+        onStateChange={() => {
+          const r = navigationRef.getCurrentRoute()?.name ?? null;
+          if (r !== routeNameRef.current) {
+            routeNameRef.current = r;
+            setRouteName(r);
+          }
+        }}
+      >
+        <AppNavigator isLoggedIn={!!session} />
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+      </NavigationContainer>
+      <ShakeReportSheet
+        visible={shakeSheetVisible}
+        onClose={() => setShakeSheetVisible(false)}
+        routeName={routeName}
+      />
+    </>
   );
 }
 
@@ -177,27 +212,29 @@ export default function App() {
 
   return (
     <AppErrorBoundary>
-      <ThemeProvider>
-        <I18nContext.Provider value={i18n}>
-          <QueryClientProvider client={queryClient}>
-            <AppInner
-              session={session}
-              biometricPassed={biometricPassed}
-              showBiometric={showBiometric}
-              onBiometricSuccess={async () => {
-                try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true'); } catch {}
-                setBiometricPassed(true);
-                setShowBiometric(false);
-              }}
-              onBiometricSkip={async () => {
-                try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'false'); } catch {}
-                setBiometricPassed(true);
-                setShowBiometric(false);
-              }}
-            />
-          </QueryClientProvider>
-        </I18nContext.Provider>
-      </ThemeProvider>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <I18nContext.Provider value={i18n}>
+            <QueryClientProvider client={queryClient}>
+              <AppInner
+                session={session}
+                biometricPassed={biometricPassed}
+                showBiometric={showBiometric}
+                onBiometricSuccess={async () => {
+                  try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'true'); } catch {}
+                  setBiometricPassed(true);
+                  setShowBiometric(false);
+                }}
+                onBiometricSkip={async () => {
+                  try { await AsyncStorage.setItem(BIOMETRIC_ENABLED_KEY, 'false'); } catch {}
+                  setBiometricPassed(true);
+                  setShowBiometric(false);
+                }}
+              />
+            </QueryClientProvider>
+          </I18nContext.Provider>
+        </ThemeProvider>
+      </SafeAreaProvider>
     </AppErrorBoundary>
   );
 }
