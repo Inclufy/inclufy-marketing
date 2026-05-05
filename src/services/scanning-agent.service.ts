@@ -1860,5 +1860,469 @@ export const FIX_HISTORY: Array<{
   { id: 'SCAN-077', resolvedIn: 'fix: resolve final 10 remaining issues', fix: 'MultiAgentScreen active/beta agent cards gain "Meer info/Learn more" action button showing agent description via Alert' },
 ];
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// APP FUNCTION MANUAL — Every screen, its features, and linked issue resolutions
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface ManualFunction {
+  name: string;           // function/handler name as in source
+  description: string;    // what it does for the user
+  issueIds?: string[];    // SCAN-XXX issues that affected this function
+}
+
+export interface ManualScreen {
+  route: string;          // React Navigation route name
+  screen: string;         // TSX filename without extension
+  category: string;       // feature area
+  purpose: string;        // one-sentence description
+  functions: ManualFunction[];
+}
+
+export const APP_MANUAL: ManualScreen[] = [
+  // ── AUTH ──────────────────────────────────────────────────────────────────
+  {
+    route: 'Login',
+    screen: 'LoginScreen',
+    category: 'Auth',
+    purpose: 'Email/password and biometric login; links to Terms & Privacy.',
+    functions: [
+      { name: 'handleLogin', description: 'Authenticates user with email + password via Supabase Auth.' },
+      { name: 'handleBiometricLogin', description: 'Authenticates via Face ID / fingerprint using expo-local-authentication.' },
+      { name: 'handleForgotPassword', description: 'Sends password reset email via Supabase.' },
+      { name: 'Terms link', description: 'Opens inclufy.com/terms in the device browser.', issueIds: ['SCAN-041'] },
+      { name: 'Privacy link', description: 'Opens inclufy.com/privacy in the device browser.', issueIds: ['SCAN-041'] },
+    ],
+  },
+  {
+    route: 'Onboarding',
+    screen: 'OnboardingScreen',
+    category: 'Auth',
+    purpose: 'Multi-step onboarding wizard shown once after first sign-up.',
+    functions: [
+      { name: 'handleNext', description: 'Advances through onboarding steps (brand name, goals, audience).' },
+      { name: 'completeOnboarding', description: 'Persists onboardingDone flag in AsyncStorage, then navigates to Main.', issueIds: ['SCAN-042'] },
+    ],
+  },
+
+  // ── EVENTS ────────────────────────────────────────────────────────────────
+  {
+    route: 'EventList',
+    screen: 'EventListScreen',
+    category: 'Events',
+    purpose: 'Lists all events with status filters; entry point for creating or opening events.',
+    functions: [
+      { name: 'filterByStatus', description: 'Filters events by All / Upcoming / Active / Completed tab.' },
+      { name: 'navigateToEventDashboard', description: 'Opens EventDashboard for a selected event.' },
+      { name: 'navigateToEventSetup', description: 'Navigates to EventSetup to create a new event.' },
+      { name: 'handleDelete', description: 'Prompts confirmation and deletes an event.' },
+      { name: 'handleLogout', description: 'Signs out the user via Supabase Auth (awaited with error Alert).', issueIds: ['SCAN-022'] },
+      { name: 'Empty state icon', description: 'Shows calendar icon (not camera) when no events exist.', issueIds: ['SCAN-023'] },
+      { name: 'Pull-to-refresh', description: 'Uses isRefetching instead of isLoading so spinner shows on refetch.', issueIds: ['SCAN-021'] },
+    ],
+  },
+  {
+    route: 'EventSetup',
+    screen: 'EventSetupScreen',
+    category: 'Events',
+    purpose: 'Create or edit an event with cover image, details, date/time, channels, tags, and brand kit.',
+    functions: [
+      { name: 'handlePickCoverImage', description: 'Opens image library to select or replace the event cover photo.' },
+      { name: 'toggleChannel', description: 'Adds/removes a social channel from the event\'s channel list.' },
+      { name: 'toggleTag / toggleGoal', description: 'Selects/deselects default post tags and marketing goals.' },
+      { name: 'handleSave', description: 'Validates fields, uploads cover image, and creates or updates the event in Supabase.' },
+      { name: 'Date validation', description: 'Rejects dates that do not match DD-MM-YYYY format with an Alert before saving.', issueIds: ['SCAN-024'] },
+      { name: 'Description null guard', description: 'Fills description with empty string instead of null when editing an existing event.', issueIds: ['SCAN-025'] },
+    ],
+  },
+  {
+    route: 'EventDashboard',
+    screen: 'EventDashboardScreen',
+    category: 'Events',
+    purpose: 'Event hub showing details, capture timeline, quick-action buttons, and status control.',
+    functions: [
+      { name: 'toggleStatus', description: 'Switches event between upcoming / active / completed.' },
+      { name: 'handleDeleteCapture', description: 'Deletes a capture from the event timeline with confirmation Alert.', issueIds: ['SCAN-026'] },
+      { name: 'navigateToRelatedScreen', description: 'Quick-action buttons navigate to LiveCapture, PostReview, Attendees, etc.' },
+      { name: 'updateEvent mutation onError', description: 'Shows Alert with error message if the event status update fails.', issueIds: ['SCAN-027'] },
+    ],
+  },
+  {
+    route: 'EventScanner',
+    screen: 'EventScannerScreen',
+    category: 'Events',
+    purpose: 'QR / barcode scanner to check in attendees at an event; supports manual location entry.',
+    functions: [
+      { name: 'handleBarcodeScanned', description: 'Decodes scanned QR/barcode and looks up or creates an attendee record.' },
+      { name: 'saveContact', description: 'Saves the scanned contact to the event\'s attendee list.' },
+      { name: 'handleLocationSourceChange', description: 'Switches location source between GPS, manual, and event address.' },
+      { name: 'Date filter query', description: 'Filters existing scans to today only via .gte() query parameter.', issueIds: ['SCAN-060', 'SCAN-062'] },
+      { name: 'Error logging', description: 'Logs Supabase query errors via console.warn instead of silently swallowing them.', issueIds: ['SCAN-059'] },
+    ],
+  },
+  {
+    route: 'EventAttendees',
+    screen: 'EventAttendeesScreen',
+    category: 'Events',
+    purpose: 'Attendee list for an event with add, edit, status change, and delete capabilities.',
+    functions: [
+      { name: 'handleAdd', description: 'Validates and saves a new attendee to the event.' },
+      { name: 'handleStatusChange', description: 'Updates attendee status (registered / checked-in / no-show).', issueIds: ['SCAN-067'] },
+      { name: 'handleDelete', description: 'Removes an attendee with confirmation.' },
+      { name: 'updateMutation onError', description: 'Shows Alert with error message if a status update fails.', issueIds: ['SCAN-067'] },
+    ],
+  },
+  {
+    route: 'StoryArc',
+    screen: 'StoryArcScreen',
+    category: 'Events',
+    purpose: 'Displays the AI-generated narrative arc and content strategy for an event.',
+    functions: [
+      { name: 'Back button', description: 'Returns to the previous screen via navigation.goBack().', issueIds: ['SCAN-036'] },
+      { name: 'displayStoryArc', description: 'Renders event story arc sections: teaser, live, and follow-up.' },
+    ],
+  },
+
+  // ── CAPTURE & POSTS ───────────────────────────────────────────────────────
+  {
+    route: 'LiveCapture',
+    screen: 'LiveCaptureScreen',
+    category: 'Capture & Posts',
+    purpose: 'Real-time photo/video/audio/quote capture with AI processing and per-channel targeting.',
+    functions: [
+      { name: 'handlePhotoCapture', description: 'Captures a photo using the device camera and queues it for AI processing.' },
+      { name: 'handleVideoEnd', description: 'Finishes a video recording and queues it for upload.' },
+      { name: 'handleAudioComplete', description: 'Saves an audio recording and requests AI transcription.' },
+      { name: 'handleUploadFromLibrary', description: 'Picks a photo from the device library for upload and AI analysis.' },
+      { name: 'handleQuoteSubmit', description: 'Saves a text quote as a capture for post generation.' },
+      { name: 'toggleChannel', description: 'Adds/removes a social channel from the capture\'s channel target list.' },
+      { name: 'Mode tab indicator', description: 'Active tab underline uses overflow:visible to prevent Android border clipping.', issueIds: ['SCAN-018'] },
+    ],
+  },
+  {
+    route: 'PostReview',
+    screen: 'PostReviewScreen',
+    category: 'Capture & Posts',
+    purpose: 'AI-generated post editor with per-channel customisation, scheduling, brand overlays, and publishing.',
+    functions: [
+      { name: 'handleToggleAudio', description: 'Plays or pauses the original audio recording for a post.' },
+      { name: 'handleIgFormatChange', description: 'Switches Instagram format between Feed / Story / Reel.' },
+      { name: 'handleAddExtraImage / handleAddImage', description: 'Adds extra images to a multi-image post.' },
+      { name: 'handleDeletePost', description: 'Deletes a post with confirmation Alert.' },
+      { name: 'handleFlipImage / handleRotateImage', description: 'Flips or rotates the post\'s image in-place.' },
+      { name: 'handleSelectLang', description: 'Regenerates post text in the selected language.' },
+      { name: 'handleRegenerate', description: 'Re-runs AI generation for a post.' },
+      { name: 'handleScheduleConfirm', description: 'Schedules the post for a selected date/time via Supabase.' },
+      { name: 'addLuxuryIcons / removeLuxuryIcons', description: 'Toggles luxury-style text formatting (✦ ✨ prefixes); made idempotent — strips existing icons before re-applying.', issueIds: ['SCAN-019'] },
+      { name: 'WhatsApp CTA toggle', description: 'Auto-saves CTA enabled/disabled state immediately via updatePost.mutate.', issueIds: ['SCAN-020'] },
+    ],
+  },
+  {
+    route: 'AllPosts',
+    screen: 'AllPostsScreen',
+    category: 'Capture & Posts',
+    purpose: 'Filterable list of all posts across all events with edit, copy, publish, and engagement refresh.',
+    functions: [
+      { name: 'Back button', description: 'Returns to the previous screen.', issueIds: ['SCAN-031'] },
+      { name: 'handleDelete', description: 'Deletes a post with confirmation.' },
+      { name: 'handleCopy', description: 'Duplicates a post with "(kopie)" suffix.' },
+      { name: 'handleEdit', description: 'Opens PostReview for inline editing.' },
+      { name: 'handlePublish', description: 'Publishes a post to its target channels.' },
+      { name: 'handleRefreshEngagement', description: 'Re-fetches real-time engagement stats for a post.' },
+    ],
+  },
+
+  // ── CAMPAIGNS ─────────────────────────────────────────────────────────────
+  {
+    route: 'CampaignList',
+    screen: 'CampaignListScreen',
+    category: 'Campaigns',
+    purpose: 'Lists all campaigns with status filters; pull-to-refresh and create-new access.',
+    functions: [
+      { name: 'filterByStatus', description: 'Filters the list by All / Active / Draft / Completed / Paused.' },
+      { name: 'handleNewCampaign', description: 'Navigates to CampaignCreate.' },
+      { name: 'Pull-to-refresh', description: 'Uses isRefetching so the spinner shows on every refresh, not just first load.', issueIds: ['SCAN-054'] },
+    ],
+  },
+  {
+    route: 'CampaignCreate',
+    screen: 'CampaignCreateScreen',
+    category: 'Campaigns',
+    purpose: '3-step wizard: basic info → budget & goals → audience targeting.',
+    functions: [
+      { name: 'handleNext', description: 'Validates current step and advances to the next.' },
+      { name: 'handleCreate', description: 'Submits the campaign to Supabase after validating all fields.' },
+      { name: 'Date validation', description: 'Rejects start/end dates that fail Date.parse before saving.', issueIds: ['SCAN-065'] },
+    ],
+  },
+  {
+    route: 'CampaignDetail',
+    screen: 'CampaignDetailScreen',
+    category: 'Campaigns',
+    purpose: 'Full campaign view with financial overview, publishing, status lifecycle, and cost tracking.',
+    functions: [
+      { name: 'handleActivate', description: 'Sets campaign status to active; shows success Alert via onSuccess callback.', issueIds: ['SCAN-055'] },
+      { name: 'handlePause / handleComplete', description: 'Pauses or completes the campaign.' },
+      { name: 'handleSaveCost / handleSaveRevenue', description: 'Adds cost or revenue line items to the campaign.' },
+      { name: 'handleDeleteCost / handleDeleteRevenue', description: 'Removes a cost or revenue entry.' },
+      { name: 'handlePublishToChannel', description: 'Publishes campaign content to a selected social channel.' },
+      { name: 'handleShareCampaign', description: 'Shares a campaign summary link via the device share sheet.' },
+      { name: 'handleReport', description: 'Navigates to the Analytics screen for this campaign\'s performance.' },
+      { name: 'Mutation onError', description: 'Shows Alert with error message if status update fails.', issueIds: ['SCAN-055'] },
+    ],
+  },
+
+  // ── AI & CONTENT ──────────────────────────────────────────────────────────
+  {
+    route: 'Copilot',
+    screen: 'CopilotScreen',
+    category: 'AI & Content',
+    purpose: 'Voice-enabled AMOS AI chat assistant with persistent conversation history.',
+    functions: [
+      { name: 'sendMessage', description: 'Sends a text message to the AMOS AI and appends the response to the thread.' },
+      { name: 'handleMicPress', description: 'Starts or stops audio recording and transcribes speech to text.' },
+      { name: 'Chat persistence', description: 'Loads history from AsyncStorage on mount and saves it after every message.', issueIds: ['SCAN-051'] },
+      { name: 'Loading state guard', description: 'setLoading(false) is only called after the await resolves, not before.', issueIds: ['SCAN-049'] },
+    ],
+  },
+  {
+    route: 'AICommand',
+    screen: 'AICommandScreen',
+    category: 'AI & Content',
+    purpose: 'Lightweight AI chat with suggested prompt chips and stable FlatList rendering.',
+    functions: [
+      { name: 'sendMessage', description: 'Sends a message and receives a streaming AI response.' },
+      { name: 'handleSuggestedPrompt', description: 'Inserts a predefined prompt chip into the message input.' },
+      { name: 'Message id field', description: 'Each Message has a stable id; FlatList keyExtractor uses item.id instead of index.', issueIds: ['SCAN-052'] },
+    ],
+  },
+  {
+    route: 'ContentCreator',
+    screen: 'ContentCreatorScreen',
+    category: 'AI & Content',
+    purpose: '4-step wizard: prompt → generate → edit → publish AI-generated social posts.',
+    functions: [
+      { name: 'handleGenerate', description: 'Calls the AI to generate platform-specific content from the input prompt.' },
+      { name: 'togglePublishPlatform', description: 'Selects or deselects a social platform for publishing.' },
+      { name: 'handlePublish', description: 'Publishes generated content to all selected platforms.' },
+      { name: 'handleSaveDraft', description: 'Saves the generated content as a draft proposal.' },
+      { name: 'handleCopy / handleShare', description: 'Copies or shares generated content text.' },
+      { name: 'History navigation', description: 'setContentHistory functional update ensures historyIndex is set atomically with the new array.', issueIds: ['SCAN-063'] },
+    ],
+  },
+  {
+    route: 'ContentProposals',
+    screen: 'ContentProposalsScreen',
+    category: 'AI & Content',
+    purpose: 'Approval workflow for AI-generated content proposals with batch actions and edit modal.',
+    functions: [
+      { name: 'handleApprove', description: 'Marks a proposal as approved.' },
+      { name: 'handleReject', description: 'Opens a cross-platform modal (not iOS-only Alert.prompt) for entering a reject reason.', issueIds: ['SCAN-071'] },
+      { name: 'handlePublish', description: 'Immediately publishes a proposal to its target channels.' },
+      { name: 'handleGenerate', description: 'Triggers AI generation of new proposals.' },
+      { name: 'handleSave / handleSaveAndApprove', description: 'Saves edits to a proposal, with optional immediate approval.' },
+      { name: 'handleToggleAutoPublish', description: 'Enables/disables auto-publish for approved proposals.' },
+      { name: 'statusFilter', description: 'Filter uses statusFilter directly without null-coalescing to \'all\'.', issueIds: ['SCAN-072'] },
+    ],
+  },
+  {
+    route: 'ContentCalendar',
+    screen: 'ContentCalendarScreen',
+    category: 'AI & Content',
+    purpose: 'Week/month calendar showing all scheduled proposals and campaigns by date.',
+    functions: [
+      { name: 'toggleViewMode', description: 'Switches between week view and month view.' },
+      { name: 'navigatePrev / navigateNext', description: 'Moves the calendar backward or forward.' },
+      { name: 'Upcoming list onPress', description: 'Tapping a list item navigates to CampaignDetail (campaigns) or ContentProposals (proposals).', issueIds: ['SCAN-029'] },
+    ],
+  },
+
+  // ── ANALYTICS & STRATEGY ─────────────────────────────────────────────────
+  {
+    route: 'Analytics',
+    screen: 'AnalyticsScreen',
+    category: 'Analytics & Strategy',
+    purpose: 'Marketing health score, activity stats, campaign performance, and channel content breakdown.',
+    functions: [
+      { name: 'Health score', description: 'Composite score (0–100%) derived from events, campaigns, proposals, and automations.' },
+      { name: 'App activity grid', description: 'Shows Events, Campaigns, Content, and Automations counts. Labelled "App Activiteit".', issueIds: ['SCAN-032'] },
+      { name: 'Campaign spend', description: 'Budget display uses integer for values under €1 000 (no €0.0K artefact).', issueIds: ['SCAN-033'] },
+      { name: 'Channel breakdown', description: 'Bar chart of content proposal counts per social channel.' },
+    ],
+  },
+  {
+    route: 'MarketingStrategy',
+    screen: 'MarketingStrategyScreen',
+    category: 'Analytics & Strategy',
+    purpose: 'Define marketing goals, target audience, channels, and autonomy level for the AMOS strategy engine.',
+    functions: [
+      { name: 'toggleGoal', description: 'Adds or removes a goal from the strategy.' },
+      { name: 'handleSave', description: 'Persists the full marketing strategy to Supabase.' },
+    ],
+  },
+  {
+    route: 'MarketingAutomation',
+    screen: 'MarketingAutomationScreen',
+    category: 'Analytics & Strategy',
+    purpose: 'Automation rule management with autopilot mode control and run history.',
+    functions: [
+      { name: 'handleCreate', description: 'Creates a new automation rule via modal.' },
+      { name: 'handleToggle', description: 'Enables or disables an automation rule.' },
+      { name: 'handleDelete', description: 'Deletes an automation rule with confirmation.' },
+      { name: 'handleAutopilotChange', description: 'Directly mutates the marketing strategy\'s autonomy_level via updateStrategy.mutate (manual→conservative, assisted→balanced, autopilot→aggressive).', issueIds: ['SCAN-069', 'SCAN-070'] },
+    ],
+  },
+  {
+    route: 'AutonomousHub',
+    screen: 'AutonomousHubScreen',
+    category: 'Analytics & Strategy',
+    purpose: 'Hub for AMOS autonomous actions: pending approvals, auto-publish toggle, and autonomy level selector.',
+    functions: [
+      { name: 'toggleAutoPublish', description: 'Enables/disables automatic publishing and immediately persists via updateStrategy.mutate.', issueIds: ['SCAN-074'] },
+      { name: 'setAutonomyLevel', description: 'Sets Conservative / Balanced / Aggressive level and persists immediately.', issueIds: ['SCAN-075'] },
+      { name: 'viewPendingActions', description: 'Lists actions waiting for user approval before AMOS executes.' },
+    ],
+  },
+
+  // ── LEADS & CONTACTS ─────────────────────────────────────────────────────
+  {
+    route: 'LeadCapture',
+    screen: 'LeadCaptureScreen',
+    category: 'Leads & Contacts',
+    purpose: 'Manual lead entry form with email validation and follow-up scheduling.',
+    functions: [
+      { name: 'handleSave', description: 'Validates and saves a new lead to Supabase.' },
+      { name: 'Email validation', description: 'Rejects emails that do not match /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/ before saving.', issueIds: ['SCAN-056', 'SCAN-058'] },
+      { name: 'handleFollowUp', description: 'Schedules a follow-up reminder for the lead.' },
+    ],
+  },
+  {
+    route: 'SmartLead',
+    screen: 'SmartLeadScreen',
+    category: 'Leads & Contacts',
+    purpose: 'Smart lead capture hub: QR scan, card scan, NFC, WhatsApp invite, and digital card sharing.',
+    functions: [
+      { name: 'handleCapture', description: 'Routes to the selected capture method (QR / card / NFC).' },
+      { name: 'handleSendInvite', description: 'Sends a connection invite email to the lead.' },
+      { name: 'handleWhatsApp', description: 'Opens WhatsApp with a pre-filled intro message to the lead.' },
+    ],
+  },
+
+  // ── BRAND & PRODUCTS ──────────────────────────────────────────────────────
+  {
+    route: 'BrandKit',
+    screen: 'BrandKitScreen',
+    category: 'Brand & Products',
+    purpose: 'Manage brand kits (logo, colours, fonts) with create, edit, delete, and set-as-default.',
+    functions: [
+      { name: 'handlePickLogo', description: 'Opens the image library to pick a logo for the kit.' },
+      { name: 'handleSave', description: 'Creates or updates a brand kit in Supabase.' },
+      { name: 'handleDelete', description: 'Deletes a brand kit with confirmation.' },
+      { name: 'handleSetDefault', description: 'Sets the selected kit as the account default and shows error Alert on failure.', issueIds: ['SCAN-034'] },
+    ],
+  },
+  {
+    route: 'Products',
+    screen: 'ProductsScreen',
+    category: 'Brand & Products',
+    purpose: 'Product / service catalogue with image upload, category filter, and CRUD management.',
+    functions: [
+      { name: 'handleSave', description: 'Uploads product image and creates or updates the product record.' },
+      { name: 'handleDelete', description: 'Deletes a product with confirmation.' },
+      { name: 'uploadProductImage', description: 'Uploads image to Supabase storage and returns a permanent public URL (not an expiring signed URL).', issueIds: ['SCAN-076'] },
+    ],
+  },
+
+  // ── LIBRARY ───────────────────────────────────────────────────────────────
+  {
+    route: 'Library',
+    screen: 'LibraryScreen',
+    category: 'Library',
+    purpose: 'Browse and import pre-designed product post templates into the event post pipeline.',
+    functions: [
+      { name: 'filterByProduct', description: 'Filters library posts by associated product.' },
+      { name: 'importPost', description: 'Imports a library template as a new post for a selected event.' },
+    ],
+  },
+  {
+    route: 'LibraryPostDetail',
+    screen: 'LibraryPostDetailScreen',
+    category: 'Library',
+    purpose: 'Detail view of a library post with edit, publish, and delete capabilities.',
+    functions: [
+      { name: 'handleDelete', description: 'Deletes the library post wrapped in try/catch with failure Alert.', issueIds: ['SCAN-073'] },
+      { name: 'handlePublish', description: 'Publishes the library post to its configured channels.' },
+    ],
+  },
+
+  // ── AUTOMATION & AI AGENTS ────────────────────────────────────────────────
+  {
+    route: 'AMOSHub',
+    screen: 'AMOSHubScreen',
+    category: 'Automation & AI Agents',
+    purpose: 'Navigation hub listing all AMOS AI modules grouped by category with live stats.',
+    functions: [
+      { name: 'navigateToModule', description: 'Opens the selected AMOS module (Copilot, Agents, Automations, etc.).' },
+    ],
+  },
+  {
+    route: 'MultiAgent',
+    screen: 'MultiAgentScreen',
+    category: 'Automation & AI Agents',
+    purpose: 'Showcases all AI agent types (Content, Lead, Analytics, etc.) with status and capabilities.',
+    functions: [
+      { name: 'Learn more button', description: 'Active and beta agent cards show a "Meer info / Learn more" button that opens an info Alert.', issueIds: ['SCAN-077'] },
+    ],
+  },
+
+  // ── SETTINGS & ACCOUNT ────────────────────────────────────────────────────
+  {
+    route: 'Settings',
+    screen: 'SettingsScreen',
+    category: 'Settings & Account',
+    purpose: 'Central settings hub: account, notifications, social connections, theme, language, and data.',
+    functions: [
+      { name: 'handleLogout', description: 'Signs out the user and navigates to Login.' },
+      { name: 'handleThemeSwitch', description: 'Toggles between light and dark mode.' },
+      { name: 'handleLanguageSwitch', description: 'Switches the app language between Dutch and English.' },
+      { name: 'handleToggleBiometric', description: 'Enables or disables biometric login.' },
+      { name: 'handleConnectSocial / startOAuth', description: 'Initiates OAuth flow for LinkedIn, Instagram, Facebook, etc.' },
+      { name: 'handleDataExport', description: 'Exports posts, captures, and events as a JSON file.' },
+      { name: 'handleDeleteAccount', description: 'Permanently deletes the user account after confirmation.' },
+      { name: 'QA Manual link', description: 'Opens QAManualScreen to view and test all 77 scanned issues.' },
+    ],
+  },
+  {
+    route: 'WhatsAppSettings',
+    screen: 'WhatsAppSettingsScreen',
+    category: 'Settings & Account',
+    purpose: 'Configure WhatsApp Business API credentials and manage message templates.',
+    functions: [
+      { name: 'saveSettings', description: 'Saves WhatsApp API key and business number to Supabase.' },
+      { name: 'Unused import removal', description: 'SectionList was imported but never used — import removed.', issueIds: ['SCAN-048'] },
+    ],
+  },
+  {
+    route: 'Integrations',
+    screen: 'IntegrationsScreen',
+    category: 'Settings & Account',
+    purpose: 'Connect and manage third-party platform integrations (social, analytics, email, CRM).',
+    functions: [
+      { name: 'connectPlatform', description: 'Opens connection flow for the selected integration.' },
+      { name: 'Connected status', description: 'Platform connected state is driven from the live social_accounts Supabase query, not from a hardcoded flag.', issueIds: ['SCAN-038'] },
+    ],
+  },
+  {
+    route: 'Notifications',
+    screen: 'NotificationsScreen',
+    category: 'Settings & Account',
+    purpose: 'Notification inbox with accept / decline actions and swipe-to-dismiss.',
+    functions: [
+      { name: 'handleAccept', description: 'Accepts a notification action (e.g., approve a proposal).' },
+      { name: 'handleDecline', description: 'Declines a notification action.' },
+      { name: 'handleGenericPress', description: 'Opens the relevant screen for a generic notification tap.' },
+    ],
+  },
+];
+
 export { KNOWN_ISSUES };
 export type { RuntimeTestResult };
