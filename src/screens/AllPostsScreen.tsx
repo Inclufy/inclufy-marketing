@@ -274,6 +274,9 @@ export default function AllPostsScreen() {
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4, marginRight: 4 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>{t.allPosts.title}</Text>
           <Text style={styles.headerCount}>{posts.length} posts</Text>
         </View>

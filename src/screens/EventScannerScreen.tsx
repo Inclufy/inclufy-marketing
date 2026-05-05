@@ -525,12 +525,15 @@ export default function EventScannerScreen() {
   const loadExistingScans = async () => {
     const { data: { user } = {} as any } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
+    const todayStart = new Date().toISOString().slice(0, 10);
+    const { data, error } = await supabase
       .from('go_event_scans')
       .select('*')
       .eq('event_id', eventId)
+      .gte('scanned_at', todayStart)
       .order('scanned_at', { ascending: false })
-      .limit(20);
+      .limit(100);
+    if (error) console.warn('loadExistingScans error:', error.message);
     if (data) setScannedList(data as any);
   };
 

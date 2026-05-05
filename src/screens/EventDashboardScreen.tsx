@@ -174,7 +174,9 @@ export default function EventDashboardScreen() {
       completed: 'archived',
       archived: 'upcoming',
     };
-    updateEvent.mutate({ id: event.id, status: nextStatus[event.status] });
+    updateEvent.mutate({ id: event.id, status: nextStatus[event.status] }, {
+      onError: (e: any) => Alert.alert('Fout', e.message),
+    });
   };
 
   const getPostsForCapture = (captureId: string): EventPost[] =>

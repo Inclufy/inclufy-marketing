@@ -6,6 +6,8 @@ import { View, Text, ScrollView, TouchableOpacity, Platform, StatusBar } from 'r
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../services/supabase';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
@@ -108,6 +110,21 @@ export default function IntegrationsScreen() {
   const { colors } = useTheme();
   const { t, locale } = useTranslation();
   const isNl = locale === 'nl';
+
+  const { data: connectedPlatforms = [] } = useQuery<string[]>({
+    queryKey: ['social-accounts-platforms'],
+    queryFn: async () => {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) return [];
+      const { data } = await supabase
+        .from('social_accounts')
+        .select('platform')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+      return (data || []).map((a: any) => a.platform);
+    },
+    staleTime: 30_000,
+  });
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.background },
@@ -233,7 +250,7 @@ export default function IntegrationsScreen() {
     },
   }));
 
-  const connectedCount = INTEGRATIONS.filter(i => i.connected).length;
+  const connectedCount = INTEGRATIONS.filter(i => connectedPlatforms.includes(i.id)).length;
   const categories = [...new Set(INTEGRATIONS.map(i => i.category))];
 
   return (
@@ -316,7 +333,7 @@ export default function IntegrationsScreen() {
                           {isNl ? integration.descriptionNl : integration.description}
                         </Text>
                       </View>
-                      {integration.connected ? (
+                      {connectedPlatforms.includes(integration.id) ? (
                         <View style={styles.connectedBadge}>
                           <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                           <Text style={styles.connectedText}>

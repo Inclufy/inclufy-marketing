@@ -626,7 +626,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventListScreen.tsx',
     affectedLines: 'handleLogout function',
     fixSuggestion: 'Add await and wrap in try/catch with Alert on error.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-023', severity: 'low', category: 'ui-visual',
@@ -639,7 +639,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventListScreen.tsx',
     affectedLines: 'ListEmptyComponent',
     fixSuggestion: 'Replace camera-outline with calendar-outline.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-024', severity: 'high', category: 'data-logic',
@@ -665,7 +665,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventSetupScreen.tsx',
     affectedLines: 'setDescription call in event load useEffect',
     fixSuggestion: 'Use setDescription(existingEvent.description ?? \'\').',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-026', severity: 'high', category: 'navigation',
@@ -691,7 +691,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventDashboardScreen.tsx',
     affectedLines: 'toggleStatus function',
     fixSuggestion: 'Add { onError: (e) => Alert.alert(\'Fout\', e.message) } to mutate().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-028', severity: 'high', category: 'ui-visual',
@@ -730,7 +730,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AllPostsScreen.tsx',
     affectedLines: 'handleEdit function',
     fixSuggestion: 'Add: if (!post.capture_id) { Alert.alert(\'Kan niet bewerken\', \'...\'); return; } before navigation.',
-    status: 'fixed',
+    status: 'open',
   },
   {
     id: 'SCAN-031', severity: 'low', category: 'navigation',
@@ -743,7 +743,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AllPostsScreen.tsx',
     affectedLines: 'header render',
     fixSuggestion: 'Add TouchableOpacity with back arrow calling navigation.goBack().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-032', severity: 'medium', category: 'ui-visual',
@@ -756,7 +756,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AnalyticsScreen.tsx',
     affectedLines: 'entire data layer',
     fixSuggestion: 'Relabel section as "App Activiteit" or integrate real engagement data from go_posts.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-033', severity: 'low', category: 'ui-visual',
@@ -769,7 +769,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AnalyticsScreen.tsx',
     affectedLines: 'budget display expression',
     fixSuggestion: 'Use conditional: value >= 1000 ? `€${(value/1000).toFixed(1)}K` : `€${value}`.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-034', severity: 'medium', category: 'data-logic',
@@ -782,7 +782,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/BrandKitScreen.tsx',
     affectedLines: 'handleSetDefault',
     fixSuggestion: 'Add { onError: (e) => Alert.alert(\'Fout\', e.message) } to mutate().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-035', severity: 'high', category: 'performance',
@@ -808,7 +808,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/StoryArcScreen.tsx',
     affectedLines: 'header (lines 342-355)',
     fixSuggestion: 'Add TouchableOpacity with arrow-back icon calling navigation.goBack().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-037', severity: 'critical', category: 'navigation',
@@ -834,7 +834,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/IntegrationsScreen.tsx',
     affectedLines: 'INTEGRATIONS constant',
     fixSuggestion: 'Query social_accounts table and merge status with static list.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-039', severity: 'critical', category: 'ui-visual',
@@ -860,7 +860,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LoginScreen.tsx',
     affectedLines: 'biometric login handler',
     fixSuggestion: 'Check refreshSession() error; show Alert on failure.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-041', severity: 'low', category: 'navigation',
@@ -873,7 +873,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LoginScreen.tsx',
     affectedLines: 'Terms & Privacy TouchableOpacity elements',
     fixSuggestion: 'Add onPress with Linking.openURL(\'https://inclufy.com/terms\').',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-042', severity: 'medium', category: 'data-logic',
@@ -886,7 +886,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/OnboardingScreen.tsx',
     affectedLines: 'handleFinish / handleSkip',
     fixSuggestion: 'Call AsyncStorage.setItem(\'onboardingDone\', \'true\') on finish/skip and check in navigator.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-043', severity: 'low', category: 'ui-visual',
@@ -899,7 +899,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/OnboardingScreen.tsx',
     affectedLines: 'scrollX declaration',
     fixSuggestion: 'Remove scrollX or wire to onScroll for dot indicator animation.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-044', severity: 'critical', category: 'data-logic',
@@ -964,7 +964,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/WhatsAppSettingsScreen.tsx',
     affectedLines: 'import statement',
     fixSuggestion: 'Remove SectionList from the import.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-049', severity: 'medium', category: 'ui-visual',
@@ -977,7 +977,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/CopilotScreen.tsx',
     affectedLines: 'voice recording handler',
     fixSuggestion: 'Move setLoading(false) into the .finally() callback of sendMessage.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-050', severity: 'high', category: 'data-logic',
@@ -1029,7 +1029,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LibraryScreen.tsx',
     affectedLines: 'scheduledText row (approx. line 105-108)',
     fixSuggestion: 'Wrap icon and text in <View style={{ flexDirection: \'row\' }}>, move Ionicons outside Text.',
-    status: 'fixed',
+    status: 'open',
   },
   {
     id: 'SCAN-054', severity: 'medium', category: 'ui-visual',
@@ -1055,7 +1055,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/CampaignDetailScreen.tsx',
     affectedLines: 'handleActivate',
     fixSuggestion: 'Move Alert to mutate() onSuccess callback; add onError handler.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-056', severity: 'medium', category: 'data-logic',
@@ -1068,7 +1068,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LeadCaptureScreen.tsx',
     affectedLines: 'handleSubmit validation',
     fixSuggestion: 'Add: const emailValid = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim()); if (!emailValid) return;',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-057', severity: 'high', category: 'navigation',
@@ -1107,7 +1107,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventRecapScreen.tsx',
     affectedLines: 'changeTone button',
     fixSuggestion: 'Add disabled={loading} to the changeTone TouchableOpacity.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-060', severity: 'medium', category: 'ui-visual',
@@ -1120,7 +1120,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventScannerScreen.tsx',
     affectedLines: 'loadExistingScans',
     fixSuggestion: 'Add .gte(\'scanned_at\', new Date().toISOString().slice(0, 10)) date filter.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-061', severity: 'high', category: 'data-logic',
@@ -1146,7 +1146,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventScannerScreen.tsx',
     affectedLines: 'loadExistingScans',
     fixSuggestion: 'Destructure { data, error } and handle error with console.error or error state.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-063', severity: 'medium', category: 'data-logic',
@@ -1159,7 +1159,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/ContentCreatorScreen.tsx',
     affectedLines: 'handleGenerate (lines 219-220)',
     fixSuggestion: 'Use functional update: setContentHistory(prev => { const next = [...prev, result]; setHistoryIndex(next.length - 1); return next; })',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-064', severity: 'high', category: 'security',
@@ -1198,7 +1198,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/TeamManageScreen.tsx',
     affectedLines: 'handleChangeRole',
     fixSuggestion: 'Add { onError: (e) => Alert.alert(t.common.error, e.message) } to mutate().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-067', severity: 'medium', category: 'data-logic',
@@ -1211,7 +1211,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventAttendeesScreen.tsx',
     affectedLines: 'handleStatusChange (lines 122-129)',
     fixSuggestion: 'Add { onError: (e) => Alert.alert(\'Fout\', e.message) } to mutate().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-068', severity: 'high', category: 'ui-visual',
@@ -1250,7 +1250,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/MarketingAutomationScreen.tsx',
     affectedLines: 'useEffect (lines 115-120)',
     fixSuggestion: 'Add hasSeeded ref guard: if (!loading && automations.length === 0 && !hasSeeded.current) { hasSeeded.current = true; seedMut.mutate(); }',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-071', severity: 'medium', category: 'ui-visual',
@@ -1263,7 +1263,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/ContentProposalsScreen.tsx',
     affectedLines: 'handleReject (lines 212-238)',
     fixSuggestion: 'Replace iOS Alert.prompt with a cross-platform TextInput Modal.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-072', severity: 'medium', category: 'data-logic',
@@ -1276,7 +1276,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/ContentProposalsScreen.tsx',
     affectedLines: 'line 126',
     fixSuggestion: 'Pass undefined for all filter: useContentProposals(filter === \'all\' ? undefined : filter).',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-073', severity: 'medium', category: 'data-logic',
@@ -1289,7 +1289,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LibraryPostDetailScreen.tsx',
     affectedLines: 'confirmDelete (lines 118-121)',
     fixSuggestion: 'Wrap in try/catch: try { await deleteMut.mutateAsync(post.id); navigation.goBack(); } catch (e) { Alert.alert(\'Verwijderen mislukt\', e.message); }',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-074', severity: 'medium', category: 'data-logic',
@@ -1302,7 +1302,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AutonomousHubScreen.tsx',
     affectedLines: 'systemActive state (line 50)',
     fixSuggestion: 'Persist in marketing strategy table; call useUpdateMarketingStrategy().mutate() on toggle.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-075', severity: 'medium', category: 'data-logic',
@@ -1315,7 +1315,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AutonomousHubScreen.tsx',
     affectedLines: 'autonomyLevel state and button onPress',
     fixSuggestion: 'Initialize from strategy.autonomy_level; call mutate({ autonomy_level: newLevel }) on press.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-076', severity: 'low', category: 'data-logic',

@@ -151,12 +151,17 @@ export default function AnalyticsScreen() {
           </View>
         </View>
 
-        {/* Key Metrics Grid */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-          <StatCard label="Events" value={eventStats.total} icon="calendar" color="#3B82F6" bg="#3B82F615" />
-          <StatCard label="Campagnes" value={campaignStats.total} icon="rocket-launch" color="#8B5CF6" bg="#8B5CF615" />
-          <StatCard label="Content" value={proposalStats?.total ?? 0} icon="file-document-outline" color="#F59E0B" bg="#F59E0B15" />
-          <StatCard label="Automations" value={autoStats?.activeCount ?? 0} icon="lightning-bolt" color="#10B981" bg="#10B98115" />
+        {/* App Activity Grid */}
+        <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.md, padding: spacing.sm }}>
+          <Text style={{ fontSize: fontSize.xs, fontWeight: fontWeight.semibold as any, color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: spacing.sm }}>
+            App Activiteit
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+            <StatCard label="Events" value={eventStats.total} icon="calendar" color="#3B82F6" bg="#3B82F615" />
+            <StatCard label="Campagnes" value={campaignStats.total} icon="rocket-launch" color="#8B5CF6" bg="#8B5CF615" />
+            <StatCard label="Content" value={proposalStats?.total ?? 0} icon="file-document-outline" color="#F59E0B" bg="#F59E0B15" />
+            <StatCard label="Automations" value={autoStats?.activeCount ?? 0} icon="lightning-bolt" color="#10B981" bg="#10B98115" />
+          </View>
         </View>
 
         {/* Campaign Performance */}
@@ -171,7 +176,9 @@ export default function AnalyticsScreen() {
             </View>
             <View style={{ alignItems: 'center' }}>
               <Text style={{ fontSize: fontSize.xl, fontWeight: fontWeight.bold as any, color: colors.text }}>
-                €{(campaignStats.totalBudget / 1000).toFixed(1)}K
+                {campaignStats.totalBudget >= 1000
+                  ? `€${(campaignStats.totalBudget / 1000).toFixed(1)}K`
+                  : `€${campaignStats.totalBudget}`}
               </Text>
               <Text style={{ fontSize: 11, color: colors.textSecondary }}>Budget</Text>
             </View>

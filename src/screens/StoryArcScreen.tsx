@@ -343,6 +343,9 @@ export default function StoryArcScreen() {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 4 }}>
+            <Ionicons name="chevron-back" size={24} color={colors.text} />
+          </TouchableOpacity>
           <View style={styles.headerIcon}>
             <Ionicons name="git-branch-outline" size={22} color={colors.primary} />
           </View>

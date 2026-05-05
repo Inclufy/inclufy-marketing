@@ -251,6 +251,11 @@ export default function LeadCaptureScreen() {
       return;
     }
 
+    if (email.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      Alert.alert(t.common.error, 'Voer een geldig e-mailadres in.');
+      return;
+    }
+
     const tagList = tags
       .split(',')
       .map((tag) => tag.trim())

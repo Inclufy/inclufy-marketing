@@ -325,8 +325,10 @@ export default function CampaignDetailScreen() {
         {
           text: 'Activeren',
           onPress: () => {
-            updateCampaign.mutate({ id: campaign!.id, status: 'active' });
-            Alert.alert('✅ Geactiveerd', 'Je campagne is nu actief! Publiceer naar kanalen om te starten.');
+            updateCampaign.mutate({ id: campaign!.id, status: 'active' }, {
+              onSuccess: () => Alert.alert('✅ Geactiveerd', 'Je campagne is nu actief! Publiceer naar kanalen om te starten.'),
+              onError: (e: any) => Alert.alert('Fout', e.message),
+            });
           },
         },
       ]

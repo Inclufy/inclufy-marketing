@@ -185,7 +185,9 @@ export default function BrandKitScreen() {
 
   const handleSetDefault = useCallback((kit: BrandKit) => {
     if (!kit.is_default) {
-      setDefaultMutation.mutate(kit.id);
+      setDefaultMutation.mutate(kit.id, {
+        onError: (e: any) => Alert.alert('Fout', e.message),
+      });
     }
   }, []);
 

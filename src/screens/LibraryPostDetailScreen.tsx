@@ -116,8 +116,12 @@ export default function LibraryPostDetailScreen() {
           text: 'Verwijder',
           style: 'destructive',
           onPress: async () => {
-            await deleteMut.mutateAsync(post!.id);
-            navigation.goBack();
+            try {
+              await deleteMut.mutateAsync(post!.id);
+              navigation.goBack();
+            } catch (e: any) {
+              Alert.alert('Verwijderen mislukt', e.message);
+            }
           },
         },
       ],

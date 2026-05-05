@@ -216,8 +216,11 @@ export default function ContentCreatorScreen() {
       setGeneratedContent(result);
       setEditedContent(result);
       setGeneratedHashtags(extractHashtags(result));
-      setContentHistory(prev => [...prev, result]);
-      setHistoryIndex(contentHistory.length);
+      setContentHistory(prev => {
+        const next = [...prev, result];
+        setHistoryIndex(next.length - 1);
+        return next;
+      });
 
       // Auto-navigate to step 2
       setTimeout(() => goToStep(2), 400);

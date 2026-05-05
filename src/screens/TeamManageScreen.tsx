@@ -272,7 +272,7 @@ export default function TeamManageScreen() {
               eventId,
               memberId: member.id,
               role,
-            });
+            }, { onError: (e: any) => Alert.alert(t.common.error, e.message) });
           },
         })),
         { text: t.common.cancel, style: 'cancel' as const },

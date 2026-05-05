@@ -123,7 +123,10 @@ export default function EventListScreen() {
   const handleLogout = () => {
     Alert.alert(t.settings.logout, t.eventList.logoutConfirm, [
       { text: t.common.cancel, style: 'cancel' },
-      { text: t.eventList.logout, style: 'destructive', onPress: () => supabase.auth.signOut() },
+      { text: t.eventList.logout, style: 'destructive', onPress: async () => {
+        const { error } = await supabase.auth.signOut();
+        if (error) Alert.alert(t.common.error, error.message);
+      }},
     ]);
   };
 
@@ -214,7 +217,7 @@ export default function EventListScreen() {
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="camera-outline" size={48} color={colors.textSecondary} />
+            <Ionicons name="calendar-outline" size={48} color={colors.textSecondary} />
             <Text style={styles.emptyTitle}>{t.eventList.noEvents}</Text>
             <Text style={styles.emptyText}>{t.eventList.noEventsDesc}</Text>
           </View>

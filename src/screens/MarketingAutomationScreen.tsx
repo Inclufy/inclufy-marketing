@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -89,6 +89,8 @@ export default function MarketingAutomationScreen() {
   const createMut = useCreateAutomation();
   const deleteMut = useDeleteAutomation();
 
+  const hasSeededRef = useRef(false);
+
   // State
   const [refreshing, setRefreshing] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -113,8 +115,8 @@ export default function MarketingAutomationScreen() {
 
   // Seed defaults if no automations exist and user has loaded
   useEffect(() => {
-    if (!loadingAutos && automations && automations.length === 0) {
-      // Auto-seed default automations
+    if (!loadingAutos && automations && automations.length === 0 && !hasSeededRef.current) {
+      hasSeededRef.current = true;
       seedMut.mutate();
     }
   }, [loadingAutos, automations?.length]);

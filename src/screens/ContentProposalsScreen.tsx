@@ -120,10 +120,13 @@ export default function ContentProposalsScreen() {
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
   const [editChannel, setEditChannel] = useState('');
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectTargetProposal, setRejectTargetProposal] = useState<ContentProposal | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   // Data hooks
   const statusFilter = filter === 'all' ? undefined : filter;
-  const { data: proposals, isLoading, refetch } = useContentProposals(statusFilter ?? 'all');
+  const { data: proposals, isLoading, refetch } = useContentProposals(statusFilter);
   const { data: stats } = useProposalStats();
   const approveMut = useApproveProposal();
   const rejectMut = useRejectProposal();
@@ -210,32 +213,16 @@ export default function ContentProposalsScreen() {
   };
 
   const handleReject = (proposal: ContentProposal) => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Reden voor afwijzing',
-        'Waarom wijs je dit voorstel af?',
-        [
-          { text: 'Annuleren', style: 'cancel' },
-          {
-            text: 'Afwijzen',
-            style: 'destructive',
-            onPress: (reason: string | undefined) => rejectMut.mutate({ id: proposal.id, note: reason || 'Afgewezen' }),
-          },
-        ],
-        'plain-text',
-        '',
-        'default',
-      );
-    } else {
-      Alert.alert(
-        'Voorstel afwijzen',
-        `Weet je zeker dat je "${proposal.title}" wilt afwijzen?`,
-        [
-          { text: 'Annuleren', style: 'cancel' },
-          { text: 'Afwijzen', style: 'destructive', onPress: () => rejectMut.mutate({ id: proposal.id, note: 'Afgewezen' }) },
-        ],
-      );
-    }
+    setRejectTargetProposal(proposal);
+    setRejectReason('');
+    setRejectModalVisible(true);
+  };
+
+  const confirmReject = () => {
+    if (!rejectTargetProposal) return;
+    rejectMut.mutate({ id: rejectTargetProposal.id, note: rejectReason.trim() || 'Afgewezen' });
+    setRejectModalVisible(false);
+    setRejectTargetProposal(null);
   };
 
   const handleDelete = (proposal: ContentProposal) => {
@@ -967,6 +954,33 @@ export default function ContentProposalsScreen() {
             >
               <Text style={[styles.modalBtnText, { color: '#fff' }]}>Opslaan & Goedkeuren</Text>
             </TouchableOpacity>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* Reject reason modal — cross-platform replacement for Alert.prompt */}
+      <Modal visible={rejectModalVisible} transparent animationType="fade" onRequestClose={() => setRejectModalVisible(false)}>
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }} activeOpacity={1} onPress={() => setRejectModalVisible(false)}>
+          <TouchableOpacity activeOpacity={1} style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 12 }} onPress={() => {}}>
+            <Text style={{ fontSize: fontSize.lg, fontWeight: fontWeight.bold as any, color: colors.text }}>Reden voor afwijzing</Text>
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>Waarom wijs je dit voorstel af?</Text>
+            <TextInput
+              style={{ borderWidth: 1, borderColor: colors.border, borderRadius: 8, padding: 10, color: colors.text, fontSize: fontSize.sm, minHeight: 80, textAlignVertical: 'top' }}
+              placeholder="Optionele reden..."
+              placeholderTextColor={colors.textSecondary}
+              value={rejectReason}
+              onChangeText={setRejectReason}
+              multiline
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'flex-end' }}>
+              <TouchableOpacity onPress={() => setRejectModalVisible(false)} style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+                <Text style={{ color: colors.textSecondary, fontSize: fontSize.sm }}>Annuleren</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={confirmReject} style={{ paddingHorizontal: 16, paddingVertical: 8, backgroundColor: colors.error + '20', borderRadius: 8 }}>
+                <Text style={{ color: colors.error, fontSize: fontSize.sm, fontWeight: fontWeight.bold as any }}>Afwijzen</Text>
+              </TouchableOpacity>
+            </View>
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>

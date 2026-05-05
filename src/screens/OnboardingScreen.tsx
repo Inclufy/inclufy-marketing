@@ -6,6 +6,7 @@ import {
   View, Text, TouchableOpacity, ScrollView, SafeAreaView, TextInput,
   Dimensions, FlatList, Animated,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -268,7 +269,10 @@ export default function OnboardingScreen() {
           borderTopWidth: 1, borderTopColor: colors.border,
         }}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Main')}
+            onPress={async () => {
+              await AsyncStorage.setItem('onboardingDone', 'true');
+              navigation.navigate('Main');
+            }}
             style={{
               backgroundColor: colors.primary, borderRadius: borderRadius.lg,
               paddingVertical: spacing.md, alignItems: 'center',

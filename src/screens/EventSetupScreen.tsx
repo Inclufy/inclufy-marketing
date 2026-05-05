@@ -190,7 +190,7 @@ export default function EventSetupScreen() {
   useEffect(() => {
     if (existingEvent) {
       setName(existingEvent.name);
-      setDescription(existingEvent.description);
+      setDescription(existingEvent.description ?? '');
       setLocation(existingEvent.location);
       setEventDate(toEUDate(existingEvent.event_date));
       setStartTime((existingEvent as any).event_start_time || '');

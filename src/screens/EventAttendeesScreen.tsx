@@ -124,8 +124,8 @@ export default function EventAttendeesScreen() {
       id: attendee.id,
       eventId: attendee.event_id,
       status: newStatus,
-    });
-  }, []);
+    }, { onError: (e: any) => Alert.alert('Fout', e.message) });
+  }, [updateMutation]);
 
   const handleDelete = useCallback((attendee: EventAttendee) => {
     Alert.alert(att.removeAttendee, att.removeConfirm, [

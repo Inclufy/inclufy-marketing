@@ -202,7 +202,6 @@ export default function CopilotScreen() {
               isVoice: true,
             };
             setMessages(prev => [...prev, userMsg]);
-            setLoading(false);
             await sendMessage(transcript.trim());
           } else {
             setLoading(false);

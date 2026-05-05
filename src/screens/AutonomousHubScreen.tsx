@@ -13,7 +13,7 @@ import { subtleShadow } from '../utils/shadows';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { useTranslation } from '../i18n';
-import { useMarketingStrategy } from '../hooks/useMarketingStrategy';
+import { useMarketingStrategy, useUpdateMarketingStrategy } from '../hooks/useMarketingStrategy';
 import { useProposalStats, useTrustScore } from '../hooks/useContentProposals';
 import { useAutomationStats } from '../hooks/useAutomations';
 
@@ -47,12 +47,15 @@ export default function AutonomousHubScreen() {
   const navigation = useNavigation<any>();
   const { colors } = useTheme();
   const { t } = useTranslation();
-  const [systemActive, setSystemActive] = useState(true);
   const { data: strategy } = useMarketingStrategy();
+  const updateStrategy = useUpdateMarketingStrategy();
   const { data: proposalStats } = useProposalStats();
   const { data: autoStats } = useAutomationStats();
   const { data: trust } = useTrustScore();
-  const [autonomyLevel, setAutonomyLevel] = useState<'conservative' | 'balanced' | 'aggressive'>('balanced');
+  const [systemActive, setSystemActive] = useState<boolean>(strategy?.auto_publish ?? true);
+  const [autonomyLevel, setAutonomyLevel] = useState<'conservative' | 'balanced' | 'aggressive'>(
+    (strategy?.autonomy_level as any) ?? 'balanced',
+  );
 
   // ── Real health & success rate calculation ──
   // Health = weighted score: strategy (25%) + channels (25%) + proposals pipeline (25%) + automations (25%)
@@ -259,7 +262,10 @@ export default function AutonomousHubScreen() {
             <Text style={styles.systemLabel}>{systemActive ? t.autonomousHub.active : t.autonomousHub.off}</Text>
             <Switch
               value={systemActive}
-              onValueChange={setSystemActive}
+              onValueChange={(val) => {
+                setSystemActive(val);
+                updateStrategy.mutate({ auto_publish: val });
+              }}
               trackColor={{ true: '#10B981', false: '#374151' }}
               thumbColor="#fff"
             />
@@ -427,7 +433,10 @@ export default function AutonomousHubScreen() {
               <TouchableOpacity
                 key={opt.key}
                 style={[styles.autonomyBtn, autonomyLevel === opt.key && { borderColor: opt.color, backgroundColor: opt.color + '15' }]}
-                onPress={() => setAutonomyLevel(opt.key)}
+                onPress={() => {
+                  setAutonomyLevel(opt.key);
+                  updateStrategy.mutate({ autonomy_level: opt.key });
+                }}
               >
                 <Text style={[styles.autonomyLabel, autonomyLevel === opt.key && { color: opt.color }]}>{opt.label}</Text>
                 <Text style={styles.autonomyDesc}>{opt.desc}</Text>

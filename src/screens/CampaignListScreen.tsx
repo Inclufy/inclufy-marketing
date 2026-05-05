@@ -307,7 +307,7 @@ export default function CampaignListScreen() {
 
   // Pass status filter to API when not "all"
   const statusParam = activeTab === 'all' ? undefined : activeTab;
-  const { data: campaigns = [], isLoading, refetch } = useCampaigns(statusParam);
+  const { data: campaigns = [], isLoading, isRefetching, refetch } = useCampaigns(statusParam);
 
   // Client-side filter as fallback (API may return all)
   const filtered =
@@ -446,7 +446,7 @@ export default function CampaignListScreen() {
         contentContainerStyle={styles.list}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
+            refreshing={isRefetching}
             onRefresh={refetch}
             tintColor={colors.primary}
           />

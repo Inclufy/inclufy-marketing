@@ -10,6 +10,7 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Linking,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -251,11 +252,11 @@ export default function LoginScreen() {
             {t.login.termsPrefix}
           </Text>
           <View style={styles.footerLinks}>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://inclufy.com/terms')}>
               <Text style={styles.footerLink}>{t.login.terms}</Text>
             </TouchableOpacity>
             <Text style={styles.footerText}>{t.login.and}</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => Linking.openURL('https://inclufy.com/privacy')}>
               <Text style={styles.footerLink}>{t.login.privacy}</Text>
             </TouchableOpacity>
           </View>
