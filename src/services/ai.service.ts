@@ -210,6 +210,7 @@ class AIService {
     output_format: 'blog' | 'newsletter' | 'linkedin_article';
     language?: 'nl' | 'en' | 'fr';
     tone?: 'compact' | 'standard' | 'detailed';
+    selected_photos?: string[];
   }): Promise<EventRecapResponse> {
     return this.invoke('event-recap', params, {
       title: '',

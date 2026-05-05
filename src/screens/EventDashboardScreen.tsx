@@ -7,6 +7,7 @@ import {
   Image,
   Alert,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { useRoute, useNavigation, RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -31,7 +32,7 @@ export default function EventDashboardScreen() {
   const route = useRoute<Route>();
   const { eventId } = route.params;
 
-  const { data: event } = useEvent(eventId);
+  const { data: event, isLoading: eventLoading } = useEvent(eventId);
   const { data: captures = [] } = useCaptures(eventId);
   const { data: posts = [] } = useEventPosts(eventId);
   const updateEvent = useUpdateEvent();
@@ -293,7 +294,21 @@ export default function EventDashboardScreen() {
     );
   };
 
-  if (!event) return null;
+  if (eventLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!event) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }}>
+        <Text style={{ color: colors.textSecondary }}>Event niet gevonden.</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>

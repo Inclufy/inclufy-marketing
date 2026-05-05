@@ -103,7 +103,7 @@ export default function EventListScreen() {
     archived: colors.textTertiary,
   };
 
-  const { data: events = [], isLoading, refetch } = useEvents();
+  const { data: events = [], isLoading, isRefetching, refetch } = useEvents();
   const deleteEvent = useDeleteEvent();
   const [activeTab, setActiveTab] = useState<EventStatus | 'all'>('all');
 
@@ -211,7 +211,7 @@ export default function EventListScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderEvent}
         contentContainerStyle={styles.list}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={refetch} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>
             <Ionicons name="camera-outline" size={48} color={colors.textSecondary} />

@@ -601,6 +601,7 @@ export default function EventRecapScreen() {
         output_format:  selectedFormat,
         language:       genLang,
         tone:           genTone,
+        selected_photos: selectedPhotos,
       });
 
       setRecaps((prev) => ({ ...prev, [genLang]: result }));

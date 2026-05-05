@@ -325,9 +325,15 @@ export default function NotificationsScreen() {
     );
   };
 
+  const VALID_ROUTES = new Set<string>([
+    'EventDashboard', 'EventSetup', 'LiveCapture', 'PostReview', 'StoryArc',
+    'EventRecap', 'TeamManage', 'CampaignList', 'CampaignDetail', 'ContentCreator',
+    'Notifications', 'Settings', 'AMOSHub', 'Integrations', 'BrandKit',
+  ]);
+
   const handleGenericPress = (notification: AppNotification) => {
     markRead.mutate(notification.id);
-    if (notification.data.route) {
+    if (notification.data.route && VALID_ROUTES.has(notification.data.route)) {
       navigation.navigate(notification.data.route as any);
     }
   };

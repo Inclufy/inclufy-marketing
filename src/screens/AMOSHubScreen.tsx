@@ -668,7 +668,7 @@ export default function AMOSHubScreen() {
               />
             ) : (
               <Ionicons
-                name={(m.icon + (m.iconLib === 'ionicons' ? '-outline' : '')) as any}
+                name={m.icon as any}
                 size={22}
                 color={isComingSoon ? colors.textTertiary : m.color}
               />

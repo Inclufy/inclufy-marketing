@@ -580,7 +580,7 @@ export default function EventScannerScreen() {
 
       // Also create a contact in go_contacts if email provided
       if (editContact.email) {
-        await supabase.from('go_contacts').upsert({
+        const { error: contactError } = await supabase.from('go_contacts').upsert({
           user_id: user.id,
           name: editContact.name || editContact.email,
           email: editContact.email,
@@ -592,6 +592,7 @@ export default function EventScannerScreen() {
           province: sessionRegion?.province || '',
           country: sessionRegion?.country || '',
         }, { onConflict: 'user_id,email' });
+        if (contactError) console.warn('Contact upsert error:', contactError.message);
       }
 
       setScannedList((prev) => [data as any, ...prev]);

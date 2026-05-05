@@ -613,7 +613,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventListScreen.tsx',
     affectedLines: 'RefreshControl prop',
     fixSuggestion: 'Use `refreshing={isRefetching}` (TanStack Query) or a separate refreshing boolean state set true before refetch() and false in finally().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-022', severity: 'medium', category: 'data-logic',
@@ -678,7 +678,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventDashboardScreen.tsx',
     affectedLines: 'early return on !event',
     fixSuggestion: 'Check isLoading/isError from useEvent(). Show spinner while loading, error card on failure.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-027', severity: 'medium', category: 'data-logic',
@@ -704,7 +704,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/ContentCalendarScreen.tsx',
     affectedLines: 'main render return',
     fixSuggestion: 'Check isLoading from both hooks and show ActivityIndicator overlay.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-029', severity: 'medium', category: 'navigation',
@@ -795,7 +795,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/StoryArcScreen.tsx',
     affectedLines: 'useEffect (lines 286-290)',
     fixSuggestion: 'Only call generateArc() if arc.length === 0. Use a ref to prevent double-firing in Strict Mode.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-036', severity: 'low', category: 'navigation',
@@ -925,7 +925,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/SettingsScreen.tsx',
     affectedLines: 'social accounts fetch',
     fixSuggestion: 'Add .eq(\'user_id\', user.id) to the query.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-046', severity: 'high', category: 'data-logic',
@@ -938,7 +938,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/SettingsScreen.tsx',
     affectedLines: 'handleExportData',
     fixSuggestion: 'Change table names to match rest of codebase: events, event_captures, event_posts.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-047', severity: 'medium', category: 'data-logic',
@@ -951,7 +951,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/SettingsScreen.tsx',
     affectedLines: 'brand kit query',
     fixSuggestion: 'Replace .eq(\'is_active\', true) with .eq(\'is_default\', true).',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-048', severity: 'low', category: 'ui-visual',
@@ -990,7 +990,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/CopilotScreen.tsx',
     affectedLines: 'recorder.record() call',
     fixSuggestion: 'try { await recorder.record(); } catch (e) { Alert.alert(\'Opname mislukt\', e.message); }',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-051', severity: 'medium', category: 'data-logic',
@@ -1081,7 +1081,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/NotificationsScreen.tsx',
     affectedLines: 'handleGenericPress',
     fixSuggestion: 'Validate route against VALID_ROUTES allowlist before calling navigation.navigate().',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-058', severity: 'high', category: 'data-logic',
@@ -1094,7 +1094,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventRecapScreen.tsx',
     affectedLines: 'generateRecap function',
     fixSuggestion: 'Include selected_photos: selectedPhotos in the generateEventRecap payload.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-059', severity: 'low', category: 'ui-visual',
@@ -1133,7 +1133,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/EventScannerScreen.tsx',
     affectedLines: 'contact upsert after QR scan',
     fixSuggestion: 'Destructure { error } from upsert and show Alert on failure.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-062', severity: 'medium', category: 'data-logic',
@@ -1172,7 +1172,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/ContentCreatorScreen.tsx',
     affectedLines: 'searchAiImages (line 281)',
     fixSuggestion: 'Move to EXPO_PUBLIC_PEXELS_KEY env var or proxy via Supabase Edge Function.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-065', severity: 'medium', category: 'data-logic',
@@ -1224,7 +1224,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AMOSHubScreen.tsx',
     affectedLines: 'renderGridCard icon render (~670-675)',
     fixSuggestion: 'Remove auto "-outline" suffix; define full icon name explicitly in each AMOSModule.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-069', severity: 'low', category: 'ui-visual',

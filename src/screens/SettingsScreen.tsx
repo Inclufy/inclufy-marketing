@@ -267,9 +267,11 @@ export default function SettingsScreen() {
   const { data: socialAccounts = [], refetch: refetchSocial } = useQuery({
     queryKey: ['social-accounts'],
     queryFn: async () => {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
       const { data } = await supabase
         .from('social_accounts')
-        .select('id, platform, account_name, platform_account_id, status, profile_image_url');
+        .select('id, platform, account_name, platform_account_id, status, profile_image_url')
+        .eq('user_id', user?.id || '');
       return (data || []) as Array<{
         id: string;
         platform: string;
@@ -290,14 +292,14 @@ export default function SettingsScreen() {
     queryFn: async () => {
       const { data } = await supabase
         .from('brand_kits')
-        .select('id, name, is_active')
-        .order('is_active', { ascending: false });
+        .select('id, name, is_default')
+        .order('is_default', { ascending: false });
       return data || [];
     },
     staleTime: 0,
   });
 
-  const activeBrandKit = (brandKits as any[]).find((bk: any) => bk.is_active);
+  const activeBrandKit = (brandKits as any[]).find((bk: any) => bk.is_default);
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
@@ -403,9 +405,9 @@ export default function SettingsScreen() {
 
       // Fetch all user data in parallel
       const [eventsRes, capturesRes, postsRes, brandKitsRes] = await Promise.all([
-        supabase.from('go_events').select('*').eq('user_id', user.id),
-        supabase.from('go_captures').select('*').eq('user_id', user.id),
-        supabase.from('go_posts').select('*').eq('user_id', user.id),
+        supabase.from('events').select('*').eq('user_id', user.id),
+        supabase.from('event_captures').select('*').eq('user_id', user.id),
+        supabase.from('event_posts').select('*').eq('user_id', user.id),
         supabase.from('brand_kits').select('id, name, is_active').eq('user_id', user.id),
       ]);
 

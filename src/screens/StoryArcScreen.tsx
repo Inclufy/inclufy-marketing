@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -63,6 +63,7 @@ export default function StoryArcScreen() {
   const { data: brandMemory } = useBrandMemory();
   const { hasConsent, showModal: showConsentModal, requestConsent, onAccept: onConsentAccept, onDecline: onConsentDecline } = useAIConsent();
 
+  const hasGeneratedRef = useRef(false);
   const [arc, setArc] = useState<StoryArcPost[]>([]);
   const [narrative, setNarrative] = useState('');
   const [loading, setLoading] = useState(true);
@@ -284,7 +285,8 @@ export default function StoryArcScreen() {
   }));
 
   useEffect(() => {
-    if (event && brandMemory) {
+    if (event && brandMemory && !hasGeneratedRef.current) {
+      hasGeneratedRef.current = true;
       generateArc();
     }
   }, [event, brandMemory]);

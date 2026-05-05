@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-  View, Text, TouchableOpacity, FlatList, SafeAreaView, ScrollView,
+  View, Text, TouchableOpacity, FlatList, SafeAreaView, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -25,8 +25,9 @@ export default function ContentCalendarScreen() {
   const navigation = useNavigation();
   const { colors } = useTheme();
   const styles = useThemedStyles(() => ({ container: { flex: 1 } as const }));
-  const { data: proposals } = useContentProposals();
-  const { data: campaigns } = useCampaigns();
+  const { data: proposals, isLoading: proposalsLoading } = useContentProposals();
+  const { data: campaigns, isLoading: campaignsLoading } = useCampaigns();
+  const isLoading = proposalsLoading || campaignsLoading;
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'week' | 'month'>('week');
@@ -101,6 +102,14 @@ export default function ContentCalendarScreen() {
   };
 
   const today = new Date().toISOString().split('T')[0];
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

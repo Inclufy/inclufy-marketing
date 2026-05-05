@@ -277,7 +277,7 @@ export default function ContentCreatorScreen() {
     setAiImageLoading(true);
     setAiImageResults([]);
     try {
-      const PEXELS_KEY = 'OZ3RwgGzshIZJdyEHY6QjUDl05wPImtlO6hEcYuBx9zJNaetpJK6n0A4';
+      const PEXELS_KEY = process.env.EXPO_PUBLIC_PEXELS_KEY || 'OZ3RwgGzshIZJdyEHY6QjUDl05wPImtlO6hEcYuBx9zJNaetpJK6n0A4';
       const pexelsUrl = `https://api.pexels.com/v1/search?query=${encodeURIComponent(q)}&per_page=12&orientation=landscape`;
       console.log('[AI Image] Searching Pexels:', q);
       const res = await fetch(pexelsUrl, {

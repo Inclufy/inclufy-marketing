@@ -238,7 +238,7 @@ export default function CopilotScreen() {
         await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
         // prepareToRecordAsync MUST be called before record()
         await recorder.prepareToRecordAsync();
-        recorder.record();
+        await recorder.record();
         setIsRecording(true);
       } catch (err: any) {
         console.error('Recording start error:', err);
