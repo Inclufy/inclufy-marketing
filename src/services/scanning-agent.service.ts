@@ -1913,7 +1913,7 @@ export const APP_MANUAL: ManualScreen[] = [
     purpose: 'Multi-step onboarding wizard shown once after first sign-up.',
     functions: [
       { name: 'handleNext', description: 'Advances through onboarding steps (brand name, goals, audience).' },
-      { name: 'completeOnboarding', description: 'Persists onboardingDone flag in AsyncStorage, then navigates to Main.', issueIds: ['SCAN-042'] },
+      { name: 'navigation.navigate Main', description: 'Inline onPress on the "Get started" button persists onboardingDone in AsyncStorage then navigates to Main.', issueIds: ['SCAN-042'] },
     ],
   },
 
@@ -1924,9 +1924,8 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Events',
     purpose: 'Lists all events with status filters; entry point for creating or opening events.',
     functions: [
-      { name: 'filterByStatus', description: 'Filters events by All / Upcoming / Active / Completed tab.' },
-      { name: 'navigateToEventDashboard', description: 'Opens EventDashboard for a selected event.' },
-      { name: 'navigateToEventSetup', description: 'Navigates to EventSetup to create a new event.' },
+      { name: 'setActiveTab', description: 'Filters events by All / Upcoming / Active / Completed tab; drives the filtered derived list.' },
+      { name: 'handleDelete', description: 'Prompts confirmation then deletes an event via useDeleteEvent.' },
       { name: 'handleDelete', description: 'Prompts confirmation and deletes an event.' },
       { name: 'handleLogout', description: 'Signs out the user via Supabase Auth (awaited with error Alert).', issueIds: ['SCAN-022'] },
       { name: 'Empty state icon', description: 'Shows calendar icon (not camera) when no events exist.', issueIds: ['SCAN-023'] },
@@ -1955,7 +1954,7 @@ export const APP_MANUAL: ManualScreen[] = [
     functions: [
       { name: 'toggleStatus', description: 'Switches event between upcoming / active / completed.' },
       { name: 'handleDeleteCapture', description: 'Deletes a capture from the event timeline with confirmation Alert.', issueIds: ['SCAN-026'] },
-      { name: 'navigateToRelatedScreen', description: 'Quick-action buttons navigate to LiveCapture, PostReview, Attendees, etc.' },
+      { name: 'Quick-action buttons', description: 'Inline onPress handlers navigate to LiveCapture, PostReview, Attendees, etc.' },
       { name: 'updateEvent mutation onError', description: 'Shows Alert with error message if the event status update fails.', issueIds: ['SCAN-027'] },
     ],
   },
@@ -1991,7 +1990,7 @@ export const APP_MANUAL: ManualScreen[] = [
     purpose: 'Displays the AI-generated narrative arc and content strategy for an event.',
     functions: [
       { name: 'Back button', description: 'Returns to the previous screen via navigation.goBack().', issueIds: ['SCAN-036'] },
-      { name: 'displayStoryArc', description: 'Renders event story arc sections: teaser, live, and follow-up.' },
+      { name: 'generateArc', description: 'Calls the AI to generate the narrative arc for the event; populates arc and narrative state.' },
     ],
   },
 
@@ -2051,7 +2050,7 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Campaigns',
     purpose: 'Lists all campaigns with status filters; pull-to-refresh and create-new access.',
     functions: [
-      { name: 'filterByStatus', description: 'Filters the list by All / Active / Draft / Completed / Paused.' },
+      { name: 'setActiveTab', description: 'Filters the list by All / Active / Draft / Completed / Paused.' },
       { name: 'handleNewCampaign', description: 'Navigates to CampaignCreate.' },
       { name: 'Pull-to-refresh', description: 'Uses isRefetching so the spinner shows on every refresh, not just first load.', issueIds: ['SCAN-054'] },
     ],
@@ -2143,8 +2142,8 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'AI & Content',
     purpose: 'Week/month calendar showing all scheduled proposals and campaigns by date.',
     functions: [
-      { name: 'toggleViewMode', description: 'Switches between week view and month view.' },
-      { name: 'navigatePrev / navigateNext', description: 'Moves the calendar backward or forward.' },
+      { name: 'setViewMode', description: 'Switches between week view and month view via useState setter.' },
+      { name: 'setCurrentDate', description: 'Moves the calendar backward or forward via the prev/next arrow buttons.' },
       { name: 'Upcoming list onPress', description: 'Tapping a list item navigates to CampaignDetail (campaigns) or ContentProposals (proposals).', issueIds: ['SCAN-029'] },
     ],
   },
@@ -2190,9 +2189,9 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Analytics & Strategy',
     purpose: 'Hub for AMOS autonomous actions: pending approvals, auto-publish toggle, and autonomy level selector.',
     functions: [
-      { name: 'toggleAutoPublish', description: 'Enables/disables automatic publishing and immediately persists via updateStrategy.mutate.', issueIds: ['SCAN-074'] },
-      { name: 'setAutonomyLevel', description: 'Sets Conservative / Balanced / Aggressive level and persists immediately.', issueIds: ['SCAN-075'] },
-      { name: 'viewPendingActions', description: 'Lists actions waiting for user approval before AMOS executes.' },
+      { name: 'setSystemActive', description: 'Toggles auto-publish switch and immediately persists via updateStrategy.mutate({ auto_publish }).', issueIds: ['SCAN-074'] },
+      { name: 'setAutonomyLevel', description: 'Sets Conservative / Balanced / Aggressive level and persists via updateStrategy.mutate({ autonomy_level }).', issueIds: ['SCAN-075'] },
+      { name: 'navigateTo', description: 'Helper that navigates to a named screen, trying stack then tab parent navigator.' },
     ],
   },
 
@@ -2252,8 +2251,8 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Library',
     purpose: 'Browse and import pre-designed product post templates into the event post pipeline.',
     functions: [
-      { name: 'filterByProduct', description: 'Filters library posts by associated product.' },
-      { name: 'importPost', description: 'Imports a library template as a new post for a selected event.' },
+      { name: 'setProductId', description: 'Filters library posts by the selected product via useState setter.' },
+      { name: 'setStatusFilter', description: 'Filters posts by status (all / draft / published / etc.).' },
     ],
   },
   {
@@ -2262,8 +2261,8 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Library',
     purpose: 'Detail view of a library post with edit, publish, and delete capabilities.',
     functions: [
-      { name: 'handleDelete', description: 'Deletes the library post wrapped in try/catch with failure Alert.', issueIds: ['SCAN-073'] },
-      { name: 'handlePublish', description: 'Publishes the library post to its configured channels.' },
+      { name: 'confirmDelete', description: 'Shows confirmation Alert then deletes the library post; wrapped in try/catch with failure Alert.', issueIds: ['SCAN-073'] },
+      { name: 'publishNow', description: 'Publishes the library post via usePublishLibraryPost mutateAsync.' },
     ],
   },
 
@@ -2274,7 +2273,7 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Automation & AI Agents',
     purpose: 'Navigation hub listing all AMOS AI modules grouped by category with live stats.',
     functions: [
-      { name: 'navigateToModule', description: 'Opens the selected AMOS module (Copilot, Agents, Automations, etc.).' },
+      { name: 'navigate', description: 'Opens the selected AMOS module; tries stack navigation first, then tab parent navigator.' },
     ],
   },
   {
@@ -2310,7 +2309,7 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Settings & Account',
     purpose: 'Configure WhatsApp Business API credentials and manage message templates.',
     functions: [
-      { name: 'saveSettings', description: 'Saves WhatsApp API key and business number to Supabase.' },
+      { name: 'handleSave', description: 'Validates and saves WhatsApp WABA ID, phone number ID, business name, and access token via useUpsertWhatsAppConfig.' },
       { name: 'Unused import removal', description: 'SectionList was imported but never used — import removed.', issueIds: ['SCAN-048'] },
     ],
   },
@@ -2320,7 +2319,7 @@ export const APP_MANUAL: ManualScreen[] = [
     category: 'Settings & Account',
     purpose: 'Connect and manage third-party platform integrations (social, analytics, email, CRM).',
     functions: [
-      { name: 'connectPlatform', description: 'Opens connection flow for the selected integration.' },
+      { name: 'Connect button onPress', description: 'Each integration card\'s connect button shows an Alert with "coming soon" message.', issueIds: ['SCAN-038'] },
       { name: 'Connected status', description: 'Platform connected state is driven from the live social_accounts Supabase query, not from a hardcoded flag.', issueIds: ['SCAN-038'] },
     ],
   },
