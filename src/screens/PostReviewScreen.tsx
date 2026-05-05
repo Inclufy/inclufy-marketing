@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -33,6 +33,7 @@ import { useThemedStyles } from '../utils/themedStyles';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type Route = RouteProp<RootStackParamList, 'PostReview'>;
@@ -74,6 +75,30 @@ export default function PostReviewScreen() {
 
   // ViewShot refs for baking overlay into image before publishing
   const viewShotRefs = useRef<Record<string, ViewShot | null>>({});
+
+  // ── Audio playback (SCAN-014) ─────────────────────────────────────────────
+  const [audioPlayingPostId, setAudioPlayingPostId] = useState<string | null>(null);
+  const audioPlayer = useAudioPlayer(null);
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
+  // Clean up player on unmount
+  useEffect(() => () => { audioPlayer.remove(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Auto-clear playing state when playback naturally ends
+  useEffect(() => {
+    if (!audioStatus.playing && audioPlayingPostId) {
+      setAudioPlayingPostId(null);
+    }
+  }, [audioStatus.playing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleToggleAudio = useCallback((postId: string, uri: string) => {
+    if (audioPlayingPostId === postId) {
+      audioPlayer.pause();
+      setAudioPlayingPostId(null);
+    } else {
+      audioPlayer.replace({ uri });
+      audioPlayer.play();
+      setAudioPlayingPostId(postId);
+    }
+  }, [audioPlayingPostId, audioPlayer]);
 
   // Fetch raw capture data to get storage_path for signed URL
   const { data: capture, isFetching: captureFetching } = useQuery({
@@ -192,6 +217,8 @@ export default function PostReviewScreen() {
   // ── Language select ───────────────────────────────────────────────────────
   const [postLang, setPostLang] = useState<Record<string, string>>({});
   const [translating, setTranslating] = useState<string | null>(null); // postId
+  // Cache original AI text so selecting NL always restores it rather than re-translating (SCAN-013)
+  const originalTextRef = useRef<Record<string, string>>({});
 
   // ── First comment draft ───────────────────────────────────────────────────
   // Keyed by post.id; seeded from post.first_comment on load
@@ -279,6 +306,7 @@ export default function PostReviewScreen() {
     logoPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   }>>({});
   const [editingOverlay, setEditingOverlay] = useState<string | null>(null); // postId being edited
+  const [savedOverlayPostId, setSavedOverlayPostId] = useState<string | null>(null); // brief save confirmation (SCAN-015)
   const [overlayDraft, setOverlayDraft] = useState<{
     text: string;
     textPosition: 'top' | 'bottom';
@@ -432,6 +460,9 @@ export default function PostReviewScreen() {
     // Update local state immediately for instant UI feedback
     setOverlayConfig((prev) => ({ ...prev, [postId]: { ...overlayDraft } }));
     setEditingOverlay(null);
+    // Show brief confirmation badge (SCAN-015)
+    setSavedOverlayPostId(postId);
+    setTimeout(() => setSavedOverlayPostId((cur) => (cur === postId ? null : cur)), 2000);
     // Persist to DB inside engagement JSONB so it survives navigation
     const post = posts.find((p) => p.id === postId);
     if (post) {
@@ -754,12 +785,29 @@ export default function PostReviewScreen() {
       requestConsent(() => { handleSelectLang(post, lang) });
       return;
     }
+
+    // NL = restore original AI text from cache (SCAN-013)
+    if (lang === 'nl') {
+      const original = originalTextRef.current[post.id];
+      if (original) {
+        setEditingText((prev) => ({ ...prev, [post.id]: original }));
+        setPostLang((prev) => ({ ...prev, [post.id]: 'nl' }));
+        try { await updatePost.mutateAsync({ id: post.id, text_content: original }); } catch { /* non-critical */ }
+        return;
+      }
+    }
+
+    // Cache original text before first translation
+    if (!originalTextRef.current[post.id]) {
+      originalTextRef.current[post.id] = editingText[post.id] ?? post.text_content ?? '';
+    }
+
     setTranslating(post.id);
     try {
-      const currentText = editingText[post.id] ?? post.text_content;
+      const currentText = originalTextRef.current[post.id] || editingText[post.id] ?? post.text_content;
       const result = await aiService.translateContent({
         text: currentText,
-        source_language: postLang[post.id] || 'nl',
+        source_language: 'nl',
         target_languages: [lang],
         platform: post.channel,
       });
@@ -1660,26 +1708,54 @@ export default function PostReviewScreen() {
                         </View>
                       </TouchableOpacity>
                     </ViewShot>
-                    <TouchableOpacity onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}
-                      style={[styles.addImageBtn, { alignSelf: 'center', marginTop: 4 }]}>
-                      {uploadingImage
-                        ? <ActivityIndicator size="small" color={colors.primary} />
-                        : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="image-outline" size={15} color={colors.primary} />
-                            <Text style={styles.addImageBtnText}>Afbeelding wijzigen</Text>
-                          </View>}
-                    </TouchableOpacity>
+                    <View style={{ flexDirection: 'row', gap: 8, alignSelf: 'center', marginTop: 4 }}>
+                      {mediaUrl && (
+                        <TouchableOpacity
+                          onPress={() => handleToggleAudio(post.id, mediaUrl)}
+                          style={[styles.addImageBtn, { backgroundColor: audioPlayingPostId === post.id ? colors.primary + '20' : undefined }]}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name={audioPlayingPostId === post.id ? 'pause' : 'play'} size={15} color={colors.primary} />
+                            <Text style={styles.addImageBtnText}>{audioPlayingPostId === post.id ? 'Pauzeer' : 'Afspelen'}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}
+                        style={styles.addImageBtn}>
+                        {uploadingImage
+                          ? <ActivityIndicator size="small" color={colors.primary} />
+                          : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="image-outline" size={15} color={colors.primary} />
+                              <Text style={styles.addImageBtnText}>Afbeelding wijzigen</Text>
+                            </View>}
+                      </TouchableOpacity>
+                    </View>
                   </>
                 ) : (
                   // Audio capture WITHOUT image — prompt to add one
                   <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
-                    <View style={{ width: 64, height: 64, borderRadius: 32,
-                      backgroundColor: 'rgba(124,58,237,0.2)',
-                      justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
-                      <Ionicons name="mic" size={32} color={colors.primary} />
-                    </View>
+                    {/* Play button (large) */}
+                    {mediaUrl && (
+                      <TouchableOpacity
+                        onPress={() => handleToggleAudio(post.id, mediaUrl)}
+                        style={{
+                          width: 64, height: 64, borderRadius: 32,
+                          backgroundColor: audioPlayingPostId === post.id ? colors.primary : 'rgba(124,58,237,0.2)',
+                          justifyContent: 'center', alignItems: 'center', marginBottom: 8,
+                        }}
+                      >
+                        <Ionicons name={audioPlayingPostId === post.id ? 'pause' : 'play'} size={32} color={audioPlayingPostId === post.id ? '#fff' : colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                    {!mediaUrl && (
+                      <View style={{ width: 64, height: 64, borderRadius: 32,
+                        backgroundColor: 'rgba(124,58,237,0.2)',
+                        justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                        <Ionicons name="mic" size={32} color={colors.primary} />
+                      </View>
+                    )}
                     <Text style={[styles.imagePlaceholderText, { color: '#fff', fontWeight: fontWeight.semibold, fontSize: fontSize.md }]}>
-                      Audio opname
+                      {audioPlayingPostId === post.id ? 'Aan het afspelen...' : 'Audio opname'}
                     </Text>
                     <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.5)' }]}>
                       Voeg optioneel een afbeelding toe
@@ -1881,14 +1957,25 @@ export default function PostReviewScreen() {
                       paddingVertical: 9, backgroundColor: colors.primary + '08',
                     }}
                   >
-                    <Ionicons name="create-outline" size={15} color={colors.primary} />
-                    <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold }}>
-                      {overlayConfig[post.id]?.text || overlayConfig[post.id]?.showLogo
-                        ? 'Overlay aanpassen'
-                        : 'Tekst / logo toevoegen'}
-                    </Text>
-                    {(overlayConfig[post.id]?.text || overlayConfig[post.id]?.showLogo) && (
-                      <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success }} />
+                    {savedOverlayPostId === post.id ? (
+                      <>
+                        <Ionicons name="checkmark-circle" size={15} color={colors.success} />
+                        <Text style={{ fontSize: fontSize.sm, color: colors.success, fontWeight: fontWeight.semibold }}>
+                          Opgeslagen
+                        </Text>
+                      </>
+                    ) : (
+                      <>
+                        <Ionicons name="create-outline" size={15} color={colors.primary} />
+                        <Text style={{ fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold }}>
+                          {overlayConfig[post.id]?.text || overlayConfig[post.id]?.showLogo
+                            ? 'Overlay aanpassen'
+                            : 'Tekst / logo toevoegen'}
+                        </Text>
+                        {(overlayConfig[post.id]?.text || overlayConfig[post.id]?.showLogo) && (
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success }} />
+                        )}
+                      </>
                     )}
                   </TouchableOpacity>
 

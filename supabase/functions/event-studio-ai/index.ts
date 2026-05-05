@@ -211,12 +211,16 @@ Include 3-5 key highlights, a 1-2 sentence social teaser, and a call-to-action.`
 
 // ─── Action: transcribe ────────────────────────────────────────────
 async function handleTranscribe(body: Record<string, unknown>) {
-  const { audio_base64 } = body;
+  const { audio_base64, audio_mime_type } = body;
   if (!audio_base64) throw new Error('audio_base64 required');
+
+  // Use caller-supplied MIME type or fall back to mp4/m4a (expo-audio default)
+  const mimeType = (audio_mime_type as string) || 'audio/mp4';
+  const ext = mimeType.includes('wav') ? 'wav' : mimeType.includes('webm') ? 'webm' : mimeType.includes('ogg') ? 'ogg' : 'm4a';
 
   const audioBytes = Uint8Array.from(atob(audio_base64 as string), (c) => c.charCodeAt(0));
   const formData = new FormData();
-  formData.append('file', new Blob([audioBytes], { type: 'audio/wav' }), 'audio.wav');
+  formData.append('file', new Blob([audioBytes], { type: mimeType }), `audio.${ext}`);
   formData.append('model', 'whisper-1');
   formData.append('language', 'nl');
 

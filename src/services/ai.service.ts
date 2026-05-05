@@ -157,9 +157,11 @@ class AIService {
 
   /**
    * Transcribe audio using Whisper via Edge Function.
+   * @param audioBase64 - Base64-encoded audio file content
+   * @param mimeType - MIME type of the audio (e.g. 'audio/mp4', 'audio/wav'). Defaults to 'audio/mp4' (expo-audio default).
    */
-  async transcribeAudio(audioBase64: string): Promise<TranscribeResponse> {
-    return this.invoke('transcribe', { audio_base64: audioBase64 }, { transcript: '', duration: 0 });
+  async transcribeAudio(audioBase64: string, mimeType = 'audio/mp4'): Promise<TranscribeResponse> {
+    return this.invoke('transcribe', { audio_base64: audioBase64, audio_mime_type: mimeType }, { transcript: '', duration: 0 });
   }
 
   /**

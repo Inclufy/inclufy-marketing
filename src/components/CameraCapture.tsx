@@ -32,6 +32,11 @@ export default function CameraCapture({ onCapture, onVideoStart, onVideoEnd, mod
   const [permission, requestPermission] = useCameraPermissions();
   const [micPermission, requestMicPermission] = useMicrophonePermissions();
 
+  // ── Flash ────────────────────────────────────────────────────────────────
+  const [flash, setFlash] = useState<'off' | 'on' | 'auto'>('off');
+  const cycleFlash = () => setFlash((prev) => prev === 'off' ? 'on' : prev === 'on' ? 'auto' : 'off');
+  const flashIcon = flash === 'on' ? 'flash' : flash === 'auto' ? 'flash-outline' : 'flash-off-outline';
+
   // ── Zoom ────────────────────────────────────────────────────────────────
   const [zoom, setZoom] = useState(0);
   const [showZoomIndicator, setShowZoomIndicator] = useState(false);
@@ -153,6 +158,7 @@ export default function CameraCapture({ onCapture, onVideoStart, onVideoEnd, mod
         facing={facing}
         mode={toCameraMode(mode)}
         zoom={zoom}
+        flash={flash}
       />
 
       {/* Zoom level indicator */}
@@ -204,13 +210,13 @@ export default function CameraCapture({ onCapture, onVideoStart, onVideoEnd, mod
           />
         </TouchableOpacity>
 
-        {/* Flash / zoom reset placeholder for symmetry */}
+        {/* Flash toggle: off → on → auto → off */}
         <TouchableOpacity
           style={styles.flipBtn}
-          onPress={() => { setZoom(0); }}
+          onPress={cycleFlash}
           activeOpacity={0.7}
         >
-          <Ionicons name="scan-outline" size={22} color={zoom > 0 ? colors.primary : 'rgba(255,255,255,0.5)'} />
+          <Ionicons name={flashIcon} size={22} color={flash !== 'off' ? '#FFD700' : 'rgba(255,255,255,0.6)'} />
         </TouchableOpacity>
       </View>
 

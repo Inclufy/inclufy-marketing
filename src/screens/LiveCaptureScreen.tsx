@@ -592,7 +592,10 @@ export default function LiveCaptureScreen() {
       const base64 = await FileSystem.readAsStringAsync(uri, {
         encoding: 'base64' as any,
       });
-      const result = await aiService.transcribeAudio(base64);
+      // Derive MIME type from the file extension — expo-audio produces M4A on iOS and MP4 on Android
+      const ext = uri.split('.').pop()?.toLowerCase() || 'm4a';
+      const mimeType = ext === 'wav' ? 'audio/wav' : ext === 'webm' ? 'audio/webm' : ext === 'ogg' ? 'audio/ogg' : 'audio/mp4';
+      const result = await aiService.transcribeAudio(base64, mimeType);
       transcript = result.transcript;
     } catch (transcribeErr) {
       console.warn('[AudioCapture] transcription failed (non-fatal):', transcribeErr);
