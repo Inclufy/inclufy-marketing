@@ -1160,6 +1160,13 @@ export default function SettingsScreen() {
             value={t.settings.demoEnvironmentDesc ?? 'Genereer demo-events'}
             onPress={() => navigation.navigate('DemoEnvironment')}
           />
+          <SettingsRow
+            icon="clipboard-outline"
+            iconColor="#6366F1"
+            label="QA Validatie Manual"
+            value="Test & valideer alle 77 gescande issues"
+            onPress={() => (navigation as any).navigate('QAManual')}
+          />
         </View>
 
         {/* ── Gegevensbeheer ────────────────────────────────────────── */}

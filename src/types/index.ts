@@ -210,6 +210,8 @@ export type RootStackParamList = {
   AllPosts: undefined;
   // WhatsApp Business settings
   WhatsAppSettings: undefined;
+  // QA Manual
+  QAManual: undefined;
   // Content Library (imported product posts)
   Library: { productId?: string } | undefined;
   LibraryImport: { productId?: string } | undefined;

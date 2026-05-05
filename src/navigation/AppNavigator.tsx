@@ -72,6 +72,7 @@ import WhatsAppSettingsScreen from '../screens/WhatsAppSettingsScreen';
 import LibraryScreen from '../screens/LibraryScreen';
 import LibraryImportScreen from '../screens/LibraryImportScreen';
 import LibraryPostDetailScreen from '../screens/LibraryPostDetailScreen';
+import QAManualScreen from '../screens/QAManualScreen';
 
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -353,6 +354,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="BrandKit" component={BrandKitScreen} options={{ title: t.screenTitles.brandKit ?? 'Brand Kit' }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: t.screenTitles.notifications }} />
           <Stack.Screen name="DemoEnvironment" component={DemoEnvironmentScreen} options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }} />
+          <Stack.Screen name="QAManual" component={QAManualScreen} options={{ headerShown: false }} />
         </>
       )}
     </Stack.Navigator>

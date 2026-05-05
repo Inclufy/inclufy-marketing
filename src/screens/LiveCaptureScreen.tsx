@@ -949,7 +949,6 @@ export default function LiveCaptureScreen() {
             })}
           </View>
         </View>
-      </View>
 
       {/* Mode Tabs */}
       <View style={styles.modeTabs}>
