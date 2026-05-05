@@ -89,7 +89,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'taken in portrait mode (detectable from device orientation or image aspect ratio), ' +
       'apply a -90 rotation automatically in addition to EXIF rotation. Also normalise EXIF ' +
       'key lookup to handle both Orientation and orientation.',
-    status: 'open',
+    status: 'in-progress',
   },
 
   {
@@ -118,7 +118,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Change imageCandidates assignment so that for video/audio, it falls back to extraImages ' +
       'instead of []. Replace `isPreviewVideo || isPreviewAudio ? []` with ' +
       '`isPreviewVideo || isPreviewAudio ? extraImages.filter(Boolean) : [...]`.',
-    status: 'open',
+    status: 'in-progress',
   },
 
   {
@@ -145,7 +145,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Modify the video/audio card branch: after the dark placeholder, check if extra_images exist ' +
       'in post.engagement and render them as a thumbnail strip below the placeholder, ' +
       'or replace the placeholder entirely if a thumbnail is available.',
-    status: 'open',
+    status: 'in-progress',
   },
 
   {
@@ -175,7 +175,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'const [day, month, year] = scheduleDate.split("-"); ' +
       'const isoDate = `${year}-${month}-${day}`; ' +
       'const scheduled_at = `${isoDate}T${timeStr}:00`;',
-    status: 'open',
+    status: 'in-progress',
   },
 
   // ── HIGH ────────────────────────────────────────────────────────────────

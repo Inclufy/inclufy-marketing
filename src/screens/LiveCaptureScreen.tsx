@@ -47,23 +47,40 @@ type Route = RouteProp<RootStackParamList, 'LiveCapture'>;
 type CaptureMode = 'photo' | 'video' | 'audio' | 'quote' | 'upload';
 
 /**
- * Fix photo orientation using EXIF data.
+ * Fix photo orientation using EXIF data with dimension-based fallback.
  * iOS cameras store portrait photos as landscape pixels with EXIF orientation flag.
- * expo-image-manipulator doesn't always apply EXIF rotation automatically.
+ * expo-image-manipulator doesn't apply EXIF rotation automatically.
+ *
+ * Handles:
+ *   - Standard EXIF codes (1/3/6/8) from flat and nested TIFF/ExifIFD structures
+ *   - Android-style degree values (90 / 180 / 270)
+ *   - Dimension fallback: if image is wider than tall after resize, rotate -90°
  */
 async function normalizeImageOrientation(uri: string, exif?: Record<string, any>): Promise<string> {
   try {
     const transforms: ImageManipulator.Action[] = [];
 
-    // Apply EXIF rotation if available
-    const orientation = exif?.Orientation || exif?.orientation;
-    if (orientation) {
-      switch (orientation) {
-        case 3: transforms.push({ rotate: 180 }); break;
-        case 6: transforms.push({ rotate: 90 }); break;
-        case 8: transforms.push({ rotate: -90 }); break;
-        // 1 = normal, 2/4/5/7 = mirrored variants (rare)
-      }
+    // Read orientation from multiple possible EXIF structures:
+    //   flat (expo-camera iOS):       exif.Orientation
+    //   nested TIFF block (some RN):  exif.TIFF?.Orientation | exif.tiff?.orientation
+    //   Android ImagePicker:          exif.Orientation (degrees: 90/180/270)
+    const raw: number | undefined =
+      exif?.Orientation ??
+      exif?.orientation ??
+      (exif as any)?.TIFF?.Orientation ??
+      (exif as any)?.tiff?.orientation ??
+      undefined;
+
+    if (raw !== undefined && raw !== null) {
+      // Standard EXIF orientation codes
+      if (raw === 3) transforms.push({ rotate: 180 });
+      else if (raw === 6) transforms.push({ rotate: 90 });
+      else if (raw === 8) transforms.push({ rotate: -90 });
+      // Android-style degree values
+      else if (raw === 90)  transforms.push({ rotate: 90 });
+      else if (raw === 180) transforms.push({ rotate: 180 });
+      else if (raw === 270) transforms.push({ rotate: -90 });
+      // 1 = normal; 2/4/5/7 = mirrored (rare) — no action needed
     }
 
     // Always resize to cap file size
@@ -74,6 +91,22 @@ async function normalizeImageOrientation(uri: string, exif?: Record<string, any>
       transforms,
       { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
     );
+
+    // Dimension-based fallback: if no EXIF rotation was applied and the resulting
+    // image is wider than tall, it was likely taken in portrait but stored landscape.
+    // Rotate -90° to correct (the most common case for portrait iOS captures).
+    if (raw === undefined || raw === null || raw === 1) {
+      const { width: w, height: h } = result;
+      if (w && h && w > h) {
+        const corrected = await ImageManipulator.manipulateAsync(
+          result.uri,
+          [{ rotate: -90 }],
+          { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
+        );
+        return corrected.uri;
+      }
+    }
+
     return result.uri;
   } catch {
     return uri;

@@ -804,7 +804,13 @@ export default function PostReviewScreen() {
     setScheduling(true);
     try {
       const timeStr = scheduleTime.trim() || '09:00';
-      const scheduled_at = `${scheduleDate.trim()}T${timeStr}:00`;
+      // Convert EU format DD-MM-YYYY → ISO YYYY-MM-DD before building timestamp
+      const rawDate = scheduleDate.trim();
+      const dateParts = rawDate.split('-');
+      const isoDate = dateParts.length === 3 && rawDate.includes('-')
+        ? `${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`
+        : rawDate;
+      const scheduled_at = `${isoDate}T${timeStr}:00`;
       // Save any pending text first
       if (editingText[schedulingPost.id]) {
         await updatePost.mutateAsync({ id: schedulingPost.id, text_content: editingText[schedulingPost.id] });
@@ -1489,8 +1495,9 @@ export default function PostReviewScreen() {
           const isVideo = mediaType === 'video';
           const isAudio = mediaType === 'audio';
 
-          // For photos: try localMediaUri → branded_image_url → captureImageUrl
-          // For video/audio: no image to show — render a dedicated media card instead
+          // For photos: try localMediaUri → branded_image_url → captureImageUrl → extras
+          // For video/audio: captureImageUrl is a media file (not image) — use only
+          // extra_images (thumbnails explicitly added by the user via "Thumbnail toevoegen")
           const brandedOk = post.branded_image_url && !failedUrls.has(post.branded_image_url);
           const fallbackImageUrl = isVideo || isAudio
             ? null
@@ -1500,9 +1507,14 @@ export default function PostReviewScreen() {
                null);
 
           // Multi-image: build ordered list and pick the active one
-          const postImages = isVideo || isAudio ? [] : getPostImages(post, fallbackImageUrl).map(
-            url => refreshedUrls[url] || url // Use refreshed signed URL if available
-          );
+          // For video/audio: only show extra_images (user-added thumbnails)
+          const postImages = (isVideo || isAudio)
+            ? (post.engagement?.extra_images ?? [])
+                .filter(Boolean)
+                .map((url: string) => refreshedUrls[url] || url)
+            : getPostImages(post, fallbackImageUrl).map(
+                url => refreshedUrls[url] || url
+              );
           const currentImgIdx = activeImageIndex[post.id] ?? 0;
           const safeIdx = Math.min(currentImgIdx, Math.max(0, postImages.length - 1));
           const imageUrl = postImages[safeIdx] ?? null;
@@ -1516,55 +1528,163 @@ export default function PostReviewScreen() {
             >
               {/* Media preview */}
               {isVideo ? (
-                // Video capture — show a branded video card (no inline player needed)
-                <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
-                  <View style={{
-                    width: 64, height: 64, borderRadius: 32,
-                    backgroundColor: 'rgba(124,58,237,0.2)',
-                    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-                  }}>
-                    <Ionicons name="videocam" size={32} color={colors.primary} />
+                imageUrl && !imageFailed ? (
+                  // Video capture WITH thumbnail — show thumbnail + video badge
+                  <>
+                    <ViewShot
+                      ref={(ref: ViewShot | null) => { viewShotRefs.current[post.id] = ref; }}
+                      options={{ format: 'jpg', quality: 0.9 }}
+                    >
+                      <TouchableOpacity
+                        style={styles.postImageWrapper}
+                        activeOpacity={0.92}
+                        onPress={() => setZoomImageUrl(imageUrl)}
+                      >
+                        <Image
+                          source={{ uri: imageUrl }}
+                          style={styles.postImage}
+                          resizeMode="cover"
+                          onError={async () => {
+                            if (imageUrl.includes('supabase') && !refreshedUrls[imageUrl]) {
+                              const freshUrl = await refreshSignedUrl(imageUrl);
+                              if (freshUrl !== imageUrl) return;
+                            }
+                            setFailedUrls((prev) => new Set([...prev, imageUrl]));
+                          }}
+                        />
+                        {/* Video badge overlay */}
+                        <View style={{
+                          position: 'absolute', top: 8, right: 8,
+                          flexDirection: 'row', alignItems: 'center', gap: 5,
+                          backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12,
+                          paddingHorizontal: 10, paddingVertical: 5,
+                        }}>
+                          <Ionicons name="videocam" size={14} color="#fff" />
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: fontWeight.semibold }}>Video</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </ViewShot>
+                    {/* Thumbnail strip + add more */}
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ flexDirection: 'row', gap: 8, paddingHorizontal: 2 }}>
+                      {postImages.map((thumbUrl: string, i: number) => (
+                        <TouchableOpacity key={`${thumbUrl}-${i}`}
+                          onPress={() => setActiveImageIndex((prev) => ({ ...prev, [post.id]: i }))}
+                          activeOpacity={0.8}>
+                          <Image source={{ uri: thumbUrl }}
+                            style={{ width: 58, height: 58, borderRadius: 8,
+                              borderWidth: i === safeIdx ? 2.5 : 1,
+                              borderColor: i === safeIdx ? (config?.color || colors.primary) : colors.border }}
+                            resizeMode="cover"
+                            onError={() => setFailedUrls((prev) => new Set([...prev, thumbUrl]))}
+                          />
+                        </TouchableOpacity>
+                      ))}
+                      <TouchableOpacity onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}
+                        style={{ width: 58, height: 58, borderRadius: 8, borderWidth: 1.5,
+                          borderColor: colors.primary + '60', borderStyle: 'dashed',
+                          justifyContent: 'center', alignItems: 'center', backgroundColor: colors.primary + '08' }}>
+                        {uploadingImage
+                          ? <ActivityIndicator size="small" color={colors.primary} />
+                          : <Ionicons name="add" size={22} color={colors.primary} />}
+                      </TouchableOpacity>
+                    </ScrollView>
+                  </>
+                ) : (
+                  // Video capture WITHOUT thumbnail — prompt to add one
+                  <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
+                    <View style={{ width: 64, height: 64, borderRadius: 32,
+                      backgroundColor: 'rgba(124,58,237,0.2)',
+                      justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                      <Ionicons name="videocam" size={32} color={colors.primary} />
+                    </View>
+                    <Text style={[styles.imagePlaceholderText, { color: '#fff', fontWeight: fontWeight.semibold, fontSize: fontSize.md }]}>
+                      Video opname
+                    </Text>
+                    <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.5)' }]}>
+                      Voeg een afbeelding toe als thumbnail
+                    </Text>
+                    <TouchableOpacity style={styles.addImageBtn} onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}>
+                      {uploadingImage
+                        ? <ActivityIndicator size="small" color={colors.primary} />
+                        : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="image-outline" size={15} color={colors.primary} />
+                            <Text style={styles.addImageBtnText}>Thumbnail toevoegen</Text>
+                          </View>}
+                    </TouchableOpacity>
                   </View>
-                  <Text style={[styles.imagePlaceholderText, { color: '#fff', fontWeight: fontWeight.semibold, fontSize: fontSize.md }]}>
-                    Video opname
-                  </Text>
-                  <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.5)' }]}>
-                    Voeg een afbeelding toe als thumbnail
-                  </Text>
-                  <TouchableOpacity style={styles.addImageBtn} onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}>
-                    {uploadingImage
-                      ? <ActivityIndicator size="small" color={colors.primary} />
-                      : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name="image-outline" size={15} color={colors.primary} />
-                          <Text style={styles.addImageBtnText}>Thumbnail toevoegen</Text>
-                        </View>}
-                  </TouchableOpacity>
-                </View>
+                )
               ) : isAudio ? (
-                // Audio capture — show a branded audio card
-                <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
-                  <View style={{
-                    width: 64, height: 64, borderRadius: 32,
-                    backgroundColor: 'rgba(124,58,237,0.2)',
-                    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-                  }}>
-                    <Ionicons name="mic" size={32} color={colors.primary} />
+                imageUrl && !imageFailed ? (
+                  // Audio capture WITH cover image — show it + audio badge
+                  <>
+                    <ViewShot
+                      ref={(ref: ViewShot | null) => { viewShotRefs.current[post.id] = ref; }}
+                      options={{ format: 'jpg', quality: 0.9 }}
+                    >
+                      <TouchableOpacity
+                        style={styles.postImageWrapper}
+                        activeOpacity={0.92}
+                        onPress={() => setZoomImageUrl(imageUrl)}
+                      >
+                        <Image
+                          source={{ uri: imageUrl }}
+                          style={styles.postImage}
+                          resizeMode="cover"
+                          onError={async () => {
+                            if (imageUrl.includes('supabase') && !refreshedUrls[imageUrl]) {
+                              const freshUrl = await refreshSignedUrl(imageUrl);
+                              if (freshUrl !== imageUrl) return;
+                            }
+                            setFailedUrls((prev) => new Set([...prev, imageUrl]));
+                          }}
+                        />
+                        {/* Audio badge overlay */}
+                        <View style={{
+                          position: 'absolute', top: 8, right: 8,
+                          flexDirection: 'row', alignItems: 'center', gap: 5,
+                          backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 12,
+                          paddingHorizontal: 10, paddingVertical: 5,
+                        }}>
+                          <Ionicons name="mic" size={14} color="#fff" />
+                          <Text style={{ color: '#fff', fontSize: 11, fontWeight: fontWeight.semibold }}>Audio</Text>
+                        </View>
+                      </TouchableOpacity>
+                    </ViewShot>
+                    <TouchableOpacity onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}
+                      style={[styles.addImageBtn, { alignSelf: 'center', marginTop: 4 }]}>
+                      {uploadingImage
+                        ? <ActivityIndicator size="small" color={colors.primary} />
+                        : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="image-outline" size={15} color={colors.primary} />
+                            <Text style={styles.addImageBtnText}>Afbeelding wijzigen</Text>
+                          </View>}
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  // Audio capture WITHOUT image — prompt to add one
+                  <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
+                    <View style={{ width: 64, height: 64, borderRadius: 32,
+                      backgroundColor: 'rgba(124,58,237,0.2)',
+                      justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                      <Ionicons name="mic" size={32} color={colors.primary} />
+                    </View>
+                    <Text style={[styles.imagePlaceholderText, { color: '#fff', fontWeight: fontWeight.semibold, fontSize: fontSize.md }]}>
+                      Audio opname
+                    </Text>
+                    <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.5)' }]}>
+                      Voeg optioneel een afbeelding toe
+                    </Text>
+                    <TouchableOpacity style={styles.addImageBtn} onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}>
+                      {uploadingImage
+                        ? <ActivityIndicator size="small" color={colors.primary} />
+                        : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="image-outline" size={15} color={colors.primary} />
+                            <Text style={styles.addImageBtnText}>Afbeelding toevoegen</Text>
+                          </View>}
+                    </TouchableOpacity>
                   </View>
-                  <Text style={[styles.imagePlaceholderText, { color: '#fff', fontWeight: fontWeight.semibold, fontSize: fontSize.md }]}>
-                    Audio opname
-                  </Text>
-                  <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.5)' }]}>
-                    Voeg optioneel een afbeelding toe
-                  </Text>
-                  <TouchableOpacity style={styles.addImageBtn} onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}>
-                    {uploadingImage
-                      ? <ActivityIndicator size="small" color={colors.primary} />
-                      : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name="image-outline" size={15} color={colors.primary} />
-                          <Text style={styles.addImageBtnText}>Afbeelding toevoegen</Text>
-                        </View>}
-                  </TouchableOpacity>
-                </View>
+                )
               ) : imageUrl && !imageFailed ? (
                 <>
                   <ViewShot
@@ -2695,9 +2815,11 @@ export default function PostReviewScreen() {
             const extraImages: string[] = Array.isArray((p.engagement as any)?.extra_images)
               ? (p.engagement as any).extra_images.filter(Boolean)
               : [];
-            // Only collect image candidates when the capture is a photo (not video/audio)
+            // For photos: try localMediaUri → branded_image_url → captureImageUrl → extras
+            // For video/audio: captureImageUrl points to a media file (not an image) —
+            // use only extra_images (thumbnails the user explicitly added)
             const imageCandidates: string[] = isPreviewVideo || isPreviewAudio
-              ? []
+              ? extraImages
               : [
                   localMediaUri,
                   p.branded_image_url,
