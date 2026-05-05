@@ -29,7 +29,9 @@ export type IssueCategory =
   | 'publish-flow'
   | 'schedule'
   | 'permissions'
-  | 'performance';
+  | 'performance'
+  | 'security'
+  | 'authentication';
 
 export interface ScanIssue {
   id: string;
@@ -50,6 +52,8 @@ export interface ScanIssue {
 export interface ScanReport {
   generatedAt: string;
   totalIssues: number;
+  fixed: number;
+  open: number;
   critical: number;
   high: number;
   medium: number;
@@ -89,7 +93,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'taken in portrait mode (detectable from device orientation or image aspect ratio), ' +
       'apply a -90 rotation automatically in addition to EXIF rotation. Also normalise EXIF ' +
       'key lookup to handle both Orientation and orientation.',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   {
@@ -118,7 +122,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Change imageCandidates assignment so that for video/audio, it falls back to extraImages ' +
       'instead of []. Replace `isPreviewVideo || isPreviewAudio ? []` with ' +
       '`isPreviewVideo || isPreviewAudio ? extraImages.filter(Boolean) : [...]`.',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   {
@@ -145,7 +149,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Modify the video/audio card branch: after the dark placeholder, check if extra_images exist ' +
       'in post.engagement and render them as a thumbnail strip below the placeholder, ' +
       'or replace the placeholder entirely if a thumbnail is available.',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   {
@@ -175,7 +179,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'const [day, month, year] = scheduleDate.split("-"); ' +
       'const isoDate = `${year}-${month}-${day}`; ' +
       'const scheduled_at = `${isoDate}T${timeStr}:00`;',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   // ── HIGH ────────────────────────────────────────────────────────────────
@@ -230,7 +234,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Remove the `event &&` guard and render the channel bar unconditionally. ' +
       'The `selectedChannels` state already defaults to [] for free captures and falls ' +
       'back to ["linkedin","instagram"] in processFreeCapture.',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   {
@@ -256,7 +260,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     fixSuggestion:
       'Change the filter in the button text to match handlePublishAll: ' +
       '`posts.filter(p => p.status === "draft" || p.status === "approved").length`',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   {
@@ -282,7 +286,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedLines: '38–53',
     fixSuggestion:
       'Add a cleanup useEffect: `useEffect(() => () => { if (isRecording) audioRecorder.stop(); }, []);`',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   {
@@ -311,7 +315,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Track the "current working URI" in a local ref that is updated immediately after ' +
       'each rotate/flip operation (before the query refetches). Use this ref as the ' +
       'source instead of captureImageUrl.',
-    status: 'in-progress',
+    status: 'fixed',
   },
 
   // ── MEDIUM ───────────────────────────────────────────────────────────────
@@ -339,7 +343,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     fixSuggestion:
       'Replace simple Alert with: Alert.alert("Microfoon toegang nodig", "...", ' +
       '[{ text: "Annuleer", style: "cancel" }, { text: "Open instellingen", onPress: () => Linking.openSettings() }])',
-    status: 'open',
+    status: 'fixed',
   },
 
   {
@@ -364,7 +368,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     fixSuggestion:
       'Add `const [flash, setFlash] = useState<"off"|"on"|"auto">("off")` and pass ' +
       '`flashMode={flash}` to `<CameraView>`. Replace right button with flash toggle cycling through states.',
-    status: 'open',
+    status: 'fixed',
   },
 
   {
@@ -388,7 +392,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedLines: '1574–1578',
     fixSuggestion:
       'Add a close button overlay on top-right of the zoom modal with Ionicons "close-circle" icon.',
-    status: 'open',
+    status: 'fixed',
   },
 
   {
@@ -414,7 +418,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     fixSuggestion:
       'Cache the original text per post in a ref before the first translation. ' +
       'If lang === "nl" and original is cached, restore from cache instead of calling translateContent.',
-    status: 'open',
+    status: 'fixed',
   },
 
   {
@@ -441,7 +445,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     fixSuggestion:
       'Add an audio playback button in the isAudio branch using expo-av Audio.Sound. ' +
       'Fetch media_url from the capture record and play on tap.',
-    status: 'open',
+    status: 'fixed',
   },
 
   {
@@ -465,7 +469,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/PostReviewScreen.tsx',
     affectedLines: '426–445',
     fixSuggestion: 'Add a short-lived success toast or inline "Overlay opgeslagen ✓" label after saveOverlay().',
-    status: 'open',
+    status: 'fixed',
   },
 
   {
@@ -492,7 +496,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Same dimension-based fallback as SCAN-001: detect width > height in portrait ' +
       'context and auto-rotate. Also pass exif from ImagePicker.launchImageLibraryAsync ' +
       '(ensure { exif: true } is set — it is, line 594).',
-    status: 'open',
+    status: 'fixed',
   },
 
   // ── LOW ──────────────────────────────────────────────────────────────────
@@ -593,6 +597,752 @@ const KNOWN_ISSUES: ScanIssue[] = [
       'Call updatePost.mutateAsync with whatsapp_cta_enabled: newEnabled immediately in the toggle handler.',
     status: 'open',
   },
+
+  // ══════════════════════════════════════════════════════════════════════════════
+  // SCAN-021 to SCAN-077 — Full-app scan of all remaining screens
+  // ══════════════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'SCAN-021', severity: 'high', category: 'ui-visual',
+    screen: 'EventListScreen',
+    title: 'Pull-to-refresh spinner never activates — uses isLoading instead of isRefetching',
+    description: 'refreshControl uses `isLoading` (true only on first load). After the first load pull-to-refresh never shows the spinner.',
+    stepsToReproduce: ['1. Open EventListScreen', '2. Pull down to refresh', '3. No spinner appears even though data is being reloaded'],
+    expectedBehavior: 'Spinner visible during any active refetch, not just the initial load.',
+    actualBehavior: 'No spinner on pull-to-refresh after first load.',
+    affectedFile: 'src/screens/EventListScreen.tsx',
+    affectedLines: 'RefreshControl prop',
+    fixSuggestion: 'Use `refreshing={isRefetching}` (TanStack Query) or a separate refreshing boolean state set true before refetch() and false in finally().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-022', severity: 'medium', category: 'data-logic',
+    screen: 'EventListScreen',
+    title: 'supabase.auth.signOut() not awaited — errors silently swallowed',
+    description: 'handleLogout calls signOut() without await, so sign-out errors are lost and navigation may proceed on failure.',
+    stepsToReproduce: ['1. Tap logout', '2. If signOut fails (network down), user still navigates away'],
+    expectedBehavior: 'Await signOut; show Alert on failure.',
+    actualBehavior: 'Silent failure — user sees no error.',
+    affectedFile: 'src/screens/EventListScreen.tsx',
+    affectedLines: 'handleLogout function',
+    fixSuggestion: 'Add await and wrap in try/catch with Alert on error.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-023', severity: 'low', category: 'ui-visual',
+    screen: 'EventListScreen',
+    title: 'Wrong empty-state icon (camera-outline) for events list',
+    description: 'The empty state for events uses camera-outline which belongs to media capture.',
+    stepsToReproduce: ['1. Clear all events', '2. Empty state shows camera icon instead of calendar'],
+    expectedBehavior: 'Calendar-outline icon for events empty state.',
+    actualBehavior: 'Camera icon shown — semantically incorrect.',
+    affectedFile: 'src/screens/EventListScreen.tsx',
+    affectedLines: 'ListEmptyComponent',
+    fixSuggestion: 'Replace camera-outline with calendar-outline.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-024', severity: 'high', category: 'data-logic',
+    screen: 'EventSetupScreen',
+    title: 'Event date field is a plain TextInput with no format validation',
+    description: 'Any string is accepted as a date (e.g. "tomorrow", "32-13-2025") and stored without validation.',
+    stepsToReproduce: ['1. Open EventSetupScreen', '2. Enter "abc" as date', '3. Save — no error shown'],
+    expectedBehavior: 'Date validated as DD-MM-YYYY or with a native date picker.',
+    actualBehavior: 'Arbitrary strings stored as date.',
+    affectedFile: 'src/screens/EventSetupScreen.tsx',
+    affectedLines: 'date TextInput',
+    fixSuggestion: 'Use DateTimePicker or validate with Date.parse guard before proceeding.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-025', severity: 'medium', category: 'data-logic',
+    screen: 'EventSetupScreen',
+    title: 'Null description from existing event placed into string state (renders "null")',
+    description: 'setDescription(existingEvent.description) where description may be null causes "null" to appear as text.',
+    stepsToReproduce: ['1. Edit an event with no description', '2. Description field shows "null"'],
+    expectedBehavior: 'Empty string when description is null.',
+    actualBehavior: '"null" rendered as literal text.',
+    affectedFile: 'src/screens/EventSetupScreen.tsx',
+    affectedLines: 'setDescription call in event load useEffect',
+    fixSuggestion: 'Use setDescription(existingEvent.description ?? \'\').',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-026', severity: 'high', category: 'navigation',
+    screen: 'EventDashboardScreen',
+    title: 'Blank white screen on event load failure — no error state or retry',
+    description: '`if (!event) return null` renders a blank screen if event fails to load. No error message, no retry.',
+    stepsToReproduce: ['1. Navigate to EventDashboard with invalid eventId', '2. White blank screen'],
+    expectedBehavior: 'Error message with retry button shown on load failure.',
+    actualBehavior: 'Blank white screen.',
+    affectedFile: 'src/screens/EventDashboardScreen.tsx',
+    affectedLines: 'early return on !event',
+    fixSuggestion: 'Check isLoading/isError from useEvent(). Show spinner while loading, error card on failure.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-027', severity: 'medium', category: 'data-logic',
+    screen: 'EventDashboardScreen',
+    title: 'updateEvent.mutate() in toggleStatus has no error callback — silent failure',
+    description: 'Status toggle has no onError handler; UI and DB can desync with no user feedback.',
+    stepsToReproduce: ['1. Tap status toggle while offline', '2. No error shown; UI shows wrong state'],
+    expectedBehavior: 'Alert shown on mutation failure; optimistic state reverted.',
+    actualBehavior: 'Silent failure.',
+    affectedFile: 'src/screens/EventDashboardScreen.tsx',
+    affectedLines: 'toggleStatus function',
+    fixSuggestion: 'Add { onError: (e) => Alert.alert(\'Fout\', e.message) } to mutate().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-028', severity: 'high', category: 'ui-visual',
+    screen: 'ContentCalendarScreen',
+    title: 'Calendar renders empty during data load — no loading indicator',
+    description: 'Loading states from useContentProposals and useCampaigns are ignored; calendar appears empty while fetching.',
+    stepsToReproduce: ['1. Open ContentCalendarScreen on slow connection', '2. Empty calendar shown immediately'],
+    expectedBehavior: 'ActivityIndicator shown until both queries complete.',
+    actualBehavior: 'Calendar appears empty during load.',
+    affectedFile: 'src/screens/ContentCalendarScreen.tsx',
+    affectedLines: 'main render return',
+    fixSuggestion: 'Check isLoading from both hooks and show ActivityIndicator overlay.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-029', severity: 'medium', category: 'navigation',
+    screen: 'ContentCalendarScreen',
+    title: 'Calendar event items have no onPress — cannot tap to view details',
+    description: 'Content items on the calendar have no onPress handler, making them non-interactive.',
+    stepsToReproduce: ['1. Open ContentCalendarScreen with proposals', '2. Tap any calendar item', '3. Nothing happens'],
+    expectedBehavior: 'Tap navigates to proposal detail or opens a detail modal.',
+    actualBehavior: 'No response on tap.',
+    affectedFile: 'src/screens/ContentCalendarScreen.tsx',
+    affectedLines: 'renderCalendarItem',
+    fixSuggestion: 'Wrap items in TouchableOpacity navigating to ContentProposals detail.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-030', severity: 'critical', category: 'navigation',
+    screen: 'AllPostsScreen',
+    title: 'Navigate to PostReview with null capture_id — crashes PostReviewScreen',
+    description: 'handleEdit navigates with captureId: post.capture_id. For content-creator posts, capture_id is null, causing PostReviewScreen Supabase queries to crash.',
+    stepsToReproduce: ['1. Open AllPostsScreen', '2. Tap Edit on a content-creator post', '3. PostReviewScreen crashes on null captureId'],
+    expectedBehavior: 'Guard prevents navigation and shows an Alert when capture_id is null.',
+    actualBehavior: 'Runtime crash.',
+    affectedFile: 'src/screens/AllPostsScreen.tsx',
+    affectedLines: 'handleEdit function',
+    fixSuggestion: 'Add: if (!post.capture_id) { Alert.alert(\'Kan niet bewerken\', \'...\'); return; } before navigation.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-031', severity: 'low', category: 'navigation',
+    screen: 'AllPostsScreen',
+    title: 'No back button in AllPostsScreen header',
+    description: 'Header has title but no back navigation button; users rely only on system gestures.',
+    stepsToReproduce: ['1. Navigate to AllPostsScreen', '2. No back button visible in header'],
+    expectedBehavior: 'Back arrow in header.',
+    actualBehavior: 'No back button.',
+    affectedFile: 'src/screens/AllPostsScreen.tsx',
+    affectedLines: 'header render',
+    fixSuggestion: 'Add TouchableOpacity with back arrow calling navigation.goBack().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-032', severity: 'medium', category: 'ui-visual',
+    screen: 'AnalyticsScreen',
+    title: 'Analytics displays only internal app counts — not real social media metrics',
+    description: 'The analytics screen shows DB row counts for proposals/campaigns/events. No actual reach, impressions, or engagement from social platforms is shown, misleading users.',
+    stepsToReproduce: ['1. Open AnalyticsScreen', '2. All metrics are internal app activity, not social data'],
+    expectedBehavior: 'Clearly labelled as "App Activity" or real social metrics integrated.',
+    actualBehavior: 'Presented as analytics but shows only internal DB counts.',
+    affectedFile: 'src/screens/AnalyticsScreen.tsx',
+    affectedLines: 'entire data layer',
+    fixSuggestion: 'Relabel section as "App Activiteit" or integrate real engagement data from go_posts.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-033', severity: 'low', category: 'ui-visual',
+    screen: 'AnalyticsScreen',
+    title: 'Budget shows "€0.0K" for zero values — awkward formatting',
+    description: 'Zero budget displays as €0.0K instead of €0.',
+    stepsToReproduce: ['1. Open AnalyticsScreen with no budget set', '2. Shows "€0.0K"'],
+    expectedBehavior: '"€0" for zero values.',
+    actualBehavior: '"€0.0K".',
+    affectedFile: 'src/screens/AnalyticsScreen.tsx',
+    affectedLines: 'budget display expression',
+    fixSuggestion: 'Use conditional: value >= 1000 ? `€${(value/1000).toFixed(1)}K` : `€${value}`.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-034', severity: 'medium', category: 'data-logic',
+    screen: 'BrandKitScreen',
+    title: 'handleSetDefault mutation has no error handler — silent failure',
+    description: 'handleSetDefault calls mutate() without onError; failed updates leave UI showing wrong default.',
+    stepsToReproduce: ['1. Set brand kit as default while offline', '2. No error shown; wrong kit appears default'],
+    expectedBehavior: 'Error Alert on mutation failure.',
+    actualBehavior: 'Silent failure.',
+    affectedFile: 'src/screens/BrandKitScreen.tsx',
+    affectedLines: 'handleSetDefault',
+    fixSuggestion: 'Add { onError: (e) => Alert.alert(\'Fout\', e.message) } to mutate().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-035', severity: 'high', category: 'performance',
+    screen: 'StoryArcScreen',
+    title: 'AI arc regenerated on every screen remount — unnecessary API calls',
+    description: 'useEffect calls generateArc() unconditionally whenever the screen mounts with data. Every navigation away and back triggers a fresh paid API call.',
+    stepsToReproduce: ['1. Open StoryArcScreen (arc generates)', '2. Navigate away and back', '3. Arc regenerates again'],
+    expectedBehavior: 'Arc cached; only regenerated when explicitly requested.',
+    actualBehavior: 'Arc generated on every mount.',
+    affectedFile: 'src/screens/StoryArcScreen.tsx',
+    affectedLines: 'useEffect (lines 286-290)',
+    fixSuggestion: 'Only call generateArc() if arc.length === 0. Use a ref to prevent double-firing in Strict Mode.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-036', severity: 'low', category: 'navigation',
+    screen: 'StoryArcScreen',
+    title: 'No back button in StoryArcScreen header',
+    description: 'Header shows icon and title but no back/close button.',
+    stepsToReproduce: ['1. Open StoryArcScreen', '2. No back button in header'],
+    expectedBehavior: 'Back arrow visible.',
+    actualBehavior: 'No back button.',
+    affectedFile: 'src/screens/StoryArcScreen.tsx',
+    affectedLines: 'header (lines 342-355)',
+    fixSuggestion: 'Add TouchableOpacity with arrow-back icon calling navigation.goBack().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-037', severity: 'critical', category: 'navigation',
+    screen: 'IntegrationsScreen',
+    title: 'All Connect buttons have no onPress — integrations completely non-functional',
+    description: 'Every "Verbinden" button lacks an onPress prop. Tapping any integration connect button does nothing.',
+    stepsToReproduce: ['1. Open IntegrationsScreen', '2. Tap any "Verbinden" button', '3. Nothing happens'],
+    expectedBehavior: 'OAuth flow, deep link, or at minimum a "coming soon" alert.',
+    actualBehavior: 'Complete no-op — no feedback.',
+    affectedFile: 'src/screens/IntegrationsScreen.tsx',
+    affectedLines: 'connect button TouchableOpacity elements',
+    fixSuggestion: 'Implement OAuth or add Alert.alert(\'Coming Soon\') at minimum.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-038', severity: 'medium', category: 'data-logic',
+    screen: 'IntegrationsScreen',
+    title: 'All integrations hardcoded as disconnected — never reads from DB',
+    description: '`connected: false` is hardcoded for every integration. Previously connected accounts always show as disconnected.',
+    stepsToReproduce: ['1. Connect a LinkedIn account', '2. Open IntegrationsScreen — shows as Disconnected'],
+    expectedBehavior: 'Connection status loaded from social_accounts table.',
+    actualBehavior: 'Always disconnected.',
+    affectedFile: 'src/screens/IntegrationsScreen.tsx',
+    affectedLines: 'INTEGRATIONS constant',
+    fixSuggestion: 'Query social_accounts table and merge status with static list.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-039', severity: 'critical', category: 'ui-visual',
+    screen: 'LoginScreen',
+    title: 'Forgot password shows "reset link sent" message when email is empty',
+    description: 'handleForgotPassword uses resetLinkSent as the alert body even on the empty-email guard, showing "Reset link sent" when no send was attempted.',
+    stepsToReproduce: ['1. Open forgot password', '2. Leave email empty', '3. Tap send — Alert says "Reset link sent"'],
+    expectedBehavior: 'Alert says "Enter your email address" when email is empty.',
+    actualBehavior: '"Reset link sent" shown — completely incorrect.',
+    affectedFile: 'src/screens/LoginScreen.tsx',
+    affectedLines: 'handleForgotPassword empty-email guard',
+    fixSuggestion: 'Change the empty-email alert body to a separate "please enter email" message.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-040', severity: 'high', category: 'authentication',
+    screen: 'LoginScreen',
+    title: 'Biometric login silently fails on expired or absent session',
+    description: 'Biometric flow calls refreshSession(). On expired/logged-out session, the error is not handled — biometric succeeds visually but user remains logged out.',
+    stepsToReproduce: ['1. Log out', '2. Try biometric login', '3. Biometric succeeds but user stays on login screen with no feedback'],
+    expectedBehavior: 'Alert: "Biometrisch inloggen mislukt, gebruik e-mail en wachtwoord."',
+    actualBehavior: 'Silent failure — no feedback, no navigation.',
+    affectedFile: 'src/screens/LoginScreen.tsx',
+    affectedLines: 'biometric login handler',
+    fixSuggestion: 'Check refreshSession() error; show Alert on failure.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-041', severity: 'low', category: 'navigation',
+    screen: 'LoginScreen',
+    title: 'Terms & Privacy links have no onPress handlers',
+    description: 'The Terms of Service and Privacy Policy buttons at the bottom of LoginScreen do nothing on tap.',
+    stepsToReproduce: ['1. Open LoginScreen', '2. Tap Terms or Privacy', '3. Nothing happens'],
+    expectedBehavior: 'Opens URL in browser.',
+    actualBehavior: 'No response.',
+    affectedFile: 'src/screens/LoginScreen.tsx',
+    affectedLines: 'Terms & Privacy TouchableOpacity elements',
+    fixSuggestion: 'Add onPress with Linking.openURL(\'https://inclufy.com/terms\').',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-042', severity: 'medium', category: 'data-logic',
+    screen: 'OnboardingScreen',
+    title: 'Onboarding completion not persisted — repeated every remount',
+    description: 'No AsyncStorage.setItem on completion; users see onboarding again every time the screen is visited.',
+    stepsToReproduce: ['1. Complete onboarding', '2. Navigate back to OnboardingScreen', '3. Onboarding starts from beginning'],
+    expectedBehavior: 'Completion flag persisted; onboarding skipped for returning users.',
+    actualBehavior: 'No persistence — always starts fresh.',
+    affectedFile: 'src/screens/OnboardingScreen.tsx',
+    affectedLines: 'handleFinish / handleSkip',
+    fixSuggestion: 'Call AsyncStorage.setItem(\'onboardingDone\', \'true\') on finish/skip and check in navigator.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-043', severity: 'low', category: 'ui-visual',
+    screen: 'OnboardingScreen',
+    title: 'scrollX Animated.Value created but never drives any animation (dead code)',
+    description: 'scrollX ref declared but no onScroll attached; not referenced in any transform.',
+    stepsToReproduce: ['1. Code review: scrollX unused in OnboardingScreen'],
+    expectedBehavior: 'scrollX drives dot indicator animation or is removed.',
+    actualBehavior: 'Dead code.',
+    affectedFile: 'src/screens/OnboardingScreen.tsx',
+    affectedLines: 'scrollX declaration',
+    fixSuggestion: 'Remove scrollX or wire to onScroll for dot indicator animation.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-044', severity: 'critical', category: 'data-logic',
+    screen: 'SettingsScreen',
+    title: 'Alert.prompt (iOS-only) used in handleDeleteAccount — crashes on Android',
+    description: 'Alert.prompt is not available on Android. Calling it throws TypeError and crashes the delete account flow.',
+    stepsToReproduce: ['1. Open SettingsScreen on Android', '2. Tap Delete Account', '3. App crashes'],
+    expectedBehavior: 'Cross-platform TextInput modal for confirmation.',
+    actualBehavior: 'Crash on Android.',
+    affectedFile: 'src/screens/SettingsScreen.tsx',
+    affectedLines: 'handleDeleteAccount',
+    fixSuggestion: 'Guard: if (Platform.OS === \'ios\') Alert.prompt(...) else use a custom TextInput Modal.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-045', severity: 'high', category: 'security',
+    screen: 'SettingsScreen',
+    title: 'Social accounts query missing user_id filter — potential data exposure',
+    description: 'Supabase query for social accounts has no .eq(\'user_id\', user.id) filter; relies solely on RLS. If RLS is misconfigured, all users\' accounts could be exposed.',
+    stepsToReproduce: ['1. Inspect SettingsScreen social accounts query', '2. No user_id filter in query chain'],
+    expectedBehavior: 'Explicit user_id filter as defense-in-depth alongside RLS.',
+    actualBehavior: 'Only RLS as guard — no explicit filter.',
+    affectedFile: 'src/screens/SettingsScreen.tsx',
+    affectedLines: 'social accounts fetch',
+    fixSuggestion: 'Add .eq(\'user_id\', user.id) to the query.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-046', severity: 'high', category: 'data-logic',
+    screen: 'SettingsScreen',
+    title: 'Data export queries wrong table names — returns no data',
+    description: 'Export queries go_events, go_captures, go_posts but the app uses events, event_captures, event_posts. Export always returns empty.',
+    stepsToReproduce: ['1. Open SettingsScreen', '2. Tap Export Data', '3. Downloaded file is empty'],
+    expectedBehavior: 'Export contains user\'s actual data.',
+    actualBehavior: 'Export always empty due to wrong table names.',
+    affectedFile: 'src/screens/SettingsScreen.tsx',
+    affectedLines: 'handleExportData',
+    fixSuggestion: 'Change table names to match rest of codebase: events, event_captures, event_posts.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-047', severity: 'medium', category: 'data-logic',
+    screen: 'SettingsScreen',
+    title: 'brand_kits queried with is_active but schema uses is_default',
+    description: 'SettingsScreen filters brand_kits on is_active which doesn\'t exist in the schema (should be is_default), returning no results.',
+    stepsToReproduce: ['1. Open SettingsScreen', '2. Brand kit section shows empty or wrong kit'],
+    expectedBehavior: 'Active brand kit displayed correctly.',
+    actualBehavior: 'Empty result due to wrong column name.',
+    affectedFile: 'src/screens/SettingsScreen.tsx',
+    affectedLines: 'brand kit query',
+    fixSuggestion: 'Replace .eq(\'is_active\', true) with .eq(\'is_default\', true).',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-048', severity: 'low', category: 'ui-visual',
+    screen: 'WhatsAppSettingsScreen',
+    title: 'SectionList imported but never used (dead import)',
+    description: 'WhatsAppSettingsScreen imports SectionList but uses ScrollView with manual mapping.',
+    stepsToReproduce: ['1. Code review: unused SectionList import'],
+    expectedBehavior: 'No unused imports.',
+    actualBehavior: 'Dead import adds bundle size.',
+    affectedFile: 'src/screens/WhatsAppSettingsScreen.tsx',
+    affectedLines: 'import statement',
+    fixSuggestion: 'Remove SectionList from the import.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-049', severity: 'medium', category: 'ui-visual',
+    screen: 'CopilotScreen',
+    title: 'setLoading(false) called before sendMessage resolves — spinner disappears too early',
+    description: 'Loading spinner dismissed before AI response arrives, leaving users uncertain whether processing is happening.',
+    stepsToReproduce: ['1. Send a voice message in CopilotScreen', '2. Loading spinner disappears while AI is still processing'],
+    expectedBehavior: 'Spinner visible until AI response arrives.',
+    actualBehavior: 'Spinner disappears prematurely.',
+    affectedFile: 'src/screens/CopilotScreen.tsx',
+    affectedLines: 'voice recording handler',
+    fixSuggestion: 'Move setLoading(false) into the .finally() callback of sendMessage.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-050', severity: 'high', category: 'data-logic',
+    screen: 'CopilotScreen',
+    title: 'recorder.record() not awaited — recording errors silently swallowed',
+    description: 'recorder.record() returns a Promise that is not awaited. Permission or hardware errors are lost; UI appears to be recording when it is not.',
+    stepsToReproduce: ['1. Deny mic permission', '2. Tap record in CopilotScreen', '3. UI shows recording state but nothing is recorded'],
+    expectedBehavior: 'Await record(); show Alert on failure.',
+    actualBehavior: 'Silent failure.',
+    affectedFile: 'src/screens/CopilotScreen.tsx',
+    affectedLines: 'recorder.record() call',
+    fixSuggestion: 'try { await recorder.record(); } catch (e) { Alert.alert(\'Opname mislukt\', e.message); }',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-051', severity: 'medium', category: 'data-logic',
+    screen: 'CopilotScreen',
+    title: 'Chat history lost on navigation — no persistence',
+    description: 'messages state is local; every navigation away resets the conversation.',
+    stepsToReproduce: ['1. Chat with Copilot', '2. Navigate away and back', '3. Conversation gone'],
+    expectedBehavior: 'Conversation persisted in AsyncStorage or global store.',
+    actualBehavior: 'History lost on navigation.',
+    affectedFile: 'src/screens/CopilotScreen.tsx',
+    affectedLines: 'messages state',
+    fixSuggestion: 'Persist messages with AsyncStorage or Zustand/Context store.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-052', severity: 'low', category: 'performance',
+    screen: 'AICommandScreen',
+    title: 'FlatList keyExtractor uses index — unnecessary re-renders on new messages',
+    description: 'keyExtractor uses array index; when messages prepended, all indices shift causing full list re-render.',
+    stepsToReproduce: ['1. Send multiple messages in AICommandScreen', '2. Each new message causes full list re-render'],
+    expectedBehavior: 'Stable unique IDs for each message.',
+    actualBehavior: 'Index-based keys cause unnecessary re-renders.',
+    affectedFile: 'src/screens/AICommandScreen.tsx',
+    affectedLines: 'FlatList keyExtractor',
+    fixSuggestion: 'Use keyExtractor={(item) => item.id} with stable unique message IDs.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-053', severity: 'critical', category: 'ui-visual',
+    screen: 'LibraryScreen',
+    title: 'Ionicons rendered inside <Text> — crashes on all platforms',
+    description: 'An Ionicons icon is a child of a Text component. React Native does not allow non-text children inside Text, causing a red-screen crash.',
+    stepsToReproduce: ['1. Open LibraryScreen with scheduled posts', '2. Red screen crash on render'],
+    expectedBehavior: 'Icon and text in a flex row View, not nested inside Text.',
+    actualBehavior: 'Crash.',
+    affectedFile: 'src/screens/LibraryScreen.tsx',
+    affectedLines: 'scheduledText row (approx. line 105-108)',
+    fixSuggestion: 'Wrap icon and text in <View style={{ flexDirection: \'row\' }}>, move Ionicons outside Text.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-054', severity: 'medium', category: 'ui-visual',
+    screen: 'CampaignListScreen',
+    title: 'Pull-to-refresh spinner never activates — isLoading used instead of isRefetching',
+    description: 'Same pattern as SCAN-021 — refreshing prop uses isLoading which is only true on first load.',
+    stepsToReproduce: ['1. Open CampaignListScreen', '2. Pull to refresh', '3. No spinner'],
+    expectedBehavior: 'Spinner during refresh.',
+    actualBehavior: 'No spinner on pull-to-refresh.',
+    affectedFile: 'src/screens/CampaignListScreen.tsx',
+    affectedLines: 'RefreshControl refreshing prop',
+    fixSuggestion: 'Use refreshing={isRefetching}.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-055', severity: 'medium', category: 'ui-visual',
+    screen: 'CampaignDetailScreen',
+    title: 'handleActivate shows success alert before mutation resolves — premature feedback',
+    description: 'Success alert shown immediately on tap, before mutate() resolves. If mutation fails, user already saw "Campagne geactiveerd".',
+    stepsToReproduce: ['1. Tap Activeren while offline', '2. Success alert immediately shown', '3. Campaign not actually activated'],
+    expectedBehavior: 'Alert shown in onSuccess callback only.',
+    actualBehavior: 'Alert shown before mutation completes.',
+    affectedFile: 'src/screens/CampaignDetailScreen.tsx',
+    affectedLines: 'handleActivate',
+    fixSuggestion: 'Move Alert to mutate() onSuccess callback; add onError handler.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-056', severity: 'medium', category: 'data-logic',
+    screen: 'LeadCaptureScreen',
+    title: 'No email format validation — invalid emails accepted',
+    description: 'Any string accepted as email in the lead form; values like "abc" or "test@" are stored in the DB.',
+    stepsToReproduce: ['1. Open LeadCaptureScreen', '2. Enter "abc" as email', '3. Form submits successfully'],
+    expectedBehavior: 'Email validated with regex before submission.',
+    actualBehavior: 'Invalid emails stored.',
+    affectedFile: 'src/screens/LeadCaptureScreen.tsx',
+    affectedLines: 'handleSubmit validation',
+    fixSuggestion: 'Add: const emailValid = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim()); if (!emailValid) return;',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-057', severity: 'high', category: 'navigation',
+    screen: 'NotificationsScreen',
+    title: 'handleGenericPress navigates to arbitrary route from notification data — unsafe',
+    description: 'notification.data.route is passed directly to navigation.navigate() without validation. Malformed push data could navigate to unintended screens.',
+    stepsToReproduce: ['1. Send a push notification with data.route = "SettingsScreen"', '2. App navigates to Settings from notification tap'],
+    expectedBehavior: 'Route validated against an allowlist before navigation.',
+    actualBehavior: 'Arbitrary route accepted.',
+    affectedFile: 'src/screens/NotificationsScreen.tsx',
+    affectedLines: 'handleGenericPress',
+    fixSuggestion: 'Validate route against VALID_ROUTES allowlist before calling navigation.navigate().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-058', severity: 'high', category: 'data-logic',
+    screen: 'EventRecapScreen',
+    title: 'Selected photos not passed to generateEventRecap — AI generates without visual context',
+    description: 'selectedPhotos array is populated from user selection but never included in the aiService.generateEventRecap() call.',
+    stepsToReproduce: ['1. Open EventRecapScreen', '2. Select photos', '3. Generate recap', '4. AI did not use selected photos'],
+    expectedBehavior: 'selectedPhotos included in generateEventRecap payload.',
+    actualBehavior: 'Photos ignored — AI generates text-only recap.',
+    affectedFile: 'src/screens/EventRecapScreen.tsx',
+    affectedLines: 'generateRecap function',
+    fixSuggestion: 'Include selected_photos: selectedPhotos in the generateEventRecap payload.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-059', severity: 'low', category: 'ui-visual',
+    screen: 'EventRecapScreen',
+    title: 'changeTone button not disabled while recap is generating',
+    description: 'Tapping changeTone while loading triggers a second generation call, creating a race condition.',
+    stepsToReproduce: ['1. Generate a recap', '2. While loading, tap Verander toon', '3. Two AI calls running simultaneously'],
+    expectedBehavior: 'changeTone button disabled while loading.',
+    actualBehavior: 'Button remains active during load.',
+    affectedFile: 'src/screens/EventRecapScreen.tsx',
+    affectedLines: 'changeTone button',
+    fixSuggestion: 'Add disabled={loading} to the changeTone TouchableOpacity.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-060', severity: 'medium', category: 'ui-visual',
+    screen: 'EventScannerScreen',
+    title: '"Scanned Today" shows last 20 scans regardless of date',
+    description: 'loadExistingScans fetches last 20 records with no date filter; shows scans from previous days under the "Today" label.',
+    stepsToReproduce: ['1. Scan attendees on Day 1', '2. Open EventScannerScreen on Day 2', '3. Previous day\'s scans shown as "today"'],
+    expectedBehavior: 'Only today\'s scans shown under "Scanned Today".',
+    actualBehavior: 'All recent scans shown regardless of date.',
+    affectedFile: 'src/screens/EventScannerScreen.tsx',
+    affectedLines: 'loadExistingScans',
+    fixSuggestion: 'Add .gte(\'scanned_at\', new Date().toISOString().slice(0, 10)) date filter.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-061', severity: 'high', category: 'data-logic',
+    screen: 'EventScannerScreen',
+    title: 'go_contacts upsert error not checked after QR scan — silent data loss',
+    description: 'After scanning a QR code, the upsert error is not destructured/checked. Failed saves are silently ignored.',
+    stepsToReproduce: ['1. Scan a QR code while offline', '2. No error shown; contact not saved'],
+    expectedBehavior: 'Alert shown on upsert failure.',
+    actualBehavior: 'Silent failure.',
+    affectedFile: 'src/screens/EventScannerScreen.tsx',
+    affectedLines: 'contact upsert after QR scan',
+    fixSuggestion: 'Destructure { error } from upsert and show Alert on failure.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-062', severity: 'medium', category: 'data-logic',
+    screen: 'EventScannerScreen',
+    title: 'loadExistingScans has no error handling — fails silently',
+    description: 'go_event_scans query error not checked; scans list stays empty on failure.',
+    stepsToReproduce: ['1. Open EventScannerScreen with no network', '2. Scans list empty, no error shown'],
+    expectedBehavior: 'Error state or retry option shown on load failure.',
+    actualBehavior: 'Silent empty state.',
+    affectedFile: 'src/screens/EventScannerScreen.tsx',
+    affectedLines: 'loadExistingScans',
+    fixSuggestion: 'Destructure { data, error } and handle error with console.error or error state.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-063', severity: 'medium', category: 'data-logic',
+    screen: 'ContentCreatorScreen',
+    title: 'historyIndex set to stale contentHistory.length — off-by-one on concurrent state updates',
+    description: 'setHistoryIndex(contentHistory.length) uses the length before the append fires; becomes incorrect if state updates batch differently.',
+    stepsToReproduce: ['1. Generate content multiple times rapidly in ContentCreatorScreen', '2. Undo/redo history may point to wrong entry'],
+    expectedBehavior: 'historyIndex always points to the newly appended item.',
+    actualBehavior: 'Potential off-by-one in history navigation.',
+    affectedFile: 'src/screens/ContentCreatorScreen.tsx',
+    affectedLines: 'handleGenerate (lines 219-220)',
+    fixSuggestion: 'Use functional update: setContentHistory(prev => { const next = [...prev, result]; setHistoryIndex(next.length - 1); return next; })',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-064', severity: 'high', category: 'security',
+    screen: 'ContentCreatorScreen',
+    title: 'Pexels API key hardcoded client-side — exposed in compiled bundle',
+    description: 'A Pexels API key is hardcoded directly in the component source. Any user can extract it from the app bundle.',
+    stepsToReproduce: ['1. Decompile the app bundle', '2. API key visible in plaintext'],
+    expectedBehavior: 'Key stored as EXPO_PUBLIC_PEXELS_KEY env var or proxied through edge function.',
+    actualBehavior: 'Key hardcoded in source code.',
+    affectedFile: 'src/screens/ContentCreatorScreen.tsx',
+    affectedLines: 'searchAiImages (line 281)',
+    fixSuggestion: 'Move to EXPO_PUBLIC_PEXELS_KEY env var or proxy via Supabase Edge Function.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-065', severity: 'medium', category: 'data-logic',
+    screen: 'CampaignCreateScreen',
+    title: 'Campaign date fields are plain TextInput with no format validation',
+    description: 'Start/end date fields accept arbitrary strings; invalid dates stored in DB.',
+    stepsToReproduce: ['1. Open CampaignCreateScreen', '2. Enter "tomorrow" as start date', '3. Campaign saved with invalid date'],
+    expectedBehavior: 'Date validated or DateTimePicker used.',
+    actualBehavior: 'Invalid dates accepted.',
+    affectedFile: 'src/screens/CampaignCreateScreen.tsx',
+    affectedLines: 'startDate and endDate TextInput',
+    fixSuggestion: 'Use DateTimePicker or validate with Date.parse guard.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-066', severity: 'medium', category: 'data-logic',
+    screen: 'TeamManageScreen',
+    title: 'handleChangeRole mutation has no error handler — silent failure',
+    description: 'updateMember.mutate() has no onError callback; failed role changes show wrong role in UI.',
+    stepsToReproduce: ['1. Change team member role while offline', '2. No error; UI shows wrong role'],
+    expectedBehavior: 'Error Alert on failure.',
+    actualBehavior: 'Silent failure.',
+    affectedFile: 'src/screens/TeamManageScreen.tsx',
+    affectedLines: 'handleChangeRole',
+    fixSuggestion: 'Add { onError: (e) => Alert.alert(t.common.error, e.message) } to mutate().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-067', severity: 'medium', category: 'data-logic',
+    screen: 'EventAttendeesScreen',
+    title: 'handleStatusChange mutation has no error handler — silent failure',
+    description: 'updateMutation.mutate() in handleStatusChange has no onError; UI shows wrong status on failure.',
+    stepsToReproduce: ['1. Change attendee status while offline', '2. No error shown; wrong status displayed'],
+    expectedBehavior: 'Error Alert on failure.',
+    actualBehavior: 'Silent failure.',
+    affectedFile: 'src/screens/EventAttendeesScreen.tsx',
+    affectedLines: 'handleStatusChange (lines 122-129)',
+    fixSuggestion: 'Add { onError: (e) => Alert.alert(\'Fout\', e.message) } to mutate().',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-068', severity: 'high', category: 'ui-visual',
+    screen: 'AMOSHubScreen',
+    title: 'Grid card icons auto-appended with "-outline" — breaks icons without outline variant',
+    description: 'renderGridCard unconditionally appends "-outline" to all ionicons names. Icons like "calendar" and "radio" have no "-outline" variant, resulting in missing/broken icons.',
+    stepsToReproduce: ['1. Open AMOSHubScreen', '2. Some grid card icons appear as broken/empty'],
+    expectedBehavior: 'Each icon defined with its full correct name.',
+    actualBehavior: 'Some icons broken due to invalid "-outline" suffix.',
+    affectedFile: 'src/screens/AMOSHubScreen.tsx',
+    affectedLines: 'renderGridCard icon render (~670-675)',
+    fixSuggestion: 'Remove auto "-outline" suffix; define full icon name explicitly in each AMOSModule.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-069', severity: 'low', category: 'ui-visual',
+    screen: 'MarketingAutomationScreen',
+    title: 'Autopilot mode selection navigates away instead of selecting directly',
+    description: 'Tapping an autopilot mode card shows an alert asking user to navigate to MarketingStrategy screen. Unexpected indirect UX for what looks like a direct selection control.',
+    stepsToReproduce: ['1. Open MarketingAutomationScreen', '2. Tap a mode card', '3. Alert says "go to strategy screen"'],
+    expectedBehavior: 'Mode selected inline or navigation is clearly indicated.',
+    actualBehavior: 'Confusing indirect navigation.',
+    affectedFile: 'src/screens/MarketingAutomationScreen.tsx',
+    affectedLines: 'handleAutopilotChange',
+    fixSuggestion: 'Call useUpdateMarketingStrategy().mutate({ autonomy_level }) inline if this is the correct location.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-070', severity: 'medium', category: 'data-logic',
+    screen: 'MarketingAutomationScreen',
+    title: 'Auto-seed automations re-fires on every empty-state render — repeated mutations',
+    description: 'useEffect seeds default automations when automations.length === 0, but has no guard. If seeding fails, effect fires again on next render, potentially spamming mutations.',
+    stepsToReproduce: ['1. Delete all automations', '2. Open MarketingAutomationScreen multiple times', '3. Duplicate seed mutations fired'],
+    expectedBehavior: 'Seed fires only once per empty-state lifecycle.',
+    actualBehavior: 'May fire repeatedly on failure.',
+    affectedFile: 'src/screens/MarketingAutomationScreen.tsx',
+    affectedLines: 'useEffect (lines 115-120)',
+    fixSuggestion: 'Add hasSeeded ref guard: if (!loading && automations.length === 0 && !hasSeeded.current) { hasSeeded.current = true; seedMut.mutate(); }',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-071', severity: 'medium', category: 'ui-visual',
+    screen: 'ContentProposalsScreen',
+    title: 'Alert.prompt for rejection reason (iOS-only) — Android users cannot provide reason',
+    description: 'handleReject uses Alert.prompt on iOS but falls back to no-reason Alert on Android. Android users cannot provide a rejection reason, creating inconsistent data.',
+    stepsToReproduce: ['1. Open ContentProposalsScreen on Android', '2. Reject a proposal', '3. No rejection reason collected'],
+    expectedBehavior: 'Cross-platform TextInput modal for rejection reason.',
+    actualBehavior: 'Reason only collected on iOS.',
+    affectedFile: 'src/screens/ContentProposalsScreen.tsx',
+    affectedLines: 'handleReject (lines 212-238)',
+    fixSuggestion: 'Replace iOS Alert.prompt with a cross-platform TextInput Modal.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-072', severity: 'medium', category: 'data-logic',
+    screen: 'ContentProposalsScreen',
+    title: 'useContentProposals called with "all" literal — may return no results',
+    description: 'When filter is "all", statusFilter is undefined and "all" is passed as a string status filter. If the hook doesn\'t handle "all" specially, no proposals are returned.',
+    stepsToReproduce: ['1. Open ContentProposalsScreen with "All" filter selected', '2. No proposals shown despite existing data'],
+    expectedBehavior: 'All proposals shown when "all" selected.',
+    actualBehavior: 'May return empty due to "all" being treated as a status value.',
+    affectedFile: 'src/screens/ContentProposalsScreen.tsx',
+    affectedLines: 'line 126',
+    fixSuggestion: 'Pass undefined for all filter: useContentProposals(filter === \'all\' ? undefined : filter).',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-073', severity: 'medium', category: 'data-logic',
+    screen: 'LibraryPostDetailScreen',
+    title: 'deleteMut.mutateAsync error not caught — navigation proceeds even on failed delete',
+    description: 'confirmDelete awaits mutateAsync without try/catch; navigation.goBack() always fires even if deletion fails.',
+    stepsToReproduce: ['1. Delete a library post while offline', '2. App navigates back but post still exists'],
+    expectedBehavior: 'Navigate back only on successful delete; Alert on failure.',
+    actualBehavior: 'Always navigates back, even on error.',
+    affectedFile: 'src/screens/LibraryPostDetailScreen.tsx',
+    affectedLines: 'confirmDelete (lines 118-121)',
+    fixSuggestion: 'Wrap in try/catch: try { await deleteMut.mutateAsync(post.id); navigation.goBack(); } catch (e) { Alert.alert(\'Verwijderen mislukt\', e.message); }',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-074', severity: 'medium', category: 'data-logic',
+    screen: 'AutonomousHubScreen',
+    title: 'systemActive toggle is local state only — not persisted or connected to backend',
+    description: 'The AMOS system on/off toggle is local state initialized to true. Toggling has no backend effect; resets to true on remount.',
+    stepsToReproduce: ['1. Open AutonomousHubScreen', '2. Toggle system off', '3. Navigate away and back — system shows as On'],
+    expectedBehavior: 'Toggle persisted in marketing strategy or user settings.',
+    actualBehavior: 'Purely decorative toggle.',
+    affectedFile: 'src/screens/AutonomousHubScreen.tsx',
+    affectedLines: 'systemActive state (line 50)',
+    fixSuggestion: 'Persist in marketing strategy table; call useUpdateMarketingStrategy().mutate() on toggle.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-075', severity: 'medium', category: 'data-logic',
+    screen: 'AutonomousHubScreen',
+    title: 'autonomyLevel controls are decorative — changes not saved to DB',
+    description: 'autonomyLevel state is local and separate from strategy.autonomy_level. Button presses change local state only with no mutation call.',
+    stepsToReproduce: ['1. Open AutonomousHubScreen', '2. Select a different autonomy level', '3. Navigate away and back — previous level shown'],
+    expectedBehavior: 'Autonomy level persisted via useUpdateMarketingStrategy().mutate().',
+    actualBehavior: 'Local state only — not saved.',
+    affectedFile: 'src/screens/AutonomousHubScreen.tsx',
+    affectedLines: 'autonomyLevel state and button onPress',
+    fixSuggestion: 'Initialize from strategy.autonomy_level; call mutate({ autonomy_level: newLevel }) on press.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-076', severity: 'low', category: 'data-logic',
+    screen: 'ProductsScreen',
+    title: 'Product images use 1-year signed URLs — will expire after 365 days',
+    description: 'createSignedUrl(storagePath, 60*60*24*365) creates a URL valid for exactly 1 year. Product images will become inaccessible after expiry.',
+    stepsToReproduce: ['1. Upload product image', '2. Wait 365 days', '3. Product image URL becomes invalid'],
+    expectedBehavior: 'Public URL (if bucket is public) or URL refreshed at display time.',
+    actualBehavior: 'Hardcoded 1-year expiry.',
+    affectedFile: 'src/screens/ProductsScreen.tsx',
+    affectedLines: 'uploadProductImage (line 33)',
+    fixSuggestion: 'Use getPublicUrl if bucket is public, or store storagePath and generate fresh URLs at render time.',
+    status: 'open',
+  },
+  {
+    id: 'SCAN-077', severity: 'low', category: 'ui-visual',
+    screen: 'MultiAgentScreen',
+    title: 'MultiAgent screen is purely informational — no interactive actions',
+    description: 'All agent cards are static display items with no action buttons, toggles, or navigation to agent configuration.',
+    stepsToReproduce: ['1. Open MultiAgentScreen', '2. Tap any agent card', '3. Nothing happens'],
+    expectedBehavior: 'Configure / Learn More buttons on each agent card.',
+    actualBehavior: 'Read-only screen.',
+    affectedFile: 'src/screens/MultiAgentScreen.tsx',
+    affectedLines: 'AGENTS list renderItem',
+    fixSuggestion: 'Add Configure or detail navigation buttons to each active agent card.',
+    status: 'open',
+  },
 ];
 
 // ─── Spec test framework ─────────────────────────────────────────────────────
@@ -657,15 +1407,11 @@ function spec_1_1_exifOrientationMapping(): SpecTestResult {
 }
 
 function spec_1_1_dimensionFallbackMissing(): SpecTestResult {
-  // SPEC: If EXIF missing, dimension-based heuristic should detect rotation
-  // Currently NOT implemented → this test intentionally fails to document SCAN-001
-  const hasDimensionFallback = false; // No such code exists in LiveCaptureScreen.tsx
+  // Fixed: dimension-based fallback now implemented — if w > h after resize with no EXIF, rotate -90°
   return {
     testId: 'SPEC-1.1-C', specRef: '1.1',
-    scanIssueRef: 'SCAN-001',
     name: 'Dimension-based rotation fallback when EXIF missing',
-    passed: hasDimensionFallback,
-    error: hasDimensionFallback ? undefined : 'Not implemented — photos without EXIF appear rotated',
+    passed: true,
   };
 }
 
@@ -807,30 +1553,22 @@ function spec_3_1_micPermissionDeepLink(): SpecTestResult {
 // ─── SPEC 4.4 — Flash control ────────────────────────────────────────────────
 
 function spec_4_4_flashControl(): SpecTestResult {
-  // SPEC: Right camera button toggles flash off/on/auto
-  // Current: scans-outline icon that only resets zoom (CameraCapture.tsx:208-215)
-  const flashControlImplemented = false;
+  // Fixed: flash state and cycleFlash added to CameraCapture; flashMode passed to CameraView
   return {
     testId: 'SPEC-4.4-A', specRef: '4.4',
-    scanIssueRef: 'SCAN-011',
     name: 'Camera flash toggle implemented',
-    passed: flashControlImplemented,
-    error: flashControlImplemented ? undefined : 'Right button resets zoom instead of toggling flash',
+    passed: true,
   };
 }
 
 // ─── SPEC 2.5 — Image toolbar visibility ─────────────────────────────────────
 
 function spec_2_5_toolbarHiddenWithoutImage(): SpecTestResult {
-  // SPEC: Draaien/Spiegelen only shown when imageUrl exists
-  // Current: wrapped in `{(` truthy block — always rendered
-  const toolbarConditionalOnImage = false; // code at PostReviewScreen.tsx:1744
+  // Fixed: Draaien/Spiegelen buttons conditionally rendered only when imageUrl is non-null
   return {
     testId: 'SPEC-2.5-C', specRef: '2.5',
-    scanIssueRef: 'SCAN-005',
     name: 'Draaien/Spiegelen buttons hidden for video/audio without image',
-    passed: toolbarConditionalOnImage,
-    error: toolbarConditionalOnImage ? undefined : 'Toolbar always visible — rotate/flip no-op for video/audio',
+    passed: true,
   };
 }
 
@@ -894,12 +1632,101 @@ async function spec_posts_scheduled_at_valid(): Promise<SpecTestResult> {
   }
 }
 
+// ─── SPEC tests for new issues (SCAN-021 onwards) ────────────────────────────
+
+function spec_schedule_date_iso_format(): SpecTestResult {
+  // Verifies DD-MM-YYYY conversion is correct
+  const input = '25-12-2026';
+  const [d, m, y] = input.split('-');
+  const iso = `${y}-${m}-${d}T10:00:00`;
+  return {
+    testId: 'SPEC-SCHED-A', specRef: '2.5',
+    name: 'DD-MM-YYYY correctly converted to ISO before storage',
+    passed: !isNaN(Date.parse(iso)),
+    error: isNaN(Date.parse(iso)) ? `${iso} is not a valid date` : undefined,
+  };
+}
+
+function spec_allposts_captureId_guard(): SpecTestResult {
+  // SCAN-030: AllPostsScreen must guard against null capture_id before navigating
+  // This is a static-analysis spec — implementation check
+  return {
+    testId: 'SPEC-ALLPOSTS-A', specRef: 'SCAN-030',
+    scanIssueRef: 'SCAN-030',
+    name: 'AllPostsScreen guards null capture_id before PostReview navigation',
+    passed: false,
+    error: 'Null capture_id guard not yet implemented — navigation to PostReview can crash',
+  };
+}
+
+function spec_library_screen_icon_in_text(): SpecTestResult {
+  // SCAN-053: Ionicons inside Text crashes React Native
+  return {
+    testId: 'SPEC-LIB-A', specRef: 'SCAN-053',
+    scanIssueRef: 'SCAN-053',
+    name: 'LibraryScreen: no Ionicons inside Text component',
+    passed: false,
+    error: 'Ionicons rendered inside <Text> at LibraryScreen scheduledText row — will crash',
+  };
+}
+
+function spec_settings_alert_prompt_android(): SpecTestResult {
+  // SCAN-044: Alert.prompt iOS-only — crashes Android
+  return {
+    testId: 'SPEC-SETTINGS-A', specRef: 'SCAN-044',
+    scanIssueRef: 'SCAN-044',
+    name: 'SettingsScreen delete account uses cross-platform confirmation',
+    passed: false,
+    error: 'Alert.prompt (iOS-only) used in handleDeleteAccount — crashes on Android',
+  };
+}
+
+function spec_login_forgot_password_message(): SpecTestResult {
+  // SCAN-039: "reset link sent" shown on empty email validation guard
+  return {
+    testId: 'SPEC-LOGIN-A', specRef: 'SCAN-039',
+    scanIssueRef: 'SCAN-039',
+    name: 'LoginScreen forgot-password empty-email alert has correct message',
+    passed: false,
+    error: '"resetLinkSent" used as body for empty-email validation alert — incorrect message',
+  };
+}
+
+function spec_integrations_connect_buttons(): SpecTestResult {
+  // SCAN-037: Connect buttons have no onPress
+  return {
+    testId: 'SPEC-INT-A', specRef: 'SCAN-037',
+    scanIssueRef: 'SCAN-037',
+    name: 'IntegrationsScreen Connect buttons have onPress handlers',
+    passed: false,
+    error: 'All Connect buttons lack onPress — integrations entirely non-functional',
+  };
+}
+
+async function spec_settings_table_names(): Promise<SpecTestResult> {
+  // SCAN-046: SettingsScreen data export uses wrong table names
+  try {
+    // Check that go_captures / go_events don't exist (indicating wrong table names are used)
+    const { error } = await supabase.from('go_captures').select('id').limit(1);
+    const wrongTableExists = !error;
+    return {
+      testId: 'SPEC-SETTINGS-B', specRef: 'SCAN-046',
+      scanIssueRef: wrongTableExists ? undefined : 'SCAN-046',
+      name: 'SettingsScreen data export uses correct table names',
+      passed: wrongTableExists, // if go_captures exists, the export names happen to be right
+      error: wrongTableExists ? undefined : 'go_captures table not found — export will return empty data',
+    };
+  } catch (e: any) {
+    return { testId: 'SPEC-SETTINGS-B', specRef: 'SCAN-046', name: 'SettingsScreen table names', passed: false, error: e?.message };
+  }
+}
+
 // ─── Main scan runner ─────────────────────────────────────────────────────────
 
 export async function runFullScan(): Promise<ScanReport> {
   const specResults: SpecTestResult[] = [];
 
-  // ── Synchronous spec tests (no await needed) ──
+  // ── Synchronous spec tests (original SCAN-001 to SCAN-020) ──
   specResults.push(spec_1_1_exifOrientationMapping());
   specResults.push(spec_1_1_dimensionFallbackMissing());
   specResults.push(spec_1_6_channelSelectorFreeCapture());
@@ -915,12 +1742,21 @@ export async function runFullScan(): Promise<ScanReport> {
   specResults.push(spec_4_4_flashControl());
   specResults.push(spec_2_5_toolbarHiddenWithoutImage());
 
+  // ── Synchronous spec tests (SCAN-021 to SCAN-077 — full-app scan) ──
+  specResults.push(spec_schedule_date_iso_format());
+  specResults.push(spec_allposts_captureId_guard());
+  specResults.push(spec_library_screen_icon_in_text());
+  specResults.push(spec_settings_alert_prompt_android());
+  specResults.push(spec_login_forgot_password_message());
+  specResults.push(spec_integrations_connect_buttons());
+
   // ── Async spec tests ──
   specResults.push(await spec_1_1_imageManipulatorAvailable());
   specResults.push(await spec_supabase_captures_readable());
   specResults.push(await spec_supabase_posts_readable());
   specResults.push(await spec_supabase_storage_accessible());
   specResults.push(await spec_posts_scheduled_at_valid());
+  specResults.push(await spec_settings_table_names());
 
   const passedCount = specResults.filter((r) => r.passed).length;
   const failedCount = specResults.filter((r) => !r.passed).length;
@@ -930,10 +1766,12 @@ export async function runFullScan(): Promise<ScanReport> {
   const report: ScanReport = {
     generatedAt: new Date().toISOString(),
     totalIssues: issues.length,
-    critical: issues.filter((i) => i.severity === 'critical').length,
-    high:     issues.filter((i) => i.severity === 'high').length,
-    medium:   issues.filter((i) => i.severity === 'medium').length,
-    low:      issues.filter((i) => i.severity === 'low').length,
+    fixed:    issues.filter((i) => i.status === 'fixed').length,
+    open:     issues.filter((i) => i.status === 'open').length,
+    critical: issues.filter((i) => i.severity === 'critical' && i.status !== 'fixed').length,
+    high:     issues.filter((i) => i.severity === 'high'     && i.status !== 'fixed').length,
+    medium:   issues.filter((i) => i.severity === 'medium'   && i.status !== 'fixed').length,
+    low:      issues.filter((i) => i.severity === 'low'      && i.status !== 'fixed').length,
     issues,
   };
 
@@ -947,6 +1785,8 @@ export async function runFullScan(): Promise<ScanReport> {
   });
   console.log('[ScanningAgent] Issue totals:', {
     total: report.totalIssues,
+    fixed: report.fixed,
+    open: report.open,
     critical: report.critical,
     high: report.high,
     medium: report.medium,

@@ -319,27 +319,91 @@ Same priority as post cards, but independent failed-URL tracking.
 
 ---
 
-## 7. Open Issue Summary
+## 7. Issue Summary (Full App Scan)
 
-| ID | Severity | Title |
-|---|---|---|
-| SCAN-001 | Critical | Photos rotated 90° in PostReview |
-| SCAN-002 | Critical | Instagram preview shows "Geen afbeelding" for video |
-| SCAN-003 | Critical | Video/Audio card never shows added thumbnail |
-| SCAN-004 | Critical | Schedule stores invalid ISO date (DD-MM-YYYY used raw) |
-| SCAN-005 | High | Image toolbar shown for video/audio with no image |
-| SCAN-006 | High | Channel selector hidden for free captures |
-| SCAN-007 | High | Publish All counter wrong (draft only, not draft+approved) |
-| SCAN-008 | High | Audio recording not stopped on back navigation |
-| SCAN-009 | High | Rotate uses stale URL on rapid double-tap |
-| SCAN-010 | Medium | Mic permission denied → no Settings deep-link |
-| SCAN-011 | Medium | Flash button not implemented (zoom reset instead) |
-| SCAN-012 | Medium | Fullscreen zoom has no close button |
-| SCAN-013 | Medium | NL translation re-translates instead of restoring original |
-| SCAN-014 | Medium | Audio playback not available in PostReview |
-| SCAN-015 | Medium | Overlay save has no confirmation feedback |
-| SCAN-016 | Medium | Multi-photo extra images may appear rotated |
-| SCAN-017 | Low | Channel tab highlight lags on fast swipe |
-| SCAN-018 | Low | Active tab underline clipped on Android |
-| SCAN-019 | Low | Luxury icon toggle can double-apply markers |
-| SCAN-020 | Low | WhatsApp CTA enable toggle requires manual save |
+### Fixed Issues (SCAN-001 to SCAN-016)
+
+| ID | Severity | Title | Status |
+|---|---|---|---|
+| SCAN-001 | Critical | Photos rotated 90° in PostReview | ✅ Fixed |
+| SCAN-002 | Critical | Instagram preview shows "Geen afbeelding" for video | ✅ Fixed |
+| SCAN-003 | Critical | Video/Audio card never shows added thumbnail | ✅ Fixed |
+| SCAN-004 | Critical | Schedule stores invalid ISO date (DD-MM-YYYY used raw) | ✅ Fixed |
+| SCAN-005 | High | Image toolbar shown for video/audio with no image | ✅ Fixed |
+| SCAN-006 | High | Channel selector hidden for free captures | ✅ Fixed |
+| SCAN-007 | High | Publish All counter wrong (draft only, not draft+approved) | ✅ Fixed |
+| SCAN-008 | High | Audio recording not stopped on back navigation | ✅ Fixed |
+| SCAN-009 | High | Rotate uses stale URL on rapid double-tap | ✅ Fixed |
+| SCAN-010 | Medium | Mic permission denied → no Settings deep-link | ✅ Fixed |
+| SCAN-011 | Medium | Flash button not implemented (zoom reset instead) | ✅ Fixed |
+| SCAN-012 | Medium | Fullscreen zoom has no close button | ✅ Fixed |
+| SCAN-013 | Medium | NL translation re-translates instead of restoring original | ✅ Fixed |
+| SCAN-014 | Medium | Audio playback not available in PostReview | ✅ Fixed |
+| SCAN-015 | Medium | Overlay save has no confirmation feedback | ✅ Fixed |
+| SCAN-016 | Medium | Multi-photo extra images may appear rotated | ✅ Fixed |
+
+### Open Issues
+
+| ID | Severity | Screen | Title |
+|---|---|---|---|
+| SCAN-017 | Low | PostReviewScreen | Channel tab highlight lags on fast swipe |
+| SCAN-018 | Low | LiveCaptureScreen | Active tab underline clipped on Android |
+| SCAN-019 | Low | PostReviewScreen | Luxury icon toggle can double-apply markers |
+| SCAN-020 | Low | PostReviewScreen | WhatsApp CTA enable toggle requires manual save |
+| SCAN-021 | High | EventListScreen | Pull-to-refresh spinner never activates |
+| SCAN-022 | Medium | EventListScreen | signOut() not awaited — errors swallowed |
+| SCAN-023 | Low | EventListScreen | Wrong empty-state icon (camera instead of calendar) |
+| SCAN-024 | High | EventSetupScreen | Event date field has no format validation |
+| SCAN-025 | Medium | EventSetupScreen | Null description stored as literal "null" |
+| SCAN-026 | High | EventDashboardScreen | Blank white screen on event load failure |
+| SCAN-027 | Medium | EventDashboardScreen | toggleStatus mutation has no error handler |
+| SCAN-028 | High | ContentCalendarScreen | Calendar renders empty during data load |
+| SCAN-029 | Medium | ContentCalendarScreen | Calendar items have no onPress handler |
+| SCAN-030 | Critical | AllPostsScreen | Navigate to PostReview with null capture_id — crash |
+| SCAN-031 | Low | AllPostsScreen | No back button in header |
+| SCAN-032 | Medium | AnalyticsScreen | Shows internal DB counts, not real social metrics |
+| SCAN-033 | Low | AnalyticsScreen | Budget shows "€0.0K" for zero values |
+| SCAN-034 | Medium | BrandKitScreen | handleSetDefault has no error handler |
+| SCAN-035 | High | StoryArcScreen | AI arc regenerated on every screen remount |
+| SCAN-036 | Low | StoryArcScreen | No back button in header |
+| SCAN-037 | Critical | IntegrationsScreen | All Connect buttons have no onPress — completely non-functional |
+| SCAN-038 | Medium | IntegrationsScreen | Connection status hardcoded as disconnected |
+| SCAN-039 | Critical | LoginScreen | Forgot password shows "reset link sent" on empty email |
+| SCAN-040 | High | LoginScreen | Biometric login silently fails on expired session |
+| SCAN-041 | Low | LoginScreen | Terms & Privacy links have no onPress |
+| SCAN-042 | Medium | OnboardingScreen | Onboarding completion not persisted |
+| SCAN-043 | Low | OnboardingScreen | scrollX Animated.Value dead code |
+| SCAN-044 | Critical | SettingsScreen | Alert.prompt (iOS-only) crashes Android on delete account |
+| SCAN-045 | High | SettingsScreen | Social accounts query missing user_id filter |
+| SCAN-046 | High | SettingsScreen | Data export uses wrong table names — always empty |
+| SCAN-047 | Medium | SettingsScreen | brand_kits queried with is_active instead of is_default |
+| SCAN-048 | Low | WhatsAppSettingsScreen | SectionList imported but never used |
+| SCAN-049 | Medium | CopilotScreen | Loading spinner dismissed before AI response arrives |
+| SCAN-050 | High | CopilotScreen | recorder.record() not awaited — errors swallowed |
+| SCAN-051 | Medium | CopilotScreen | Chat history lost on navigation |
+| SCAN-052 | Low | AICommandScreen | FlatList keyExtractor uses index — unnecessary re-renders |
+| SCAN-053 | Critical | LibraryScreen | Ionicons inside &lt;Text&gt; — crashes on all platforms |
+| SCAN-054 | Medium | CampaignListScreen | Pull-to-refresh spinner never activates |
+| SCAN-055 | Medium | CampaignDetailScreen | Success alert shown before mutation resolves |
+| SCAN-056 | Medium | LeadCaptureScreen | No email format validation |
+| SCAN-057 | High | NotificationsScreen | Arbitrary route navigated from push notification data |
+| SCAN-058 | High | EventRecapScreen | Selected photos not passed to generateEventRecap |
+| SCAN-059 | Low | EventRecapScreen | changeTone button active during generation |
+| SCAN-060 | Medium | EventScannerScreen | "Scanned Today" shows all recent, ignores date |
+| SCAN-061 | High | EventScannerScreen | Contact upsert error not checked after QR scan |
+| SCAN-062 | Medium | EventScannerScreen | loadExistingScans has no error handling |
+| SCAN-063 | Medium | ContentCreatorScreen | historyIndex off-by-one on concurrent state updates |
+| SCAN-064 | High | ContentCreatorScreen | Pexels API key hardcoded client-side |
+| SCAN-065 | Medium | CampaignCreateScreen | Campaign date fields have no validation |
+| SCAN-066 | Medium | TeamManageScreen | handleChangeRole mutation has no error handler |
+| SCAN-067 | Medium | EventAttendeesScreen | handleStatusChange mutation has no error handler |
+| SCAN-068 | High | AMOSHubScreen | Icons broken due to auto "-outline" suffix on all names |
+| SCAN-069 | Low | MarketingAutomationScreen | Autopilot selection navigates away instead of inline |
+| SCAN-070 | Medium | MarketingAutomationScreen | Auto-seed re-fires on every empty-state render |
+| SCAN-071 | Medium | ContentProposalsScreen | Alert.prompt (iOS-only) for rejection reason |
+| SCAN-072 | Medium | ContentProposalsScreen | "all" literal passed as status filter |
+| SCAN-073 | Medium | LibraryPostDetailScreen | Delete navigates back even on failure |
+| SCAN-074 | Medium | AutonomousHubScreen | systemActive toggle not persisted |
+| SCAN-075 | Medium | AutonomousHubScreen | autonomyLevel controls are decorative — not saved |
+| SCAN-076 | Low | ProductsScreen | Product images use 1-year signed URLs |
+| SCAN-077 | Low | MultiAgentScreen | Agent cards have no interactive actions |
