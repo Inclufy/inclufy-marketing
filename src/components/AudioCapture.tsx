@@ -25,7 +25,14 @@ export default function AudioCapture({ onRecordingComplete }: Props) {
     (async () => {
       const status = await AudioModule.requestRecordingPermissionsAsync();
       if (!status.granted) {
-        Alert.alert('Microfoon toegang nodig');
+        Alert.alert(
+          'Microfoon toegang nodig',
+          'Geef toegang tot de microfoon om audio op te nemen.',
+          [
+            { text: 'Annuleer', style: 'cancel' },
+            { text: 'Open instellingen', onPress: () => { const { Linking } = require('react-native'); Linking.openSettings(); } },
+          ],
+        );
         return;
       }
       await setAudioModeAsync({
@@ -33,7 +40,12 @@ export default function AudioCapture({ onRecordingComplete }: Props) {
         allowsRecording: true,
       });
     })();
-  }, []);
+
+    // Stop the recorder when the component unmounts (e.g. user taps Back mid-recording)
+    return () => {
+      audioRecorder.stop().catch(() => {});
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRecording = async () => {
     try {

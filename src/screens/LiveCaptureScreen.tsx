@@ -918,9 +918,8 @@ export default function LiveCaptureScreen() {
         </View>
       )}
 
-      {/* ── Per-capture channel selector ─────────────────────────────────── */}
-      {event && (
-        <View style={styles.channelBar}>
+      {/* ── Per-capture channel selector — always visible ────────────────── */}
+      <View style={styles.channelBar}>
           <Text style={styles.channelBarLabel}>Kanalen:</Text>
           <View style={styles.channelChips}>
             {CHANNEL_OPTIONS.map((ch) => {
@@ -947,7 +946,7 @@ export default function LiveCaptureScreen() {
             })}
           </View>
         </View>
-      )}
+      </View>
 
       {/* Mode Tabs */}
       <View style={styles.modeTabs}>

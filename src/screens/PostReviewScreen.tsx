@@ -67,6 +67,11 @@ export default function PostReviewScreen() {
   const [flippingImage, setFlippingImage] = useState(false);
   const [rotatingImage, setRotatingImage] = useState(false);
 
+  // Tracks the latest processed image URI immediately after each rotate/flip so
+  // rapid consecutive operations always build on the latest result rather than
+  // waiting for captureImageUrl to refetch from Supabase (SCAN-009).
+  const workingUriRef = useRef<string | null>(null);
+
   // ViewShot refs for baking overlay into image before publishing
   const viewShotRefs = useRef<Record<string, ViewShot | null>>({});
 
@@ -673,12 +678,16 @@ export default function PostReviewScreen() {
     if (flippingImage) return;
     setFlippingImage(true);
     try {
-      const sourceUrl = captureImageUrl ?? imageUrl;
+      // Use workingUriRef so rapid consecutive flips build on the latest result
+      // rather than the stale captureImageUrl that hasn't refetched yet (SCAN-009)
+      const sourceUrl = workingUriRef.current ?? captureImageUrl ?? imageUrl;
       const result = await ImageManipulator.manipulateAsync(
         sourceUrl,
         [{ flip: ImageManipulator.FlipType.Horizontal }],
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
+      // Update working URI immediately so the next operation uses this result
+      workingUriRef.current = result.uri;
       const { url, path } = await uploadMedia(result.uri, safeEventId, 'photo');
       await supabase
         .from('go_captures')
@@ -688,8 +697,7 @@ export default function PostReviewScreen() {
       await Promise.all(
         posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
-      // Drop the stale localMediaUri (un-flipped local file from LiveCapture) so
-      // the resolution falls through to the new flipped captureImageUrl.
+      // Drop the stale localMediaUri so resolution falls through to the new URL
       setLocalMediaUri(null);
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
@@ -706,12 +714,13 @@ export default function PostReviewScreen() {
     if (rotatingImage) return;
     setRotatingImage(true);
     try {
-      const sourceUrl = captureImageUrl ?? imageUrl;
+      const sourceUrl = workingUriRef.current ?? captureImageUrl ?? imageUrl;
       const result = await ImageManipulator.manipulateAsync(
         sourceUrl,
         [{ rotate: 90 }],
         { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
       );
+      workingUriRef.current = result.uri;
       const { url, path } = await uploadMedia(result.uri, safeEventId, 'photo');
       await supabase
         .from('go_captures')
@@ -2643,7 +2652,7 @@ export default function PostReviewScreen() {
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Ionicons name="rocket-outline" size={18} color={colors.textOnPrimary} />
             <Text style={styles.publishAllText}>
-              {t.postReview.publishAllButton} ({posts.filter((p) => p.status === 'draft').length} {t.postReview.channels})
+              {t.postReview.publishAllButton} ({posts.filter((p) => p.status === 'draft' || p.status === 'approved').length} {t.postReview.channels})
             </Text>
           </View>
         )}
