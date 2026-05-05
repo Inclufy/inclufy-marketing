@@ -302,42 +302,8 @@ export default function SettingsScreen() {
   // ── Handlers ─────────────────────────────────────────────────────────────
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Account verwijderen',
-      'Typ "VERWIJDER" om je account permanent te verwijderen. Dit kan niet ongedaan worden gemaakt.',
-      [
-        { text: 'Annuleren', style: 'cancel' },
-        {
-          text: 'Doorgaan',
-          style: 'destructive',
-          onPress: () => {
-            Alert.prompt(
-              'Bevestig verwijdering',
-              'Typ VERWIJDER om door te gaan',
-              async (input) => {
-                if (input?.trim() !== 'VERWIJDER') {
-                  Alert.alert('Geannuleerd', 'De tekst komt niet overeen. Account is niet verwijderd.');
-                  return;
-                }
-                try {
-                  const { data: { user } = {} as any } = await supabase.auth.getUser();
-                  if (!user) throw new Error('Niet ingelogd');
-                  // Try RPC first, fall back to deleting profile row
-                  const { error: rpcError } = await supabase.rpc('delete_user');
-                  if (rpcError) {
-                    await supabase.from('profiles').delete().eq('id', user.id);
-                  }
-                  await supabase.auth.signOut();
-                } catch (err: any) {
-                  Alert.alert('Fout', err?.message ?? 'Account kon niet worden verwijderd.');
-                }
-              },
-              'plain-text',
-            );
-          },
-        },
-      ],
-    );
+    setDeleteConfirmText('');
+    setShowDeleteModal(true);
   };
 
   const handleLogout = () => {
@@ -478,6 +444,34 @@ export default function SettingsScreen() {
       Alert.alert('Fout bij export', err?.message ?? 'Onbekende fout. Probeer opnieuw.');
     } finally {
       setExportLoading(false);
+    }
+  };
+
+  // ── Delete account confirmation state (cross-platform replacement for Alert.prompt) ──
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmDeleteAccount = async () => {
+    if (deleteConfirmText.trim() !== 'VERWIJDER') {
+      Alert.alert('Geannuleerd', 'De tekst komt niet overeen. Account is niet verwijderd.');
+      return;
+    }
+    setDeleting(true);
+    try {
+      const { data: { user } = {} as any } = await supabase.auth.getUser();
+      if (!user) throw new Error('Niet ingelogd');
+      const { error: rpcError } = await supabase.rpc('delete_user');
+      if (rpcError) {
+        await supabase.from('profiles').delete().eq('id', user.id);
+      }
+      await supabase.auth.signOut();
+    } catch (err: any) {
+      Alert.alert('Fout', err?.message ?? 'Account kon niet worden verwijderd.');
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+      setDeleteConfirmText('');
     }
   };
 
@@ -1208,6 +1202,44 @@ export default function SettingsScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      {/* Delete account confirmation modal — cross-platform replacement for Alert.prompt */}
+      <Modal visible={showDeleteModal} transparent animationType="fade" onRequestClose={() => setShowDeleteModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, width: '100%', maxWidth: 360 }}>
+            <Text style={{ fontSize: 17, fontWeight: '700', color: '#111', marginBottom: 8 }}>Account verwijderen</Text>
+            <Text style={{ fontSize: 14, color: '#555', marginBottom: 16 }}>
+              Dit kan niet ongedaan worden gemaakt. Typ{' '}
+              <Text style={{ fontWeight: '700', color: '#DC2626' }}>VERWIJDER</Text>
+              {' '}om door te gaan.
+            </Text>
+            <TextInput
+              value={deleteConfirmText}
+              onChangeText={setDeleteConfirmText}
+              placeholder="VERWIJDER"
+              autoCapitalize="characters"
+              style={{ borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 8, padding: 12, fontSize: 15, marginBottom: 16 }}
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity
+                onPress={() => { setShowDeleteModal(false); setDeleteConfirmText(''); }}
+                style={{ flex: 1, padding: 12, borderRadius: 8, borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center' }}
+              >
+                <Text style={{ fontWeight: '600', color: '#374151' }}>Annuleren</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={confirmDeleteAccount}
+                disabled={deleting}
+                style={{ flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#DC2626', alignItems: 'center' }}
+              >
+                {deleting
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={{ fontWeight: '600', color: '#fff' }}>Verwijderen</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* AI Consent Modal (shown when toggling consent ON from settings) */}
       {showAIConsentModal && (

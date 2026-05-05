@@ -102,9 +102,12 @@ export default function LibraryScreen() {
           </View>
 
           {item.scheduled_for && (
-            <Text style={[styles.scheduledText, { color: colors.textSecondary }]}>
-              <Ionicons name="time-outline" size={11} /> {new Date(item.scheduled_for).toLocaleString('nl-NL')}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="time-outline" size={11} color={colors.textSecondary} />
+              <Text style={[styles.scheduledText, { color: colors.textSecondary }]}>
+                {new Date(item.scheduled_for).toLocaleString('nl-NL')}
+              </Text>
+            </View>
           )}
         </View>
       </TouchableOpacity>

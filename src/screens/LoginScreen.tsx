@@ -90,7 +90,7 @@ export default function LoginScreen() {
 
   const handleForgotPassword = async () => {
     if (!email.trim()) {
-      Alert.alert(t.login.fillEmailFirst, t.login.resetLinkSent);
+      Alert.alert(t.login.fillEmailFirst, 'Vul je e-mailadres in om een resetlink te ontvangen.');
       return;
     }
     setLoading(true);

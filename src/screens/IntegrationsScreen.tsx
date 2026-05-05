@@ -327,6 +327,12 @@ export default function IntegrationsScreen() {
                         <TouchableOpacity
                           style={[styles.connectBtn, { borderColor: integration.color + '60' }]}
                           activeOpacity={0.7}
+                          onPress={() => Alert.alert(
+                            isNl ? `${integration.name} koppelen` : `Connect ${integration.name}`,
+                            isNl
+                              ? `Directe koppeling met ${integration.name} komt binnenkort beschikbaar. Beheer je koppelingen nu via Instellingen → Sociale media.`
+                              : `Direct ${integration.name} integration is coming soon. Manage your connections via Settings → Social media.`,
+                          )}
                         >
                           <Text style={[styles.connectBtnText, { color: integration.color }]}>
                             {isNl ? 'Verbinden' : 'Connect'}

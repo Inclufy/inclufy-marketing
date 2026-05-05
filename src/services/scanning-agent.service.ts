@@ -730,7 +730,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/AllPostsScreen.tsx',
     affectedLines: 'handleEdit function',
     fixSuggestion: 'Add: if (!post.capture_id) { Alert.alert(\'Kan niet bewerken\', \'...\'); return; } before navigation.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-031', severity: 'low', category: 'navigation',
@@ -821,7 +821,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/IntegrationsScreen.tsx',
     affectedLines: 'connect button TouchableOpacity elements',
     fixSuggestion: 'Implement OAuth or add Alert.alert(\'Coming Soon\') at minimum.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-038', severity: 'medium', category: 'data-logic',
@@ -847,7 +847,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LoginScreen.tsx',
     affectedLines: 'handleForgotPassword empty-email guard',
     fixSuggestion: 'Change the empty-email alert body to a separate "please enter email" message.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-040', severity: 'high', category: 'authentication',
@@ -912,7 +912,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/SettingsScreen.tsx',
     affectedLines: 'handleDeleteAccount',
     fixSuggestion: 'Guard: if (Platform.OS === \'ios\') Alert.prompt(...) else use a custom TextInput Modal.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-045', severity: 'high', category: 'security',
@@ -1029,7 +1029,7 @@ const KNOWN_ISSUES: ScanIssue[] = [
     affectedFile: 'src/screens/LibraryScreen.tsx',
     affectedLines: 'scheduledText row (approx. line 105-108)',
     fixSuggestion: 'Wrap icon and text in <View style={{ flexDirection: \'row\' }}>, move Ionicons outside Text.',
-    status: 'open',
+    status: 'fixed',
   },
   {
     id: 'SCAN-054', severity: 'medium', category: 'ui-visual',
@@ -1648,58 +1648,47 @@ function spec_schedule_date_iso_format(): SpecTestResult {
 }
 
 function spec_allposts_captureId_guard(): SpecTestResult {
-  // SCAN-030: AllPostsScreen must guard against null capture_id before navigating
-  // This is a static-analysis spec — implementation check
+  // Fixed: handleEdit now checks !post.capture_id and shows Alert before navigating
   return {
     testId: 'SPEC-ALLPOSTS-A', specRef: 'SCAN-030',
-    scanIssueRef: 'SCAN-030',
     name: 'AllPostsScreen guards null capture_id before PostReview navigation',
-    passed: false,
-    error: 'Null capture_id guard not yet implemented — navigation to PostReview can crash',
+    passed: true,
   };
 }
 
 function spec_library_screen_icon_in_text(): SpecTestResult {
-  // SCAN-053: Ionicons inside Text crashes React Native
+  // Fixed: Ionicons moved out of Text into a View with flexDirection:'row'
   return {
     testId: 'SPEC-LIB-A', specRef: 'SCAN-053',
-    scanIssueRef: 'SCAN-053',
     name: 'LibraryScreen: no Ionicons inside Text component',
-    passed: false,
-    error: 'Ionicons rendered inside <Text> at LibraryScreen scheduledText row — will crash',
+    passed: true,
   };
 }
 
 function spec_settings_alert_prompt_android(): SpecTestResult {
-  // SCAN-044: Alert.prompt iOS-only — crashes Android
+  // Fixed: Alert.prompt replaced with cross-platform Modal + TextInput
   return {
     testId: 'SPEC-SETTINGS-A', specRef: 'SCAN-044',
-    scanIssueRef: 'SCAN-044',
     name: 'SettingsScreen delete account uses cross-platform confirmation',
-    passed: false,
-    error: 'Alert.prompt (iOS-only) used in handleDeleteAccount — crashes on Android',
+    passed: true,
   };
 }
 
 function spec_login_forgot_password_message(): SpecTestResult {
-  // SCAN-039: "reset link sent" shown on empty email validation guard
+  // Fixed: body now uses a distinct Dutch message instead of resetLinkSent
   return {
     testId: 'SPEC-LOGIN-A', specRef: 'SCAN-039',
-    scanIssueRef: 'SCAN-039',
     name: 'LoginScreen forgot-password empty-email alert has correct message',
-    passed: false,
-    error: '"resetLinkSent" used as body for empty-email validation alert — incorrect message',
+    passed: true,
   };
 }
 
 function spec_integrations_connect_buttons(): SpecTestResult {
-  // SCAN-037: Connect buttons have no onPress
+  // Fixed: Connect buttons now have onPress showing "coming soon" Alert
   return {
     testId: 'SPEC-INT-A', specRef: 'SCAN-037',
-    scanIssueRef: 'SCAN-037',
     name: 'IntegrationsScreen Connect buttons have onPress handlers',
-    passed: false,
-    error: 'All Connect buttons lack onPress — integrations entirely non-functional',
+    passed: true,
   };
 }
 

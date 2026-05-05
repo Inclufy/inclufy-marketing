@@ -123,6 +123,10 @@ export default function AllPostsScreen() {
   };
 
   const handleEdit = (post: EventPost) => {
+    if (!post.capture_id) {
+      Alert.alert('Kan niet bewerken', 'Deze post heeft geen gekoppelde capture en kan niet worden bewerkt.');
+      return;
+    }
     navigation.navigate('PostReview', {
       captureId: post.capture_id,
       eventId: post.event_id || undefined,
