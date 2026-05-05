@@ -2334,6 +2334,234 @@ export const APP_MANUAL: ManualScreen[] = [
       { name: 'handleGenericPress', description: 'Opens the relevant screen for a generic notification tap.' },
     ],
   },
+
+  // ── DASHBOARD ─────────────────────────────────────────────────────────────
+  {
+    route: 'Home',
+    screen: 'HomeScreen',
+    category: 'Dashboard',
+    purpose: 'Main dashboard: health score, live event strip, upcoming campaigns, feed alerts, and quick-action grid.',
+    functions: [
+      { name: 'onRefresh', description: 'Pull-to-refresh: refetches stats, campaigns, events, and feed alerts in parallel.' },
+      { name: 'setDismissedAlerts', description: 'Dismisses a feed alert card by adding its id to the local dismissed set.' },
+    ],
+  },
+
+  // ── AUTH (extended) ───────────────────────────────────────────────────────
+  {
+    route: 'Biometric',
+    screen: 'BiometricScreen',
+    category: 'Auth',
+    purpose: 'Standalone biometric prompt shown at app resume when the user has biometric lock enabled.',
+    functions: [
+      { name: 'handleAuthenticate', description: 'Calls expo-local-authentication promptAsync and navigates to Main on success.' },
+    ],
+  },
+  {
+    route: 'SetupWizard',
+    screen: 'SetupWizardScreen',
+    category: 'Auth',
+    purpose: 'Read-only 5-step onboarding progress tracker (Brand Kit → Channels → Content → Team → First Campaign) with step status indicators.',
+    functions: [
+      { name: 'Back button', description: 'navigation.goBack() — the only interactive element; all step cards are informational.' },
+    ],
+  },
+
+  // ── EVENTS (extended) ─────────────────────────────────────────────────────
+  {
+    route: 'EventIntelligence',
+    screen: 'EventIntelligenceScreen',
+    category: 'Events',
+    purpose: 'AI-powered event discovery radar: scans surroundings for relevant events and allows attending/following.',
+    functions: [
+      { name: 'handleScan', description: 'Triggers a new AI radar scan for nearby/relevant events.' },
+      { name: 'handleAttend', description: 'Marks a discovered event as attending and saves it to the user\'s event list.' },
+    ],
+  },
+  {
+    route: 'EventRecap',
+    screen: 'EventRecapScreen',
+    category: 'Events',
+    purpose: 'AI-generated post-event recap with selectable photos, tone picker, and share capability.',
+    functions: [
+      { name: 'togglePhoto', description: 'Adds or removes a photo from the recap selection.', issueIds: ['SCAN-064'] },
+      { name: 'generateRecap', description: 'Calls the AI to produce the recap text using selected photos, language, and tone.', issueIds: ['SCAN-064'] },
+      { name: 'handleShare', description: 'Shares the generated recap text via the device share sheet.' },
+    ],
+  },
+  {
+    route: 'EventShare',
+    screen: 'EventShareScreen',
+    category: 'Events',
+    purpose: 'Share an event link, sync to device calendar, and toggle public registration.',
+    functions: [
+      { name: 'handleShare', description: 'Generates and shares a deep-link URL for the event.' },
+      { name: 'handleCalendarSync', description: 'Adds the event to the device calendar via expo-calendar.' },
+      { name: 'handleToggleRegistration', description: 'Enables or disables public registration for the event.' },
+      { name: 'handleOpenSite', description: 'Opens an event-related URL in the system browser.' },
+    ],
+  },
+
+  // ── LEADS & CONTACTS (extended) ───────────────────────────────────────────
+  {
+    route: 'CardScan',
+    screen: 'CardScanScreen',
+    category: 'Leads & Contacts',
+    purpose: 'Camera-based business card scanner: captures, OCR-parses, and saves the contact as a lead.',
+    functions: [
+      { name: 'handleCapture', description: 'Takes a photo of a business card using the device camera.' },
+      { name: 'handleSave', description: 'Saves the OCR-parsed card data as a new lead in Supabase.' },
+    ],
+  },
+  {
+    route: 'QRScan',
+    screen: 'QRScanScreen',
+    category: 'Leads & Contacts',
+    purpose: 'QR code scanner for importing a contact\'s digital card or vCard data.',
+    functions: [
+      { name: 'handleBarCodeScanned', description: 'Decodes a scanned QR payload and pre-fills the contact form.' },
+      { name: 'handleSave', description: 'Saves the decoded contact as a new lead.' },
+      { name: 'handleRescan', description: 'Resets the scanner to allow a new scan.' },
+    ],
+  },
+  {
+    route: 'NFCShare',
+    screen: 'NFCShareScreen',
+    category: 'Leads & Contacts',
+    purpose: 'NFC tap-to-share: beam the user\'s digital card to another device or receive a contact via NFC.',
+    functions: [
+      { name: 'handleShare', description: 'Writes the user\'s digital card data to an NFC tag or initiates a beam.' },
+      { name: 'handleReceive', description: 'Listens for an incoming NFC tap and saves the received contact.' },
+    ],
+  },
+  {
+    route: 'MyDigitalCard',
+    screen: 'MyDigitalCardScreen',
+    category: 'Leads & Contacts',
+    purpose: 'The user\'s own digital business card: field visibility picker, QR display, copy, and share.',
+    functions: [
+      { name: 'toggleQrField', description: 'Shows or hides a specific field (name, email, phone, etc.) on the QR card.' },
+      { name: 'handleShare', description: 'Shares the card URL or QR image via the device share sheet.' },
+      { name: 'handleCopy', description: 'Copies the digital card URL to the clipboard.' },
+    ],
+  },
+
+  // ── LIBRARY (extended) ────────────────────────────────────────────────────
+  {
+    route: 'LibraryImport',
+    screen: 'LibraryImportScreen',
+    category: 'Library',
+    purpose: 'Import a ZIP file of library posts with product and campaign assignment, with a progress indicator.',
+    functions: [
+      { name: 'pickFile', description: 'Opens the system document picker to select a ZIP file.' },
+      { name: 'startImport', description: 'Uploads the ZIP and triggers useImportLibraryZip, tracking progress percentage.' },
+      { name: 'setProductId', description: 'Associates the import batch with a specific product.' },
+    ],
+  },
+
+  // ── NETWORKING ────────────────────────────────────────────────────────────
+  {
+    route: 'NetworkingEngine',
+    screen: 'NetworkingEngineScreen',
+    category: 'Networking',
+    purpose: 'Contact relationship manager with follow-up reminders, LinkedIn connect shortcuts, and QR scanner tab.',
+    functions: [
+      { name: 'setFilter', description: 'Filters contacts by category (all / hot / warm / cold).' },
+      { name: 'setActiveTab', description: 'Switches between Contacts list and QR Scanner tab.' },
+      { name: 'setExpandedId', description: 'Expands or collapses a contact card to show follow-up actions.' },
+      { name: 'Follow-up button', description: 'Shows an Alert with the follow-up message for the contact.' },
+      { name: 'LinkedIn button', description: 'Shows an Alert prompting the user to connect on LinkedIn.' },
+    ],
+  },
+  {
+    route: 'OpportunityFeed',
+    screen: 'OpportunityFeedScreen',
+    category: 'Networking',
+    purpose: 'AI-curated feed of marketing opportunities (events, partnerships, leads) with action shortcuts.',
+    functions: [
+      { name: 'handleScan', description: 'Triggers a fresh AI scan for new opportunities.' },
+      { name: 'handleAction', description: 'Routes the selected action for a feed item (attend, save, contact, etc.).' },
+    ],
+  },
+  {
+    route: 'OpportunityRadar',
+    screen: 'OpportunityRadarScreen',
+    category: 'Networking',
+    purpose: 'Radar view of opportunities ranked by estimated value with dismiss and act buttons.',
+    functions: [
+      { name: 'handleDismiss', description: 'Removes an opportunity from the radar by id.' },
+      { name: 'handleAction', description: 'Executes the primary action for an opportunity (e.g., open event, save lead).' },
+    ],
+  },
+  {
+    route: 'FollowedOrganizers',
+    screen: 'FollowedOrganizersScreen',
+    category: 'Networking',
+    purpose: 'List of followed event organisers with remove and add-from-suggestions capabilities.',
+    functions: [
+      { name: 'toggleFavorite', description: 'useMutation that adds or removes an organiser from the followed list.' },
+      { name: 'handleRemove', description: 'Removes a followed organiser with confirmation.' },
+      { name: 'handleAddSuggested', description: 'Follows a suggested organiser from the curated list.' },
+    ],
+  },
+  {
+    route: 'Organization',
+    screen: 'OrganizationScreen',
+    category: 'Networking',
+    purpose: 'View and edit the user\'s organisation profile (name, description, website, logo).',
+    functions: [
+      { name: 'handleSave', description: 'Persists organisation profile changes to Supabase.' },
+      { name: 'handleCancel', description: 'Reverts the form to the original profile values and exits edit mode.' },
+    ],
+  },
+
+  // ── TEAM ──────────────────────────────────────────────────────────────────
+  {
+    route: 'TeamDirectory',
+    screen: 'TeamDirectoryScreen',
+    category: 'Team',
+    purpose: 'Team member directory with invite form and member delete.',
+    functions: [
+      { name: 'handleSubmit', description: 'Invites a new team member by email via Supabase.' },
+      { name: 'handleDelete', description: 'Removes a team member with confirmation.' },
+    ],
+  },
+  {
+    route: 'TeamManage',
+    screen: 'TeamManageScreen',
+    category: 'Team',
+    purpose: 'Manage existing team members: invite, change roles, and remove.',
+    functions: [
+      { name: 'handleInvite', description: 'Sends a team invitation to the entered email address.' },
+      { name: 'handleChangeRole', description: 'Updates a member\'s role (admin / editor / viewer).', issueIds: ['SCAN-066'] },
+      { name: 'handleRemove', description: 'Removes a team member with confirmation.' },
+      { name: 'updateMember.mutate onError', description: 'Shows an Alert with the error message if role update fails.', issueIds: ['SCAN-066'] },
+    ],
+  },
+
+  // ── CAMPAIGNS (extended) ─────────────────────────────────────────────────
+  {
+    route: 'BudgetMonitor',
+    screen: 'BudgetMonitorScreen',
+    category: 'Campaigns',
+    purpose: 'Real-time budget dashboard: total spend vs budget, per-channel breakdown, and overspend alerts.',
+    functions: [
+      { name: 'onRefresh', description: 'Pull-to-refresh: re-fetches campaign budget overview and campaign list.' },
+      { name: 'formatCurrency', description: 'Formats a number as a locale-aware currency string (nl-NL / en-US / fr-FR).' },
+    ],
+  },
+
+  // ── DEV / QA ─────────────────────────────────────────────────────────────
+  {
+    route: 'DemoEnvironment',
+    screen: 'DemoEnvironmentScreen',
+    category: 'Dev / QA',
+    purpose: 'Internal screen to seed or reset the demo environment data (visible only in dev/demo builds).',
+    functions: [
+      { name: 'handleSeedDemo', description: 'Seeds the Supabase database with demo events, posts, campaigns, and contacts.' },
+      { name: 'handleResetDemo', description: 'Deletes all demo data and resets the account to a clean state.' },
+    ],
+  },
 ];
 
 export { KNOWN_ISSUES };
