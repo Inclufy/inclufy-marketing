@@ -4,12 +4,14 @@
 import React, { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, SafeAreaView, TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
-import { KNOWN_ISSUES, FIX_HISTORY, APP_MANUAL } from '../services/scanning-agent.service';
+import { KNOWN_ISSUES, FIX_HISTORY, APP_MANUAL, runFullScan } from '../services/scanning-agent.service';
+import { useScanReports, useTriggerScan } from '../hooks/useScanReports';
 
 // ─── Colour maps ─────────────────────────────────────────────────────────────
 
@@ -63,6 +65,23 @@ export default function QAManualScreen() {
   const [sevFilter, setSevFilter] = useState<SevFilter>('all');
   const [expandedScreens, setExpandedScreens] = useState<Record<string, boolean>>({});
   const [expandedIssues, setExpandedIssues] = useState<Record<string, boolean>>({});
+  const [runningInApp, setRunningInApp] = useState(false);
+
+  // Live scan reports from Supabase (cron + edge + in-app)
+  const { data: scanReports = [], refetch: refetchReports } = useScanReports(1);
+  const latestReport = scanReports[0] ?? null;
+  const triggerEdgeScan = useTriggerScan();
+
+  const handleRunScan = async () => {
+    setRunningInApp(true);
+    try {
+      // Run the full in-app scan (UI checks + async DB checks + writes to scan_reports)
+      await runFullScan();
+      await refetchReports();
+    } finally {
+      setRunningInApp(false);
+    }
+  };
 
   // Pre-build fix map and issue map for O(1) lookups
   const fixMap = useMemo(() => {
@@ -186,6 +205,78 @@ export default function QAManualScreen() {
             </Text>
           </TouchableOpacity>
         ))}
+      </View>
+
+      {/* ── Scan status banner ── */}
+      <View style={{
+        marginHorizontal: spacing.sm, marginTop: spacing.sm,
+        borderRadius: borderRadius.md, borderWidth: 1,
+        borderColor: latestReport
+          ? (latestReport.failed > 0 ? '#F59E0B40' : '#10B98140')
+          : colors.border,
+        backgroundColor: latestReport
+          ? (latestReport.failed > 0 ? '#F59E0B0C' : '#10B9810C')
+          : colors.surface,
+        overflow: 'hidden',
+      }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: spacing.sm, gap: spacing.sm }}>
+          <Ionicons
+            name={latestReport ? (latestReport.failed > 0 ? 'warning-outline' : 'shield-checkmark-outline') : 'time-outline'}
+            size={18}
+            color={latestReport ? (latestReport.failed > 0 ? '#F59E0B' : '#10B981') : colors.textSecondary}
+          />
+          <View style={{ flex: 1 }}>
+            {latestReport ? (
+              <>
+                <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold as any, color: colors.text }}>
+                  {latestReport.summary}
+                </Text>
+                <Text style={{ fontSize: 10, color: colors.textSecondary, marginTop: 1 }}>
+                  {latestReport.source === 'cron' ? '⏰ Automatisch' : latestReport.source === 'manual-edge' ? '☁️ Edge scan' : '📱 In-app scan'}
+                  {'  ·  '}
+                  {new Date(latestReport.created_at).toLocaleString('nl-NL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </Text>
+              </>
+            ) : (
+              <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>Nog geen scan uitgevoerd</Text>
+            )}
+          </View>
+          {/* Run now button */}
+          <TouchableOpacity
+            onPress={handleRunScan}
+            disabled={runningInApp || triggerEdgeScan.isPending}
+            style={{
+              flexDirection: 'row', alignItems: 'center', gap: 5,
+              paddingHorizontal: spacing.sm, paddingVertical: 6,
+              borderRadius: borderRadius.md, backgroundColor: colors.primary,
+              opacity: (runningInApp || triggerEdgeScan.isPending) ? 0.5 : 1,
+            }}
+          >
+            {(runningInApp || triggerEdgeScan.isPending)
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Ionicons name="play-circle-outline" size={14} color="#fff" />
+            }
+            <Text style={{ fontSize: 12, fontWeight: fontWeight.semibold as any, color: '#fff' }}>
+              Nu scannen
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Failed checks inline */}
+        {latestReport && latestReport.failed > 0 && (
+          <View style={{ borderTopWidth: 1, borderTopColor: '#F59E0B30', paddingHorizontal: spacing.sm, paddingBottom: spacing.sm }}>
+            {latestReport.results.filter(r => !r.passed).map(r => (
+              <View key={r.id} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 6, marginTop: 6 }}>
+                <Ionicons name="close-circle" size={13} color="#EF4444" style={{ marginTop: 1 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 11, color: colors.text, fontWeight: fontWeight.medium as any }}>{r.name}</Text>
+                  {r.error && <Text style={{ fontSize: 10, color: '#EF4444', marginTop: 1 }}>{r.error}</Text>}
+                  {r.scanIssueRef && <Text style={{ fontSize: 10, color: '#F59E0B', marginTop: 1 }}>Ref: {r.scanIssueRef}</Text>}
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
 
       {/* ── Search ── */}

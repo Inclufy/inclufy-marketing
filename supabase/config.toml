@@ -25,3 +25,10 @@ verify_jwt = true
 
 [functions.product-issues]
 verify_jwt = true
+
+# scan-monitor: verify_jwt = false.
+# Called by pg_cron (no session/JWT) for the twice-daily scheduled run.
+# For manual app-triggered calls the function checks x-internal-call header
+# to distinguish source; no user data is exposed in the response.
+[functions.scan-monitor]
+verify_jwt = false

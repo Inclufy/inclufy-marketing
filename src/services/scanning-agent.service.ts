@@ -1766,20 +1766,33 @@ export async function runFullScan(): Promise<ScanReport> {
 
   console.log('[ScanningAgent] ═══ SCAN COMPLETE ═══');
   console.log(`[ScanningAgent] Spec tests: ${passedCount} passed, ${failedCount} failed`);
-  console.log('[ScanningAgent] Spec results:');
   specResults.forEach((r) => {
     const icon = r.passed ? '✅' : '❌';
     const issueRef = r.scanIssueRef ? ` [${r.scanIssueRef}]` : '';
     console.log(`  ${icon} ${r.testId} (SPEC §${r.specRef})${issueRef} — ${r.name}${r.error ? '\n     └─ ' + r.error : ''}`);
   });
-  console.log('[ScanningAgent] Issue totals:', {
-    total: report.totalIssues,
-    fixed: report.fixed,
-    open: report.open,
-    critical: report.critical,
-    high: report.high,
-    medium: report.medium,
-    low: report.low,
+
+  // Persist results to scan_reports so the QA Manual screen can show them
+  // alongside cron-triggered Edge Function results. Fire-and-forget — don't
+  // await so the caller gets the report immediately.
+  const dbResults = specResults.map((r) => ({
+    id: r.testId,
+    name: r.name,
+    passed: r.passed,
+    error: r.error,
+    scanIssueRef: r.scanIssueRef,
+  }));
+  supabase.from('scan_reports').insert({
+    source: 'manual-app',
+    total_checks: specResults.length,
+    passed: passedCount,
+    failed: failedCount,
+    results: dbResults,
+    summary: failedCount === 0
+      ? `All ${passedCount} in-app checks passed.`
+      : `${failedCount} in-app check(s) failed out of ${specResults.length}.`,
+  }).then(({ error }) => {
+    if (error) console.warn('[ScanningAgent] Could not persist report:', error.message);
   });
 
   return report;
