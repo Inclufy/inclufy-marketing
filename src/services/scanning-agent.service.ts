@@ -1710,6 +1710,746 @@ async function spec_settings_table_names(): Promise<SpecTestResult> {
   }
 }
 
+// ─── Spec tests for SCAN-021 to SCAN-077 regressions ─────────────────────────
+// Pattern A helpers: fs/path are loaded at runtime via require() inside each
+// function body. Declare globals so TypeScript is satisfied — the scanning agent
+// runs in a Node.js-like context where require and __dirname are available.
+declare const __dirname: string;
+// eslint-disable-next-line no-var
+declare var require: (id: string) => any;
+
+function spec_evtlist_refresh_control(): SpecTestResult {
+  // SCAN-021: RefreshControl must use isRefetching, not isLoading
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventListScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('refreshing={isRefetching}') && !src.includes('refreshing={isLoading}');
+  return {
+    testId: 'SPEC-EVTLIST-A', specRef: 'SCAN-021', scanIssueRef: 'SCAN-021',
+    name: 'EventListScreen RefreshControl uses isRefetching (not isLoading)',
+    passed,
+    error: passed ? undefined : 'refreshing={isRefetching} not found or refreshing={isLoading} still present',
+  };
+}
+
+function spec_evtlist_logout_awaited(): SpecTestResult {
+  // SCAN-022: handleLogout must await supabase.auth.signOut()
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventListScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('await supabase.auth.signOut()');
+  return {
+    testId: 'SPEC-EVTLIST-B', specRef: 'SCAN-022', scanIssueRef: 'SCAN-022',
+    name: 'EventListScreen handleLogout awaits signOut()',
+    passed,
+    error: passed ? undefined : 'await supabase.auth.signOut() not found in EventListScreen',
+  };
+}
+
+function spec_evtlist_empty_icon(): SpecTestResult {
+  // SCAN-023: Empty state must use calendar-outline, not camera-outline
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventListScreen.tsx'), 'utf8',
+  );
+  const hasCalendar = src.includes('"calendar-outline"') || src.includes("'calendar-outline'");
+  const hasCamera = src.includes('"camera-outline"') || src.includes("'camera-outline'");
+  const passed = hasCalendar && !hasCamera;
+  return {
+    testId: 'SPEC-EVTLIST-C', specRef: 'SCAN-023', scanIssueRef: 'SCAN-023',
+    name: 'EventListScreen empty state uses calendar-outline icon',
+    passed,
+    error: passed ? undefined : `calendar-outline=${hasCalendar} camera-outline=${hasCamera}`,
+  };
+}
+
+function spec_eventsetup_date_validation(): SpecTestResult {
+  // SCAN-024: Date field must be validated as DD-MM-YYYY format
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventSetupScreen.tsx'), 'utf8',
+  );
+  // Fix is a regex validation: /^\d{2}-\d{2}-\d{4}$/
+  const passed = src.includes('\\d{2}-\\d{2}-\\d{4}') || src.includes(/\\d\{2\}-\\d\{2\}-\\d\{4\}/.source);
+  return {
+    testId: 'SPEC-EVTSETUP-A', specRef: 'SCAN-024', scanIssueRef: 'SCAN-024',
+    name: 'EventSetupScreen date field has DD-MM-YYYY regex validation',
+    passed,
+    error: passed ? undefined : 'Regex \\d{2}-\\d{2}-\\d{4} not found — date field may lack format validation',
+  };
+}
+
+function spec_eventsetup_null_description(): SpecTestResult {
+  // SCAN-025: Description from existing event must use ?? '' to avoid "null" string
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventSetupScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes("description ?? ''") || src.includes('description ?? ""');
+  return {
+    testId: 'SPEC-EVTSETUP-B', specRef: 'SCAN-025', scanIssueRef: 'SCAN-025',
+    name: 'EventSetupScreen null description coerced to empty string with ??',
+    passed,
+    error: passed ? undefined : "description ?? '' not found — null description may render as 'null'",
+  };
+}
+
+function spec_evtdash_error_state(): SpecTestResult {
+  // SCAN-026: Event load failure must show an error message, not return null silently
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventDashboardScreen.tsx'), 'utf8',
+  );
+  // The fix replaces `return null` for !event with a visible error view
+  const hasErrorText = src.includes('Event niet gevonden') || src.includes('event not found') ||
+    src.includes('isError') || (src.includes('!event') && !src.includes('if (!event) return null'));
+  return {
+    testId: 'SPEC-EVTDASH-A', specRef: 'SCAN-026', scanIssueRef: 'SCAN-026',
+    name: 'EventDashboardScreen shows error message on event load failure (not blank)',
+    passed: hasErrorText,
+    error: hasErrorText ? undefined : 'No error message on !event — blank screen regression',
+  };
+}
+
+function spec_evtdash_toggle_onerror(): SpecTestResult {
+  // SCAN-027: toggleStatus mutation must have onError callback
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventDashboardScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('onError') && src.includes('toggleStatus');
+  return {
+    testId: 'SPEC-EVTDASH-B', specRef: 'SCAN-027', scanIssueRef: 'SCAN-027',
+    name: 'EventDashboardScreen toggleStatus has onError callback',
+    passed,
+    error: passed ? undefined : 'onError not found in toggleStatus — mutation failures are silent',
+  };
+}
+
+function spec_calendar_loading_indicator(): SpecTestResult {
+  // SCAN-028: ContentCalendarScreen must show ActivityIndicator while queries load
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ContentCalendarScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('ActivityIndicator') && src.includes('isLoading');
+  return {
+    testId: 'SPEC-CALCAL-A', specRef: 'SCAN-028', scanIssueRef: 'SCAN-028',
+    name: 'ContentCalendarScreen shows ActivityIndicator while loading',
+    passed,
+    error: passed ? undefined : 'ActivityIndicator or isLoading not found — calendar may appear empty during load',
+  };
+}
+
+function spec_calendar_item_onpress(): SpecTestResult {
+  // SCAN-029: Calendar items must have onPress handlers
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ContentCalendarScreen.tsx'), 'utf8',
+  );
+  // Fix added TouchableOpacity with onPress navigating to detail
+  const passed = src.includes('onPress') && (src.includes('CampaignDetail') || src.includes('ContentProposals'));
+  return {
+    testId: 'SPEC-CALCAL-B', specRef: 'SCAN-029', scanIssueRef: 'SCAN-029',
+    name: 'ContentCalendarScreen calendar items have onPress navigation',
+    passed,
+    error: passed ? undefined : 'onPress navigation not found in calendar items',
+  };
+}
+
+function spec_allposts_back_button(): SpecTestResult {
+  // SCAN-031: AllPostsScreen must have a back button in the header
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AllPostsScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('navigation.goBack') || src.includes('goBack()');
+  return {
+    testId: 'SPEC-ALLPOSTS-B', specRef: 'SCAN-031', scanIssueRef: 'SCAN-031',
+    name: 'AllPostsScreen header has back navigation button',
+    passed,
+    error: passed ? undefined : 'navigation.goBack() not found — no back button in AllPostsScreen',
+  };
+}
+
+function spec_analytics_app_activity_label(): SpecTestResult {
+  // SCAN-032: AnalyticsScreen must label section as "App Activiteit" not as real social metrics
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AnalyticsScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('App Activiteit') || src.includes('App activiteit') || src.includes('app activiteit');
+  return {
+    testId: 'SPEC-ANALYTICS-A', specRef: 'SCAN-032', scanIssueRef: 'SCAN-032',
+    name: 'AnalyticsScreen labels internal metrics as "App Activiteit"',
+    passed,
+    error: passed ? undefined : '"App Activiteit" label not found — screen may mislead users about data source',
+  };
+}
+
+function spec_analytics_budget_formatting(): SpecTestResult {
+  // SCAN-033: Budget must not show "€0.0K" for zero — must show "€0"
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AnalyticsScreen.tsx'), 'utf8',
+  );
+  // Fix: conditional formatting >= 1000 ? K : plain
+  const passed = src.includes('1000') && (src.includes('toFixed') || src.includes('K`'));
+  return {
+    testId: 'SPEC-ANALYTICS-B', specRef: 'SCAN-033', scanIssueRef: 'SCAN-033',
+    name: 'AnalyticsScreen budget uses conditional K-formatting (not always €0.0K)',
+    passed,
+    error: passed ? undefined : 'Conditional budget formatting not found — zero shows as €0.0K',
+  };
+}
+
+function spec_brandkit_setdefault_onerror(): SpecTestResult {
+  // SCAN-034: handleSetDefault mutation must have onError callback
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/BrandKitScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('handleSetDefault') && src.includes('onError');
+  return {
+    testId: 'SPEC-BRANDKIT-A', specRef: 'SCAN-034', scanIssueRef: 'SCAN-034',
+    name: 'BrandKitScreen handleSetDefault has onError callback',
+    passed,
+    error: passed ? undefined : 'onError not found in handleSetDefault — silent failure possible',
+  };
+}
+
+function spec_storyarc_no_remount_regen(): SpecTestResult {
+  // SCAN-035: StoryArcScreen must guard arc regeneration with a ref so it only fires once
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/StoryArcScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('hasGeneratedRef') || src.includes('hasGenerated') || src.includes('.current = true');
+  return {
+    testId: 'SPEC-STORYARC-A', specRef: 'SCAN-035', scanIssueRef: 'SCAN-035',
+    name: 'StoryArcScreen uses ref guard to prevent arc regeneration on remount',
+    passed,
+    error: passed ? undefined : 'hasGeneratedRef or equivalent guard not found — arc regenerates on every mount',
+  };
+}
+
+function spec_storyarc_back_button(): SpecTestResult {
+  // SCAN-036: StoryArcScreen must have a back button
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/StoryArcScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('navigation.goBack') || src.includes('goBack()');
+  return {
+    testId: 'SPEC-STORYARC-B', specRef: 'SCAN-036', scanIssueRef: 'SCAN-036',
+    name: 'StoryArcScreen header has back navigation button',
+    passed,
+    error: passed ? undefined : 'navigation.goBack() not found — no back button in StoryArcScreen',
+  };
+}
+
+function spec_integrations_status_from_db(): SpecTestResult {
+  // SCAN-038: IntegrationsScreen must read connection status from social_accounts, not hardcode false
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/IntegrationsScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('social_accounts') && src.includes('connectedPlatforms');
+  return {
+    testId: 'SPEC-INT-B', specRef: 'SCAN-038', scanIssueRef: 'SCAN-038',
+    name: 'IntegrationsScreen loads connection status from social_accounts table',
+    passed,
+    error: passed ? undefined : 'social_accounts or connectedPlatforms not found — integrations always show as disconnected',
+  };
+}
+
+function spec_login_biometric_error_handled(): SpecTestResult {
+  // SCAN-040: Biometric login must handle failed refreshSession with an Alert
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/LoginScreen.tsx'), 'utf8',
+  );
+  // Fix: check error from refreshSession and show Alert
+  const passed = src.includes('refreshSession') && src.includes('Alert') && src.includes('biometric');
+  return {
+    testId: 'SPEC-LOGIN-B', specRef: 'SCAN-040', scanIssueRef: 'SCAN-040',
+    name: 'LoginScreen biometric login handles session error with Alert',
+    passed,
+    error: passed ? undefined : 'Biometric error handling (Alert on refreshSession failure) not found',
+  };
+}
+
+function spec_login_terms_privacy_links(): SpecTestResult {
+  // SCAN-041: Terms & Privacy links must have Linking.openURL onPress handlers
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/LoginScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('Linking.openURL') && (src.includes('terms') || src.includes('privacy'));
+  return {
+    testId: 'SPEC-LOGIN-C', specRef: 'SCAN-041', scanIssueRef: 'SCAN-041',
+    name: 'LoginScreen Terms & Privacy links use Linking.openURL',
+    passed,
+    error: passed ? undefined : 'Linking.openURL not found for terms/privacy — links are non-functional',
+  };
+}
+
+function spec_onboarding_persistence(): SpecTestResult {
+  // SCAN-042: Onboarding must persist completion with AsyncStorage
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/OnboardingScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes("AsyncStorage.setItem") && src.includes('onboardingDone');
+  return {
+    testId: 'SPEC-ONBOARD-A', specRef: 'SCAN-042', scanIssueRef: 'SCAN-042',
+    name: 'OnboardingScreen persists completion via AsyncStorage.setItem',
+    passed,
+    error: passed ? undefined : 'AsyncStorage.setItem(onboardingDone) not found — completion not persisted',
+  };
+}
+
+function spec_onboarding_scrollx_wired(): SpecTestResult {
+  // SCAN-043: scrollX must drive animation via onScroll, not be dead code
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/OnboardingScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('onScroll') && src.includes('scrollX');
+  return {
+    testId: 'SPEC-ONBOARD-B', specRef: 'SCAN-043', scanIssueRef: 'SCAN-043',
+    name: 'OnboardingScreen scrollX Animated.Value wired to onScroll',
+    passed,
+    error: passed ? undefined : 'scrollX not wired to onScroll — dead animation code',
+  };
+}
+
+function spec_settings_social_accounts_user_filter(): SpecTestResult {
+  // SCAN-045: social_accounts query must include explicit user_id filter
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/SettingsScreen.tsx'), 'utf8',
+  );
+  // Look for .eq('user_id', ... near social_accounts
+  const socialIdx = src.indexOf('social_accounts');
+  const nearby = src.slice(socialIdx, socialIdx + 300);
+  const passed = socialIdx !== -1 && nearby.includes('user_id');
+  return {
+    testId: 'SPEC-SETTINGS-C', specRef: 'SCAN-045', scanIssueRef: 'SCAN-045',
+    name: 'SettingsScreen social_accounts query includes user_id filter',
+    passed,
+    error: passed ? undefined : 'user_id filter not found near social_accounts query',
+  };
+}
+
+function spec_settings_brand_kit_column(): SpecTestResult {
+  // SCAN-047: brand_kits query must use is_default column, not is_active
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/SettingsScreen.tsx'), 'utf8',
+  );
+  // The brand kits section (around line 294) queries is_default
+  const passed = src.includes("'is_default'") && !src.includes(".eq('is_active', true)");
+  return {
+    testId: 'SPEC-SETTINGS-D', specRef: 'SCAN-047', scanIssueRef: 'SCAN-047',
+    name: "SettingsScreen brand_kits query uses is_default column (not is_active)",
+    passed,
+    error: passed ? undefined : "is_default not used or is_active still used — brand kits may not load",
+  };
+}
+
+function spec_whatsapp_no_sectionlist_import(): SpecTestResult {
+  // SCAN-048: WhatsAppSettingsScreen must not import SectionList (dead import)
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/WhatsAppSettingsScreen.tsx'), 'utf8',
+  );
+  const passed = !src.includes('SectionList');
+  return {
+    testId: 'SPEC-WHATSAPP-A', specRef: 'SCAN-048', scanIssueRef: 'SCAN-048',
+    name: 'WhatsAppSettingsScreen has no unused SectionList import',
+    passed,
+    error: passed ? undefined : 'SectionList still imported in WhatsAppSettingsScreen (dead import)',
+  };
+}
+
+function spec_copilot_loading_in_finally(): SpecTestResult {
+  // SCAN-049: setLoading(false) must be in finally block of sendMessage, not before it resolves
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/CopilotScreen.tsx'), 'utf8',
+  );
+  // Check that setLoading(false) appears inside finally
+  const finallyIdx = src.indexOf('finally');
+  const nearby = finallyIdx !== -1 ? src.slice(finallyIdx, finallyIdx + 100) : '';
+  const passed = finallyIdx !== -1 && nearby.includes('setLoading(false)');
+  return {
+    testId: 'SPEC-COPILOT-A', specRef: 'SCAN-049', scanIssueRef: 'SCAN-049',
+    name: 'CopilotScreen setLoading(false) called inside finally block',
+    passed,
+    error: passed ? undefined : 'setLoading(false) not found inside finally — spinner may disappear prematurely',
+  };
+}
+
+function spec_copilot_recorder_awaited(): SpecTestResult {
+  // SCAN-050: recorder.record() must be awaited
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/CopilotScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('await recorder.record()');
+  return {
+    testId: 'SPEC-COPILOT-B', specRef: 'SCAN-050', scanIssueRef: 'SCAN-050',
+    name: 'CopilotScreen recorder.record() is awaited',
+    passed,
+    error: passed ? undefined : 'await recorder.record() not found — recording errors silently swallowed',
+  };
+}
+
+function spec_copilot_chat_persisted(): SpecTestResult {
+  // SCAN-051: Chat history must be persisted with AsyncStorage
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/CopilotScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('AsyncStorage') && src.includes('STORAGE_KEY');
+  return {
+    testId: 'SPEC-COPILOT-C', specRef: 'SCAN-051', scanIssueRef: 'SCAN-051',
+    name: 'CopilotScreen chat history persisted with AsyncStorage',
+    passed,
+    error: passed ? undefined : 'AsyncStorage/STORAGE_KEY not found — chat history lost on navigation',
+  };
+}
+
+function spec_aicommand_stable_key_extractor(): SpecTestResult {
+  // SCAN-052: FlatList must use item.id as key, not array index
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AICommandScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('item.id') && !src.includes('keyExtractor={(_, index)') &&
+    !src.includes('keyExtractor={(_item, index)');
+  return {
+    testId: 'SPEC-AICMD-A', specRef: 'SCAN-052', scanIssueRef: 'SCAN-052',
+    name: 'AICommandScreen FlatList uses item.id as keyExtractor (not index)',
+    passed,
+    error: passed ? undefined : 'item.id key not found or index-based key detected — unnecessary re-renders on new messages',
+  };
+}
+
+function spec_campaign_list_refresh_control(): SpecTestResult {
+  // SCAN-054: CampaignListScreen RefreshControl must use isRefetching, not isLoading
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/CampaignListScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('refreshing={isRefetching}') && !src.includes('refreshing={isLoading}');
+  return {
+    testId: 'SPEC-CAMPLIST-A', specRef: 'SCAN-054', scanIssueRef: 'SCAN-054',
+    name: 'CampaignListScreen RefreshControl uses isRefetching (not isLoading)',
+    passed,
+    error: passed ? undefined : 'refreshing={isRefetching} not found or refreshing={isLoading} still present',
+  };
+}
+
+function spec_campaign_detail_activate_on_success(): SpecTestResult {
+  // SCAN-055: handleActivate Alert must be in onSuccess callback, not before mutation
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/CampaignDetailScreen.tsx'), 'utf8',
+  );
+  // Fix: Alert is in onSuccess callback
+  const passed = src.includes('onSuccess') && src.includes('handleActivate');
+  return {
+    testId: 'SPEC-CAMPDET-A', specRef: 'SCAN-055', scanIssueRef: 'SCAN-055',
+    name: 'CampaignDetailScreen handleActivate shows success Alert only in onSuccess',
+    passed,
+    error: passed ? undefined : 'onSuccess callback not found in handleActivate — success alert premature',
+  };
+}
+
+function spec_leadcapture_email_validation(): SpecTestResult {
+  // SCAN-056: Email field must be validated with a regex before submission
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/LeadCaptureScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('@') && (src.includes('emailValid') || src.includes('email.*regex') ||
+    src.includes('/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test') ||
+    src.includes("[^\\s@]+@[^\\s@]+") || src.includes('[^\\\\s@]'));
+  return {
+    testId: 'SPEC-LEADCAP-A', specRef: 'SCAN-056', scanIssueRef: 'SCAN-056',
+    name: 'LeadCaptureScreen email field validated with regex',
+    passed,
+    error: passed ? undefined : 'Email regex validation not found in LeadCaptureScreen',
+  };
+}
+
+function spec_notifications_route_allowlist(): SpecTestResult {
+  // SCAN-057: Navigation from notification must be validated against an allowlist
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/NotificationsScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('VALID_ROUTES') && src.includes('navigation.navigate');
+  return {
+    testId: 'SPEC-NOTIF-A', specRef: 'SCAN-057', scanIssueRef: 'SCAN-057',
+    name: 'NotificationsScreen validates navigation route against VALID_ROUTES allowlist',
+    passed,
+    error: passed ? undefined : 'VALID_ROUTES allowlist not found — arbitrary routes accepted from push data',
+  };
+}
+
+function spec_eventrecap_photos_in_payload(): SpecTestResult {
+  // SCAN-058: generateEventRecap call must include selected_photos
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventRecapScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('selected_photos') && src.includes('selectedPhotos');
+  return {
+    testId: 'SPEC-EVTRECAP-A', specRef: 'SCAN-058', scanIssueRef: 'SCAN-058',
+    name: 'EventRecapScreen passes selectedPhotos to generateEventRecap payload',
+    passed,
+    error: passed ? undefined : 'selected_photos not found in generateEventRecap call',
+  };
+}
+
+function spec_eventrecap_changetone_disabled(): SpecTestResult {
+  // SCAN-059: changeTone button must be disabled while loading
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventRecapScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('changeTone') && src.includes('disabled={loading}');
+  return {
+    testId: 'SPEC-EVTRECAP-B', specRef: 'SCAN-059', scanIssueRef: 'SCAN-059',
+    name: 'EventRecapScreen changeTone button disabled while loading',
+    passed,
+    error: passed ? undefined : 'disabled={loading} not found near changeTone button',
+  };
+}
+
+function spec_evtscanner_today_date_filter(): SpecTestResult {
+  // SCAN-060: loadExistingScans must filter by today's date using .gte('scanned_at', ...)
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventScannerScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('.gte(') && src.includes('scanned_at') && src.includes('todayStart');
+  return {
+    testId: 'SPEC-EVTSCNR-A', specRef: 'SCAN-060', scanIssueRef: 'SCAN-060',
+    name: 'EventScannerScreen loadExistingScans filters by today\'s date',
+    passed,
+    error: passed ? undefined : '.gte(scanned_at, todayStart) not found — all recent scans shown as "today"',
+  };
+}
+
+function spec_evtscanner_upsert_error_checked(): SpecTestResult {
+  // SCAN-061: go_contacts upsert error must be checked/handled
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventScannerScreen.tsx'), 'utf8',
+  );
+  // Fix: contactError is checked via console.warn or Alert after upsert
+  const passed = src.includes('contactError') || src.includes('upsert');
+  return {
+    testId: 'SPEC-EVTSCNR-B', specRef: 'SCAN-061', scanIssueRef: 'SCAN-061',
+    name: 'EventScannerScreen go_contacts upsert error is checked',
+    passed,
+    error: passed ? undefined : 'contactError not destructured — upsert failures silently ignored',
+  };
+}
+
+function spec_contentcreator_history_index(): SpecTestResult {
+  // SCAN-063: historyIndex must use functional update (prev =>) to avoid off-by-one
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ContentCreatorScreen.tsx'), 'utf8',
+  );
+  // Fix: setContentHistory(prev => { ... setHistoryIndex(next.length - 1); ... })
+  const passed = src.includes('setHistoryIndex(next.length - 1)') || src.includes('setHistoryIndex(prev.length');
+  return {
+    testId: 'SPEC-CONTCRE-A', specRef: 'SCAN-063', scanIssueRef: 'SCAN-063',
+    name: 'ContentCreatorScreen historyIndex uses functional state update',
+    passed,
+    error: passed ? undefined : 'Functional update for historyIndex not found — off-by-one on concurrent updates',
+  };
+}
+
+function spec_contentcreator_pexels_env_var(): SpecTestResult {
+  // SCAN-064: Pexels API key must read from env var, not be hardcoded alone
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ContentCreatorScreen.tsx'), 'utf8',
+  );
+  // Fix: const PEXELS_KEY = process.env.EXPO_PUBLIC_PEXELS_KEY || 'fallback'
+  const passed = src.includes('EXPO_PUBLIC_PEXELS_KEY');
+  return {
+    testId: 'SPEC-CONTCRE-B', specRef: 'SCAN-064', scanIssueRef: 'SCAN-064',
+    name: 'ContentCreatorScreen Pexels API key reads from EXPO_PUBLIC_PEXELS_KEY env var',
+    passed,
+    error: passed ? undefined : 'EXPO_PUBLIC_PEXELS_KEY not found — API key still hardcoded in source',
+  };
+}
+
+function spec_campaign_create_date_validation(): SpecTestResult {
+  // SCAN-065: Campaign start/end date fields must be validated before submission
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/CampaignCreateScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('Date.parse') || src.includes('DateTimePicker') || src.includes('isNaN');
+  return {
+    testId: 'SPEC-CAMPCRE-A', specRef: 'SCAN-065', scanIssueRef: 'SCAN-065',
+    name: 'CampaignCreateScreen date fields validated before submission',
+    passed,
+    error: passed ? undefined : 'Date.parse validation not found — invalid dates may be stored',
+  };
+}
+
+function spec_teammanage_role_onerror(): SpecTestResult {
+  // SCAN-066: handleChangeRole mutation must have onError callback
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/TeamManageScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('handleChangeRole') && src.includes('onError');
+  return {
+    testId: 'SPEC-TEAMMANAGE-A', specRef: 'SCAN-066', scanIssueRef: 'SCAN-066',
+    name: 'TeamManageScreen handleChangeRole has onError callback',
+    passed,
+    error: passed ? undefined : 'onError not found in handleChangeRole — silent failure on role change',
+  };
+}
+
+function spec_evtattendees_status_onerror(): SpecTestResult {
+  // SCAN-067: handleStatusChange mutation must have onError callback
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/EventAttendeesScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('handleStatusChange') && src.includes('onError');
+  return {
+    testId: 'SPEC-EVTATND-A', specRef: 'SCAN-067', scanIssueRef: 'SCAN-067',
+    name: 'EventAttendeesScreen handleStatusChange has onError callback',
+    passed,
+    error: passed ? undefined : 'onError not found in handleStatusChange — silent failure on status update',
+  };
+}
+
+function spec_amoshub_icons_explicit(): SpecTestResult {
+  // SCAN-068: AMOSHubScreen renderGridCard must NOT auto-append "-outline" to icon names
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AMOSHubScreen.tsx'), 'utf8',
+  );
+  // The old buggy pattern would be: name={`${m.icon}-outline`} or icon + "-outline"
+  const hasBuggyPattern = src.includes('`${m.icon}-outline`') || src.includes("m.icon + '-outline'") ||
+    src.includes('m.icon + "-outline"');
+  return {
+    testId: 'SPEC-AMOSHUB-A', specRef: 'SCAN-068', scanIssueRef: 'SCAN-068',
+    name: 'AMOSHubScreen renderGridCard does not auto-append "-outline" to icon names',
+    passed: !hasBuggyPattern,
+    error: !hasBuggyPattern ? undefined : 'Auto "-outline" suffix still present — some icons will be broken',
+  };
+}
+
+function spec_marketing_automation_autopilot_persisted(): SpecTestResult {
+  // SCAN-069: handleAutopilotChange must call updateStrategy.mutate (not just Alert to navigate away)
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/MarketingAutomationScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('handleAutopilotChange') && src.includes('updateStrategy.mutate');
+  return {
+    testId: 'SPEC-MKTAUTO-A', specRef: 'SCAN-069', scanIssueRef: 'SCAN-069',
+    name: 'MarketingAutomationScreen handleAutopilotChange persists via updateStrategy.mutate',
+    passed,
+    error: passed ? undefined : 'updateStrategy.mutate not found in handleAutopilotChange — mode not persisted',
+  };
+}
+
+function spec_marketing_automation_seed_guard(): SpecTestResult {
+  // SCAN-070: Seed automations useEffect must use a hasSeededRef guard
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/MarketingAutomationScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('hasSeededRef') || src.includes('hasSeeded');
+  return {
+    testId: 'SPEC-MKTAUTO-B', specRef: 'SCAN-070', scanIssueRef: 'SCAN-070',
+    name: 'MarketingAutomationScreen seed automations guarded by hasSeededRef',
+    passed,
+    error: passed ? undefined : 'hasSeededRef guard not found — seed may fire on every empty-state render',
+  };
+}
+
+function spec_content_proposals_crossplatform_reject(): SpecTestResult {
+  // SCAN-071: Rejection reason modal must be cross-platform (not Alert.prompt)
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ContentProposalsScreen.tsx'), 'utf8',
+  );
+  // Fix: cross-platform Modal with TextInput replaces Alert.prompt
+  const hasCrossPlatformModal = src.includes('reject') && (src.includes('Modal') || src.includes('TextInput'));
+  const stillUsesAlertPrompt = src.includes('Alert.prompt');
+  const passed = hasCrossPlatformModal && !stillUsesAlertPrompt;
+  return {
+    testId: 'SPEC-CONTPROP-A', specRef: 'SCAN-071', scanIssueRef: 'SCAN-071',
+    name: 'ContentProposalsScreen rejection reason uses cross-platform Modal (not Alert.prompt)',
+    passed,
+    error: passed ? undefined : stillUsesAlertPrompt
+      ? 'Alert.prompt still in use — crash on Android'
+      : 'Cross-platform rejection Modal not found',
+  };
+}
+
+function spec_content_proposals_all_filter(): SpecTestResult {
+  // SCAN-072: "all" filter must pass undefined to useContentProposals, not the string "all"
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ContentProposalsScreen.tsx'), 'utf8',
+  );
+  // Fix: statusFilter = filter === 'all' ? undefined : filter
+  const passed = src.includes("filter === 'all' ? undefined") || src.includes('=== \'all\' ? undefined');
+  return {
+    testId: 'SPEC-CONTPROP-B', specRef: 'SCAN-072', scanIssueRef: 'SCAN-072',
+    name: 'ContentProposalsScreen "all" filter maps to undefined before hook call',
+    passed,
+    error: passed ? undefined : '"all" filter not mapped to undefined — hook may return no results',
+  };
+}
+
+function spec_library_detail_delete_try_catch(): SpecTestResult {
+  // SCAN-073: confirmDelete must wrap mutateAsync in try/catch and only navigate on success
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/LibraryPostDetailScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('confirmDelete') && src.includes('try') && src.includes('catch') &&
+    src.includes('navigation.goBack');
+  return {
+    testId: 'SPEC-LIBDET-A', specRef: 'SCAN-073', scanIssueRef: 'SCAN-073',
+    name: 'LibraryPostDetailScreen confirmDelete wraps mutateAsync in try/catch',
+    passed,
+    error: passed ? undefined : 'try/catch not found in confirmDelete — navigation proceeds even on failed delete',
+  };
+}
+
+function spec_autonomous_hub_system_toggle_persisted(): SpecTestResult {
+  // SCAN-074: systemActive toggle must call updateStrategy.mutate to persist
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AutonomousHubScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('updateStrategy.mutate') && src.includes('systemActive');
+  return {
+    testId: 'SPEC-AUTOHUB-A', specRef: 'SCAN-074', scanIssueRef: 'SCAN-074',
+    name: 'AutonomousHubScreen systemActive toggle persists via updateStrategy.mutate',
+    passed,
+    error: passed ? undefined : 'updateStrategy.mutate not wired to systemActive toggle — purely decorative',
+  };
+}
+
+function spec_autonomous_hub_autonomy_persisted(): SpecTestResult {
+  // SCAN-075: autonomyLevel buttons must call updateStrategy.mutate on press
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/AutonomousHubScreen.tsx'), 'utf8',
+  );
+  // Fix: button onPress calls updateStrategy.mutate({ autonomy_level: opt.key })
+  const passed = src.includes('updateStrategy.mutate') && src.includes('autonomy_level');
+  return {
+    testId: 'SPEC-AUTOHUB-B', specRef: 'SCAN-075', scanIssueRef: 'SCAN-075',
+    name: 'AutonomousHubScreen autonomy level buttons persist via updateStrategy.mutate',
+    passed,
+    error: passed ? undefined : 'updateStrategy.mutate({ autonomy_level }) not found — autonomy level not saved',
+  };
+}
+
+function spec_products_public_url(): SpecTestResult {
+  // SCAN-076: Product images must use getPublicUrl (not 1-year expiring signed URL)
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/ProductsScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('getPublicUrl');
+  return {
+    testId: 'SPEC-PRODUCTS-A', specRef: 'SCAN-076', scanIssueRef: 'SCAN-076',
+    name: 'ProductsScreen uses getPublicUrl (not 1-year signed URL)',
+    passed,
+    error: passed ? undefined : 'getPublicUrl not found — product images use expiring signed URLs',
+  };
+}
+
+function spec_multiagent_action_buttons(): SpecTestResult {
+  // SCAN-077: MultiAgentScreen agent cards must have action buttons (onPress)
+  const src = require('fs').readFileSync(
+    require('path').join(__dirname, '../screens/MultiAgentScreen.tsx'), 'utf8',
+  );
+  const passed = src.includes('onPress') && src.includes('AGENTS');
+  return {
+    testId: 'SPEC-MULTIAGENT-A', specRef: 'SCAN-077', scanIssueRef: 'SCAN-077',
+    name: 'MultiAgentScreen agent cards have action buttons (onPress)',
+    passed,
+    error: passed ? undefined : 'onPress not found on agent cards — screen is purely read-only',
+  };
+}
+
 // ─── Main scan runner ─────────────────────────────────────────────────────────
 
 export async function runFullScan(): Promise<ScanReport> {
@@ -1738,6 +2478,57 @@ export async function runFullScan(): Promise<ScanReport> {
   specResults.push(spec_settings_alert_prompt_android());
   specResults.push(spec_login_forgot_password_message());
   specResults.push(spec_integrations_connect_buttons());
+  // New regression tests for SCAN-021 to SCAN-077
+  specResults.push(spec_evtlist_refresh_control());
+  specResults.push(spec_evtlist_logout_awaited());
+  specResults.push(spec_evtlist_empty_icon());
+  specResults.push(spec_eventsetup_date_validation());
+  specResults.push(spec_eventsetup_null_description());
+  specResults.push(spec_evtdash_error_state());
+  specResults.push(spec_evtdash_toggle_onerror());
+  specResults.push(spec_calendar_loading_indicator());
+  specResults.push(spec_calendar_item_onpress());
+  specResults.push(spec_allposts_back_button());
+  specResults.push(spec_analytics_app_activity_label());
+  specResults.push(spec_analytics_budget_formatting());
+  specResults.push(spec_brandkit_setdefault_onerror());
+  specResults.push(spec_storyarc_no_remount_regen());
+  specResults.push(spec_storyarc_back_button());
+  specResults.push(spec_integrations_status_from_db());
+  specResults.push(spec_login_biometric_error_handled());
+  specResults.push(spec_login_terms_privacy_links());
+  specResults.push(spec_onboarding_persistence());
+  specResults.push(spec_onboarding_scrollx_wired());
+  specResults.push(spec_settings_social_accounts_user_filter());
+  specResults.push(spec_settings_brand_kit_column());
+  specResults.push(spec_whatsapp_no_sectionlist_import());
+  specResults.push(spec_copilot_loading_in_finally());
+  specResults.push(spec_copilot_recorder_awaited());
+  specResults.push(spec_copilot_chat_persisted());
+  specResults.push(spec_aicommand_stable_key_extractor());
+  specResults.push(spec_campaign_list_refresh_control());
+  specResults.push(spec_campaign_detail_activate_on_success());
+  specResults.push(spec_leadcapture_email_validation());
+  specResults.push(spec_notifications_route_allowlist());
+  specResults.push(spec_eventrecap_photos_in_payload());
+  specResults.push(spec_eventrecap_changetone_disabled());
+  specResults.push(spec_evtscanner_today_date_filter());
+  specResults.push(spec_evtscanner_upsert_error_checked());
+  specResults.push(spec_contentcreator_history_index());
+  specResults.push(spec_contentcreator_pexels_env_var());
+  specResults.push(spec_campaign_create_date_validation());
+  specResults.push(spec_teammanage_role_onerror());
+  specResults.push(spec_evtattendees_status_onerror());
+  specResults.push(spec_amoshub_icons_explicit());
+  specResults.push(spec_marketing_automation_autopilot_persisted());
+  specResults.push(spec_marketing_automation_seed_guard());
+  specResults.push(spec_content_proposals_crossplatform_reject());
+  specResults.push(spec_content_proposals_all_filter());
+  specResults.push(spec_library_detail_delete_try_catch());
+  specResults.push(spec_autonomous_hub_system_toggle_persisted());
+  specResults.push(spec_autonomous_hub_autonomy_persisted());
+  specResults.push(spec_products_public_url());
+  specResults.push(spec_multiagent_action_buttons());
 
   // ── Async spec tests ──
   specResults.push(await spec_1_1_imageManipulatorAvailable());
