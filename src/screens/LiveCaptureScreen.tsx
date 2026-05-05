@@ -1096,11 +1096,13 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.8)',
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
+    overflow: 'visible',
   },
   modeTab: {
     alignItems: 'center',
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
+    overflow: 'visible',
   },
   modeTabActive: {
     borderBottomWidth: 2,

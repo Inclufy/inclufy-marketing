@@ -29,7 +29,7 @@ import {
   Automation,
   AutomationLog,
 } from '../hooks/useAutomations';
-import { useMarketingStrategy } from '../hooks/useMarketingStrategy';
+import { useMarketingStrategy, useUpdateMarketingStrategy } from '../hooks/useMarketingStrategy';
 
 type AutopilotMode = 'manual' | 'assisted' | 'autopilot';
 
@@ -88,6 +88,7 @@ export default function MarketingAutomationScreen() {
   const seedMut = useSeedAutomations();
   const createMut = useCreateAutomation();
   const deleteMut = useDeleteAutomation();
+  const updateStrategy = useUpdateMarketingStrategy();
 
   const hasSeededRef = useRef(false);
 
@@ -164,16 +165,14 @@ export default function MarketingAutomationScreen() {
     );
   };
 
+  const reverseAutopilotMap: Record<AutopilotMode, string> = {
+    manual: 'conservative',
+    assisted: 'balanced',
+    autopilot: 'aggressive',
+  };
+
   const handleAutopilotChange = (mode: AutopilotMode) => {
-    // Navigate to strategy screen to change autonomy level
-    Alert.alert(
-      'Autopilot Modus',
-      'De autopilot modus wordt bepaald door je Marketing Strategie. Wil je je strategie aanpassen?',
-      [
-        { text: 'Annuleren', style: 'cancel' },
-        { text: 'Strategie Bewerken', onPress: () => navigation.navigate('MarketingStrategy') },
-      ]
-    );
+    updateStrategy.mutate({ autonomy_level: reverseAutopilotMap[mode] });
   };
 
   const activeCount = stats?.activeCount ?? 0;

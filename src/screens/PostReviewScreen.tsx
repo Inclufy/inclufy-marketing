@@ -187,7 +187,7 @@ export default function PostReviewScreen() {
   };
 
   const addLuxuryIcons = (text: string): string => {
-    let result = text;
+    let result = removeLuxuryIcons(text);
     // Add bullet-point style icons at line starts
     result = result.replace(/^[-•]\s*/gm, '✦ ');
     // Add sparkle to hashtags
@@ -2412,6 +2412,7 @@ export default function PostReviewScreen() {
                           onPress={() => {
                             const newEnabled = !isEnabled;
                             setWhatsappCtaEnabled((prev) => ({ ...prev, [post.id]: newEnabled }));
+                            updatePost.mutate({ id: post.id, whatsapp_cta_enabled: newEnabled } as any);
                           }}
                           style={{
                             flexDirection: 'row',

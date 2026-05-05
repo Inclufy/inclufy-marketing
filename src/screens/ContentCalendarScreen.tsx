@@ -216,11 +216,18 @@ export default function ContentCalendarScreen() {
             .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
             .slice(0, 10)
             .map(evt => (
-              <View key={evt.id} style={{
-                flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-                padding: spacing.sm, borderRadius: borderRadius.md,
-                backgroundColor: colors.surface, marginBottom: spacing.xs,
-              }}>
+              <TouchableOpacity
+                key={evt.id}
+                activeOpacity={0.7}
+                onPress={() => evt.type === 'campaign'
+                  ? (navigation as any).navigate('CampaignDetail', { campaignId: evt.id })
+                  : (navigation as any).navigate('ContentProposals')}
+                style={{
+                  flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+                  padding: spacing.sm, borderRadius: borderRadius.md,
+                  backgroundColor: colors.surface, marginBottom: spacing.xs,
+                }}
+              >
                 <View style={{
                   width: 4, height: 36, borderRadius: 2,
                   backgroundColor: evt.type === 'campaign' ? '#8B5CF6' : (CHANNEL_COLORS[evt.channel || ''] || colors.primary),
@@ -238,7 +245,7 @@ export default function ContentCalendarScreen() {
                 }}>
                   <Text style={{ fontSize: 10, color: evt.status === 'published' ? '#10B981' : evt.status === 'approved' ? '#3B82F6' : '#F59E0B' }}>{evt.status}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
           {events.filter(e => new Date(e.date) >= new Date()).length === 0 && (
             <Text style={{ textAlign: 'center', color: colors.textSecondary, paddingVertical: spacing.lg }}>

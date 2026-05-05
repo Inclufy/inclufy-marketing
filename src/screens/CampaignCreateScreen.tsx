@@ -288,6 +288,14 @@ export default function CampaignCreateScreen() {
   };
 
   const handleCreate = async () => {
+    if (startDate.trim() && isNaN(Date.parse(startDate.trim()))) {
+      Alert.alert(t.common?.error ?? 'Fout', 'Ongeldige startdatum. Gebruik bijv. 2025-12-25.');
+      return;
+    }
+    if (endDate.trim() && isNaN(Date.parse(endDate.trim()))) {
+      Alert.alert(t.common?.error ?? 'Fout', 'Ongeldige einddatum. Gebruik bijv. 2025-12-31.');
+      return;
+    }
     const input: CampaignCreateInput = {
       name: name.trim(),
       type,

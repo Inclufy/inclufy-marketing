@@ -20,7 +20,7 @@ import { useThemedStyles } from '../utils/themedStyles';
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
-type Message = { role: 'user' | 'assistant'; content: string };
+type Message = { id: string; role: 'user' | 'assistant'; content: string };
 
 export default function AICommandScreen() {
   const { t } = useTranslation();
@@ -198,7 +198,7 @@ export default function AICommandScreen() {
       const trimmed = text.trim();
       if (!trimmed || loading) return;
 
-      const userMessage: Message = { role: 'user', content: trimmed };
+      const userMessage: Message = { id: `msg-${Date.now()}-u`, role: 'user', content: trimmed };
       const updatedMessages = [...messages, userMessage];
       setMessages(updatedMessages);
       setInput('');
@@ -223,7 +223,7 @@ export default function AICommandScreen() {
         if (!res.ok) throw new Error(data?.error ?? `HTTP ${res.status}`);
 
         const assistantContent = data?.response ?? data?.content ?? t.aiCommand.noResponse;
-        setMessages((prev) => [...prev, { role: 'assistant', content: assistantContent }]);
+        setMessages((prev) => [...prev, { id: `msg-${Date.now()}-a`, role: 'assistant', content: assistantContent }]);
       } catch (err: any) {
         const msg = err?.message ?? '';
         const friendly = msg.includes('OpenAI')
@@ -231,7 +231,7 @@ export default function AICommandScreen() {
           : msg.includes('network') || msg.includes('fetch') || msg.includes('Failed')
           ? 'Geen verbinding. Controleer je internet.'
           : t.aiCommand.errorMessage;
-        setMessages((prev) => [...prev, { role: 'assistant', content: friendly }]);
+        setMessages((prev) => [...prev, { id: `msg-${Date.now()}-e`, role: 'assistant', content: friendly }]);
       } finally {
         setLoading(false);
       }
@@ -299,7 +299,7 @@ export default function AICommandScreen() {
   );
 
   const keyExtractor = useCallback(
-    (_: Message, index: number) => `msg-${index}`,
+    (item: Message) => item.id,
     [],
   );
 

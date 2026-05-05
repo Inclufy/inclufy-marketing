@@ -2,7 +2,7 @@
 // Multi-Agent System — AI agents that work together autonomously
 
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform, StatusBar, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -363,6 +363,30 @@ export default function MultiAgentScreen() {
                     </View>
                   ))}
                 </View>
+
+                {/* Action button for active/beta agents */}
+                {agent.status !== 'coming' && (
+                  <TouchableOpacity
+                    onPress={() => Alert.alert(
+                      isNl ? agent.nameNl : agent.name,
+                      isNl ? agent.descriptionNl : agent.description,
+                    )}
+                    style={{
+                      marginTop: 10,
+                      alignSelf: 'flex-start',
+                      paddingHorizontal: 14,
+                      paddingVertical: 6,
+                      borderRadius: 8,
+                      borderWidth: 1.5,
+                      borderColor: agent.color + '60',
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: agent.color }}>
+                      {isNl ? 'Meer info' : 'Learn more'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             );
           })}

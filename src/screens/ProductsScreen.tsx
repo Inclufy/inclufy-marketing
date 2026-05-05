@@ -30,8 +30,6 @@ async function uploadProductImage(localUri: string): Promise<string> {
   const { error } = await supabase.storage
     .from('media').upload(storagePath, blob, { contentType, upsert: true });
   if (error) throw error;
-  const { data: signData } = await supabase.storage.from('media').createSignedUrl(storagePath, 60 * 60 * 24 * 365);
-  if (signData?.signedUrl) return signData.signedUrl;
   const { data: urlData } = supabase.storage.from('media').getPublicUrl(storagePath);
   return urlData.publicUrl;
 }

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   View,
   Text,
@@ -86,14 +87,33 @@ export default function CopilotScreen() {
   const { colors } = useTheme();
   const scrollRef = useRef<ScrollView>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '0',
-      role: 'assistant',
-      content: '👋 Hoi! Ik ben AMOS, jouw AI marketing copiloot. Stel me een vraag, geef me een opdracht of gebruik de snelle acties hieronder. Je kunt ook op de microfoon tikken om te spreken! 🎙️',
-      timestamp: new Date(),
-    },
-  ]);
+  const STORAGE_KEY = 'copilot_chat_history';
+  const WELCOME_MSG: Message = {
+    id: '0',
+    role: 'assistant',
+    content: '👋 Hoi! Ik ben AMOS, jouw AI marketing copiloot. Stel me een vraag, geef me een opdracht of gebruik de snelle acties hieronder. Je kunt ook op de microfoon tikken om te spreken! 🎙️',
+    timestamp: new Date(),
+  };
+
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MSG]);
+
+  // Load persisted history on mount
+  useEffect(() => {
+    AsyncStorage.getItem(STORAGE_KEY).then(raw => {
+      if (!raw) return;
+      try {
+        const saved: Message[] = JSON.parse(raw).map((m: any) => ({ ...m, timestamp: new Date(m.timestamp) }));
+        if (saved.length > 0) setMessages(saved);
+      } catch { /* ignore corrupt data */ }
+    });
+  }, []);
+
+  // Persist history whenever messages change (skip the initial welcome-only state)
+  useEffect(() => {
+    if (messages.length > 1 || (messages.length === 1 && messages[0].id !== '0')) {
+      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(messages)).catch(() => {});
+    }
+  }, [messages]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);

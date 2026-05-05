@@ -233,6 +233,10 @@ export default function EventSetupScreen() {
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert(t.eventSetup.fillEventName); return; }
     if (!eventDate.trim()) { Alert.alert(t.eventSetup.fillDate); return; }
+    if (!/^\d{2}-\d{2}-\d{4}$/.test(eventDate.trim())) {
+      Alert.alert('Ongeldige datum', 'Voer de datum in als DD-MM-JJJJ (bijv. 25-12-2025)');
+      return;
+    }
     if (selectedChannels.length === 0) { Alert.alert(t.eventSetup.selectChannel); return; }
 
     let coverUrl: string | null = null;
