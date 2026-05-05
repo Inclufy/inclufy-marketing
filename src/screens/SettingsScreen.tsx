@@ -1167,6 +1167,13 @@ export default function SettingsScreen() {
             value="Test & valideer alle 77 gescande issues"
             onPress={() => (navigation as any).navigate('QAManual')}
           />
+          <SettingsRow
+            icon="share-social-outline"
+            iconColor="#E8317A"
+            label="Social Media Agent"
+            value="Platform-regels, limieten & AMOS-mogelijkheden"
+            onPress={() => (navigation as any).navigate('SocialMediaAgent')}
+          />
         </View>
 
         {/* ── Gegevensbeheer ────────────────────────────────────────── */}

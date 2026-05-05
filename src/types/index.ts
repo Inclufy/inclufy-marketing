@@ -212,6 +212,8 @@ export type RootStackParamList = {
   WhatsAppSettings: undefined;
   // QA Manual
   QAManual: undefined;
+  // Social Media Agent
+  SocialMediaAgent: undefined;
   // Content Library (imported product posts)
   Library: { productId?: string } | undefined;
   LibraryImport: { productId?: string } | undefined;
