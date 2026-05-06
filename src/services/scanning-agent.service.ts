@@ -3353,6 +3353,32 @@ export const APP_MANUAL: ManualScreen[] = [
       { name: 'handleResetDemo', description: 'Deletes all demo data and resets the account to a clean state.' },
     ],
   },
+  {
+    route: 'QAManual',
+    screen: 'QAManualScreen',
+    category: 'Dev / QA',
+    purpose: 'In-app function manual and issue tracker: documents all 56 screens, 191 functions, and 77 scanned issues with live scan status.',
+    functions: [
+      { name: 'handleRunScan', description: 'Runs the full in-app spec suite via runFullScan() and refreshes the status banner.' },
+      { name: 'toggleScreen', description: 'Expands or collapses a screen entry in the Functie Manual tab.' },
+      { name: 'toggleIssue', description: 'Expands or collapses an issue entry in the Issue Tracker tab.' },
+      { name: 'setSearch', description: 'Filters screens/functions or issues by a text query.' },
+      { name: 'setSevFilter', description: 'Filters issues by severity (critical/high/medium/low) or status (fixed/open).' },
+      { name: 'setTab', description: 'Switches between the Functie Manual tab and the Issue Tracker tab.' },
+    ],
+  },
+  {
+    route: 'SocialMediaAgent',
+    screen: 'SocialMediaAgentScreen',
+    category: 'Dev / QA',
+    purpose: 'Per-platform social media reference: publishing rules, content specs, character limits, do\'s/don\'ts, and AMOS capability map. Includes a live publish validator.',
+    functions: [
+      { name: 'togglePlatform', description: 'Expands or collapses a platform card to show its full detail.' },
+      { name: 'setFilter', description: 'Filters platforms by All / API Available / Business Required / Scheduling.' },
+      { name: 'setSearch', description: 'Searches across platform names, content types, capabilities, and do\'s/don\'ts.' },
+      { name: 'setActiveTab', description: 'Switches between the Platforms reference tab and the Publish Validator tab.' },
+    ],
+  },
 ];
 
 export { KNOWN_ISSUES };

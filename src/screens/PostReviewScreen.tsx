@@ -32,6 +32,17 @@ import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
+import { getPlatformById } from '../services/social-media-agent.service';
+
+// Maps app Channel values to social-media-agent platform IDs
+const CHANNEL_TO_PLATFORM: Partial<Record<Channel, string>> = {
+  instagram: 'instagram',
+  facebook: 'facebook',
+  linkedin: 'linkedin',
+  tiktok: 'tiktok',
+  whatsapp: 'whatsapp',
+  x: 'twitter',
+};
 import ViewShot, { captureRef } from 'react-native-view-shot';
 import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
@@ -858,6 +869,21 @@ export default function PostReviewScreen() {
   // ── Schedule confirm ──────────────────────────────────────────────────────
   const handleScheduleConfirm = async () => {
     if (!schedulingPost || !scheduleDate.trim()) return;
+
+    // Guard: check whether this platform supports API scheduling
+    const platformId = CHANNEL_TO_PLATFORM[schedulingPost.channel];
+    if (platformId) {
+      const platform = getPlatformById(platformId);
+      if (platform && !platform.publishing.schedulingSupported) {
+        Alert.alert(
+          'Inplannen niet mogelijk',
+          `${platform.name} ondersteunt geen geplande publicatie via de API.\n\nPubliceer direct, of gebruik de native planningsfunctie van ${platform.name} zelf.`,
+          [{ text: 'OK' }],
+        );
+        return;
+      }
+    }
+
     setScheduling(true);
     try {
       const timeStr = scheduleTime.trim() || '09:00';
@@ -1513,6 +1539,9 @@ export default function PostReviewScreen() {
         {posts.map((post, index) => {
           const config = channelConfig[post.channel];
           const isActive = index === activeIndex;
+          const platformId = CHANNEL_TO_PLATFORM[post.channel];
+          const platform = platformId ? getPlatformById(platformId) : undefined;
+          const noScheduling = platform ? !platform.publishing.schedulingSupported : false;
           return (
             <TouchableOpacity
               key={post.id}
@@ -1531,6 +1560,14 @@ export default function PostReviewScreen() {
               >
                 {config?.label || post.channel}
               </Text>
+              {noScheduling && (
+                <View style={{
+                  marginTop: 1, paddingHorizontal: 4, paddingVertical: 1,
+                  borderRadius: 4, backgroundColor: '#F59E0B20',
+                }}>
+                  <Text style={{ fontSize: 8, color: '#F59E0B', fontWeight: '700' }}>NO SCHED</Text>
+                </View>
+              )}
             </TouchableOpacity>
           );
         })}

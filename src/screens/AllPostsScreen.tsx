@@ -20,6 +20,16 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
+import { getPlatformById } from '../services/social-media-agent.service';
+
+const CHANNEL_TO_PLATFORM: Partial<Record<Channel, string>> = {
+  instagram: 'instagram',
+  facebook: 'facebook',
+  linkedin: 'linkedin',
+  tiktok: 'tiktok',
+  whatsapp: 'whatsapp',
+  x: 'twitter',
+};
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -134,6 +144,23 @@ export default function AllPostsScreen() {
   };
 
   const handlePublish = async (post: EventPost) => {
+    // Guard: warn if platform requires manual action or has no API
+    const platformId = CHANNEL_TO_PLATFORM[post.channel];
+    if (platformId) {
+      const platform = getPlatformById(platformId);
+      if (platform && !platform.publishing.apiAvailable) {
+        Alert.alert(
+          'Handmatige actie vereist',
+          `${platform.name} heeft geen officiële publicatie-API. Open de app van ${platform.name} om handmatig te publiceren.`,
+          [{ text: 'Annuleren', style: 'cancel' }, { text: 'Toch proberen', onPress: () => doPublish(post) }],
+        );
+        return;
+      }
+    }
+    doPublish(post);
+  };
+
+  const doPublish = async (post: EventPost) => {
     try {
       await publishPost.mutateAsync(post.id);
       Alert.alert('✅', `Post gepubliceerd op ${channelConfig[post.channel]?.label}`);
