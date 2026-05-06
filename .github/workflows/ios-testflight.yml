@@ -1,0 +1,77 @@
+name: iOS TestFlight (EAS)
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "EAS build profile"
+        required: true
+        default: production
+        type: choice
+        options:
+          - production
+          - preview
+      auto_submit:
+        description: "Submit to TestFlight after build"
+        required: true
+        default: true
+        type: boolean
+      message:
+        description: "Build message (shown in EAS dashboard)"
+        required: false
+        default: ""
+
+jobs:
+  build:
+    name: EAS build + TestFlight submit
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify EXPO_TOKEN is set
+        run: |
+          if [ -z "${EXPO_TOKEN}" ]; then
+            echo "::error::EXPO_TOKEN repo secret is missing. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup EAS CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Show build context
+        run: |
+          echo "Ref:           ${GITHUB_REF}"
+          echo "SHA:           ${GITHUB_SHA}"
+          echo "Profile:       ${{ inputs.profile }}"
+          echo "Auto-submit:   ${{ inputs.auto_submit }}"
+          node -p "'app.json version: ' + require('./app.json').expo.version + ' / iOS buildNumber: ' + require('./app.json').expo.ios.buildNumber"
+
+      - name: EAS build (iOS) + optional TestFlight submit
+        run: |
+          set -e
+          ARGS="--platform ios --profile ${{ inputs.profile }} --non-interactive --no-wait"
+          if [ "${{ inputs.auto_submit }}" = "true" ]; then
+            ARGS="$ARGS --auto-submit"
+          fi
+          if [ -n "${{ inputs.message }}" ]; then
+            ARGS="$ARGS --message \"${{ inputs.message }}\""
+          fi
+          echo "Running: eas build $ARGS"
+          eval eas build $ARGS
