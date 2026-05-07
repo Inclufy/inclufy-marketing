@@ -114,7 +114,18 @@ export default function CameraCapture({ onCapture, onVideoStart, onVideoEnd, mod
   const takePhoto = async () => {
     if (!cameraRef.current) return;
     try {
-      const photo = await cameraRef.current.takePictureAsync({ quality: 0.8, exif: true });
+      // skipProcessing: false → iOS bakes EXIF orientation into pixels before
+      // returning the URI. Without this flag, the URI points at a temp file
+      // whose pixel orientation does NOT match what's displayed in the iOS
+      // Photos app — leading to "rotated" previews in our React Native side.
+      // exif: true → still return the EXIF dictionary so normalizeImage-
+      // Orientation can apply a fallback rotation if pixel-baking somehow
+      // failed on a particular device.
+      const photo = await cameraRef.current.takePictureAsync({
+        quality: 0.8,
+        exif: true,
+        skipProcessing: false,
+      });
       if (!photo) return;
 
       // Pass raw URI + EXIF to parent so orientation can be corrected

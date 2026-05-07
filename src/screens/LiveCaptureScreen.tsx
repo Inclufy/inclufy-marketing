@@ -55,18 +55,40 @@ async function normalizeImageOrientation(uri: string, exif?: Record<string, any>
   try {
     const transforms: ImageManipulator.Action[] = [];
 
-    // Apply EXIF rotation if available
-    const orientation = exif?.Orientation || exif?.orientation;
-    if (orientation) {
-      switch (orientation) {
-        case 3: transforms.push({ rotate: 180 }); break;
-        case 6: transforms.push({ rotate: 90 }); break;
-        case 8: transforms.push({ rotate: -90 }); break;
-        // 1 = normal, 2/4/5/7 = mirrored variants (rare)
-      }
+    // Full EXIF orientation table — covers all 8 cases including mirrored variants.
+    // Without these, iOS portraits (orientation=6) and other rotations show
+    // sideways in React Native <Image> components even though Photos.app
+    // displays them upright.
+    //   1 = normal (no transform)
+    //   2 = mirrored horizontally
+    //   3 = rotated 180°
+    //   4 = mirrored vertically
+    //   5 = mirrored horizontally + rotated -90° (CW)
+    //   6 = rotated 90° (CW)
+    //   7 = mirrored horizontally + rotated 90° (CW)
+    //   8 = rotated -90° (CCW)
+    const orientation = Number(exif?.Orientation ?? exif?.orientation ?? 0);
+    switch (orientation) {
+      case 2: transforms.push({ flip: ImageManipulator.FlipType.Horizontal }); break;
+      case 3: transforms.push({ rotate: 180 }); break;
+      case 4: transforms.push({ flip: ImageManipulator.FlipType.Vertical }); break;
+      case 5:
+        transforms.push({ rotate: -90 });
+        transforms.push({ flip: ImageManipulator.FlipType.Horizontal });
+        break;
+      case 6: transforms.push({ rotate: 90 }); break;
+      case 7:
+        transforms.push({ rotate: 90 });
+        transforms.push({ flip: ImageManipulator.FlipType.Horizontal });
+        break;
+      case 8: transforms.push({ rotate: -90 }); break;
+      // 0 (missing) and 1 (normal) → no rotation, but we still re-encode below
+      // so the JPEG output has its EXIF orientation flag stripped/normalised.
     }
 
-    // Always resize to cap file size
+    // Always resize to cap file size. This also forces a JPEG re-encode which
+    // bakes any pixel rotation into the output and clears the EXIF orientation
+    // flag so downstream <Image> components can't double-rotate.
     transforms.push({ resize: { width: 1920 } });
 
     const result = await ImageManipulator.manipulateAsync(
@@ -75,7 +97,9 @@ async function normalizeImageOrientation(uri: string, exif?: Record<string, any>
       { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
     );
     return result.uri;
-  } catch {
+  } catch (err) {
+    // Log so production issues surface in Sentry instead of silent fallback
+    console.warn('[normalizeImageOrientation] failed for', uri, err);
     return uri;
   }
 }
