@@ -111,9 +111,9 @@ Show: Tap "Verbind LinkedIn" → LinkedIn consent page appears → highlight sco
 Show: LiveCapture screen → take photo → add note "Kickoff of the Q3 partner summit" → tap generate.
 
 **[01:30-02:20] Account picker**
-> "In the post review screen, the user sees all their connected LinkedIn accounts — personal and each company page they admin. In my test account I have my personal profile plus two company pages: Eprocure Consulting and Inclufy Academy."
+> "In the post review screen, the user sees all their connected LinkedIn accounts — personal and each company page they admin. In my test account I have my personal profile plus two company pages: Inclufy_Ecosystem and Inclufy Academy."
 
-Show: PostReview screen → tap Publish → account picker modal showing 3 rows: Sami Loukile (personal), Eprocure Consulting (Bedrijf), Inclufy Academy (Bedrijf).
+Show: PostReview screen → tap Publish → account picker modal showing 3 rows: Sami Loukile (personal), Inclufy_Ecosystem (Bedrijf), Inclufy Academy (Bedrijf).
 
 **[02:20-03:00] Publish to personal (already working)**
 > "Publishing to personal uses `w_member_social` — this is already approved for our app. Here's the post going live."
@@ -123,12 +123,12 @@ Show: Select personal → confirm → success alert → switch to LinkedIn.com i
 **[03:00-04:00] Publish to Company Page (the new capability)**
 > "Now the Company Page flow. The same post, different destination. AMOS uses the `w_organization_social` scope to create a UGC share with the organization URN as author. The post appears on the company page, attributed to the page brand — not to the individual user."
 
-Show: Return to AMOS → duplicate post → select Eprocure Consulting → confirm → success → switch to Eprocure company page on LinkedIn.com → see the post live.
+Show: Return to AMOS → duplicate post → select Inclufy_Ecosystem → confirm → success → switch to Eprocure company page on LinkedIn.com → see the post live.
 
 **[04:00-04:30] Error handling & consent revocation**
 > "Tokens are validated before each publish. If scope is missing or expired, the user gets a clear reconnect prompt. Disconnecting in Settings revokes tokens server-side."
 
-Show: Settings → Social Media → tap Disconnect on Eprocure Consulting → confirmation → row disappears.
+Show: Settings → Social Media → tap Disconnect on Inclufy_Ecosystem → confirmation → row disappears.
 
 **[04:30-05:00] Closing**
 > "AMOS is used by SMBs across Europe who want to maintain an active brand presence without hiring a full-time social media team. LinkedIn Company Page support is our top requested feature. Thank you for reviewing our application."
