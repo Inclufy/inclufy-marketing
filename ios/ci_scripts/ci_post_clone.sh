@@ -10,15 +10,20 @@ echo "Working directory: $(pwd)"
 # Fix Xcode Cloud setting CI=TRUE (uppercase) — Expo expects lowercase boolean
 export CI=1
 
-# Sentry source-map auto-upload requires an auth token + org/slug that are not
-# configured for Xcode Cloud. Without these, the "Bundle React Native code"
-# build phase script fails with `An organization ID or slug is required` and
-# the entire xcodebuild archive exits with code 65. Disable upload + allow
-# failure so the script returns success even when Sentry is misconfigured.
-# See docs/META_APP_REVIEW_SUBMISSION.md, eas.json (production env), and the
-# Sentry expo plugin docs for the full list of relevant env vars.
-export SENTRY_DISABLE_AUTO_UPLOAD=true
-export SENTRY_ALLOW_FAILURE=true
+# NOTE on Sentry source-map upload failure:
+#   The `sentry-cli upload-debug-files` build phase script needs SENTRY_ORG /
+#   SENTRY_PROJECT / SENTRY_AUTH_TOKEN. Without them the script exits non-zero
+#   and the entire xcodebuild archive cascades to exit-code 65.
+#
+#   `export` from this script does NOT propagate to xcodebuild's child shells
+#   in Xcode Cloud — verified empirically on Build 211 (commit 40f0f05 had
+#   the export here and still failed).
+#
+#   The ONLY working fix is to set these as Shared Environment Variables in
+#   App Store Connect → Apps → InclufyGO → Xcode Cloud → Settings:
+#     SENTRY_DISABLE_AUTO_UPLOAD = true
+#     SENTRY_ALLOW_FAILURE       = true
+#   These DO propagate to all build phases.
 
 # Install Node.js
 echo "=== Installing Node.js ==="
