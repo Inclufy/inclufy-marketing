@@ -745,7 +745,10 @@ export default function PostReviewScreen() {
     if (flippingImage) return;
     setFlippingImage(true);
     try {
-      const sourceUrl = captureImageUrl ?? imageUrl;
+      // Source priority: localMediaUri (latest local file from prev manip) →
+      // cloud signed URL → prop. Same reasoning as handleRotateImage —
+      // prevents flip-only-works-once after my atomic-state fix in 401fdb6.
+      const sourceUrl = localMediaUri ?? captureImageUrl ?? imageUrl;
       const result = await ImageManipulator.manipulateAsync(
         sourceUrl,
         [{ flip: ImageManipulator.FlipType.Horizontal }],
@@ -780,7 +783,13 @@ export default function PostReviewScreen() {
     if (rotatingImage) return;
     setRotatingImage(true);
     try {
-      const sourceUrl = captureImageUrl ?? imageUrl;
+      // Source priority: localMediaUri (just-rotated local file) → cloud signed
+      // URL → prop. Reading localMediaUri first prevents the 2nd-rotate bug
+      // where captureImageUrl is still stale right after a first rotate (the
+      // signed-URL query invalidation is async; user can tap before refetch
+      // completes → operates on pre-rotation image → result is identical to
+      // 1st rotate, looks like Draaien works only once).
+      const sourceUrl = localMediaUri ?? captureImageUrl ?? imageUrl;
       const result = await ImageManipulator.manipulateAsync(
         sourceUrl,
         [{ rotate: 90 }],
