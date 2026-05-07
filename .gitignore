@@ -69,3 +69,6 @@ web/test-results/
 # Allow Xcode Cloud ci_scripts (inside gitignored ios/)
 !ios/ci_scripts/
 !ios/ci_scripts/**
+
+# Audit & diagnostic artifacts (amos-operational-tester output)
+tmp/
