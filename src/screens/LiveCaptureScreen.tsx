@@ -52,53 +52,47 @@ type CaptureMode = 'photo' | 'video' | 'audio' | 'quote' | 'upload';
  * expo-image-manipulator doesn't always apply EXIF rotation automatically.
  */
 async function normalizeImageOrientation(uri: string, exif?: Record<string, any>): Promise<string> {
+  // Empirical lesson 2026-05-07 (Sami's "still flipped" report on build 216):
+  //
+  // expo-image-manipulator on iOS auto-applies EXIF orientation when reading
+  // the source image. Plus expo-camera with skipProcessing:false bakes
+  // orientation into pixels before returning the URI. Both layers normalise
+  // orientation. Adding our OWN explicit switch on top caused DOUBLE rotation
+  // — pixels rotated once by iOS/manipulator, then rotated again by our code.
+  //
+  // The fix: trust the lib + iOS. Just pass through ImageManipulator with
+  // resize-only to force a JPEG re-encode, which strips the EXIF orientation
+  // flag from the output so downstream <Image> components see clean pixels.
+  //
+  // The exif parameter is kept in the signature for backwards compatibility
+  // and Sentry-breadcrumb logging — we no longer act on it.
   try {
-    const transforms: ImageManipulator.Action[] = [];
-
-    // Full EXIF orientation table — covers all 8 cases including mirrored variants.
-    // Without these, iOS portraits (orientation=6) and other rotations show
-    // sideways in React Native <Image> components even though Photos.app
-    // displays them upright.
-    //   1 = normal (no transform)
-    //   2 = mirrored horizontally
-    //   3 = rotated 180°
-    //   4 = mirrored vertically
-    //   5 = mirrored horizontally + rotated -90° (CW)
-    //   6 = rotated 90° (CW)
-    //   7 = mirrored horizontally + rotated 90° (CW)
-    //   8 = rotated -90° (CCW)
-    const orientation = Number(exif?.Orientation ?? exif?.orientation ?? 0);
-    switch (orientation) {
-      case 2: transforms.push({ flip: ImageManipulator.FlipType.Horizontal }); break;
-      case 3: transforms.push({ rotate: 180 }); break;
-      case 4: transforms.push({ flip: ImageManipulator.FlipType.Vertical }); break;
-      case 5:
-        transforms.push({ rotate: -90 });
-        transforms.push({ flip: ImageManipulator.FlipType.Horizontal });
-        break;
-      case 6: transforms.push({ rotate: 90 }); break;
-      case 7:
-        transforms.push({ rotate: 90 });
-        transforms.push({ flip: ImageManipulator.FlipType.Horizontal });
-        break;
-      case 8: transforms.push({ rotate: -90 }); break;
-      // 0 (missing) and 1 (normal) → no rotation, but we still re-encode below
-      // so the JPEG output has its EXIF orientation flag stripped/normalised.
-    }
-
-    // Always resize to cap file size. This also forces a JPEG re-encode which
-    // bakes any pixel rotation into the output and clears the EXIF orientation
-    // flag so downstream <Image> components can't double-rotate.
-    transforms.push({ resize: { width: 1920 } });
-
     const result = await ImageManipulator.manipulateAsync(
       uri,
-      transforms,
+      [{ resize: { width: 1920 } }],
       { compress: 0.85, format: ImageManipulator.SaveFormat.JPEG },
     );
+
+    // Sentry breadcrumb for any future "still rotated" report — captures the
+    // raw EXIF and the result URI so we can diagnose without shipping a
+    // logging build.
+    try {
+      const SentryRN = require('@sentry/react-native');
+      SentryRN.addBreadcrumb({
+        category: 'image-orientation',
+        level: 'info',
+        message: 'normalizeImageOrientation completed',
+        data: {
+          source_uri: uri,
+          result_uri: result.uri,
+          exif_orientation: exif?.Orientation ?? exif?.orientation ?? 'missing',
+          exif_keys: exif ? Object.keys(exif).slice(0, 12) : [],
+        },
+      });
+    } catch { /* Sentry not initialised in dev — ignore */ }
+
     return result.uri;
   } catch (err) {
-    // Log so production issues surface in Sentry instead of silent fallback
     console.warn('[normalizeImageOrientation] failed for', uri, err);
     return uri;
   }
