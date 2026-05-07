@@ -451,8 +451,26 @@ Deno.serve(async (req) => {
     // ─── Store accounts ─────────────────────────────────────────────
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Store main personal account
-    await upsertSocialAccount(db, userId, platform, profileId, profileName, profilePicture, accessToken, 'personal', undefined, tokenExpiresAt, tokenRefreshToken);
+    // Store main personal account.
+    //
+    // NOTE: For Instagram, we deliberately SKIP storing a 'personal' row.
+    // Reason: Instagram OAuth uses the same Facebook OAuth flow (the FB user
+    // logs in, and we discover IG Business accounts linked to their Pages
+    // below). There is no longer an Instagram-personal-publishing API since
+    // Meta deprecated the Instagram Basic Display API; IG content publishing
+    // requires a Business account linked to a Facebook Page.
+    //
+    // If we stored a 'personal' IG row here with the user's Facebook profile
+    // ID, that row would appear in the AMOS account picker, the user could
+    // tap it to publish, and the publish would silently fail (publish-social
+    // skips IG rows where account_type !== 'business').
+    //
+    // We only store the FB-personal row for the Facebook platform, and let
+    // the Pages discovery block below (line ~510) populate FB Pages and
+    // their linked IG Business accounts.
+    if (platform !== 'instagram') {
+      await upsertSocialAccount(db, userId, platform, profileId, profileName, profilePicture, accessToken, 'personal', undefined, tokenExpiresAt, tokenRefreshToken);
+    }
 
     // ─── LinkedIn: discover company pages the user can administer ───
     // Requires w_organization_social + rw_organization_admin scopes,

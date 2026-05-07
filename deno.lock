@@ -1,0 +1,73 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://esm.sh/@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.105.1"
+  },
+  "remote": {
+    "https://deno.land/std@0.177.0/async/abortable.ts": "73acfb3ed7261ce0d930dbe89e43db8d34e017b063cf0eaa7d215477bf53442e",
+    "https://deno.land/std@0.177.0/async/deadline.ts": "c5facb0b404eede83e38bd2717ea8ab34faa2ffb20ef87fd261fcba32ba307aa",
+    "https://deno.land/std@0.177.0/async/debounce.ts": "adab11d04ca38d699444ac8a9d9856b4155e8dda2afd07ce78276c01ea5a4332",
+    "https://deno.land/std@0.177.0/async/deferred.ts": "42790112f36a75a57db4a96d33974a936deb7b04d25c6084a9fa8a49f135def8",
+    "https://deno.land/std@0.177.0/async/delay.ts": "73aa04cec034c84fc748c7be49bb15cac3dd43a57174bfdb7a4aec22c248f0dd",
+    "https://deno.land/std@0.177.0/async/mod.ts": "f04344fa21738e5ad6bea37a6bfffd57c617c2d372bb9f9dcfd118a1b622e576",
+    "https://deno.land/std@0.177.0/async/mux_async_iterator.ts": "70c7f2ee4e9466161350473ad61cac0b9f115cff4c552eaa7ef9d50c4cbb4cc9",
+    "https://deno.land/std@0.177.0/async/pool.ts": "fd082bd4aaf26445909889435a5c74334c017847842ec035739b4ae637ae8260",
+    "https://deno.land/std@0.177.0/async/retry.ts": "5efa3ba450ac0c07a40a82e2df296287b5013755d232049efd7ea2244f15b20f",
+    "https://deno.land/std@0.177.0/async/tee.ts": "47e42d35f622650b02234d43803d0383a89eb4387e1b83b5a40106d18ae36757",
+    "https://deno.land/std@0.177.0/http/server.ts": "cbb17b594651215ba95c01a395700684e569c165a567e4e04bba327f41197433",
+    "https://esm.sh/@supabase/supabase-js@2.105.1": "d96e63cd3c7d0a07d5821a3573b4923d0e556e064633265c584656d95b22fa38"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@expo/vector-icons@^15.0.2",
+        "npm:@react-native-async-storage/async-storage@2.2.0",
+        "npm:@react-navigation/bottom-tabs@^7.4.0",
+        "npm:@react-navigation/native-stack@^7.10.1",
+        "npm:@react-navigation/native@^7.1.8",
+        "npm:@react-navigation/stack@^7.8.4",
+        "npm:@sentry/react-native@7.11",
+        "npm:@supabase/supabase-js@^2.99.0",
+        "npm:@tanstack/react-query@^5.90.21",
+        "npm:@types/react@~19.2.2",
+        "npm:axios@^1.13.6",
+        "npm:expo-asset@~55.0.10",
+        "npm:expo-audio@~55.0.14",
+        "npm:expo-calendar@~55.0.14",
+        "npm:expo-camera@~55.0.16",
+        "npm:expo-clipboard@~55.0.13",
+        "npm:expo-constants@~55.0.9",
+        "npm:expo-document-picker@~55.0.13",
+        "npm:expo-file-system@~55.0.10",
+        "npm:expo-font@~55.0.4",
+        "npm:expo-image-manipulator@~55.0.15",
+        "npm:expo-image-picker@~55.0.19",
+        "npm:expo-linear-gradient@~55.0.13",
+        "npm:expo-linking@~55.0.14",
+        "npm:expo-local-authentication@~55.0.13",
+        "npm:expo-location@~55.1.8",
+        "npm:expo-media-library@~55.0.15",
+        "npm:expo-notifications@~55.0.20",
+        "npm:expo-router@~55.0.13",
+        "npm:expo-sensors@~55.0.13",
+        "npm:expo-status-bar@~55.0.5",
+        "npm:expo-web-browser@~55.0.14",
+        "npm:expo@~55.0.17",
+        "npm:react-dom@19.2.0",
+        "npm:react-native-gesture-handler@2.30",
+        "npm:react-native-nfc-manager@^3.17.2",
+        "npm:react-native-qrcode-svg@^6.3.21",
+        "npm:react-native-safe-area-context@~5.6.2",
+        "npm:react-native-screens@4.23",
+        "npm:react-native-svg@^15.15.3",
+        "npm:react-native-url-polyfill@3",
+        "npm:react-native-view-shot@^4.0.3",
+        "npm:react-native-web@0.21",
+        "npm:react-native@0.83.6",
+        "npm:react@19.2.0",
+        "npm:typescript@~5.9.2",
+        "npm:zustand@^5.0.11"
+      ]
+    }
+  }
+}

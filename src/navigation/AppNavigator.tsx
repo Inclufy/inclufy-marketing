@@ -53,6 +53,7 @@ import EventScannerScreen from '../screens/EventScannerScreen';
 import EventIntelligenceScreen from '../screens/EventIntelligenceScreen';
 import OpportunityFeedScreen from '../screens/OpportunityFeedScreen';
 import BrandKitScreen from '../screens/BrandKitScreen';
+import SocialMediaWizard from '../screens/SocialMediaWizard';
 import EventAttendeesScreen from '../screens/EventAttendeesScreen';
 import EventShareScreen from '../screens/EventShareScreen';
 import CopilotScreen from '../screens/CopilotScreen';
@@ -353,6 +354,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: t.screenTitles.settings }} />
           <Stack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: 'WhatsApp Business' }} />
           <Stack.Screen name="BrandKit" component={BrandKitScreen} options={{ title: t.screenTitles.brandKit ?? 'Brand Kit' }} />
+          <Stack.Screen name="SocialMediaWizard" component={SocialMediaWizard} options={{ headerShown: false }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: t.screenTitles.notifications }} />
           <Stack.Screen name="DemoEnvironment" component={DemoEnvironmentScreen} options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }} />
         </>

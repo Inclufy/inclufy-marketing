@@ -177,6 +177,7 @@ export type RootStackParamList = {
   // Settings
   Settings: undefined;
   BrandKit: undefined;
+  SocialMediaWizard: { initialStep?: 'goal' | 'status' | 'connect' | 'verify' | 'brandVoice' | 'firstPost' } | undefined;
   // Event Attendees & Share
   EventAttendees: { eventId: string };
   EventShare: { eventId: string };

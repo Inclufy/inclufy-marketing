@@ -19,7 +19,10 @@ Vóór je een formulier opent:
 
 ## 🅰️ LinkedIn LMDP submission form
 
-URL: https://www.linkedin.com/developers/apps/789493c65q6j5e/products/marketing-developer-platform
+URL: https://www.linkedin.com/developers/apps/78sy9roeoz1143/products/marketing-developer-platform
+
+> **Client ID gebruikt:** `78sy9roeoz1143` (nieuwe AMOS Community app — 2026-05-07).
+> Oude AMOS app `789493c65q6j5e` is hierdoor vervangen voor LMDP-aanvraag.
 
 ### Field — "What does your app do?" (use case)
 

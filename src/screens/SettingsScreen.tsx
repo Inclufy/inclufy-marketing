@@ -554,6 +554,11 @@ export default function SettingsScreen() {
           setShowManualConnect(true);
         },
       });
+      options.push({
+        text: '🔌 Account ontkoppelen',
+        style: 'destructive',
+        onPress: () => handleDisconnectSocial(platformKey, label, connectedAccounts),
+      });
     } else {
       options.push({
         text: '🔗 Verbinden via OAuth',
@@ -570,7 +575,90 @@ export default function SettingsScreen() {
 
     options.push({ text: 'Annuleren', style: 'cancel' });
 
-    Alert.alert(`${label} koppelen`, 'Kies hoe je wilt verbinden:', options);
+    Alert.alert(
+      connectedAccounts.length > 0 ? `${label} beheren` : `${label} koppelen`,
+      connectedAccounts.length > 0 ? 'Kies een actie:' : 'Kies hoe je wilt verbinden:',
+      options,
+    );
+  };
+
+  // Disconnect a social account — removes OAuth tokens + metadata from our DB.
+  // Required for GDPR compliance + LinkedIn LMDP / Meta App Review anti-abuse claims.
+  const handleDisconnectSocial = async (
+    platformKey: string,
+    label: string,
+    connectedAccounts: any[],
+  ) => {
+    // Single connected account → direct confirmation
+    if (connectedAccounts.length === 1) {
+      const acc = connectedAccounts[0];
+      Alert.alert(
+        'Account ontkoppelen',
+        `Weet je zeker dat je "${acc.account_name || label}" wilt ontkoppelen?\n\nOAuth-tokens en gecachte ${label}-gegevens worden binnen enkele seconden verwijderd uit onze database. Je kunt later opnieuw verbinden.`,
+        [
+          { text: 'Annuleren', style: 'cancel' },
+          {
+            text: 'Ontkoppelen',
+            style: 'destructive',
+            onPress: () => performDisconnect([acc.id], acc.account_name || label),
+          },
+        ],
+      );
+      return;
+    }
+
+    // Multiple accounts → picker to choose which (or all)
+    const options: any[] = connectedAccounts.map((acc: any) => ({
+      text: `🔌 ${acc.account_name || acc.platform_account_id || 'Onbekend'}`,
+      style: 'destructive',
+      onPress: () => performDisconnect([acc.id], acc.account_name || label),
+    }));
+    options.push({
+      text: `🔌 Alle ${connectedAccounts.length} accounts ontkoppelen`,
+      style: 'destructive',
+      onPress: () =>
+        Alert.alert(
+          'Alles ontkoppelen?',
+          `${connectedAccounts.length} ${label}-accounts worden ontkoppeld. OAuth-tokens worden verwijderd. Dit kan niet ongedaan worden gemaakt.`,
+          [
+            { text: 'Annuleren', style: 'cancel' },
+            {
+              text: 'Alles ontkoppelen',
+              style: 'destructive',
+              onPress: () => performDisconnect(connectedAccounts.map((a: any) => a.id), `${connectedAccounts.length} accounts`),
+            },
+          ],
+        ),
+    });
+    options.push({ text: 'Annuleren', style: 'cancel' });
+
+    Alert.alert(
+      `${label} ontkoppelen`,
+      'Welke account wil je ontkoppelen?',
+      options,
+    );
+  };
+
+  const performDisconnect = async (accountIds: string[], displayName: string) => {
+    try {
+      const { error } = await supabase
+        .from('social_accounts')
+        .delete()
+        .in('id', accountIds);
+
+      if (error) throw error;
+
+      await refetchSocial();
+      Alert.alert(
+        '✅ Ontkoppeld',
+        `${displayName} is ontkoppeld. OAuth-tokens en gecachte gegevens zijn verwijderd uit onze database.`,
+      );
+    } catch (err: any) {
+      Alert.alert(
+        'Fout bij ontkoppelen',
+        err?.message ?? 'Kon account niet ontkoppelen. Probeer opnieuw of neem contact op met support.',
+      );
+    }
   };
 
   const startOAuth = async (platformKey: string, label: string) => {
@@ -1022,6 +1110,35 @@ export default function SettingsScreen() {
 
         {/* ── Social Media ──────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>Social Media</Text>
+
+        {/* Wizard CTA — vervangt eventueel Alert.alert flow voor nieuwe users */}
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => navigation.navigate('SocialMediaWizard', undefined)}
+          style={{
+            backgroundColor: colors.primary + '12',
+            borderWidth: 1,
+            borderColor: colors.primary + '40',
+            borderRadius: borderRadius.md,
+            padding: spacing.md,
+            marginBottom: spacing.sm,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm,
+          }}
+        >
+          <Ionicons name="sparkles" size={22} color={colors.primary} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }}>
+              Verbind via wizard
+            </Text>
+            <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 }}>
+              Gegidste flow met AI-merkstem analyse — aanbevolen
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+        </TouchableOpacity>
+
         <View style={styles.card}>
           {SOCIAL_PLATFORMS.map((platform, index) => {
             const connectedAccounts = (socialAccounts as any[]).filter(
