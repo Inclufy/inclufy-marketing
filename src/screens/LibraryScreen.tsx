@@ -74,7 +74,7 @@ export default function LibraryScreen() {
         activeOpacity={0.85}
       >
         {imageUrl ? (
-          <Image source={{ uri: imageUrl }} style={styles.cardImage} />
+          <Image source={{ uri: imageUrl }} style={styles.cardImage} resizeMode="cover" />
         ) : (
           <View style={[styles.cardImage, styles.cardImagePlaceholder]}>
             <MaterialCommunityIcons name="image-off-outline" size={32} color="#CBD5E1" />

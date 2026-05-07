@@ -178,3 +178,108 @@ Migratie is **additief** — geen impact op bestaande tables of flows.
 - [ ] AMOS iOS build submitted to TestFlight
 - [ ] AMOS Android AAB built
 - [ ] Mobile shake-to-report werkt (handmatig getest op TestFlight)
+
+---
+
+## Phase 3 — Website production-readiness (NIEUW, 2026-05-04)
+
+**Owner agent**: `website-landingpage-curator` (`~/.claude/agents/website-landingpage-curator.md`) — geïntroduceerd 2026-05-04.
+
+**Trigger**: screenshot van `marketing.inclufy.com/pricing` toonde currency-mismatch ($ op NL pagina) + hardcoded dark-mode + sub-brand drift.
+
+### Scope van deze phase
+
+| # | Item | Status | Files |
+|---|---|---|---|
+| 1 | Light-mode infrastructuur (CSS-vars `:root` + `.dark`) | ✅ | `web/src/app/globals.css` |
+| 2 | ThemeProvider (dependency-free, localStorage + system-pref) | ✅ | `web/src/components/theme/ThemeProvider.tsx` |
+| 3 | ThemeToggle UI (Licht / Donker / Systeem radiogroup) | ✅ | `web/src/components/theme/ThemeToggle.tsx` |
+| 4 | No-flash inline script in `<head>` | ✅ | `web/src/app/layout.tsx` |
+| 5 | Sidebar refactor naar design-tokens + toggle in footer | ✅ | `web/src/components/layout/Sidebar.tsx` |
+| 6 | Sales chatbot widget (floating, contextual, NL-first) | ✅ | `web/src/components/sales/SalesChatWidget.tsx` |
+| 7 | API route voor chatbot (Anthropic Claude Haiku, edge runtime) | ✅ | `web/src/app/api/sales-chat/route.ts` |
+| 8 | Mount widget global in layout | ✅ | `web/src/app/layout.tsx` |
+| 9 | Pricing-page refactor ($→€, design-tokens) | ⏳ wacht gitlab-sync | `web/src/app/pricing/page.tsx` (op `gitlab/main`) |
+| 10 | Currency-formatter per locale (NL=€, MA=MAD, UAE=AED) | ⏳ wacht stap 9 | n.t.b. |
+| 11 | Pricing-tier validatie tegen `docs/PRICING_BUNDLES.md` | ⏳ doc pending | n.v.t. |
+
+### Dependencies
+
+- **Lokale repo is 37 commits behind `gitlab/main`** — eerst `git fetch gitlab && git rebase gitlab/main` voor stap 9-11.
+- Sales-chatbot vereist `ANTHROPIC_API_KEY` in productie-env (Vercel/GitLab CI). Zonder key valt widget gracefully terug op contact-CTA.
+- Light-mode werkt zelfstandig zonder rebase.
+
+### Pre-deploy gates (extra)
+
+| Gate | Command | Pass-criterium |
+|---|---|---|
+| 6. Web TS na light-mode + chatbot | `cd web && npx tsc --noEmit` | enkel pre-existing `integrations/page.tsx` error |
+| 7. Visual regressie | dev-server + `preview_screenshot` op `/`, `/dashboard`, `/pricing` in beide modes | geen kapotte contrasten |
+| 8. Chatbot smoke | `curl -X POST /api/sales-chat -d '{"messages":[{"role":"user","content":"prijzen?"}]}'` | 200 + reply non-empty |
+| 9. Audit-rapport gegenereerd | `website-landingpage-curator` op live URLs | rapport in `docs/website-audits/` |
+
+### Deploy stappen
+
+```bash
+cd "/Users/samiloukile/Dropbox/Inclufy Marketing/Inclufy Marketing-main"
+
+# 1. Sync lokaal met productie
+git fetch gitlab
+git cherry -v gitlab/main  # check welke "ahead" commits duplicaat zijn
+git rebase gitlab/main      # of: nieuwe branch + merge
+
+# 2. Stage + commit light-mode + chatbot
+git add web/src/app/globals.css \
+        web/src/app/layout.tsx \
+        web/src/app/providers.tsx \
+        web/src/components/theme/ \
+        web/src/components/sales/ \
+        web/src/components/layout/Sidebar.tsx \
+        web/src/app/api/sales-chat/
+
+git commit -m "feat(web): light-mode + sales chatbot
+
+- Add light/dark/system theme with no-flash script + localStorage
+- Add ThemeToggle in sidebar footer
+- Add SalesChatWidget (floating bottom-right) with contextual prompts
+- Add /api/sales-chat edge route using Claude Haiku
+- Refactor Sidebar to design-tokens
+- Wire ThemeProvider in providers.tsx"
+
+# 3. Push naar productie
+git push gitlab main
+git push origin main
+
+# 4. Set Anthropic key in Vercel/GitLab
+vercel env add ANTHROPIC_API_KEY production
+# or: in GitLab CI/CD → Settings → Variables
+```
+
+### Post-deploy smoke (extra)
+
+1. **Light-mode toggle**: open https://marketing.inclufy.com/dashboard → klik thema-knop in sidebar → 3 modi werken zonder FOUC.
+2. **Sales chatbot**: open homepage → klik chat-bubble rechtsonder → vraag "wat kost het?" → reply binnen 3s.
+3. **Audit-run**: laat `website-landingpage-curator` agent draaien op `/`, `/pricing`, `/contact` → check rapport in `docs/website-audits/2026-05-04-marketing-prod.md`.
+
+### Rollback (extra)
+
+| Scenario | Actie |
+|---|---|
+| Light-mode breekt prod-styling | Revert `globals.css` `.dark` block + Sidebar token-changes; toggle blijft werken maar enkel licht |
+| Chatbot 500 errors | API-route loggen naar Sentry; zonder API-key valt widget terug op contact-CTA — geen blocker |
+| FOUC op eerste paint | Verifieer dat `noFlashScript` in `<head>` blijft, niet in `<body>` |
+| Visual contrast issues | Kleurvars in `.dark` block bijstellen — pure CSS-only fix, geen code-deploy nodig |
+
+### Sign-off Phase 3
+
+- [x] Light-mode CSS + Provider + Toggle gebouwd
+- [x] No-flash script in layout
+- [x] Sidebar gerefactord naar tokens
+- [x] Sales chatbot widget + API route
+- [x] TypeScript schoon (enkel pre-existing fout)
+- [ ] Local rebase op gitlab/main uitgevoerd
+- [ ] Pricing-page refactor ($→€) na rebase
+- [ ] `ANTHROPIC_API_KEY` in productie env
+- [ ] `website-landingpage-curator` audit-rapport gegenereerd
+- [ ] Visuele smoke-tests in beide modes
+- [ ] Push naar `gitlab/main`

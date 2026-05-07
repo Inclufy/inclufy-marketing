@@ -19,10 +19,14 @@ import {
   usePublishLibraryPost,
   useDeleteLibraryPost,
 } from '../hooks/useLibraryPosts';
-import { useStrategyAlignment } from '../hooks/useStrategyAlignment';
+import { useStrategyAlignment, type ChannelScore } from '../hooks/useStrategyAlignment';
+import { channelLabel } from '../lib/channelRules';
 import type { RootStackParamList, LibraryLanguage, Channel, LibraryPost } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '../services/supabase';
+import ChannelPreview from '../components/ChannelPreview';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'LibraryPostDetail'>;
@@ -37,6 +41,22 @@ export default function LibraryPostDetailScreen() {
   const { data: post, isLoading } = useLibraryPost(route.params.postId);
   const scheduleMut = useScheduleLibraryPost();
   const publishMut = usePublishLibraryPost();
+
+  // Map of platform → account_name for channel previews
+  const { data: accountMap = {} } = useQuery({
+    queryKey: ['social-accounts-map'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('social_accounts')
+        .select('platform, account_name');
+      const m: Record<string, string> = {};
+      (data ?? []).forEach((a: { platform: string; account_name: string }) => {
+        m[a.platform.toLowerCase()] = a.account_name;
+      });
+      return m;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
   const deleteMut = useDeleteLibraryPost();
 
   const [language, setLanguage] = useState<LibraryLanguage>('nl');
@@ -141,7 +161,7 @@ export default function LibraryPostDetailScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Image preview */}
         {tr?.image_url ? (
-          <Image source={{ uri: tr.image_url }} style={styles.preview} />
+          <Image source={{ uri: tr.image_url }} style={styles.preview} resizeMode="cover" />
         ) : (
           <View style={[styles.preview, styles.previewEmpty]}>
             <MaterialCommunityIcons name="image-off-outline" size={40} color="#CBD5E1" />
@@ -181,6 +201,23 @@ export default function LibraryPostDetailScreen() {
           {post.scheduled_for && <Row label="Gepland" value={new Date(post.scheduled_for).toLocaleString('nl-NL')} />}
           {post.published_at && <Row label="Gepubliceerd" value={new Date(post.published_at).toLocaleString('nl-NL')} />}
         </View>
+
+        {/* Channel previews */}
+        {post.channels.length > 0 && (
+          <View style={{ marginTop: spacing.md, gap: spacing.sm }}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Preview per kanaal</Text>
+            {post.channels.map((ch) => (
+              <ChannelPreview
+                key={ch}
+                channel={ch}
+                accountName={accountMap[String(ch).toLowerCase()]}
+                imageUrl={tr?.image_url}
+                caption={tr?.caption}
+                hashtags={tr?.hashtags}
+              />
+            ))}
+          </View>
+        )}
 
         {/* Strategy alignment banner (soft warnings) */}
         {post.status !== 'published' && <AlignmentBanner post={post} />}
@@ -249,28 +286,34 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+function paletteForScore(score: number, colors: { text: string }) {
+  if (score >= 80) return { bg: '#10B98115', border: '#10B981', icon: '#10B981', text: '#065F46' };
+  if (score >= 50) return { bg: '#F59E0B15', border: '#F59E0B', icon: '#F59E0B', text: colors.text };
+  return { bg: '#EF444415', border: '#EF4444', icon: '#EF4444', text: colors.text };
+}
+
 function AlignmentBanner({ post }: { post: LibraryPost }) {
   const { colors } = useTheme();
   const navigation = useNavigation<Nav>();
   const alignment = useStrategyAlignment(post);
+  const [expanded, setExpanded] = useState(false);
 
-  // Color scheme per status
   const palette =
-    alignment.status === 'ok'
-      ? { bg: '#10B98115', border: '#10B981', icon: '#10B981', text: '#065F46' }
-      : alignment.status === 'no_strategy'
+    alignment.status === 'no_strategy'
       ? { bg: '#94A3B815', border: '#94A3B8', icon: '#475569', text: colors.text }
-      : { bg: '#F59E0B15', border: '#F59E0B', icon: '#F59E0B', text: colors.text };
+      : paletteForScore(alignment.overallScore, colors);
 
   const iconName =
-    alignment.status === 'ok' ? 'checkmark-circle' : alignment.status === 'no_strategy' ? 'information-circle' : 'warning';
+    alignment.status === 'ok' ? 'checkmark-circle'
+    : alignment.status === 'no_strategy' ? 'information-circle'
+    : alignment.overallScore >= 50 ? 'warning' : 'alert-circle';
 
   const headline =
-    alignment.status === 'ok'
-      ? `Aligned met strategie · ${alignment.alignedChannels.length}/${post.channels.length} kanalen`
-      : alignment.status === 'no_strategy'
+    alignment.status === 'no_strategy'
       ? 'Geen actieve strategie'
-      : `${alignment.warnings.length} waarschuwing${alignment.warnings.length === 1 ? '' : 'en'}`;
+      : alignment.status === 'ok'
+      ? `Aligned met strategie · ${alignment.alignedChannels.length}/${post.channels.length} kanalen`
+      : `Channel-fit: ${alignment.overallScore}/100 · ${alignment.warnings.length} waarschuwing${alignment.warnings.length === 1 ? '' : 'en'}`;
 
   return (
     <View style={[styles.banner, { backgroundColor: palette.bg, borderColor: palette.border }]}>
@@ -279,7 +322,24 @@ function AlignmentBanner({ post }: { post: LibraryPost }) {
         <Text style={[styles.bannerHeadline, { color: palette.text }]}>{headline}</Text>
       </View>
 
+      {/* Per-channel score chips */}
+      {alignment.channelScores.length > 0 && (
+        <View style={styles.scoreRow}>
+          {alignment.channelScores.map((cs) => (
+            <ChannelScoreChip key={cs.channel} score={cs} />
+          ))}
+        </View>
+      )}
+
       {alignment.warnings.length > 0 && (
+        <TouchableOpacity onPress={() => setExpanded((e) => !e)} activeOpacity={0.7}>
+          <Text style={[styles.bannerToggle, { color: palette.icon }]}>
+            {expanded ? '▾ Verberg details' : `▸ Toon details (${alignment.warnings.length})`}
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {expanded && alignment.warnings.length > 0 && (
         <View style={styles.bannerWarnings}>
           {alignment.warnings.map((w, i) => (
             <Text key={i} style={[styles.bannerWarning, { color: palette.text }]}>
@@ -290,19 +350,40 @@ function AlignmentBanner({ post }: { post: LibraryPost }) {
       )}
 
       {alignment.status !== 'ok' && (
-        <TouchableOpacity
-          style={[styles.bannerCta, { borderColor: palette.border }]}
-          onPress={() => navigation.navigate('MarketingStrategy')}
-        >
-          <Text style={[styles.bannerCtaText, { color: palette.icon }]}>
-            {alignment.needsSetup ? 'Strategie instellen →' : 'Strategie aanpassen →'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.bannerCtaRow}>
+          <TouchableOpacity
+            style={[styles.bannerCta, { borderColor: palette.border }]}
+            onPress={() => navigation.navigate('MarketingStrategy')}
+          >
+            <Text style={[styles.bannerCtaText, { color: palette.icon }]}>
+              {alignment.needsSetup ? 'Strategie instellen →' : 'Strategie aanpassen →'}
+            </Text>
+          </TouchableOpacity>
+          {!alignment.needsSetup && (
+            <TouchableOpacity
+              style={[styles.bannerCta, { borderColor: palette.border }]}
+              onPress={() => navigation.navigate('Personas')}
+            >
+              <Text style={[styles.bannerCtaText, { color: palette.icon }]}>Persona's beheren →</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       )}
 
       <Text style={[styles.bannerHint, { color: colors.textSecondary }]}>
         Dit is een waarschuwing — je kunt nog steeds publiceren.
       </Text>
+    </View>
+  );
+}
+
+function ChannelScoreChip({ score }: { score: ChannelScore }) {
+  const { colors } = useTheme();
+  const p = paletteForScore(score.score, colors);
+  return (
+    <View style={[styles.scoreChip, { backgroundColor: p.bg, borderColor: p.border }]}>
+      <Text style={[styles.scoreChipChannel, { color: p.text }]}>{channelLabel(score.channel)}</Text>
+      <Text style={[styles.scoreChipScore, { color: p.icon }]}>{score.score}</Text>
     </View>
   );
 }
@@ -319,6 +400,7 @@ const styles = StyleSheet.create({
 
   preview: { width: '100%', aspectRatio: 1, borderRadius: borderRadius.md, backgroundColor: '#F1F5F9' },
   previewEmpty: { alignItems: 'center', justifyContent: 'center' },
+  sectionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold as '600', marginBottom: spacing.xs },
 
   langRow: { flexDirection: 'row', gap: spacing.sm },
   langBtn: {
@@ -369,6 +451,16 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full, borderWidth: 1,
     marginTop: 4,
   },
+  bannerCtaRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: 4 },
   bannerCtaText: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold as '600' },
   bannerHint: { fontSize: 11, fontStyle: 'italic', marginTop: 2 },
+  bannerToggle: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold as '600', marginTop: 4 },
+  scoreRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: 2 },
+  scoreChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: borderRadius.full, borderWidth: 1,
+  },
+  scoreChipChannel: { fontSize: 11, fontWeight: fontWeight.medium as '500' },
+  scoreChipScore: { fontSize: 13, fontWeight: fontWeight.bold as '700' },
 });

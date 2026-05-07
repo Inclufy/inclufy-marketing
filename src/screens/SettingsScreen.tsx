@@ -626,7 +626,14 @@ export default function SettingsScreen() {
       authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'facebook' || platformKey === 'instagram') {
       const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
-      const scope = 'pages_show_list,pages_manage_posts,public_profile';
+      // Scopes:
+      //   pages_show_list             — enumerate user's FB pages
+      //   pages_manage_posts          — publish to FB pages
+      //   pages_read_engagement       — read page metadata (required to discover IG business link)
+      //   instagram_basic             — read IG business profile
+      //   instagram_content_publish   — publish to IG business account (requires Meta App Review for production)
+      //   public_profile              — basic identity
+      const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish,public_profile';
       authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'tiktok') {
       const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';

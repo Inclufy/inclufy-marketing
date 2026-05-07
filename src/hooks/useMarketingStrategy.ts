@@ -1,10 +1,22 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import type { Channel } from '../types';
 
 export interface ChannelConfig {
   active: boolean;
   posts_per_week: number;
   budget_pct: number;
+}
+
+export type PersonaTone = 'formal' | 'casual' | 'inspirational';
+
+export interface Persona {
+  id: string;
+  name: string;
+  role: string;
+  pain_points: string[];
+  tone: PersonaTone;
+  channels: Channel[];
 }
 
 export interface MarketingStrategy {
@@ -32,6 +44,8 @@ export interface MarketingStrategy {
   autonomy_level: 'conservative' | 'balanced' | 'aggressive';
   auto_publish: boolean;
   require_approval: boolean;
+  // Personas (target audience profiles for channel-fit alignment)
+  personas: Persona[];
   // Status
   is_active: boolean;
   created_at: string;

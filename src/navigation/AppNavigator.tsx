@@ -61,6 +61,7 @@ import ProductsScreen from '../screens/ProductsScreen';
 import TeamDirectoryScreen from '../screens/TeamDirectoryScreen';
 import OrganizationScreen from '../screens/OrganizationScreen';
 import MarketingStrategyScreen from '../screens/MarketingStrategyScreen';
+import PersonasScreen from '../screens/PersonasScreen';
 import ContentProposalsScreen from '../screens/ContentProposalsScreen';
 import ContentCalendarScreen from '../screens/ContentCalendarScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
@@ -334,6 +335,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="TeamDirectory" component={TeamDirectoryScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Organization" component={OrganizationScreen} options={{ headerShown: false }} />
           <Stack.Screen name="MarketingStrategy" component={MarketingStrategyScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="Personas" component={PersonasScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ContentProposals" component={ContentProposalsScreen} options={{ headerShown: false }} />
           <Stack.Screen name="ContentCalendar" component={ContentCalendarScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Analytics" component={AnalyticsScreen} options={{ headerShown: false }} />

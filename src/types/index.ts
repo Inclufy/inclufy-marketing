@@ -200,6 +200,7 @@ export type RootStackParamList = {
   Organization: undefined;
   // Marketing Strategy
   MarketingStrategy: undefined;
+  Personas: undefined;
   // Content Proposals
   ContentProposals: undefined;
   // New screens

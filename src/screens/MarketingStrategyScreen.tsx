@@ -184,6 +184,14 @@ export default function MarketingStrategyScreen() {
     section: { backgroundColor: c.surface, borderRadius: borderRadius.lg, padding: spacing.md, gap: spacing.sm, ...subtleShadow },
     sectionTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: c.text },
     sectionSub: { fontSize: fontSize.xs, color: c.textSecondary, marginTop: -4 },
+    sectionHint: { fontSize: fontSize.xs, marginTop: -4, marginBottom: spacing.xs },
+    personasBtn: {
+      flexDirection: R, alignItems: C, gap: spacing.sm,
+      paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+      borderRadius: borderRadius.md, borderWidth: 1,
+    },
+    personasBtnText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+    personasBtnArrow: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
     goalsGrid: { flexDirection: R, flexWrap: 'wrap' as const, gap: spacing.sm },
     goalChip: { width: '47%' as any, flexDirection: R, alignItems: C, gap: spacing.xs, paddingVertical: spacing.sm, paddingHorizontal: spacing.sm, borderRadius: borderRadius.md, borderWidth: 1.5, borderColor: c.border, backgroundColor: c.background },
     goalLabel: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: c.text, flex: 1 },
@@ -393,6 +401,24 @@ export default function MarketingStrategyScreen() {
       <View style={s.section}>
         <Text style={s.sectionTitle}>Content Mix</Text>
         {renderPctRow(CONTENT_MIX, contentMix, setContentMix, '#9333EA')}
+      </View>
+      <View style={s.section}>
+        <Text style={s.sectionTitle}>Doelgroep persona's</Text>
+        <Text style={[s.sectionHint, { color: colors.textSecondary }]}>
+          Beschrijf wie je bereikt per kanaal — gebruikt door de channel-fit check op posts.
+        </Text>
+        <TouchableOpacity
+          style={[s.personasBtn, { borderColor: colors.border }]}
+          onPress={() => navigation.navigate('Personas')}
+        >
+          <MaterialCommunityIcons name="account-group" size={20} color={colors.primary} />
+          <Text style={[s.personasBtnText, { color: colors.text }]}>
+            {existing?.personas?.length
+              ? `${existing.personas.length} persona${existing.personas.length === 1 ? '' : "'s"} ingesteld`
+              : "Persona's beheren"}
+          </Text>
+          <Text style={[s.personasBtnArrow, { color: colors.primary }]}>→</Text>
+        </TouchableOpacity>
       </View>
       <View style={s.postsTotal}>
         <Text style={s.postsTotalNum}>{totalPostsPerWeek}</Text>
