@@ -6,31 +6,33 @@
 -- Channel union has had 'whatsapp' for a while, but the DB CHECK constraints
 -- were never updated → INSERT fails with `go_posts_channel_check`.
 --
--- This migration is idempotent: it drops the existing constraint (if any) and
--- re-creates it with the expanded channel set.
+-- This migration is idempotent + safe for fresh-DB setups: ALTER TABLE IF
+-- EXISTS skips tables that haven't been created yet (content_proposals and
+-- automations are not in every environment).
 -- =============================================================================
 
--- 1. go_posts.channel
-ALTER TABLE public.go_posts
+-- 1. go_posts.channel (the table that actually triggered the bug)
+ALTER TABLE IF EXISTS public.go_posts
   DROP CONSTRAINT IF EXISTS go_posts_channel_check;
 
-ALTER TABLE public.go_posts
+ALTER TABLE IF EXISTS public.go_posts
   ADD CONSTRAINT go_posts_channel_check
   CHECK (channel IN ('linkedin', 'instagram', 'x', 'facebook', 'tiktok', 'whatsapp'));
 
--- 2. content_proposals.channel (same legacy 5-channel CHECK)
-ALTER TABLE public.content_proposals
+-- 2. content_proposals.channel — same legacy 5-channel CHECK.
+--    Skip silently if the table doesn't exist (production DB lacks this table).
+ALTER TABLE IF EXISTS public.content_proposals
   DROP CONSTRAINT IF EXISTS content_proposals_channel_check;
 
-ALTER TABLE public.content_proposals
+ALTER TABLE IF EXISTS public.content_proposals
   ADD CONSTRAINT content_proposals_channel_check
   CHECK (channel IN ('linkedin', 'instagram', 'x', 'facebook', 'tiktok', 'whatsapp'));
 
--- 3. automations.channel — already allows 'email' as 6th option, so we re-affirm
---    with the wider set including 'whatsapp'. Was: linkedin/instagram/x/facebook/tiktok/email.
-ALTER TABLE public.automations
+-- 3. automations.channel — already allows 'email' as 6th option, re-affirm
+--    with the wider set including 'whatsapp'. Skip if table not present.
+ALTER TABLE IF EXISTS public.automations
   DROP CONSTRAINT IF EXISTS automations_channel_check;
 
-ALTER TABLE public.automations
+ALTER TABLE IF EXISTS public.automations
   ADD CONSTRAINT automations_channel_check
   CHECK (channel IS NULL OR channel IN ('linkedin', 'instagram', 'x', 'facebook', 'tiktok', 'whatsapp', 'email'));
