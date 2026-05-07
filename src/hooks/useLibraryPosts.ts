@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import type { LibraryPost, LibraryImport, Channel } from '../types';
+import { adaptForChannel } from '../lib/channelAdapter';
 
 // ─── Query: list library posts (optionally filter by product/campaign) ───
 
@@ -188,6 +189,15 @@ export function usePublishLibraryPost() {
 
       const channels = params.channels ?? lp.channels;
 
+      // Need authenticated user_id — publish-social requires it
+      const { data: userData, error: userErr } = await supabase.auth.getUser();
+      if (userErr || !userData.user) throw new Error('not authenticated');
+      const userId = userData.user.id;
+
+      // Derive product key for LinkedIn page routing (read by publish-social).
+      // Priority: external_id ("ecosystem-finance-bold") > campaign string.
+      const productKey = (lp.external_id ?? lp.campaign ?? '').toLowerCase();
+
       await supabase
         .from('library_posts')
         .update({ status: 'publishing' })
@@ -197,17 +207,37 @@ export function usePublishLibraryPost() {
       const results: Record<string, { post_id?: string; url?: string; error?: string }> = {};
 
       for (const ch of channels) {
+        // Channel-fit adaptation — trim/expand caption and calibrate hashtags per platform
+        const adapted = adaptForChannel(ch, tr.caption ?? '', tr.hashtags ?? []);
+        const text = [adapted.caption, adapted.hashtags.join(' ')].filter(Boolean).join('\n\n');
         const { data: pubData, error: pubErr } = await supabase.functions.invoke('publish-social', {
           body: {
             channel: ch,
-            text: [tr.caption, tr.hashtags.join(' ')].filter(Boolean).join('\n\n'),
-            imageUrl: tr.image_url,
-            // existing publish-social signature; library_post_id is informational
-            library_post_id: params.postId,
+            text,
+            // publish-social signature: post_id + user_id + image_url (snake_case)
+            post_id: params.postId,
+            user_id: userId,
+            image_url: tr.image_url,
+            library_post_id: params.postId, // informational
+            product_key: productKey || undefined, // routes LinkedIn posts to the matching company page
           },
         });
         if (pubErr) {
-          results[ch] = { error: pubErr.message };
+          // FunctionsHttpError swallows the body in pubErr.message — read pubErr.context (Response) for the real reason
+          let detail = pubErr.message;
+          const ctx = (pubErr as any).context;
+          if (ctx && typeof ctx.text === 'function') {
+            try {
+              const raw = await ctx.text();
+              try {
+                const parsed = JSON.parse(raw);
+                detail = parsed.error || parsed.details || raw || pubErr.message;
+              } catch {
+                detail = raw || pubErr.message;
+              }
+            } catch {/* keep wrapper message */}
+          }
+          results[ch] = { error: detail };
         } else if (pubData?.success === false) {
           results[ch] = { error: pubData.error ?? 'unknown' };
         } else {
