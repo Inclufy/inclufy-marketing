@@ -53,9 +53,10 @@ CREATE POLICY "users_own_brand_voice_delete" ON public.brand_voice_profiles
   FOR DELETE USING (auth.uid() = user_id);
 
 -- ════════════════════════════════════════════════════════════════════
--- Wizard tracking on qr_profiles
+-- Wizard tracking on profiles (table name confirmed via existing
+-- migrations 20260317060000_profiles_qr_fields.sql etc.)
 -- ════════════════════════════════════════════════════════════════════
-ALTER TABLE public.qr_profiles
+ALTER TABLE public.profiles
   ADD COLUMN IF NOT EXISTS wizard_completed_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS wizard_skipped_steps TEXT[] DEFAULT '{}';
 

@@ -36,14 +36,16 @@ export default function StepGoal({ selectedPlatforms, togglePlatform, fetchRecom
   useEffect(() => {
     (async () => {
       try {
-        // Fetch user's industry + audience from qr_profile
+        // Fetch user's company from profiles (used as industry hint).
+        // industry + audience columns don't exist on profiles — AI handles
+        // missing context gracefully via fallback path.
         const { data: profile } = await supabase
-          .from('qr_profiles')
-          .select('industry, audience, company')
+          .from('profiles')
+          .select('company, title')
           .maybeSingle();
 
-        const industry = profile?.industry ?? profile?.company ?? '';
-        const audience = profile?.audience ?? '';
+        const industry = profile?.company ?? '';
+        const audience = profile?.title ?? '';
         const result = await fetchRecommendations(industry, audience, 'nl');
         setAiReason(result.reason);
       } catch {
