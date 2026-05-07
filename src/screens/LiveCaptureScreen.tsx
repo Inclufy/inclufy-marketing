@@ -247,7 +247,7 @@ export default function LiveCaptureScreen() {
 
         const activeChannels: Channel[] = selectedChannels.length
           ? selectedChannels
-          : ['linkedin', 'instagram'];
+          : ['linkedin', 'instagram', 'facebook', 'whatsapp'];
 
         let results: Record<string, any> = {};
         try {
@@ -412,7 +412,7 @@ export default function LiveCaptureScreen() {
         try {
           const activeChannels: Channel[] = selectedChannels.length
             ? selectedChannels
-            : ((event.channels?.length ? event.channels : ['linkedin', 'instagram']) as Channel[]);
+            : ((event.channels?.length ? event.channels : ['linkedin', 'instagram', 'facebook', 'whatsapp']) as Channel[]);
 
         results = await aiService.generateAllChannelPosts(
             activeChannels,
@@ -433,7 +433,7 @@ export default function LiveCaptureScreen() {
           console.warn('[processCapture] AI generation failed, using placeholders:', aiErr);
           const fallbackChannels: Channel[] = selectedChannels.length
             ? selectedChannels
-            : ((event.channels?.length ? event.channels : ['linkedin', 'instagram']) as Channel[]);
+            : ((event.channels?.length ? event.channels : ['linkedin', 'instagram', 'facebook', 'whatsapp']) as Channel[]);
           for (const channel of fallbackChannels) {
             results[channel] = {
               text: note.trim() || event.name,

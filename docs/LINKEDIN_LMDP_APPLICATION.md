@@ -34,14 +34,14 @@ We request Marketing Developer Platform access to enable **Company Page publishi
 
 ### 1.4 User Stories
 
-**Story 1 — SMB Owner**
-> As the owner of Eprocure Consulting (LinkedIn Company Page, 2,400 followers), I want to publish event photos from a conference directly to my company page so my network sees the brand active at industry events. Currently I must download from AMOS and manually re-upload on LinkedIn.com.
+**Story 1 — Multi-Page Brand Owner (real Inclufy use case)**
+> As founder of Inclufy BV, I admin 6 LinkedIn Company Pages representing our ecosystem: Inclufy_Ecosystem (corporate hoofdpage, URL `linkedin.com/company/inclufysolutions`, 178 followers), Inclufy Academy (training pillar), Inclufy Consulting (services pillar), Inclufy-AI (solutions pillar), plus standalone product pages ProjeXtPal and AMOS. When I capture content at an industry event, I need AMOS to route each post to the correct page based on context — product news to ProjeXtPal/AMOS, training updates to Academy, ecosystem stories to Inclufy_Ecosystem. Today I must manually re-upload to LinkedIn.com 6 separate times.
 
 **Story 2 — Event Organizer (Multi-Channel)**
-> As an event organizer running the annual Inclufy Summit, I capture 20+ moments during the event. I want each AI-generated post to go simultaneously to (a) my personal profile, (b) the event's dedicated Company Page, and (c) optionally a partner's page where I have admin rights — without opening LinkedIn.com 60 times.
+> As an event organizer running the annual Inclufy Summit, I capture 20+ moments during the event. I want each AI-generated post to go simultaneously to (a) my personal profile, (b) the Inclufy_Ecosystem corporate page, and (c) optionally a partner's page where I have admin rights — without opening LinkedIn.com 60 times.
 
 **Story 3 — Multi-Brand Marketer**
-> As a fractional CMO admin for 4 client company pages, I want one AMOS session to route each client's content to their respective LinkedIn page. Picker at publish time chooses between Client A Page, Client B Page, etc.
+> As a fractional CMO admin for 4 client company pages (e.g., one user managing both Inclufy Academy AND a partner organization's page), I want one AMOS session to route each client's content to their respective LinkedIn page. Picker at publish time chooses between the destination pages with clear branding so I never publish to the wrong audience.
 
 ### 1.5 Consent & UX Flow
 

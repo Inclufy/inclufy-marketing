@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.inclufy.go",
-      "buildNumber": "208",
+      "buildNumber": "211",
       "infoPlist": {
         "NSCameraUsageDescription": "Inclufy GO needs camera access to capture photos and videos at events.",
         "NSMicrophoneUsageDescription": "Inclufy GO needs microphone access for video and audio recording.",
@@ -71,7 +71,7 @@
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
       ],
-      "versionCode": 2
+      "versionCode": 3
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -131,7 +131,8 @@
       "expo-web-browser",
       "expo-font",
       "expo-asset",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      "expo-video"
     ]
   }
 }

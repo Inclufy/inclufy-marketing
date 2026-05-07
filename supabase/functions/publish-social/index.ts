@@ -824,7 +824,62 @@ Deno.serve(async (req: Request) => {
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     const body = await req.json();
-    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, video_url: directVideoUrl, media_type: directMediaType, extra_image_urls: directExtraImageUrls, account_id: directAccountId, ig_format: directIgFormat } = body;
+    const { proposal_id, post_id, user_id, channel: directChannel, text: directText, image_url: directImageUrl, video_url: directVideoUrl, media_type: directMediaType, extra_image_urls: directExtraImageUrls, account_id: directAccountId, ig_format: directIgFormat, product_key: directProductKey } = body;
+
+    // ─── Account preference helpers ────────────────────────────────────
+    // Prefer publishing as the company/business/page identity over personal.
+    // Personal LinkedIn = w_member_social only; company = w_organization_social (LMDP).
+    // Personal IG = no API publishing; business = full Graph publishing.
+    const ACCOUNT_TYPE_RANK: Record<string, number> = {
+      company: 1, business: 1, page: 1,
+      personal: 5, manual: 9,
+    };
+    // LinkedIn product → admin page mapping. Active once LMDP is approved
+    // and `social_accounts` rows exist with account_type='company'.
+    const LINKEDIN_PAGE_BY_PRODUCT: Record<string, string> = {
+      academy: 'Inclufy Academy', assessments: 'Inclufy Academy',
+      projects: 'ProjextPal', projextpal: 'ProjextPal',
+      marketing: 'AMOS', amos: 'AMOS', events: 'AMOS',
+      helix: 'Inclufy-AI', 'iq-helix': 'Inclufy-AI', iqhelix: 'Inclufy-AI',
+      finance: 'Inclufy AI Solutions', sales: 'Inclufy AI Solutions',
+      procurement: 'Inclufy AI Solutions', inventory: 'Inclufy AI Solutions',
+      warehousing: 'Inclufy AI Solutions', manufacturing: 'Inclufy AI Solutions',
+      logistics: 'Inclufy AI Solutions', ignite: 'Inclufy AI Solutions',
+      erp: 'Inclufy AI Solutions',
+      ecosystem: 'Inclufy Consulting', consulting: 'Inclufy Consulting',
+      community: 'LEADERS NETWORK', leadership: 'LEADERS NETWORK',
+    };
+    function pickAccount(accounts: any[], channel: string, productKey?: string): any | null {
+      if (!accounts || accounts.length === 0) return null;
+      // Normalize account-name for comparison: strip the trailing "(Bedrijf)" /
+      // "(Company)" suffix that the OAuth callback adds, lowercase, trim. This
+      // prevents substring ambiguity (e.g. target "Inclufy" used to also match
+      // "Inclufy AI Solutions" — now must be EXACT after normalization).
+      const normName = (s?: string | null) =>
+        (s || '')
+          .toLowerCase()
+          .replace(/\s*\((?:bedrijf|company)\)\s*$/i, '')
+          .trim();
+      // 1) LinkedIn — try product → page name match first (exact match only)
+      if (channel === 'linkedin' && productKey) {
+        const lc = productKey.toLowerCase();
+        const sortedKeys = Object.keys(LINKEDIN_PAGE_BY_PRODUCT).sort((a, b) => b.length - a.length);
+        for (const key of sortedKeys) {
+          if (lc.includes(key)) {
+            const target = normName(LINKEDIN_PAGE_BY_PRODUCT[key]);
+            const match = accounts.find((a) =>
+              normName(a.account_name) === target && a.account_type === 'company',
+            );
+            if (match) return match;
+          }
+        }
+      }
+      // 2) Smart-default — prefer company/business/page over personal
+      const sorted = [...accounts].sort((a, b) =>
+        (ACCOUNT_TYPE_RANK[a.account_type] ?? 7) - (ACCOUNT_TYPE_RANK[b.account_type] ?? 7),
+      );
+      return sorted[0];
+    }
 
     // Assert JWT user matches request body user_id (skipped for internal calls)
     if (!isInternalCall && user_id && jwtUser && jwtUser.id !== user_id) {
@@ -850,37 +905,42 @@ Deno.serve(async (req: Request) => {
         );
       }
 
-      // Find social account — use specific account_id if provided (for multi-account support)
-      // Case-insensitive platform match + fallback without status filter (mirrors mobile fix 6548a90)
+      // Find social account — use specific account_id if provided, else smart-default
+      // (prefer company/business/page over personal, with LinkedIn product→page mapping).
       const normalizedChannel = String(channel).toLowerCase();
-      let socialAccountQuery = db
-        .from('social_accounts')
-        .select('id, platform, platform_account_id, account_type, account_name, status')
-        .eq('user_id', user_id)
-        .ilike('platform', normalizedChannel)
-        .eq('status', 'active');
-      if (directAccountId) {
-        socialAccountQuery = socialAccountQuery.eq('id', directAccountId);
-      }
-      let { data: socialAccount } = await socialAccountQuery
-        .limit(1)
-        .maybeSingle();
+      let socialAccount: any = null;
 
-      // Fallback: retry without status filter (accounts may be 'connected' instead of 'active')
-      if (!socialAccount) {
-        console.log(`[publish-social] No active ${channel} account — retrying without status filter`);
-        let fallbackQuery = db
+      if (directAccountId) {
+        const { data } = await db
           .from('social_accounts')
           .select('id, platform, platform_account_id, account_type, account_name, status')
           .eq('user_id', user_id)
-          .ilike('platform', normalizedChannel);
-        if (directAccountId) {
-          fallbackQuery = fallbackQuery.eq('id', directAccountId);
-        }
-        const { data: fallbackAccount } = await fallbackQuery
+          .eq('id', directAccountId)
           .limit(1)
           .maybeSingle();
-        socialAccount = fallbackAccount;
+        socialAccount = data;
+      } else {
+        // Fetch all matching accounts; prefer 'active', fall back to any status
+        const { data: activeAccounts } = await db
+          .from('social_accounts')
+          .select('id, platform, platform_account_id, account_type, account_name, status')
+          .eq('user_id', user_id)
+          .ilike('platform', normalizedChannel)
+          .eq('status', 'active');
+        let candidates = activeAccounts ?? [];
+        if (candidates.length === 0) {
+          console.log(`[publish-social] No active ${channel} account — retrying without status filter`);
+          const { data: anyAccounts } = await db
+            .from('social_accounts')
+            .select('id, platform, platform_account_id, account_type, account_name, status')
+            .eq('user_id', user_id)
+            .ilike('platform', normalizedChannel);
+          candidates = anyAccounts ?? [];
+        }
+        socialAccount = pickAccount(candidates, normalizedChannel, directProductKey);
+        if (socialAccount) {
+          console.log(`[publish-social] Picked ${channel} account: type=${socialAccount.account_type} name="${socialAccount.account_name}" (productKey=${directProductKey || 'n/a'})`);
+        }
       }
 
       if (!socialAccount) {

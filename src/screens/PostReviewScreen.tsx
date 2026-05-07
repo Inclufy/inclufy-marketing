@@ -21,6 +21,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useCapturePosts, useUpdatePost, usePublishPost, useBatchPublish, useDeletePost } from '../hooks/useEventPosts';
 import { uploadMedia } from '../hooks/useCaptures';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { VideoView, useVideoPlayer } from 'expo-video';
 import { useEvent } from '../hooks/useEvents';
 import { aiService } from '../services/ai.service';
 import { supabase } from '../services/supabase';
@@ -47,6 +48,30 @@ const channelConfig: Record<Channel, { label: string; color: string; icon: strin
   tiktok: { label: 'TikTok', color: '#000000', icon: 'logo-tiktok' },
   whatsapp: { label: 'WhatsApp', color: '#25D366', icon: 'logo-whatsapp' },
 };
+
+// Inline video preview — uses expo-video. Defined at module level so the hook
+// has a stable identity across renders.
+function VideoPreview({
+  source,
+  style,
+}: {
+  source: string;
+  style?: any;
+}) {
+  const player = useVideoPlayer(source, (p) => {
+    p.loop = true;
+    p.muted = true;
+  });
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      contentFit="cover"
+      nativeControls
+      allowsPictureInPicture={false}
+    />
+  );
+}
 
 export default function PostReviewScreen() {
   const { t } = useTranslation();
@@ -186,6 +211,52 @@ export default function PostReviewScreen() {
 
   // ── Language select ───────────────────────────────────────────────────────
   const [postLang, setPostLang] = useState<Record<string, string>>({});
+
+  // Detect language of free text via marker-word frequency. Returns one of the
+  // supported codes (nl/en/fr/de/es). Used to initialise the language flag so it
+  // visually matches the AI-generated content (Bug 7) instead of always defaulting
+  // to 'nl' when the AI in fact produced English.
+  const detectLang = React.useCallback((text: string | null | undefined): string => {
+    const s = (text || '').toLowerCase();
+    if (s.length < 10) return 'nl';
+    const markers: Record<string, RegExp[]> = {
+      nl: [/\b(de|het|een|en|maar|wij|onze|jouw|voor|met|dat|niet|wel|ook)\b/g],
+      en: [/\b(the|and|with|our|your|for|that|not|this|are|to|of|in|is)\b/g],
+      fr: [/\b(le|la|les|un|une|de|et|nous|notre|votre|pour|avec|que|pas)\b/g],
+      de: [/\b(der|die|das|und|mit|unser|euer|für|nicht|ist|wir)\b/g],
+      es: [/\b(el|la|los|las|un|una|y|nuestro|para|con|que|no|es)\b/g],
+    };
+    let best: string = 'nl';
+    let bestCount = 0;
+    for (const [code, regexes] of Object.entries(markers)) {
+      const count = regexes.reduce((acc, re) => acc + (s.match(re)?.length ?? 0), 0);
+      if (count > bestCount) {
+        bestCount = count;
+        best = code;
+      }
+    }
+    return best;
+  }, []);
+
+  // Initialise postLang based on detected language of each post on first render.
+  // Only sets keys we don't already have (so explicit user choice is preserved).
+  React.useEffect(() => {
+    if (!posts || posts.length === 0) return;
+    setPostLang((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const p of posts) {
+        if (!next[p.id]) {
+          next[p.id] = detectLang(p.text_content);
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+    // posts is stable per query; intentionally only depend on length to avoid
+    // re-running every time the query refetches the same data.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [posts?.length]);
   const [translating, setTranslating] = useState<string | null>(null); // postId
 
   // ── First comment draft ───────────────────────────────────────────────────
@@ -311,6 +382,7 @@ export default function PostReviewScreen() {
 
   // ── Account selection for publishing ─────────────────────────────────
   const [showAccountPicker, setShowAccountPicker] = useState(false);
+  const [pickerSelectedIds, setPickerSelectedIds] = useState<Set<string>>(new Set());
   const [pendingPublishPost, setPendingPublishPost] = useState<EventPost | null>(null);
   const [availableAccounts, setAvailableAccounts] = useState<any[]>([]);
   // Track which account was used to publish each post (postId → account info)
@@ -328,13 +400,13 @@ export default function PostReviewScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return [];
       // Filter out account types that cannot actually publish via API:
-      // - Instagram 'personal' — Meta Graph API requires Business/Creator accounts
       // - any 'manual' — no OAuth token, can't API-publish
-      const isPublishable = (acc: any) => {
-        if (acc.account_type === 'manual') return false;
-        if (channel === 'instagram' && acc.account_type === 'personal') return false;
-        return true;
-      };
+      // NOTE: Instagram 'personal' rows are now SHOWN with a warning badge in the
+      // picker (rather than hidden) because legacy OAuth runs may have miscoded
+      // a Business account as 'personal'. The picker surfaces a warning and the
+      // user can decide whether to attempt publishing — Meta Graph API will
+      // reject it with a clear error if it really is a personal account.
+      const isPublishable = (acc: any) => acc.account_type !== 'manual';
       // Sort: pages/business first, then personal. Used as default preference
       // when the user has multiple accounts connected for a channel.
       const accountPriority = (t: string | null) => {
@@ -688,9 +760,11 @@ export default function PostReviewScreen() {
       await Promise.all(
         posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
-      // Drop the stale localMediaUri (un-flipped local file from LiveCapture) so
-      // the resolution falls through to the new flipped captureImageUrl.
-      setLocalMediaUri(null);
+      // Keep the preview alive by pointing localMediaUri at the just-flipped
+      // local file. This survives the gap between invalidating the cached
+      // signed-URL and the new one being fetched. The next render of the
+      // PostReview screen will show the correct flipped image immediately.
+      setLocalMediaUri(result.uri);
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
     } catch {
@@ -720,7 +794,8 @@ export default function PostReviewScreen() {
       await Promise.all(
         posts.map((p) => updatePost.mutateAsync({ id: p.id, branded_image_url: null })),
       );
-      setLocalMediaUri(null);
+      // Keep preview alive — see flip handler for the same pattern.
+      setLocalMediaUri(result.uri);
       queryClient.invalidateQueries({ queryKey: ['capture', captureId] });
       queryClient.invalidateQueries({ queryKey: ['capture-image-url', captureId] });
     } catch {
@@ -1160,18 +1235,12 @@ export default function PostReviewScreen() {
       doPublish(post, acc?.id, acc);
       return;
     }
-    // Multiple accounts — try to apply per-category preference first
-    const pref = preferredAccountTypeForPost(post);
-    if (pref === 'page') {
-      const pageAcc = accounts.find((a: any) => a.account_type === 'page' || a.account_type === 'business');
-      if (pageAcc) { doPublish(post, pageAcc.id, pageAcc); return; }
-    } else if (pref === 'personal') {
-      const personalAcc = accounts.find((a: any) => a.account_type === 'personal');
-      if (personalAcc) { doPublish(post, personalAcc.id, personalAcc); return; }
-    }
-    // No strong preference, or preferred type not found — show picker
+    // Multiple accounts — ALWAYS show picker so user can consciously choose
+    // (the per-category preference is now used to pre-highlight the suggested
+    // account in the picker UI, but never to auto-publish without consent).
     setPendingPublishPost(post);
     setAvailableAccounts(accounts);
+    setPickerSelectedIds(new Set()); // reset multi-select on each open
     setShowAccountPicker(true);
   };
 
@@ -1277,9 +1346,15 @@ export default function PostReviewScreen() {
                   `Post is opgeslagen als "Goedgekeurd" maar nog niet gepubliceerd op ${channelConfig[post.channel]?.label}.\n\nVerbind je social media accounts via Instellingen → Social Media om automatisch te publiceren.`,
                   [{ text: 'OK' }]
                 );
-              } else if (err?.message?.includes('reconnect') || err?.message?.includes('verlopen')) {
+              } else if (
+                err?.message === 'TOKEN_EXPIRED' ||
+                err?.message?.includes('TOKEN_EXPIRED') ||
+                err?.message?.includes('reconnect') ||
+                err?.message?.includes('verlopen')
+              ) {
                 Alert.alert(
                   '🔑 Token verlopen',
+                  err?.userMessage ||
                   `Je ${channelConfig[post.channel]?.label} verbinding is verlopen.\n\nGa naar Instellingen → Social Media en koppel je account opnieuw.`,
                   [{ text: 'OK' }]
                 );
@@ -1516,30 +1591,30 @@ export default function PostReviewScreen() {
             >
               {/* Media preview */}
               {isVideo ? (
-                // Video capture — show a branded video card (no inline player needed)
-                <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
-                  <View style={{
-                    width: 64, height: 64, borderRadius: 32,
-                    backgroundColor: 'rgba(124,58,237,0.2)',
-                    justifyContent: 'center', alignItems: 'center', marginBottom: 8,
-                  }}>
-                    <Ionicons name="videocam" size={32} color={colors.primary} />
+                captureImageUrl ? (
+                  <View style={[styles.imagePlaceholder, { backgroundColor: '#000', padding: 0, overflow: 'hidden' }]}>
+                    <VideoPreview source={captureImageUrl} style={{ width: '100%', height: '100%' }} />
+                    <TouchableOpacity
+                      style={[styles.addImageBtn, { position: 'absolute', bottom: 12, right: 12, backgroundColor: 'rgba(0,0,0,0.6)' }]}
+                      onPress={() => handleAddExtraImage(post)}
+                      disabled={uploadingImage}
+                    >
+                      {uploadingImage
+                        ? <ActivityIndicator size="small" color="#fff" />
+                        : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <Ionicons name="image-outline" size={15} color="#fff" />
+                            <Text style={[styles.addImageBtnText, { color: '#fff' }]}>Thumbnail</Text>
+                          </View>}
+                    </TouchableOpacity>
                   </View>
-                  <Text style={[styles.imagePlaceholderText, { color: '#fff', fontWeight: fontWeight.semibold, fontSize: fontSize.md }]}>
-                    Video opname
-                  </Text>
-                  <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.5)' }]}>
-                    Voeg een afbeelding toe als thumbnail
-                  </Text>
-                  <TouchableOpacity style={styles.addImageBtn} onPress={() => handleAddExtraImage(post)} disabled={uploadingImage}>
-                    {uploadingImage
-                      ? <ActivityIndicator size="small" color={colors.primary} />
-                      : <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons name="image-outline" size={15} color={colors.primary} />
-                          <Text style={styles.addImageBtnText}>Thumbnail toevoegen</Text>
-                        </View>}
-                  </TouchableOpacity>
-                </View>
+                ) : (
+                  <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
+                    <ActivityIndicator size="large" color={colors.primary} />
+                    <Text style={[styles.imagePlaceholderText, { color: 'rgba(255,255,255,0.6)', marginTop: 8 }]}>
+                      Video laden...
+                    </Text>
+                  </View>
+                )
               ) : isAudio ? (
                 // Audio capture — show a branded audio card
                 <View style={[styles.imagePlaceholder, { backgroundColor: '#0a0a0a' }]}>
@@ -1962,10 +2037,19 @@ export default function PostReviewScreen() {
               {/* ── Instagram format picker (feed / story / reel) ────── */}
               {post.channel === 'instagram' && (() => {
                 const igFmt = igFormatDraft[post.id] ?? 'feed';
-                const IG_FORMATS: Array<{ value: 'feed' | 'story' | 'reel'; label: string; icon: string }> = [
+                // Reel REQUIRES a video; disable the chip when capture is photo/audio.
+                // Story works with both image+video, so always allowed.
+                const reelDisabled = mediaType !== 'video';
+                const IG_FORMATS: Array<{ value: 'feed' | 'story' | 'reel'; label: string; icon: string; disabled?: boolean; disabledReason?: string }> = [
                   { value: 'feed', label: 'Feed', icon: 'grid-outline' },
                   { value: 'story', label: 'Story', icon: 'phone-portrait-outline' },
-                  { value: 'reel', label: 'Reel', icon: 'film-outline' },
+                  {
+                    value: 'reel',
+                    label: 'Reel',
+                    icon: 'film-outline',
+                    disabled: reelDisabled,
+                    disabledReason: 'Reel vereist video',
+                  },
                 ];
                 const hint = igFmt === 'story'
                   ? 'Story: geen caption, alleen afbeelding of video'
@@ -1981,12 +2065,23 @@ export default function PostReviewScreen() {
                       </Text>
                     </View>
                     <View style={{ flexDirection: 'row', gap: 6 }}>
-                      {IG_FORMATS.map(({ value, label, icon }) => {
+                      {IG_FORMATS.map(({ value, label, icon, disabled, disabledReason }) => {
                         const isActive = igFmt === value;
+                        const isDisabled = !!disabled;
                         return (
                           <TouchableOpacity
                             key={value}
-                            onPress={() => handleIgFormatChange(post, value)}
+                            disabled={isDisabled}
+                            onPress={() => {
+                              if (isDisabled) {
+                                Alert.alert(
+                                  `${label} niet beschikbaar`,
+                                  disabledReason || `${label} is niet beschikbaar voor dit mediatype.`,
+                                );
+                                return;
+                              }
+                              handleIgFormatChange(post, value);
+                            }}
                             style={{
                               flex: 1,
                               flexDirection: 'row',
@@ -1998,6 +2093,7 @@ export default function PostReviewScreen() {
                               borderWidth: 1.5,
                               borderColor: isActive ? (config?.color || '#E4405F') : colors.border,
                               backgroundColor: isActive ? (config?.color || '#E4405F') + '18' : 'transparent',
+                              opacity: isDisabled ? 0.4 : 1,
                             }}
                           >
                             <Ionicons
@@ -2782,6 +2878,15 @@ export default function PostReviewScreen() {
 
             // Shared image renderer with swipeable carousel for multi-image
             const PreviewImage = ({ height, borderRadius: br }: { height: number; borderRadius?: number }) => {
+              // For video captures, render the inline video player instead of an image.
+              // captureImageUrl resolves to the video signed URL when mediaType === 'video'.
+              if (isPreviewVideo && captureImageUrl) {
+                return (
+                  <View style={{ width: '100%', height, borderRadius: br ?? 0, overflow: 'hidden', backgroundColor: '#000' }}>
+                    <VideoPreview source={captureImageUrl} style={{ width: '100%', height: '100%' }} />
+                  </View>
+                );
+              }
               // Deduplicated preview images (already computed above)
               const imgs = previewImages.length > 0 ? previewImages : [];
               const hasMultiple = imgs.length > 1;
@@ -2789,8 +2894,8 @@ export default function PostReviewScreen() {
               if (imgs.length === 0) {
                 return (
                   <View style={{ width: '100%', height, borderRadius: br ?? 0, overflow: 'hidden', backgroundColor: '#111', justifyContent: 'center', alignItems: 'center', gap: 6 }}>
-                    <Ionicons name="image-outline" size={44} color="#555" />
-                    <Text style={{ fontSize: 12, color: '#555' }}>Geen afbeelding</Text>
+                    <Ionicons name={isPreviewVideo ? 'videocam-outline' : 'image-outline'} size={44} color="#555" />
+                    <Text style={{ fontSize: 12, color: '#555' }}>{isPreviewVideo ? 'Video laden...' : 'Geen afbeelding'}</Text>
                   </View>
                 );
               }
@@ -3363,39 +3468,111 @@ export default function PostReviewScreen() {
                 Kies account
               </Text>
               <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
-                Selecteer het account waarop je wilt publiceren
+                Tap een account om direct te publiceren, of vink meerdere aan om naar alle te posten.
               </Text>
-              {availableAccounts.map((acc) => (
+              {availableAccounts.map((acc) => {
+                const isSelected = pickerSelectedIds.has(acc.id);
+                const isIgPersonalWarn = pendingPublishPost?.channel === 'instagram' && acc.account_type === 'personal';
+                return (
+                  <View
+                    key={acc.id}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 12,
+                      backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.md,
+                      marginBottom: 8, borderWidth: 1, borderColor: isSelected ? colors.primary : colors.border,
+                    }}
+                  >
+                    {/* Multi-select checkbox */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setPickerSelectedIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(acc.id)) next.delete(acc.id); else next.add(acc.id);
+                          return next;
+                        });
+                      }}
+                      style={{
+                        width: 24, height: 24, borderRadius: 6,
+                        borderWidth: 2,
+                        borderColor: isSelected ? colors.primary : colors.border,
+                        backgroundColor: isSelected ? colors.primary : 'transparent',
+                        justifyContent: 'center', alignItems: 'center',
+                      }}
+                    >
+                      {isSelected && <Ionicons name="checkmark" size={16} color="#fff" />}
+                    </TouchableOpacity>
+                    {/* Tap on the rest of the row = single direct publish */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setShowAccountPicker(false);
+                        if (pendingPublishPost) doPublish(pendingPublishPost, acc.id, acc);
+                      }}
+                      style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                    >
+                      {acc.profile_image_url ? (
+                        <Image source={{ uri: acc.profile_image_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
+                      ) : (
+                        <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="person" size={20} color={colors.primary} />
+                        </View>
+                      )}
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold as any }}>
+                          {acc.account_name || acc.platform_account_id}
+                        </Text>
+                        <Text style={{ color: colors.textSecondary, fontSize: fontSize.xs }}>
+                          {acc.account_type === 'page' ? '🏢 Bedrijfspagina' : acc.account_type === 'business' ? '💼 Zakelijk' : '👤 Persoonlijk'}
+                        </Text>
+                        {isIgPersonalWarn && (
+                          <Text style={{ color: '#E0A500', fontSize: fontSize.xs, marginTop: 2 }}>
+                            ⚠️ Vereist Business + FB-koppeling om te publiceren
+                          </Text>
+                        )}
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                    </TouchableOpacity>
+                  </View>
+                );
+              })}
+              {/* Multi-publish button — appears when >0 accounts checked */}
+              {pickerSelectedIds.size > 0 && (
                 <TouchableOpacity
-                  key={acc.id}
-                  onPress={() => {
+                  onPress={async () => {
+                    if (!pendingPublishPost) return;
+                    const post = pendingPublishPost;
+                    const selected = availableAccounts.filter(a => pickerSelectedIds.has(a.id));
                     setShowAccountPicker(false);
-                    if (pendingPublishPost) doPublish(pendingPublishPost, acc.id, acc);
+                    // Publish sequentially. doPublish shows its own confirm Alert per call —
+                    // for multi-publish we bypass that by inlining: we directly call publishPost
+                    // for each selected account. Errors are surfaced after the loop.
+                    const errs: string[] = [];
+                    for (const acc of selected) {
+                      try {
+                        await publishPost.mutateAsync({ postId: post.id, accountId: acc.id });
+                      } catch (e: any) {
+                        errs.push(`${acc.account_name}: ${e?.userMessage || e?.message || 'fout'}`);
+                      }
+                    }
+                    if (errs.length === 0) {
+                      Alert.alert('✅ Gepubliceerd', `Naar ${selected.length} accounts.`);
+                    } else {
+                      Alert.alert(
+                        errs.length === selected.length ? '❌ Mislukt' : '⚠️ Deels gelukt',
+                        errs.join('\n\n'),
+                      );
+                    }
                   }}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 12,
-                    backgroundColor: colors.background, borderRadius: borderRadius.md, padding: spacing.md,
-                    marginBottom: 8, borderWidth: 1, borderColor: colors.border,
+                    backgroundColor: colors.primary,
+                    paddingVertical: spacing.md, borderRadius: borderRadius.md,
+                    alignItems: 'center', marginTop: 4, marginBottom: 4,
                   }}
                 >
-                  {acc.profile_image_url ? (
-                    <Image source={{ uri: acc.profile_image_url }} style={{ width: 40, height: 40, borderRadius: 20 }} />
-                  ) : (
-                    <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primary + '20', justifyContent: 'center', alignItems: 'center' }}>
-                      <Ionicons name="person" size={20} color={colors.primary} />
-                    </View>
-                  )}
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold as any }}>
-                      {acc.account_name || acc.platform_account_id}
-                    </Text>
-                    <Text style={{ color: colors.textSecondary, fontSize: fontSize.xs }}>
-                      {acc.account_type === 'page' ? '🏢 Bedrijfspagina' : acc.account_type === 'business' ? '💼 Zakelijk' : '👤 Persoonlijk'}
-                    </Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+                  <Text style={{ color: '#fff', fontSize: fontSize.md, fontWeight: fontWeight.bold as any }}>
+                    Publiceer naar {pickerSelectedIds.size} accounts
+                  </Text>
                 </TouchableOpacity>
-              ))}
+              )}
               <TouchableOpacity onPress={() => setShowAccountPicker(false)} style={{ alignItems: 'center', paddingVertical: spacing.sm, marginTop: 4 }}>
                 <Text style={{ color: colors.textSecondary, fontSize: fontSize.sm }}>Annuleren</Text>
               </TouchableOpacity>

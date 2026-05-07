@@ -42,6 +42,8 @@ PODS:
     - ZXingObjC/PDF417
   - ExpoClipboard (55.0.13):
     - ExpoModulesCore
+  - ExpoDocumentPicker (55.0.13):
+    - ExpoModulesCore
   - ExpoDomWebView (55.0.5):
     - ExpoModulesCore
   - ExpoFileSystem (55.0.17):
@@ -111,7 +113,11 @@ PODS:
   - ExpoRouter (55.0.13):
     - ExpoModulesCore
     - RNScreens
+  - ExpoSensors (55.0.13):
+    - ExpoModulesCore
   - ExpoSymbols (55.0.7):
+    - ExpoModulesCore
+  - ExpoVideo (55.0.16):
     - ExpoModulesCore
   - ExpoWebBrowser (55.0.14):
     - ExpoModulesCore
@@ -2196,6 +2202,7 @@ DEPENDENCIES:
   - ExpoCamera (from `../node_modules/expo-camera/ios`)
   - ExpoCameraBarcodeScanning (from `../node_modules/expo-camera/ios`)
   - ExpoClipboard (from `../node_modules/expo-clipboard/ios`)
+  - ExpoDocumentPicker (from `../node_modules/expo-document-picker/ios`)
   - "ExpoDomWebView (from `../node_modules/@expo/dom-webview/ios`)"
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
@@ -2214,7 +2221,9 @@ DEPENDENCIES:
   - ExpoModulesJSI (from `../node_modules/expo-modules-core`)
   - ExpoNotifications (from `../node_modules/expo-notifications/ios`)
   - ExpoRouter (from `../node_modules/expo-router/ios`)
+  - ExpoSensors (from `../node_modules/expo-sensors/ios`)
   - ExpoSymbols (from `../node_modules/expo-symbols/ios`)
+  - ExpoVideo (from `../node_modules/expo-video/ios`)
   - ExpoWebBrowser (from `../node_modules/expo-web-browser/ios`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
@@ -2330,6 +2339,8 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-camera/ios"
   ExpoClipboard:
     :path: "../node_modules/expo-clipboard/ios"
+  ExpoDocumentPicker:
+    :path: "../node_modules/expo-document-picker/ios"
   ExpoDomWebView:
     :path: "../node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
@@ -2366,8 +2377,12 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo-notifications/ios"
   ExpoRouter:
     :path: "../node_modules/expo-router/ios"
+  ExpoSensors:
+    :path: "../node_modules/expo-sensors/ios"
   ExpoSymbols:
     :path: "../node_modules/expo-symbols/ios"
+  ExpoVideo:
+    :path: "../node_modules/expo-video/ios"
   ExpoWebBrowser:
     :path: "../node_modules/expo-web-browser/ios"
   FBLazyVector:
@@ -2544,6 +2559,7 @@ SPEC CHECKSUMS:
   ExpoCamera: 0ed88db61b7dc54712a98b8baaf415a3be88b76b
   ExpoCameraBarcodeScanning: 1a003bdf373e94e82164b054f440efb2d10f2f38
   ExpoClipboard: 5d1b0cd2686406f21e616f2d9b3431259dee2e6a
+  ExpoDocumentPicker: be59b82799ae30811e3f37a7521d6622baa63a19
   ExpoDomWebView: 2b2fbd9a07de8790569257cbf9dfdaa31cf95c70
   ExpoFileSystem: a0e4a5a09c9c4f84338289b273a172609452dec9
   ExpoFont: cdd7a1d574a376fa003c713eff49e0a4df8672c7
@@ -2562,7 +2578,9 @@ SPEC CHECKSUMS:
   ExpoModulesJSI: 24121c9a2f32d5f6b6ca2f7ff54925be716d5841
   ExpoNotifications: 2e854c961b10f4a642d5159422f73f8561542ba7
   ExpoRouter: e2c56f80102b153c5f8c887b38094ef936c266a2
+  ExpoSensors: 8a6cb82a28ed592cc6923021b39aa4078dea3a53
   ExpoSymbols: 8b63e859ba013df1f2fc666f535fddb3d5270569
+  ExpoVideo: 9e10be01a10776a89ae1f0775445b4e4ba6b09f0
   ExpoWebBrowser: f88a3ba50a025b673236a46d2654a49b985953d6
   FBLazyVector: 427fa1856a481856091061293ce865a75aa4f20f
   hermes-engine: f68af20f22d291924de974e7ce2eee6661cb1cc0

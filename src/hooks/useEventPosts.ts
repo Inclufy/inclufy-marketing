@@ -66,7 +66,13 @@ export function useUpdatePost() {
 export function usePublishPost() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (postId: string) => {
+    // Accept either a bare postId (legacy) or an object specifying which account
+    // to publish to. Without explicit accountId we fall back to the smart default
+    // (first/only account for the channel), but the picker UI now passes accountId
+    // so the user's conscious choice is honoured (fix for Bug 1 / E1 / E4).
+    mutationFn: async (input: string | { postId: string; accountId?: string }) => {
+      const postId = typeof input === 'string' ? input : input.postId;
+      const explicitAccountId = typeof input === 'string' ? undefined : input.accountId;
       // Fetch the post to get channel, text, image, user_id
       const { data: post, error: fetchErr } = await supabase
         .from('go_posts')
@@ -82,19 +88,39 @@ export function usePublishPost() {
       // Normalize channel to lowercase (DB stores 'linkedin', post might have 'LinkedIn')
       const normalizedChannel = post.channel?.toLowerCase();
 
-      const { data: socialAccount, error: socialErr } = await supabase
+      // Branch 1 — explicit account choice from picker
+      let finalAccount: any = null;
+      if (explicitAccountId) {
+        const { data: chosen, error: chosenErr } = await supabase
+          .from('social_accounts')
+          .select('id, platform, account_type, account_name, platform_account_id, status')
+          .eq('id', explicitAccountId)
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (chosenErr) throw chosenErr;
+        if (!chosen) {
+          throw new Error('Gekozen account niet gevonden of niet meer beschikbaar.');
+        }
+        finalAccount = chosen;
+      }
+
+      // Branch 2 — legacy fallback (no explicit account): pick first active row
+      const { data: socialAccount, error: socialErr } = finalAccount
+        ? { data: null, error: null }
+        : await supabase
         .from('social_accounts')
         .select('id, platform, account_type, account_name, platform_account_id, status')
         .eq('user_id', user.id)
         .eq('status', 'active')
         .ilike('platform', normalizedChannel)
+        .order('account_type', { ascending: true })
         .limit(1)
         .maybeSingle();
 
       if (socialErr) throw socialErr;
 
       // If no active account found, try without status filter (account might be connected but not 'active')
-      let finalAccount = socialAccount;
+      if (!finalAccount) finalAccount = socialAccount;
       if (!finalAccount || (finalAccount.status !== 'active' && finalAccount.status !== 'connected')) {
         const { data: anyAccount } = await supabase
           .from('social_accounts')
@@ -177,11 +203,30 @@ export function usePublishPost() {
           || (typeof pubErr === 'object' && 'message' in pubErr ? (pubErr as any).message : null)
           || String(pubErr);
         const finalMsg = errorMsg || 'Publicatie mislukt — edge function fout';
+        // Detect expired/invalid OAuth tokens and surface a clear actionable error
+        // (previously: such errors fell through as generic "publish failed" or were
+        // mistaken for "manual mode"). Throws a typed error the UI can match on.
+        const lower = finalMsg.toLowerCase();
+        const tokenExpired =
+          lower.includes('token') && (
+            lower.includes('expired') || lower.includes('invalid') ||
+            lower.includes('revoked') || lower.includes('unauthorized') ||
+            lower.includes('401')
+          );
+        const persistMsg = tokenExpired
+          ? `TOKEN_EXPIRED: ${finalMsg}`
+          : finalMsg;
         // Persist error so it's visible in the DB for debugging (previously lost on throw path)
         await supabase
           .from('go_posts')
-          .update({ publish_error: finalMsg })
+          .update({ publish_error: persistMsg })
           .eq('id', postId);
+        if (tokenExpired) {
+          throw Object.assign(new Error('TOKEN_EXPIRED'), {
+            userMessage: `De koppeling met ${post.channel} is verlopen. Ga naar Instellingen → Social Media en verbind opnieuw.`,
+            originalMessage: finalMsg,
+          });
+        }
         throw new Error(finalMsg);
       }
 
