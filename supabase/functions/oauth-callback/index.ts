@@ -722,8 +722,21 @@ Deno.serve(async (req) => {
         `https://graph.threads.net/v1.0/me?fields=id,username,name&access_token=${accessToken}`,
       );
       const profile = profileRes.ok ? await profileRes.json() : {};
-      profileId = profile.id ?? threadsUserId;
+      console.log('[Threads] Profile response:', JSON.stringify(profile));
+      console.log('[Threads] tokenData.user_id:', threadsUserId);
+
+      profileId = String(profile.id ?? threadsUserId ?? '');
       profileName = profile.username || profile.name || 'Threads User';
+
+      // Threads sometimes returns no id in /me — fall back to a synthetic ID
+      // so the insert at least has a unique platform_account_id and the
+      // user gets visible feedback in Settings (status='active' even if
+      // profile fetch was incomplete). User can disconnect + reconnect.
+      if (!profileId) {
+        profileId = `threads_${Date.now()}`;
+        console.warn('[Threads] No profile id from API — using synthetic:', profileId);
+      }
+      console.log('[Threads] Final profileId:', profileId, 'profileName:', profileName);
 
     } else if (platform === 'instagram-direct') {
       // ─── Instagram Direct Login (NEW 2024+ flow) ──────────────────
