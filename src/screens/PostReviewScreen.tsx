@@ -1318,26 +1318,66 @@ export default function PostReviewScreen() {
               }
               const pubResult = await publishPost.mutateAsync(post.id);
               if ((pubResult as any)?.manual) {
-                const manualMsg = `Post is opgeslagen als gepubliceerd. Kopieer de tekst en plak deze handmatig op ${channelConfig[post.channel]?.label}.\n\nVoor automatisch publiceren: koppel je account via OAuth in Instellingen.`;
-                if (post.channel === 'whatsapp') {
-                  const postText = post.text_content + ((post.hashtags?.length ?? 0) > 0 ? '\n\n' + post.hashtags.join(' ') : '');
-                  const waUrl = `whatsapp://send?text=${encodeURIComponent(postText)}`;
-                  const waWebUrl = `https://wa.me/?text=${encodeURIComponent(postText)}`;
+                // Build the post text once for clipboard + deep-link reuse
+                const postText = post.text_content + ((post.hashtags?.length ?? 0) > 0 ? '\n\n' + post.hashtags.join(' ') : '');
+                const platformLabel = channelConfig[post.channel]?.label ?? post.channel;
+
+                // Per-channel manual-share configuration
+                type ManualConfig = {
+                  appUrl?: string;        // native deep-link (preferred)
+                  webFallback: string;    // browser fallback
+                  buttonLabel: string;
+                  copyOnTap: boolean;     // copy text to clipboard before opening app
+                };
+                const MANUAL_CONFIG: Record<string, ManualConfig | undefined> = {
+                  whatsapp: {
+                    appUrl: `whatsapp://send?text=${encodeURIComponent(postText)}`,
+                    webFallback: `https://wa.me/?text=${encodeURIComponent(postText)}`,
+                    buttonLabel: 'Open WhatsApp',
+                    copyOnTap: false,
+                  },
+                  snapchat: {
+                    // Snap Kit Creative Kit SDK was deprecated 2023; pure URL-scheme
+                    // can only open the app. We copy the post text to clipboard so
+                    // user can paste it as a Snap text/sticker after Snap opens.
+                    appUrl: 'snapchat://',
+                    webFallback: 'https://www.snapchat.com/',
+                    buttonLabel: 'Open Snapchat',
+                    copyOnTap: true,
+                  },
+                };
+                const manualConfig = MANUAL_CONFIG[post.channel];
+
+                if (manualConfig) {
+                  const manualMsg = manualConfig.copyOnTap
+                    ? `Post-tekst is naar je klembord gekopieerd. ${platformLabel} opent nu — plak de tekst in je nieuwe post.`
+                    : `Post is opgeslagen als gepubliceerd. Tap "${manualConfig.buttonLabel}" om de tekst te delen.`;
                   Alert.alert(
-                    '📋 Klaar om te posten',
+                    '📋 Klaar om te delen',
                     manualMsg,
                     [
                       { text: 'OK', style: 'cancel' },
                       {
-                        text: 'Open WhatsApp',
-                        onPress: () =>
-                          Linking.canOpenURL(waUrl)
-                            .then((supported) => Linking.openURL(supported ? waUrl : waWebUrl))
-                            .catch(() => Linking.openURL(waWebUrl)),
+                        text: manualConfig.buttonLabel,
+                        onPress: async () => {
+                          try {
+                            if (manualConfig.copyOnTap) {
+                              const Clipboard = await import('expo-clipboard');
+                              await Clipboard.setStringAsync(postText);
+                            }
+                            const url = manualConfig.appUrl ?? manualConfig.webFallback;
+                            const supported = await Linking.canOpenURL(url);
+                            await Linking.openURL(supported ? url : manualConfig.webFallback);
+                          } catch (e) {
+                            await Linking.openURL(manualConfig.webFallback).catch(() => {});
+                          }
+                        },
                       },
                     ],
                   );
                 } else {
+                  // Generic fallback for any future manual-share platform without specific deep-link
+                  const manualMsg = `Post is opgeslagen als gepubliceerd. Kopieer de tekst en plak deze handmatig op ${platformLabel}.\n\nVoor automatisch publiceren: koppel je account via OAuth in Instellingen.`;
                   Alert.alert('📋 Klaar om te posten', manualMsg);
                 }
               } else {

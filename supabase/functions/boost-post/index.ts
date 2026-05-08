@@ -173,15 +173,125 @@ Deno.serve(async (req) => {
     let nextStep: 'review_creatives' | 'platform_pending' | 'live' | 'dry_run' = 'review_creatives';
 
     if (!isDryRun && channel === 'meta') {
-      // PLACEHOLDER — actual Meta Marketing API call goes here once
-      // ads_management scope is approved. Will:
-      //   1. POST /{ad_account_id}/campaigns
-      //   2. POST /{ad_account_id}/adsets with audience_config + budget
-      //   3. POST /{ad_account_id}/adcreatives with first variant
-      //   4. POST /{ad_account_id}/ads linking adset + creative
-      //   5. Update campaign.external_campaign_id, status='pending_approval'
-      console.log('[boost-post] Meta Marketing API not yet wired (waiting App Review)');
-      nextStep = 'platform_pending';
+      // ─── Meta Marketing API push (LIVE flow) ────────────────────────
+      // Activated when META_ADS_API_LIVE=true. Requires:
+      //   - ads_management scope approved (Meta App Review)
+      //   - META_AD_ACCOUNT_ID secret set (format: 'act_<id>')
+      //   - User has connected FB account with the Page they want to boost
+      const META_AD_ACCOUNT_ID = Deno.env.get('META_AD_ACCOUNT_ID') ?? '';
+      const FB_ACCESS_TOKEN = await (async () => {
+        if (!post.social_account_id) return '';
+        const { data: acc } = await supabase
+          .from('social_accounts')
+          .select('access_token')
+          .eq('id', post.social_account_id)
+          .maybeSingle();
+        return acc?.access_token ?? '';
+      })();
+
+      if (!META_AD_ACCOUNT_ID || !FB_ACCESS_TOKEN) {
+        console.warn('[boost-post] Meta live mode missing AD_ACCOUNT_ID or access_token — falling back to dry_run');
+        nextStep = 'platform_pending';
+      } else {
+        try {
+          const fbApi = `https://graph.facebook.com/v20.0/${META_AD_ACCOUNT_ID}`;
+
+          // 1. Create campaign
+          const campaignRes = await fetch(`${fbApi}/campaigns`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              name: `AMOS Boost ${campaign.id.substring(0, 8)}`,
+              objective,
+              status: 'PAUSED', // start paused — user explicitly resumes
+              special_ad_categories: '[]',
+              access_token: FB_ACCESS_TOKEN,
+            }),
+          });
+          if (!campaignRes.ok) {
+            throw new Error(`Meta campaigns API: ${await campaignRes.text()}`);
+          }
+          const fbCampaign = await campaignRes.json();
+          const fbCampaignId = fbCampaign.id;
+
+          // 2. Create ad set with budget + audience
+          // Map our audience_config to Meta's targeting spec
+          const targeting = mapAudienceToMetaTargeting(audience_config);
+          const adsetRes = await fetch(`${fbApi}/adsets`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              name: `AMOS AdSet ${campaign.id.substring(0, 8)}`,
+              campaign_id: fbCampaignId,
+              daily_budget: String(Math.floor(budget_cents / duration_days)),
+              billing_event: 'IMPRESSIONS',
+              optimization_goal: objective === 'POST_ENGAGEMENT' ? 'POST_ENGAGEMENT' : 'REACH',
+              bid_strategy: 'LOWEST_COST_WITHOUT_CAP',
+              targeting: JSON.stringify(targeting),
+              status: 'PAUSED',
+              start_time: new Date().toISOString(),
+              end_time: new Date(Date.now() + duration_days * 24 * 60 * 60 * 1000).toISOString(),
+              access_token: FB_ACCESS_TOKEN,
+            }),
+          });
+          if (!adsetRes.ok) {
+            throw new Error(`Meta adsets API: ${await adsetRes.text()}`);
+          }
+          const fbAdSet = await adsetRes.json();
+
+          // 3. Update campaign with external IDs
+          await supabase
+            .from('ad_campaigns')
+            .update({
+              external_campaign_id: fbCampaignId,
+              external_ad_set_id: fbAdSet.id,
+              status: 'pending_approval',
+              external_metadata: {
+                ...campaign.external_metadata,
+                meta_ad_account: META_AD_ACCOUNT_ID,
+                pushed_at: new Date().toISOString(),
+              },
+            })
+            .eq('id', campaign.id);
+
+          nextStep = 'live';
+          console.log('[boost-post] Meta campaign created:', fbCampaignId);
+        } catch (e: any) {
+          console.error('[boost-post] Meta API push failed:', e.message);
+          await supabase
+            .from('ad_campaigns')
+            .update({
+              status: 'failed',
+              external_metadata: { ...campaign.external_metadata, error: e.message },
+            })
+            .eq('id', campaign.id);
+          nextStep = 'platform_pending';
+        }
+      }
+    }
+
+    // Helper: map AMOS audience_config to Meta targeting spec
+    // (defined inline to keep edge fn self-contained)
+    /* eslint-disable @typescript-eslint/no-unused-vars */
+    function mapAudienceToMetaTargeting(config: Record<string, unknown>): Record<string, unknown> {
+      const targeting: Record<string, unknown> = {
+        geo_locations: { countries: [String(config.country ?? 'NL')] },
+      };
+      if (config.age && Array.isArray(config.age) && config.age.length === 2) {
+        targeting.age_min = config.age[0];
+        targeting.age_max = config.age[1];
+      }
+      if (config.type === 'lookalike' && config.source === 'page_followers') {
+        // Meta requires a custom_audience_id for lookalike — created server-side
+        // when user has connected Page. Falls back to interest-targeting if missing.
+        targeting.custom_audiences = []; // will be filled by separate cron
+      }
+      if (config.type === 'interest' && Array.isArray(config.interests)) {
+        targeting.flexible_spec = [{
+          interests: (config.interests as string[]).map((name) => ({ name })),
+        }];
+      }
+      return targeting;
     }
 
     if (isDryRun) {

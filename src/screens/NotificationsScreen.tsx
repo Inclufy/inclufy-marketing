@@ -34,6 +34,7 @@ const TYPE_CONFIG: Record<string, NotifConfig> = {
   ai_suggestion:  { icon: 'sparkles',         color: '#9333EA' },
   post_published: { icon: 'checkmark-circle', color: '#10B981' },
   event_update:   { icon: 'calendar',         color: '#3B82F6' },
+  boost_candidate:{ icon: 'rocket',           color: '#F59E0B' }, // Capture-to-Ad top-performer
   system:         { icon: 'notifications',    color: '#6B7280' },
 };
 
@@ -327,6 +328,21 @@ export default function NotificationsScreen() {
 
   const handleGenericPress = (notification: AppNotification) => {
     markRead.mutate(notification.id);
+
+    // Capture-to-Ad: boost_candidate notifications open BoostFlow wizard
+    // for the related post. Inserted by ad-performance-monitor cron when a
+    // post is detected as top-performer (3x baseline engagement).
+    if (notification.type === 'boost_candidate') {
+      const postId = (notification as any).related_post_id ?? notification.data?.post_id;
+      if (postId) {
+        navigation.navigate('BoostFlow', {
+          postId: String(postId),
+          channel: 'meta', // boost_candidate currently only triggers for FB/IG
+        });
+        return;
+      }
+    }
+
     if (notification.data.route) {
       navigation.navigate(notification.data.route as any);
     }
