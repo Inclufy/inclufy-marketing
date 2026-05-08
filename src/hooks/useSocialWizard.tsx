@@ -38,7 +38,8 @@ export type PlatformKey =
   | 'tiktok'
   | 'snapchat'
   | 'pinterest'
-  | 'threads';
+  | 'threads'
+  | 'whatsapp';
 
 export type ConnectionStatus =
   | 'pending'      // initial / not started

@@ -45,6 +45,14 @@ function getPlatformState(p: PlatformKey, accounts: SocialAccount[]): {
     };
   }
 
+  if (p === 'whatsapp') {
+    return {
+      state: 'manual',
+      message: 'Manueel delen',
+      details: 'WhatsApp Status / Channel via deep-link — AMOS opent WhatsApp met je content gereed',
+    };
+  }
+
   if (p === 'facebook') {
     const hasPage = platformAccounts.some(a => a.account_type === 'page');
     if (hasPage) {

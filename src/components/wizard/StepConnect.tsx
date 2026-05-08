@@ -15,6 +15,19 @@ const PLATFORM_META: Record<PlatformKey, { label: string; icon: keyof typeof imp
   pinterest: { label: 'Pinterest', icon: 'logo-pinterest', color: '#E60023' },
   threads:   { label: 'Threads',   icon: 'at-circle',      color: '#000000' },
   snapchat:  { label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00' },
+  whatsapp:  { label: 'WhatsApp',  icon: 'logo-whatsapp',  color: '#25D366' },
+};
+
+// Manual-share platforms — no OAuth, deep-link only
+const MANUAL_PLATFORMS: Record<PlatformKey, { description: string } | undefined> = {
+  facebook: undefined,
+  instagram: undefined,
+  linkedin: undefined,
+  tiktok: undefined,
+  pinterest: undefined,
+  threads: undefined,
+  snapchat: { description: 'Snapchat heeft geen publieke API voor automatische posts. Bij publiceren opent AMOS de Snap-app met je content — jij plaatst hem dan met één tik.' },
+  whatsapp: { description: 'WhatsApp Status en Channels werken via deep-link. AMOS opent WhatsApp met je content gereed — jij kiest de status of channel.' },
 };
 
 const SCOPE_LIST: Record<PlatformKey, string[]> = {
@@ -72,7 +85,7 @@ export default function StepConnect({
   useEffect(() => {
     (async () => {
       for (const p of selectedPlatforms) {
-        if (p === 'snapchat') continue;
+        if (MANUAL_PLATFORMS[p]) continue; // skip Snapchat, WhatsApp
         const explanation = await fetchPrerequisiteExplain(p, 'nl');
         setPrereqs(prev => ({ ...prev, [p]: explanation }));
       }
@@ -170,12 +183,11 @@ export default function StepConnect({
         const tiktokScope = 'user.info.basic,video.publish,video.upload';
         authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(tiktokScope)}&response_type=code&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'pinterest') {
-        // Pinterest OAuth — requires Pinterest Developer App registered + verified.
-        // Set EXPO_PUBLIC_PINTEREST_CLIENT_ID via EAS secret after registration.
-        const pinClientId = process.env.EXPO_PUBLIC_PINTEREST_CLIENT_ID || '';
-        if (!pinClientId) {
-          throw new Error('Pinterest is nog niet geconfigureerd (Developer App registratie pending).');
-        }
+        // Pinterest OAuth — App-ID 1568759 (AMOS by Inclufy).
+        // Note: Trial approval pending (24-48u) — until then OAuth will
+        // start but Pinterest's API may reject scopes. Standard access
+        // unlocks pins:write after Pinterest's review.
+        const pinClientId = process.env.EXPO_PUBLIC_PINTEREST_CLIENT_ID || '1568759';
         const pinScopes = 'pins:read,pins:write,boards:read,boards:write,user_accounts:read';
         authUrl = `https://www.pinterest.com/oauth/?response_type=code&client_id=${pinClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(pinScopes)}&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'threads') {
@@ -185,11 +197,12 @@ export default function StepConnect({
         const threadsAppId = process.env.EXPO_PUBLIC_THREADS_APP_ID || '952201194080195';
         const threadsScopes = 'threads_basic,threads_content_publish';
         authUrl = `https://www.threads.net/oauth/authorize?client_id=${threadsAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(threadsScopes)}&response_type=code&state=${encodeURIComponent(state)}`;
-      } else if (platformKey === 'snapchat') {
-        // Snapchat: no public publish API exists since Snap Kit deprecated 2023.
-        // We don't open OAuth — instead the wizard's "Connect Snapchat" tap should
-        // route to a manual-share flow handled in PostReview (deep-link to Snap app).
-        throw new Error('Snapchat ondersteunt geen API-koppeling. Gebruik manueel delen via de Snapchat-app.');
+      } else if (platformKey === 'snapchat' || platformKey === 'whatsapp') {
+        // Manual-share platforms — no public publish API.
+        // The wizard renders these as info-cards (no OAuth button), so this
+        // branch is only hit if someone calls connect() programmatically.
+        // PostReview handles the actual share via deep-link (snapchat:// or wa.me/).
+        throw new Error(`${platformKey === 'snapchat' ? 'Snapchat' : 'WhatsApp'} werkt via manueel delen — geen koppeling nodig.`);
       }
 
       if (!authUrl) throw new Error('OAuth niet beschikbaar voor dit platform');
@@ -272,8 +285,9 @@ export default function StepConnect({
 
       <View style={{ gap: spacing.md }}>
         {selectedPlatforms.map((p) => {
-          // Snapchat — special case: no OAuth, manual share via deep-link only
-          if (p === 'snapchat') {
+          // Manual-share platforms (Snapchat, WhatsApp) — no OAuth, deep-link only
+          const manualConfig = MANUAL_PLATFORMS[p];
+          if (manualConfig) {
             const meta = PLATFORM_META[p];
             return (
               <View
@@ -311,7 +325,7 @@ export default function StepConnect({
                     </Text>
                   </View>
                   <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 }}>
-                    Snapchat heeft geen publieke API voor automatische posts. Bij publiceren opent AMOS de Snap-app met je content — jij plaatst hem dan met één tik.
+                    {manualConfig.description}
                   </Text>
                 </View>
               </View>

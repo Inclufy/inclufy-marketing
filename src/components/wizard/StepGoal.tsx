@@ -21,6 +21,7 @@ const PLATFORMS: Array<{
   { key: 'pinterest', label: 'Pinterest', icon: 'logo-pinterest', color: '#E60023', status: 'ready',  hint: 'Sterk voor F&B + product visuals' },
   { key: 'threads',   label: 'Threads',   icon: 'at-circle',      color: '#000000', status: 'ready',  hint: 'Tekst-first kanaal, gekoppeld aan IG' },
   { key: 'snapchat',  label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00', status: 'manual', hint: 'Manueel delen via Snap-app' },
+  { key: 'whatsapp',  label: 'WhatsApp',  icon: 'logo-whatsapp',  color: '#25D366', status: 'manual', hint: 'Status / Channel via WhatsApp deep-link' },
 ];
 
 type Props = {
