@@ -17,8 +17,9 @@ const PLATFORM_META: Record<PlatformKey, { label: string; icon: keyof typeof imp
 
 const SCOPE_LIST: Record<PlatformKey, string[]> = {
   // instagram_basic deprecated 2024 — IG Business auto-discovered via FB Pages flow
-  facebook: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile', 'email'],
-  instagram: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile', 'email'],
+  // email removed — requires "Authenticate with Facebook Login" use case not configured
+  facebook: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
+  instagram: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
   linkedin: ['openid', 'profile', 'email', 'w_member_social'],
   tiktok: ['user.info.basic', 'video.publish', 'video.list'],
   snapchat: [],
@@ -110,11 +111,14 @@ export default function StepConnect({
         authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'facebook' || platformKey === 'instagram') {
         const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
-        // NOTE: `instagram_basic` was deprecated by Meta (2024). Removed.
-        // IG Business account is auto-discovered via FB Pages flow using
-        // `pages_show_list` + `instagram_content_publish`. The /me/accounts
-        // endpoint returns `instagram_business_account` field per Page.
-        const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_content_publish,business_management,public_profile,email';
+        // NOTES on scope choices:
+        // - `instagram_basic` was deprecated by Meta (2024) — removed.
+        // - `email` requires "Authenticate with Facebook Login" use case
+        //   which this app doesn't have configured — removed (we don't
+        //   need email for our flow anyway, public_profile gives us name).
+        // - IG Business is auto-discovered via FB Pages flow in
+        //   oauth-callback using /me/accounts?fields=instagram_business_account.
+        const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_content_publish,business_management,public_profile';
         authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'tiktok') {
         const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
