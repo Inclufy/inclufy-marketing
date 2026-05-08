@@ -748,53 +748,15 @@ export default function PostReviewScreen() {
   //
   // Once Meta ads_management scope is approved, set META_ADS_API_LIVE=true
   // server-side and the campaign auto-pushes to Marketing API instead.
-  const handleBoost = async (post: EventPost) => {
-    Alert.alert(
-      '🚀 Boost deze post',
-      `AMOS opent Meta Ads Manager met je ${channelConfig[post.channel]?.label ?? post.channel} post pre-filled. Daar kies je zelf budget + doelgroep.\n\nWij genereren ondertussen 3 AI ad-varianten die je later kunt gebruiken.`,
-      [
-        { text: 'Annuleren', style: 'cancel' },
-        {
-          text: 'Boost openen',
-          onPress: async () => {
-            // Step 1 — kick off boost-post edge function (creates ad_campaigns
-            // row + triggers ai-ad-variants in background; non-blocking).
-            try {
-              const { data: { session } } = await supabase.auth.getSession();
-              if (session?.access_token) {
-                supabase.functions.invoke('boost-post', {
-                  body: {
-                    post_id: post.id,
-                    channel: 'meta', // FB + IG both go through Meta Ads Manager
-                    budget_cents: 2500, // €25 default — user can change in Meta UI
-                    duration_days: 3,
-                    objective: 'POST_ENGAGEMENT',
-                    auto_generate_variants: true,
-                    dry_run: true, // until Meta App Review approves ads_management
-                  },
-                }).catch((e) => console.warn('[Boost] background tracking failed:', e));
-              }
-            } catch (e) {
-              console.warn('[Boost] could not create ad_campaigns row:', e);
-            }
-
-            // Step 2 — open Meta Ads Manager. Pre-fill via post_id query param
-            // so the platform shows the boost composer for this specific post.
-            // Falls back to generic Ads Manager URL if external_post_id missing.
-            const externalPostId = (post as any).external_post_id || post.id;
-            const adsManagerUrl = `https://www.facebook.com/ads/manager/manage/ads/?post_id=${externalPostId}&boost=1`;
-            try {
-              await Linking.openURL(adsManagerUrl);
-            } catch {
-              Alert.alert(
-                'Kon Ads Manager niet openen',
-                'Open Meta Ads Manager handmatig: business.facebook.com/adsmanager',
-              );
-            }
-          },
-        },
-      ],
-    );
+  const handleBoost = (post: EventPost) => {
+    // Navigate to the in-app BoostFlow wizard instead of jumping straight
+    // to Meta Ads Manager. The wizard handles budget/audience/variants
+    // and creates the ad_campaigns row internally. User can still open
+    // Meta Ads Manager from the final step if needed.
+    navigation.navigate('BoostFlow', {
+      postId: post.id,
+      channel: post.channel === 'instagram' ? 'instagram' : 'facebook',
+    });
   };
 
   // ── Flip image ────────────────────────────────────────────────────────────

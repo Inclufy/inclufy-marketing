@@ -176,8 +176,9 @@ export type RootStackParamList = {
   CardScan: undefined;
   MyDigitalCard: undefined;
   NFCShare: undefined;
-  // Budget
+  // Budget + Ads
   BudgetMonitor: undefined;
+  BoostFlow: { postId: string; channel: 'facebook' | 'instagram' | 'meta' };
   // Opportunities & Automation
   OpportunityRadar: undefined;
   MarketingAutomation: undefined;

@@ -46,6 +46,7 @@ import NFCShareScreen from '../screens/NFCShareScreen';
 import OpportunityRadarScreen from '../screens/OpportunityRadarScreen';
 import MarketingAutomationScreen from '../screens/MarketingAutomationScreen';
 import BudgetMonitorScreen from '../screens/BudgetMonitorScreen';
+import BoostFlowScreen from '../screens/BoostFlowScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
 import DemoEnvironmentScreen from '../screens/DemoEnvironmentScreen';
 import AMOSHubScreen from '../screens/AMOSHubScreen';
@@ -327,6 +328,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           {/* ─── Marketing Automation ─── */}
           <Stack.Screen name="MarketingAutomation" component={MarketingAutomationScreen} options={{ title: t.screenTitles.automation ?? 'Automation' }} />
           <Stack.Screen name="BudgetMonitor" component={BudgetMonitorScreen} options={{ title: t.screenTitles.marketingBudget }} />
+          <Stack.Screen name="BoostFlow" component={BoostFlowScreen} options={{ title: 'Boost', headerShown: false }} />
           <Stack.Screen name="AMOSHub" component={AMOSHubScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AutonomousHub" component={AutonomousHubScreen} options={{ headerShown: false }} />
           <Stack.Screen name="NetworkingEngine" component={NetworkingEngineScreen} options={{ title: 'Networking Engine' }} />
