@@ -22,13 +22,19 @@ const corsHeaders = {
 async function publishToLinkedIn(
   accessToken: string,
   profileId: string,
-  text: string,
+  rawText: string,
   imageUrl?: string,
   accountType?: string, // 'personal' | 'company'
   extraImageUrls?: string[], // additional images for multi-image posts
   videoUrl?: string, // video URL for video posts
   mediaType?: string, // 'photo' | 'video' | 'audio'
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
+  // LinkedIn shareCommentary hard limit = 3000 chars. Without truncation,
+  // long AI-generated posts return 422 from /v2/ugcPosts. Truncate with
+  // ellipsis so the post still publishes cleanly.
+  const text = (rawText ?? '').length > 3000
+    ? rawText.substring(0, 2997) + '...'
+    : (rawText ?? '');
   try {
     let authorUrn: string;
 
