@@ -155,10 +155,17 @@ export default function LiveCaptureScreen() {
       prev.includes(ch) ? (prev.length > 1 ? prev.filter((c) => c !== ch) : prev) : [...prev, ch],
     );
 
+  // Full 8-platform list to match wizard goal-step. Earlier hardcoded subset
+  // of 4 channels caused PostReview to only show 4 tabs even when user had
+  // 6 OAuth + 2 manual platforms connected.
   const CHANNEL_OPTIONS: { key: Channel; label: string; color: string; icon: string }[] = [
     { key: 'linkedin',  label: 'LinkedIn',  color: '#0077B5', icon: 'logo-linkedin'  },
     { key: 'instagram', label: 'Instagram', color: '#E4405F', icon: 'logo-instagram' },
     { key: 'facebook',  label: 'Facebook',  color: '#1877F2', icon: 'logo-facebook'  },
+    { key: 'tiktok',    label: 'TikTok',    color: '#000000', icon: 'musical-notes'  },
+    { key: 'pinterest', label: 'Pinterest', color: '#E60023', icon: 'logo-pinterest' },
+    { key: 'threads',   label: 'Threads',   color: '#000000', icon: 'at-circle'      },
+    { key: 'snapchat',  label: 'Snapchat',  color: '#FFFC00', icon: 'logo-snapchat'  },
     { key: 'whatsapp',  label: 'WhatsApp',  color: '#25D366', icon: 'logo-whatsapp'  },
   ];
 
