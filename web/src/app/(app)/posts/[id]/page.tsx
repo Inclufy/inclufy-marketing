@@ -108,6 +108,52 @@ export default function PostDetailPage() {
     }
   };
 
+  /**
+   * Capture-to-Ad — Boost handler.
+   *
+   * Web equivalent of mobile PostReviewScreen.handleBoost. Two-step flow:
+   *   1. Fire-and-forget call to boost-post edge fn (creates ad_campaigns
+   *      row + AI-generated creative variants, in DRY-RUN until Meta App
+   *      Review approves ads_management scope).
+   *   2. Open Meta Ads Manager in new tab with post pre-filled.
+   */
+  const onBoost = async () => {
+    if (!post) return;
+    const confirmed = confirm(
+      `🚀 Boost deze post\n\n` +
+        `AMOS opent Meta Ads Manager in een nieuw tabblad met je ${post.channel} post pre-filled. ` +
+        `Daar kies je zelf budget + doelgroep.\n\n` +
+        `Wij genereren ondertussen 3 AI ad-varianten die je later kunt gebruiken.`,
+    );
+    if (!confirmed) return;
+
+    // Step 1 — fire-and-forget background tracking
+    try {
+      const { supabase } = await import('@/services/supabase');
+      supabase.functions
+        .invoke('boost-post', {
+          body: {
+            post_id: post.id,
+            channel: 'meta',
+            budget_cents: 2500,
+            duration_days: 3,
+            objective: 'POST_ENGAGEMENT',
+            auto_generate_variants: true,
+            dry_run: true,
+          },
+        })
+        .catch((e) => console.warn('[Boost] background tracking failed:', e));
+    } catch (e) {
+      console.warn('[Boost] could not invoke boost-post:', e);
+    }
+
+    // Step 2 — open Meta Ads Manager in new tab
+    const externalPostId = (post as any).external_post_id || post.id;
+    const adsManagerUrl = `https://www.facebook.com/ads/manager/manage/ads/?post_id=${externalPostId}&boost=1`;
+    window.open(adsManagerUrl, '_blank', 'noopener,noreferrer');
+    toast.success('Meta Ads Manager geopend — kies budget + doelgroep daar');
+  };
+
   const onPublish = async () => {
     if (!post) return;
     if (dirty) {
@@ -462,6 +508,23 @@ export default function PostDetailPage() {
             </button>
           </div>
         </div>
+      )}
+
+      {/* Capture-to-Ad: Boost button on published Meta posts.
+          Same pattern as mobile PostReviewScreen — fires boost-post edge fn
+          (DRY-RUN until Meta App Review approves ads_management) +
+          opens Meta Ads Manager with post pre-filled. */}
+      {post.status === 'published' && (post.channel === 'facebook' || post.channel === 'instagram') && (
+        <button
+          onClick={onBoost}
+          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-amber-500 bg-amber-50 px-6 py-3 text-base font-semibold text-amber-700 hover:bg-amber-100 transition-colors"
+        >
+          <Sparkles className="h-5 w-5" />
+          Boost deze post
+          <span className="ml-2 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-medium">
+            Capture-to-Ad
+          </span>
+        </button>
       )}
 
       <div className="flex justify-between gap-2 border-t border-slate-200 pt-4">
