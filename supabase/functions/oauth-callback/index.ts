@@ -647,21 +647,39 @@ Deno.serve(async (req) => {
       profilePicture = profile.picture?.data?.url ?? '';
 
       // ─── Fetch Facebook Pages (for business page support) ────────
+      // Meta has TWO IG-Page link fields since 2024:
+      //   `instagram_business_account` — old, populated when IG-Page link was
+      //     made via Page Settings > Linked accounts (legacy flow)
+      //   `connected_instagram_account` — new, populated when link was made
+      //     via Account Center / Business Settings > Page Settings > IG link
+      //     (current flow as of 2024+)
+      // We query both and use whichever returns a value, since the IG-Page
+      // link UI may use either flow depending on user's Meta version/region.
       try {
         const pagesRes = await fetch(
-          `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username,profile_picture_url}&access_token=${accessToken}`,
+          `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,instagram_business_account{id,name,username,profile_picture_url},connected_instagram_account{id,name,username,profile_picture_url}&access_token=${accessToken}`,
         );
         if (pagesRes.ok) {
           const pagesData = await pagesRes.json();
-          pages = (pagesData.data || []).map((p: any) => ({
-            id: p.id,
-            name: p.name,
-            access_token: p.access_token,
-            ig_id: p.instagram_business_account?.id,
-            ig_name: p.instagram_business_account?.username || p.instagram_business_account?.name,
-            ig_picture: p.instagram_business_account?.profile_picture_url,
-          }));
+          pages = (pagesData.data || []).map((p: any) => {
+            // Try both fields, prefer the one that has an id
+            const igLink = p.instagram_business_account ?? p.connected_instagram_account;
+            return {
+              id: p.id,
+              name: p.name,
+              access_token: p.access_token,
+              ig_id: igLink?.id,
+              ig_name: igLink?.username || igLink?.name,
+              ig_picture: igLink?.profile_picture_url,
+            };
+          });
           console.log(`Found ${pages.length} Facebook Pages`);
+          console.log('IG links:', JSON.stringify(pages.map(p => ({
+            page: p.name, ig_id: p.ig_id, ig_name: p.ig_name,
+          }))));
+        } else {
+          const errText = await pagesRes.text();
+          console.error('Pages fetch HTTP error:', pagesRes.status, errText);
         }
       } catch (e) {
         console.error('Failed to fetch pages:', e);
