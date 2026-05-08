@@ -152,7 +152,7 @@ async function rollupCampaignMetrics(supabase: any): Promise<{ updated: number; 
   // Fetch active campaigns
   const { data: activeCampaigns } = await supabase
     .from('ad_campaigns')
-    .select('id, channel, external_campaign_id, started_at, duration_days, total_spent_cents, budget_cents')
+    .select('id, channel, external_campaign_id, started_at, duration_days, budget_cents, total_impressions, total_clicks, total_spent_cents, total_conversions')
     .eq('status', 'active');
 
   if (!activeCampaigns || activeCampaigns.length === 0) {
@@ -220,25 +220,25 @@ async function rollupCampaignMetrics(supabase: any): Promise<{ updated: number; 
         { onConflict: 'campaign_id,date' },
       );
     if (!upErr) {
-      // Update denormalized totals on ad_campaigns
-      await supabase.rpc('increment_campaign_totals' as any, {
-        p_campaign_id: campaign.id,
-        p_impressions: metrics.impressions,
-        p_clicks: metrics.clicks,
-        p_spent_cents: metrics.spent_cents,
-        p_conversions: metrics.conversions,
-      }).catch(() => {
-        // RPC may not exist yet — fallback to direct update
-        supabase
-          .from('ad_campaigns')
-          .update({
-            total_impressions: campaign.total_spent_cents + metrics.impressions,
-            total_clicks: metrics.clicks,
-            total_spent_cents: campaign.total_spent_cents + metrics.spent_cents,
-            total_conversions: metrics.conversions,
-          })
-          .eq('id', campaign.id);
-      });
+      // Update denormalized totals on ad_campaigns.
+      // BUG-NEW-07: increment_campaign_totals RPC is not yet defined in any
+      // migration, so we skip the RPC call entirely and use the direct
+      // update path. Once the RPC is added (idempotent atomic increment
+      // version), uncomment the RPC call and remove this comment.
+      // BUG-NEW-03 fix: total_impressions accumulator was reading
+      // total_spent_cents (wrong field). Now reads from the matching field.
+      const { error: incErr } = await supabase
+        .from('ad_campaigns')
+        .update({
+          total_impressions: (campaign.total_impressions ?? 0) + metrics.impressions,
+          total_clicks: (campaign.total_clicks ?? 0) + metrics.clicks,
+          total_spent_cents: (campaign.total_spent_cents ?? 0) + metrics.spent_cents,
+          total_conversions: (campaign.total_conversions ?? 0) + metrics.conversions,
+        })
+        .eq('id', campaign.id);
+      if (incErr) {
+        console.error('[ad-performance-monitor] Failed to update totals for', campaign.id, incErr);
+      }
       updated++;
     }
   }

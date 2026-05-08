@@ -15,7 +15,7 @@ import {
   ArrowLeft, Sparkles, Check, Loader2, ExternalLink, Target, Wallet, Wand2, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/services/supabase';
+import { supabase } from '@/lib/supabase';
 
 type BudgetPreset = { label: string; cents: number; days: number };
 const BUDGET_PRESETS: BudgetPreset[] = [
@@ -125,9 +125,17 @@ export default function BoostFlowPage() {
         .eq('campaign_id', campaignId)
         .eq('variant_label', chosenVariant);
 
+      // BUG-NEW-06 fix: populate started_at so the cron's duration
+      // detection works. approved_at marks user confirmation moment;
+      // started_at marks when the campaign clock begins.
+      const now = new Date().toISOString();
       await supabase
         .from('ad_campaigns')
-        .update({ status: 'pending_approval', approved_at: new Date().toISOString() })
+        .update({
+          status: 'pending_approval',
+          approved_at: now,
+          started_at: now,
+        })
         .eq('id', campaignId);
 
       setSubmitted(true);

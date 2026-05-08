@@ -40,6 +40,7 @@ const SCOPE_LIST: Record<PlatformKey, string[]> = {
   pinterest: ['pins:read', 'pins:write', 'boards:read', 'boards:write', 'user_accounts:read'],
   threads: ['threads_basic', 'threads_content_publish'],
   snapchat: [],
+  whatsapp: [], // manual share — geen OAuth scopes
 };
 
 type SocialAccount = {

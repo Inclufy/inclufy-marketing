@@ -143,9 +143,17 @@ export default function BoostFlowScreen() {
       // Update campaign status — ready for platform push
       // (in DRY-RUN this just stays draft; when META_ADS_API_LIVE flag flips
       //  the boost-post handler picks up draft campaigns and pushes them)
+      // BUG-NEW-06 fix: populate started_at so the cron's duration
+      // detection works. approved_at marks user confirmation moment;
+      // started_at marks when the campaign clock begins.
+      const now = new Date().toISOString();
       await supabase
         .from('ad_campaigns')
-        .update({ status: 'pending_approval', approved_at: new Date().toISOString() })
+        .update({
+          status: 'pending_approval',
+          approved_at: now,
+          started_at: now,
+        })
         .eq('id', campaignId);
 
       setSubmitted(true);

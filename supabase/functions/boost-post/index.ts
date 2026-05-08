@@ -51,6 +51,37 @@ const META_APP_ID = Deno.env.get('META_APP_ID') ?? '947950264797942';
 // but doesn't actually push to Meta Marketing API.
 const META_ADS_API_LIVE = Deno.env.get('META_ADS_API_LIVE') === 'true';
 
+/**
+ * Map AMOS audience_config preset to Meta Marketing API targeting spec.
+ *
+ * BUG-NEW-05 fix: defined at module top (not inside Deno.serve) to avoid
+ * function-hoisting fragility if anyone refactors to a `const` arrow.
+ *
+ * Supported audience types:
+ *   - lookalike: page_followers (custom_audience created server-side)
+ *   - interest: array of interest names mapped to flexible_spec.interests
+ *   - geo: only geo_locations.countries
+ *   - job_title: future — needs Meta job_titles vocab match
+ */
+function mapAudienceToMetaTargeting(config: Record<string, unknown>): Record<string, unknown> {
+  const targeting: Record<string, unknown> = {
+    geo_locations: { countries: [String(config.country ?? 'NL')] },
+  };
+  if (config.age && Array.isArray(config.age) && config.age.length === 2) {
+    targeting.age_min = config.age[0];
+    targeting.age_max = config.age[1];
+  }
+  if (config.type === 'lookalike' && config.source === 'page_followers') {
+    targeting.custom_audiences = []; // filled later by lookalike-builder cron
+  }
+  if (config.type === 'interest' && Array.isArray(config.interests)) {
+    targeting.flexible_spec = [{
+      interests: (config.interests as string[]).map((name) => ({ name })),
+    }];
+  }
+  return targeting;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
 
@@ -240,12 +271,17 @@ Deno.serve(async (req) => {
           const fbAdSet = await adsetRes.json();
 
           // 3. Update campaign with external IDs
+          // BUG-NEW-06 fix: populate started_at so ad-performance-monitor
+          // can correctly compute end-of-duration and mark completed.
+          // Use now() since Meta starts the ad at creation time (status
+          // PAUSED but the ad set start_time is now()).
           await supabase
             .from('ad_campaigns')
             .update({
               external_campaign_id: fbCampaignId,
               external_ad_set_id: fbAdSet.id,
               status: 'pending_approval',
+              started_at: new Date().toISOString(),
               external_metadata: {
                 ...campaign.external_metadata,
                 meta_ad_account: META_AD_ACCOUNT_ID,
@@ -268,30 +304,6 @@ Deno.serve(async (req) => {
           nextStep = 'platform_pending';
         }
       }
-    }
-
-    // Helper: map AMOS audience_config to Meta targeting spec
-    // (defined inline to keep edge fn self-contained)
-    /* eslint-disable @typescript-eslint/no-unused-vars */
-    function mapAudienceToMetaTargeting(config: Record<string, unknown>): Record<string, unknown> {
-      const targeting: Record<string, unknown> = {
-        geo_locations: { countries: [String(config.country ?? 'NL')] },
-      };
-      if (config.age && Array.isArray(config.age) && config.age.length === 2) {
-        targeting.age_min = config.age[0];
-        targeting.age_max = config.age[1];
-      }
-      if (config.type === 'lookalike' && config.source === 'page_followers') {
-        // Meta requires a custom_audience_id for lookalike — created server-side
-        // when user has connected Page. Falls back to interest-targeting if missing.
-        targeting.custom_audiences = []; // will be filled by separate cron
-      }
-      if (config.type === 'interest' && Array.isArray(config.interests)) {
-        targeting.flexible_spec = [{
-          interests: (config.interests as string[]).map((name) => ({ name })),
-        }];
-      }
-      return targeting;
     }
 
     if (isDryRun) {
