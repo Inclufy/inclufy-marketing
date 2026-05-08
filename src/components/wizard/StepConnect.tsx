@@ -131,14 +131,20 @@ export default function StepConnect({
         // instagram.com/oauth/authorize. Token works directly for IG
         // publishing without Pages API or Account Center dependency.
         //
+        // GOTCHA: Instagram API with Instagram Login requires a SEPARATE
+        // Instagram App ID — NOT the Meta App ID. This separate app sits
+        // inside the Meta App's "Instagram API" use case and has its own
+        // app_id + app_secret. Meta App ID (947950264797942) returns
+        // "Invalid request: Parameters of the request are invalid" on IG.
+        //
         // The state parameter uses 'instagram-direct' as platform key so
         // oauth-callback knows to use the IG-direct flow (api.instagram.com)
         // instead of the legacy Meta+Pages flow.
-        const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
+        const igAppId = process.env.EXPO_PUBLIC_INSTAGRAM_APP_ID || '2250348065370973';
         const igScope = 'instagram_business_basic,instagram_business_content_publish';
         // Override the state's platform suffix to flag IG-direct flow
         const igState = `${user.id}:${orgIdForState}:instagram-direct`;
-        authUrl = `https://www.instagram.com/oauth/authorize?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
+        authUrl = `https://www.instagram.com/oauth/authorize?client_id=${igAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
       } else if (platformKey === 'tiktok') {
         // TikTok AMOS app (Inclufy ownership, App ID 7617756854004910092).
         // Sandbox credentials (sbaw0n7p637do602ql) for development testing

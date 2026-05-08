@@ -721,21 +721,31 @@ Deno.serve(async (req) => {
       // credentials. Token works directly for IG Business publishing
       // without needing FB Pages API or Account Center IG-Page link.
       //
-      // Required Meta App use case: "Instagram API with Instagram Login"
-      // (NOT the same as "Manage messaging & content on Instagram"
-      // which is for FB-Login → IG-via-Pages flow).
+      // Required Meta App use case: "Manage messaging & content on
+      // Instagram" → "API setup with Instagram login" → reveals a
+      // SEPARATE Instagram App ID + App Secret (NOT the Meta App's).
+      //
+      // GOTCHA: Use INSTAGRAM_APP_ID + INSTAGRAM_APP_SECRET here,
+      // not META_APP_ID/SECRET. Meta credentials return "Invalid
+      // request" on api.instagram.com endpoints.
       //
       // OAuth URL: https://www.instagram.com/oauth/authorize
       // Token exchange: https://api.instagram.com/oauth/access_token
       // Long-lived: https://graph.instagram.com/access_token
       console.log('Instagram Direct Login token exchange');
 
+      const IG_APP_ID = Deno.env.get('INSTAGRAM_APP_ID') ?? '2250348065370973';
+      const IG_APP_SECRET = Deno.env.get('INSTAGRAM_APP_SECRET') ?? '';
+      if (!IG_APP_SECRET) {
+        return errorPage('Instagram', 'Configuratie ontbreekt', 'INSTAGRAM_APP_SECRET niet gezet in Supabase secrets.');
+      }
+
       const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_id: META_APP_ID,
-          client_secret: META_APP_SECRET,
+          client_id: IG_APP_ID,
+          client_secret: IG_APP_SECRET,
           grant_type: 'authorization_code',
           redirect_uri: REDIRECT_URI,
           code,
@@ -755,7 +765,7 @@ Deno.serve(async (req) => {
       // Exchange short-lived (1h) for long-lived (60d) token
       try {
         const longLivedRes = await fetch(
-          `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${META_APP_SECRET}&access_token=${accessToken}`,
+          `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${IG_APP_SECRET}&access_token=${accessToken}`,
         );
         if (longLivedRes.ok) {
           const longLivedData = await longLivedRes.json();
