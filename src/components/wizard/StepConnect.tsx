@@ -103,11 +103,16 @@ export default function StepConnect({
       let authUrl = '';
 
       if (platformKey === 'linkedin') {
-        const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '78sy9roeoz1143';
-        const lmdpEnabled = process.env.EXPO_PUBLIC_LINKEDIN_LMDP === 'true';
-        const basicScopes = 'openid profile email w_member_social';
-        const lmdpScopes = ' r_organization_social w_organization_social rw_organization_admin';
-        const scopes = basicScopes + (lmdpEnabled ? lmdpScopes : '');
+        // LinkedIn restricts apps from combining "Sign In + Share" with
+        // "Community Management API" in the same app. So we maintain TWO
+        // LinkedIn apps:
+        //   - AMOS         (789493c65q6j5e) — Share + Sign In = personal feed
+        //   - AMOS Community (78sy9roeoz1143) — Community Mgmt API = Company Pages
+        // For now (until LMDP approved on AMOS Community), use OLD app for
+        // personal-feed OAuth. After LMDP approval we'll add a separate
+        // "Connect Company Pages" step in the wizard that uses AMOS Community.
+        const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '789493c65q6j5e';
+        const scopes = 'openid profile email w_member_social';
         authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'facebook' || platformKey === 'instagram') {
         const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
