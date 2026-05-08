@@ -104,13 +104,12 @@ export default function StepConnect({
 
       if (platformKey === 'linkedin') {
         // LinkedIn restricts apps from combining "Sign In + Share" with
-        // "Community Management API" in the same app. So we maintain TWO
-        // LinkedIn apps:
-        //   - AMOS         (789493c65q6j5e) — Share + Sign In = personal feed
-        //   - AMOS Community (78sy9roeoz1143) — Community Mgmt API = Company Pages
-        // For now (until LMDP approved on AMOS Community), use OLD app for
-        // personal-feed OAuth. After LMDP approval we'll add a separate
-        // "Connect Company Pages" step in the wizard that uses AMOS Community.
+        // "Community Management API" in the same app. We maintain TWO apps:
+        //   - AMOS         (789493c65q6j5e) — Share + Sign In = USER-FACING
+        //                  All wizard OAuth flows go through THIS app.
+        //   - AMOS Community (78sy9roeoz1143) — Community Mgmt API = LMDP-only
+        //                  Separate app-registration purely for LinkedIn's
+        //                  LMDP submission paperwork. NOT used for user OAuth.
         const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '789493c65q6j5e';
         const scopes = 'openid profile email w_member_social';
         authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
