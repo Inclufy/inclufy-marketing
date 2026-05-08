@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Modal,
   SafeAreaView,
   StyleSheet,
 } from 'react-native';
@@ -79,10 +80,48 @@ export default function LibraryPostDetailScreen() {
   const tr = post.translations[language] ?? post.translations[post.primary_language];
   const availableLangs = LANGS.filter((l) => post.translations[l]);
 
+  // Channel picker modal — opens before publish so user can override
+  // post.channels (default = whatever's in the DB) with any subset of
+  // their connected platforms. Earlier UX showed a plain Alert with
+  // post.channels.join(', ') and gave no way to add channels.
+  const [channelPickerOpen, setChannelPickerOpen] = useState(false);
+  const [pickerChannels, setPickerChannels] = useState<Channel[]>([]);
+
+  // Fetch user's connected platforms so picker shows everything they can publish to
+  const { data: connectedChannels = [] } = useQuery<Channel[]>({
+    queryKey: ['connected-channels-for-publish'],
+    queryFn: async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return [] as Channel[];
+      const { data: accounts } = await supabase
+        .from('social_accounts')
+        .select('platform')
+        .eq('user_id', user.id)
+        .in('status', ['active', 'connected']);
+      const oauth = Array.from(new Set((accounts ?? []).map((a: any) => a.platform as Channel)));
+      // Always include manual-share platforms
+      return Array.from(new Set([...oauth, 'snapchat' as Channel, 'whatsapp' as Channel]));
+    },
+    staleTime: 60_000,
+  });
+
   function publishNow() {
+    if (!post) return;
+    // Pre-fill with whatever's already on the post; user can add/remove
+    setPickerChannels([...post.channels]);
+    setChannelPickerOpen(true);
+  }
+
+  async function executePublish(chosen: Channel[]) {
+    if (!post) return;
+    if (chosen.length === 0) {
+      Alert.alert('Geen kanalen', 'Kies minstens één kanaal om te publiceren.');
+      return;
+    }
+    setChannelPickerOpen(false);
     Alert.alert(
       'Nu publiceren',
-      `Post wordt direct gepubliceerd op: ${post!.channels.join(', ')} (${language.toUpperCase()})`,
+      `Post wordt direct gepubliceerd op: ${chosen.join(', ')} (${language.toUpperCase()})`,
       [
         { text: 'Annuleren', style: 'cancel' },
         {
@@ -90,7 +129,7 @@ export default function LibraryPostDetailScreen() {
           style: 'default',
           onPress: async () => {
             try {
-              const r = await publishMut.mutateAsync({ postId: post!.id, language });
+              const r = await publishMut.mutateAsync({ postId: post.id, language, channels: chosen });
               if (r.ok) {
                 Alert.alert('Gepubliceerd', 'Post staat live op alle gekozen kanalen.');
               } else {
@@ -272,6 +311,69 @@ export default function LibraryPostDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Channel picker modal — opens from publishNow() */}
+      <Modal visible={channelPickerOpen} animationType="slide" transparent onRequestClose={() => setChannelPickerOpen(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: spacing.lg, maxHeight: '80%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.md }}>
+              <Text style={{ flex: 1, fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.text }}>
+                Kies kanalen
+              </Text>
+              <TouchableOpacity onPress={() => setChannelPickerOpen(false)}>
+                <Ionicons name="close" size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
+              Selecteer waar je deze post wilt publiceren. Standaard: kanalen uit de post.
+            </Text>
+            <ScrollView>
+              {connectedChannels.map((ch) => {
+                const selected = pickerChannels.includes(ch);
+                return (
+                  <TouchableOpacity
+                    key={ch}
+                    onPress={() => setPickerChannels((prev) => (selected ? prev.filter((x) => x !== ch) : [...prev, ch]))}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+                      padding: spacing.md, borderRadius: borderRadius.md, marginBottom: 6,
+                      backgroundColor: selected ? colors.primary + '15' : colors.surface,
+                      borderWidth: 1.5, borderColor: selected ? colors.primary : colors.border,
+                    }}
+                  >
+                    <Ionicons
+                      name={selected ? 'checkmark-circle' : 'ellipse-outline'}
+                      size={22}
+                      color={selected ? colors.primary : colors.textTertiary}
+                    />
+                    <Text style={{ flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text }}>
+                      {channelLabel(ch)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              {connectedChannels.length === 0 && (
+                <Text style={{ color: colors.textSecondary, padding: spacing.md }}>
+                  Geen verbonden kanalen gevonden. Verbind eerst social-accounts via Instellingen.
+                </Text>
+              )}
+            </ScrollView>
+            <TouchableOpacity
+              onPress={() => executePublish(pickerChannels)}
+              disabled={pickerChannels.length === 0}
+              style={{
+                marginTop: spacing.md, padding: spacing.md, borderRadius: borderRadius.md,
+                backgroundColor: pickerChannels.length === 0 ? colors.border : colors.primary,
+                alignItems: 'center',
+              }}
+            >
+              <Text style={{ color: '#fff', fontSize: fontSize.md, fontWeight: fontWeight.semibold }}>
+                Publiceer op {pickerChannels.length} kanalen
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
