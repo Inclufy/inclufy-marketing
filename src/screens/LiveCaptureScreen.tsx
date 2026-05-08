@@ -426,13 +426,43 @@ export default function LiveCaptureScreen() {
         // For non-photo captures, use the transcript or note as text context for the AI
         const aiTranscript = transcript || (mediaType !== 'photo' ? note.trim() : undefined);
 
+        // Resolve which channels to generate posts for. Priority:
+        //   1. Explicit selectedChannels (user picked in capture screen)
+        //   2. Event-level configured channels
+        //   3. Dynamic fallback: all platforms the user has active accounts for
+        //      (queries social_accounts) + manual-share platforms (snapchat, whatsapp)
+        //   4. Static fallback: ['linkedin', 'instagram', 'facebook', 'whatsapp']
+        // Step 3 is critical — Sami connected 6 OAuth platforms today and was
+        // only seeing 4 tabs in PostReview because the static fallback was used.
+        const resolveActiveChannels = async (): Promise<Channel[]> => {
+          if (selectedChannels.length) return selectedChannels;
+          if (event.channels?.length) return event.channels as Channel[];
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              const { data: accounts } = await supabase
+                .from('social_accounts')
+                .select('platform')
+                .eq('user_id', user.id)
+                .in('status', ['active', 'connected']);
+              if (accounts && accounts.length) {
+                const oauthChannels = Array.from(new Set(accounts.map((a: any) => a.platform as Channel)));
+                // Always include manual-share platforms — they don't have rows in
+                // social_accounts but are still publishing destinations
+                const allChannels = Array.from(new Set([...oauthChannels, 'snapchat' as Channel, 'whatsapp' as Channel]));
+                return allChannels;
+              }
+            }
+          } catch (e) {
+            console.warn('[processCapture] Active-channels fetch failed:', e);
+          }
+          return ['linkedin', 'instagram', 'facebook', 'whatsapp'] as Channel[];
+        };
+        const activeChannels: Channel[] = await resolveActiveChannels();
+
         let results: Record<string, any> = {};
         try {
-          const activeChannels: Channel[] = selectedChannels.length
-            ? selectedChannels
-            : ((event.channels?.length ? event.channels : ['linkedin', 'instagram', 'facebook', 'whatsapp']) as Channel[]);
-
-        results = await aiService.generateAllChannelPosts(
+          results = await aiService.generateAllChannelPosts(
             activeChannels,
             imageBase64,
             aiTranscript,
@@ -449,10 +479,7 @@ export default function LiveCaptureScreen() {
           // AI generation failed (timeout, Edge Function error, etc.)
           // Create placeholder posts so user can still navigate to PostReview and edit manually
           console.warn('[processCapture] AI generation failed, using placeholders:', aiErr);
-          const fallbackChannels: Channel[] = selectedChannels.length
-            ? selectedChannels
-            : ((event.channels?.length ? event.channels : ['linkedin', 'instagram', 'facebook', 'whatsapp']) as Channel[]);
-          for (const channel of fallbackChannels) {
+          for (const channel of activeChannels) {
             results[channel] = {
               text: note.trim() || event.name,
               hashtags: event.hashtags || [],
