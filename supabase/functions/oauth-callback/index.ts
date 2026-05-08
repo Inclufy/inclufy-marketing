@@ -31,57 +31,277 @@ function esc(s: string | null | undefined): string {
 }
 
 function successPage(platform: string, accountName: string, pages?: Array<{id: string, name: string}>) {
+  const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
+  const platformColor: Record<string, string> = {
+    facebook: '#1877F2',
+    instagram: '#E4405F',
+    linkedin: '#0077B5',
+    tiktok: '#FE2C55',
+  };
+  const accent = platformColor[platform.toLowerCase()] ?? '#7C3AED';
+
   const pagesHtml = pages && pages.length > 0
-    ? `<div style="margin-top:16px;text-align:left">
-        <p style="font-size:14px;color:#333;font-weight:600;margin-bottom:8px">Bedrijfspagina's gevonden:</p>
-        ${pages.map(p => `<div style="padding:8px 12px;background:#F3F0FF;border-radius:8px;margin-bottom:6px;font-size:13px;color:#5B21B6">&#10004; ${esc(p.name)}</div>`).join('')}
+    ? `<div class="pages">
+        <p class="pages-title">${pages.length} ${pages.length === 1 ? 'account' : 'accounts'} ontdekt</p>
+        ${pages.map(p => `<div class="page-row"><span class="check">✓</span><span>${esc(p.name)}</span></div>`).join('')}
        </div>`
     : '';
 
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Verbonden!</title>
+<html lang="nl"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#7C3AED">
+<title>${platformLabel} verbonden — AMOS</title>
 <style>
-  body{font-family:-apple-system,system-ui,sans-serif;display:flex;justify-content:center;align-items:center;
-  min-height:100vh;margin:0;background:linear-gradient(135deg,#F7F6FF,#EDE9FE);color:#1a1a2e}
-  .card{background:#fff;border-radius:20px;padding:48px 32px;text-align:center;max-width:400px;
-  box-shadow:0 8px 32px rgba(124,58,237,.12)}
-  .icon{font-size:64px;margin-bottom:16px}
-  h1{font-size:24px;margin:0 0 8px;color:#7C3AED}
-  p{color:#666;margin:0 0 16px;line-height:1.5}
-</style></head>
-<body><div class="card">
-  <div class="icon">&#10004;</div>
-  <h1>Verbonden!</h1>
-  <p><strong>${esc(platform.charAt(0).toUpperCase() + platform.slice(1))}</strong> is succesvol verbonden met AMOS${accountName ? ` als <strong>${esc(accountName)}</strong>` : ''}.</p>
-  ${pagesHtml}
-  <p style="font-size:14px;color:#999;margin-top:16px">Je kunt dit venster sluiten en teruggaan naar de app.</p>
-</div></body></html>`;
-  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;-webkit-font-smoothing:antialiased}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    min-height:100vh;
+    background:linear-gradient(160deg,#F7F6FF 0%,#EDE9FE 50%,${accent}15 100%);
+    color:#1a1a2e;
+    padding:24px;
+    position:relative;
+  }
+  .pulse{
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    width:280px;height:280px;
+    border-radius:50%;
+    background:radial-gradient(circle, ${accent}25 0%, transparent 70%);
+    animation:pulse 3s ease-out infinite;
+    pointer-events:none;
+  }
+  @keyframes pulse{
+    0%{transform:translate(-50%,-50%) scale(0.8);opacity:0.8}
+    100%{transform:translate(-50%,-50%) scale(1.4);opacity:0}
+  }
+  .card{
+    background:rgba(255,255,255,0.95);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-radius:24px;
+    padding:40px 28px 32px;
+    text-align:center;
+    max-width:380px;
+    width:100%;
+    box-shadow:0 20px 60px rgba(124,58,237,0.18), 0 0 0 1px rgba(255,255,255,0.5) inset;
+    position:relative;
+    z-index:1;
+    animation:slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes slideUp{
+    from{opacity:0;transform:translateY(20px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  .check-circle{
+    width:80px;height:80px;
+    margin:0 auto 24px;
+    border-radius:50%;
+    background:linear-gradient(135deg, ${accent}, ${accent}DD);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 24px ${accent}40;
+    animation:bounce 0.6s cubic-bezier(0.34,1.56,0.64,1) 0.1s both;
+  }
+  @keyframes bounce{
+    from{opacity:0;transform:scale(0.3)}
+    to{opacity:1;transform:scale(1)}
+  }
+  .check-circle svg{width:40px;height:40px;stroke:#fff;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  .check-circle path{stroke-dasharray:32;stroke-dashoffset:32;animation:draw 0.5s ease-out 0.4s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  h1{font-size:26px;font-weight:700;margin:0 0 8px;color:#1a1a2e;letter-spacing:-0.02em}
+  .platform-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 12px;border-radius:999px;
+    background:${accent}15;color:${accent};
+    font-size:13px;font-weight:600;letter-spacing:-0.01em;
+    margin-bottom:12px;
+  }
+  .subtitle{color:#525272;font-size:15px;margin:0 0 20px;line-height:1.5;font-weight:400}
+  .subtitle strong{color:#1a1a2e;font-weight:600}
+  .pages{
+    margin:24px 0 8px;
+    padding:16px;
+    background:#FAFAFC;
+    border-radius:14px;
+    text-align:left;
+    border:1px solid #EFEEFA;
+  }
+  .pages-title{font-size:13px;color:#525272;font-weight:600;margin:0 0 10px;text-transform:uppercase;letter-spacing:0.04em}
+  .page-row{
+    display:flex;align-items:center;gap:10px;
+    padding:8px 0;font-size:14px;color:#1a1a2e;font-weight:500;
+  }
+  .page-row + .page-row{border-top:1px solid #EFEEFA}
+  .check{
+    flex-shrink:0;width:20px;height:20px;border-radius:50%;
+    background:${accent};color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;
+  }
+  .footer-msg{
+    font-size:14px;color:#888;margin:24px 0 0;line-height:1.5;
+  }
+  .countdown{
+    margin-top:16px;
+    height:4px;background:#EFEEFA;border-radius:2px;overflow:hidden;
+    position:relative;
+  }
+  .countdown::after{
+    content:'';position:absolute;left:0;top:0;height:100%;
+    background:linear-gradient(90deg, ${accent}, ${accent}AA);
+    border-radius:2px;
+    animation:countdown 3s linear forwards;
+  }
+  @keyframes countdown{from{width:100%}to{width:0%}}
+  .footer-brand{
+    margin-top:32px;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:12px;color:#9999AA;letter-spacing:0.04em;
+  }
+  .footer-brand .dot{width:6px;height:6px;border-radius:50%;background:${accent}}
+</style>
+</head>
+<body>
+  <div class="pulse"></div>
+  <div class="card">
+    <div class="check-circle">
+      <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>
+    </div>
+    <div class="platform-badge">${platformLabel}</div>
+    <h1>Verbonden!</h1>
+    <p class="subtitle">${accountName ? `<strong>${esc(accountName)}</strong> is gekoppeld aan AMOS.` : `${platformLabel} is gekoppeld aan AMOS.`}</p>
+    ${pagesHtml}
+    <p class="footer-msg">Dit venster sluit automatisch.<br>Ga terug naar AMOS om verder te gaan.</p>
+    <div class="countdown"></div>
+    <div class="footer-brand"><span class="dot"></span>Powered by AMOS<span class="dot"></span></div>
+  </div>
+  <script>
+    // Auto-close after 3 sec — works in SFSafariViewController on iOS
+    setTimeout(function(){
+      try { window.close(); } catch(e) {}
+      // Fallback: redirect to a deep link if window.close doesn't work
+      try { window.location.href = 'inclufy-go://oauth-success?platform=${platform}'; } catch(e) {}
+    }, 3000);
+  </script>
+</body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }
 
 function errorPage(platform: string, reason: string, details?: string) {
+  const platformLabel = platform.charAt(0).toUpperCase() + platform.slice(1);
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fout</title>
+<html lang="nl"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#DC2626">
+<title>Verbinding mislukt — AMOS</title>
 <style>
-  body{font-family:-apple-system,system-ui,sans-serif;display:flex;justify-content:center;align-items:center;
-  min-height:100vh;margin:0;background:#FFF5F5;color:#1a1a2e}
-  .card{background:#fff;border-radius:20px;padding:48px 32px;text-align:center;max-width:400px;
-  box-shadow:0 8px 32px rgba(220,38,38,.12)}
-  .icon{font-size:64px;margin-bottom:16px}
-  h1{font-size:24px;margin:0 0 8px;color:#DC2626}
-  p{color:#666;margin:0 0 24px;line-height:1.5}
-  .detail{font-size:11px;color:#aaa;word-break:break-all;margin-top:8px;padding:8px;background:#f5f5f5;border-radius:8px;text-align:left}
-</style></head>
-<body><div class="card">
-  <div class="icon">&#10060;</div>
-  <h1>Verbinding mislukt</h1>
-  <p>Er ging iets mis bij het verbinden van <strong>${esc(platform)}</strong>.</p>
-  <p style="font-size:13px;color:#999">Fout: ${esc(reason)}<br>Probeer het opnieuw vanuit de app.</p>
-  ${details ? `<div class="detail">${esc(details)}</div>` : ''}
-</div></body></html>`;
-  return new Response(html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;-webkit-font-smoothing:antialiased}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",system-ui,sans-serif;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    min-height:100vh;
+    background:linear-gradient(160deg,#FFF5F5 0%,#FEF2F2 50%,#FEE2E215 100%);
+    color:#1a1a2e;
+    padding:24px;
+  }
+  .card{
+    background:rgba(255,255,255,0.95);
+    backdrop-filter:blur(20px);
+    -webkit-backdrop-filter:blur(20px);
+    border-radius:24px;
+    padding:40px 28px 32px;
+    text-align:center;
+    max-width:380px;
+    width:100%;
+    box-shadow:0 20px 60px rgba(220,38,38,0.15), 0 0 0 1px rgba(255,255,255,0.5) inset;
+    animation:slideUp 0.5s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes slideUp{
+    from{opacity:0;transform:translateY(20px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+  .error-circle{
+    width:80px;height:80px;
+    margin:0 auto 24px;
+    border-radius:50%;
+    background:linear-gradient(135deg,#DC2626,#B91C1C);
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 24px rgba(220,38,38,0.3);
+    animation:shake 0.6s cubic-bezier(0.36,0.07,0.19,0.97) 0.1s both;
+  }
+  @keyframes shake{
+    0%,100%{transform:translateX(0)}
+    20%,60%{transform:translateX(-6px)}
+    40%,80%{transform:translateX(6px)}
+  }
+  .error-circle svg{width:40px;height:40px;stroke:#fff;stroke-width:3.5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  h1{font-size:24px;font-weight:700;margin:0 0 8px;color:#1a1a2e;letter-spacing:-0.02em}
+  .platform-badge{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:4px 12px;border-radius:999px;
+    background:#DC262615;color:#DC2626;
+    font-size:13px;font-weight:600;
+    margin-bottom:12px;
+  }
+  .reason{
+    color:#525272;font-size:15px;margin:0 0 16px;line-height:1.5;
+  }
+  .reason strong{color:#1a1a2e;font-weight:600}
+  .detail{
+    font-size:12px;color:#888;margin-top:16px;padding:12px;
+    background:#FAFAFC;border-radius:10px;text-align:left;
+    border:1px solid #EFEEFA;font-family:ui-monospace,SF Mono,Menlo,monospace;
+    word-break:break-all;line-height:1.4;max-height:120px;overflow:auto;
+  }
+  .help{
+    margin-top:24px;font-size:14px;color:#888;line-height:1.5;
+  }
+  .help strong{color:#1a1a2e}
+  .footer-brand{
+    margin-top:32px;
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:12px;color:#9999AA;letter-spacing:0.04em;
+  }
+  .footer-brand .dot{width:6px;height:6px;border-radius:50%;background:#DC2626}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="error-circle">
+      <svg viewBox="0 0 24 24"><path d="M6 6L18 18 M6 18L18 6"/></svg>
+    </div>
+    <div class="platform-badge">${platformLabel}</div>
+    <h1>Verbinding mislukt</h1>
+    <p class="reason">${esc(reason)}</p>
+    ${details ? `<div class="detail">${esc(details)}</div>` : ''}
+    <p class="help">Ga terug naar <strong>AMOS</strong> en probeer opnieuw te verbinden.</p>
+    <div class="footer-brand"><span class="dot"></span>Powered by AMOS<span class="dot"></span></div>
+  </div>
+</body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'X-Content-Type-Options': 'nosniff',
+    },
+  });
 }
 
 async function upsertSocialAccount(
