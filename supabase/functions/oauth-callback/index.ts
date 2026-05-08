@@ -668,15 +668,25 @@ Deno.serve(async (req) => {
       // ─── Threads (Meta) ───────────────────────────────────────────
       // Uses Meta OAuth via the same META_APP_ID. Threads-specific
       // endpoints under graph.threads.net.
+      //
+      // GOTCHA (same as IG): Threads use case has SEPARATE app_id +
+      // app_secret, distinct from Meta App credentials. Found in Meta
+      // App → Use cases → Access the Threads API → Customize → Settings.
       console.log('Threads token exchange');
+
+      const THREADS_APP_ID = Deno.env.get('THREADS_APP_ID') ?? '952201194080195';
+      const THREADS_APP_SECRET = Deno.env.get('THREADS_APP_SECRET') ?? '';
+      if (!THREADS_APP_SECRET) {
+        return errorPage('Threads', 'Configuratie ontbreekt', 'THREADS_APP_SECRET niet gezet in Supabase secrets.');
+      }
 
       const tokenUrl = new URL('https://graph.threads.net/oauth/access_token');
       const tokenRes = await fetch(tokenUrl.toString(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
-          client_id: META_APP_ID,
-          client_secret: META_APP_SECRET,
+          client_id: THREADS_APP_ID,
+          client_secret: THREADS_APP_SECRET,
           grant_type: 'authorization_code',
           redirect_uri: REDIRECT_URI,
           code,
@@ -696,7 +706,7 @@ Deno.serve(async (req) => {
       // Optionally exchange for long-lived token (60 days)
       try {
         const longLivedRes = await fetch(
-          `https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${META_APP_SECRET}&access_token=${accessToken}`,
+          `https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${THREADS_APP_SECRET}&access_token=${accessToken}`,
         );
         if (longLivedRes.ok) {
           const longLivedData = await longLivedRes.json();

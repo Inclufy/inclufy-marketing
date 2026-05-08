@@ -164,11 +164,12 @@ export default function StepConnect({
         const pinScopes = 'pins:read,pins:write,boards:read,boards:write,user_accounts:read';
         authUrl = `https://www.pinterest.com/oauth/?response_type=code&client_id=${pinClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(pinScopes)}&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'threads') {
-        // Threads uses Meta OAuth via existing Meta app (947950264797942).
-        // Requires "Access the Threads API" use case activated in Meta App Dashboard.
-        const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
+        // Threads use case has its OWN app_id + app_secret (same pattern
+        // as Instagram API with Instagram Login). NOT the Meta App ID.
+        // Found in Meta App → Use cases → Access the Threads API → Customize → Settings.
+        const threadsAppId = process.env.EXPO_PUBLIC_THREADS_APP_ID || '952201194080195';
         const threadsScopes = 'threads_basic,threads_content_publish';
-        authUrl = `https://www.threads.net/oauth/authorize?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(threadsScopes)}&response_type=code&state=${encodeURIComponent(state)}`;
+        authUrl = `https://www.threads.net/oauth/authorize?client_id=${threadsAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(threadsScopes)}&response_type=code&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'snapchat') {
         // Snapchat: no public publish API exists since Snap Kit deprecated 2023.
         // We don't open OAuth — instead the wizard's "Connect Snapchat" tap should
