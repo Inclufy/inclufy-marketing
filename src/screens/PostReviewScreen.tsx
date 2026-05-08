@@ -739,6 +739,64 @@ export default function PostReviewScreen() {
     );
   };
 
+  // ── Boost post (Capture-to-Ad) ─────────────────────────────────────────
+  // Two-step flow:
+  //   1. Create ad_campaigns row + AI-generated creative variants
+  //      (in DRY-RUN until Meta App Review approves ads_management).
+  //   2. Open Meta Ads Manager with this post pre-filled so user can
+  //      configure budget/audience in Meta UI.
+  //
+  // Once Meta ads_management scope is approved, set META_ADS_API_LIVE=true
+  // server-side and the campaign auto-pushes to Marketing API instead.
+  const handleBoost = async (post: EventPost) => {
+    Alert.alert(
+      '🚀 Boost deze post',
+      `AMOS opent Meta Ads Manager met je ${channelConfig[post.channel]?.label ?? post.channel} post pre-filled. Daar kies je zelf budget + doelgroep.\n\nWij genereren ondertussen 3 AI ad-varianten die je later kunt gebruiken.`,
+      [
+        { text: 'Annuleren', style: 'cancel' },
+        {
+          text: 'Boost openen',
+          onPress: async () => {
+            // Step 1 — kick off boost-post edge function (creates ad_campaigns
+            // row + triggers ai-ad-variants in background; non-blocking).
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              if (session?.access_token) {
+                supabase.functions.invoke('boost-post', {
+                  body: {
+                    post_id: post.id,
+                    channel: 'meta', // FB + IG both go through Meta Ads Manager
+                    budget_cents: 2500, // €25 default — user can change in Meta UI
+                    duration_days: 3,
+                    objective: 'POST_ENGAGEMENT',
+                    auto_generate_variants: true,
+                    dry_run: true, // until Meta App Review approves ads_management
+                  },
+                }).catch((e) => console.warn('[Boost] background tracking failed:', e));
+              }
+            } catch (e) {
+              console.warn('[Boost] could not create ad_campaigns row:', e);
+            }
+
+            // Step 2 — open Meta Ads Manager. Pre-fill via post_id query param
+            // so the platform shows the boost composer for this specific post.
+            // Falls back to generic Ads Manager URL if external_post_id missing.
+            const externalPostId = (post as any).external_post_id || post.id;
+            const adsManagerUrl = `https://www.facebook.com/ads/manager/manage/ads/?post_id=${externalPostId}&boost=1`;
+            try {
+              await Linking.openURL(adsManagerUrl);
+            } catch {
+              Alert.alert(
+                'Kon Ads Manager niet openen',
+                'Open Meta Ads Manager handmatig: business.facebook.com/adsmanager',
+              );
+            }
+          },
+        },
+      ],
+    );
+  };
+
   // ── Flip image ────────────────────────────────────────────────────────────
   // Always operate on the RAW capture image (not the branded one) — otherwise
   // any baked-in text/logo overlay gets mirror-flipped (looks like backwards text).
@@ -2582,7 +2640,7 @@ export default function PostReviewScreen() {
                 </View>
               </TouchableOpacity>
 
-              {/* ── Publish + Delete ─────────────────────────────────── */}
+              {/* ── Publish + Boost + Delete ─────────────────────────── */}
               <View style={styles.actions}>
                 <TouchableOpacity
                   style={[styles.actionBtn, { backgroundColor: config?.color || colors.primary }]}
@@ -2597,6 +2655,28 @@ export default function PostReviewScreen() {
                     </Text>
                   )}
                 </TouchableOpacity>
+
+                {/* Boost button — shows for published Meta posts (FB/IG).
+                    Opens Meta Ads Manager with post pre-filled + creates
+                    ad_campaigns row in background (DRY-RUN until Meta App
+                    Review approves ads_management scope). */}
+                {post.status === 'published' && (post.channel === 'facebook' || post.channel === 'instagram') && (
+                  <TouchableOpacity
+                    onPress={() => handleBoost(post)}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 6,
+                      paddingHorizontal: spacing.md, paddingVertical: 12,
+                      borderRadius: borderRadius.md,
+                      backgroundColor: '#F59E0B' + '15',
+                      borderWidth: 1.5, borderColor: '#F59E0B',
+                    }}
+                  >
+                    <Ionicons name="rocket-outline" size={16} color="#F59E0B" />
+                    <Text style={{ color: '#F59E0B', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                      Boost
+                    </Text>
+                  </TouchableOpacity>
+                )}
 
                 {/* Delete post */}
                 <TouchableOpacity
