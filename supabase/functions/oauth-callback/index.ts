@@ -190,28 +190,22 @@ function successPage(platform: string, accountName: string, pages?: Array<{id: s
     }, 3000);
   </script>
 </body></html>`;
-  // Wrap with immediate-redirect script to handle iOS in-app browser
-  // raw-HTML rendering bug. The deep link triggers AMOS to re-open;
-  // the visual UI is a brief 200ms flash before redirect.
-  const wrappedHtml = html.replace(
-    '<body>',
-    `<body>
-<script>
-  // Immediate deep-link redirect to bounce back to AMOS app
-  (function(){
-    try {
-      window.location.href = 'inclufy-go://oauth-success?platform=${encodeURIComponent(platform)}&account=${encodeURIComponent(accountName ?? '')}';
-    } catch(e) {}
-    // Fallback: try to close window after 200ms if app didn't open
-    setTimeout(function(){ try { window.close(); } catch(e) {} }, 200);
-  })();
-</script>`,
-  );
+  // Return 302 redirect to deep-link scheme. The wizard uses
+  // WebBrowser.openAuthSessionAsync('inclufy-go://oauth-success') which
+  // detects this scheme redirect and auto-dismisses the in-app browser,
+  // returning control to the AMOS wizard. Much cleaner than the HTML
+  // page approach and fixes the "wizard hangs forever" bug.
+  //
+  // The HTML success page is included as a fallback for desktop browsers
+  // / web tests that hit oauth-callback directly (state=test for debugging).
+  // For real OAuth (with valid user state), the 302 fires before HTML renders.
+  const deepLink = `inclufy-go://oauth-success?platform=${encodeURIComponent(platform)}&account=${encodeURIComponent(accountName ?? '')}`;
 
-  return new Response(wrappedHtml, {
-    status: 200,
+  return new Response(html, {
+    status: 302,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
+      'Location': deepLink,
       'Cache-Control': 'no-store, no-cache, must-revalidate',
     },
   });

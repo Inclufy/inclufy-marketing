@@ -131,15 +131,39 @@ export default function StepConnect({
 
       if (!authUrl) throw new Error('OAuth niet beschikbaar voor dit platform');
 
-      await WebBrowser.openBrowserAsync(authUrl, {
-        dismissButtonStyle: 'done',
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
-      });
+      // Use openAuthSessionAsync — auto-dismisses when URL with the
+      // app's URL scheme is loaded (e.g. inclufy-go://oauth-success
+      // returned by oauth-callback after successful OAuth). This avoids
+      // the "wizard hangs forever" bug where openBrowserAsync waits for
+      // user to manually tap Done.
+      //
+      // Note: the OAuth provider (Meta/LinkedIn) redirects to our HTTPS
+      // edge function URL — that's NOT intercepted by the auth session
+      // because the scheme is https. Only when the edge function returns
+      // a redirect to inclufy-go:// does the session detect the match
+      // and dismiss.
+      const authResult = await WebBrowser.openAuthSessionAsync(
+        authUrl,
+        'inclufy-go://oauth-success',
+        {
+          dismissButtonStyle: 'done',
+          preferEphemeralSession: false,
+        },
+      );
 
-      // After dismiss: refetch accounts to detect new rows
-      await new Promise(r => setTimeout(r, 1500));
+      // After session ends: refetch accounts to detect new rows
+      // (works regardless of whether user cancelled or completed)
+      await new Promise(r => setTimeout(r, 800));
       await refetchAccounts();
-      setPlatformStatus(platformKey, 'connected');
+
+      if (authResult.type === 'success') {
+        setPlatformStatus(platformKey, 'connected');
+      } else if (authResult.type === 'cancel' || authResult.type === 'dismiss') {
+        // User cancelled — don't show error, just leave status as pending
+        setPlatformStatus(platformKey, 'pending');
+      } else {
+        setPlatformStatus(platformKey, 'failed');
+      }
     } catch (err: any) {
       setPlatformStatus(platformKey, 'failed');
       const friendlyMsg = await fetchErrorTroubleshoot(platformKey, err?.message ?? 'Unknown error', 'nl');
