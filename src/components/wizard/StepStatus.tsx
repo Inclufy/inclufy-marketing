@@ -13,6 +13,7 @@ const PLATFORM_META: Record<PlatformKey, { label: string; icon: keyof typeof imp
   pinterest: { label: 'Pinterest', icon: 'logo-pinterest', color: '#E60023' },
   threads:   { label: 'Threads',   icon: 'at-circle',      color: '#000000' },
   snapchat:  { label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00' },
+  whatsapp:  { label: 'WhatsApp',  icon: 'logo-whatsapp',  color: '#25D366' },
 };
 
 type SocialAccount = {
