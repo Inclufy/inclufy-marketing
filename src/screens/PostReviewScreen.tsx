@@ -31,6 +31,7 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
+import { useUserTier, canBoostMeta } from '../utils/userTier';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -90,6 +91,7 @@ export default function PostReviewScreen() {
   const { data: posts = [], isLoading } = useCapturePosts(captureId);
   const updatePost = useUpdatePost();
   const publishPost = usePublishPost();
+  const { tier: userTier } = useUserTier();
   const batchPublish = useBatchPublish();
   const deletePost = useDeletePost();
   const [flippingImage, setFlippingImage] = useState(false);
@@ -2659,25 +2661,43 @@ export default function PostReviewScreen() {
                 </TouchableOpacity>
 
                 {/* Boost button — shows for published Meta posts (FB/IG).
-                    Opens Meta Ads Manager with post pre-filled + creates
-                    ad_campaigns row in background (DRY-RUN until Meta App
-                    Review approves ads_management scope). */}
+                    Tier-gated: requires tier ≥ promote (read via useUserTier hook
+                    in component scope above). Lower tiers see an "Upgrade"
+                    pill that links to /pricing on marketing.inclufy.com. */}
                 {post.status === 'published' && (post.channel === 'facebook' || post.channel === 'instagram') && (
-                  <TouchableOpacity
-                    onPress={() => handleBoost(post)}
-                    style={{
-                      flexDirection: 'row', alignItems: 'center', gap: 6,
-                      paddingHorizontal: spacing.md, paddingVertical: 12,
-                      borderRadius: borderRadius.md,
-                      backgroundColor: '#F59E0B' + '15',
-                      borderWidth: 1.5, borderColor: '#F59E0B',
-                    }}
-                  >
-                    <Ionicons name="rocket-outline" size={16} color="#F59E0B" />
-                    <Text style={{ color: '#F59E0B', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
-                      Boost
-                    </Text>
-                  </TouchableOpacity>
+                  canBoostMeta(userTier) ? (
+                    <TouchableOpacity
+                      onPress={() => handleBoost(post)}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        paddingHorizontal: spacing.md, paddingVertical: 12,
+                        borderRadius: borderRadius.md,
+                        backgroundColor: '#F59E0B' + '15',
+                        borderWidth: 1.5, borderColor: '#F59E0B',
+                      }}
+                    >
+                      <Ionicons name="rocket-outline" size={16} color="#F59E0B" />
+                      <Text style={{ color: '#F59E0B', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                        Boost
+                      </Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      onPress={() => Linking.openURL('https://marketing.inclufy.com/pricing?upgrade=promote')}
+                      style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 6,
+                        paddingHorizontal: spacing.md, paddingVertical: 12,
+                        borderRadius: borderRadius.md,
+                        backgroundColor: colors.textTertiary + '15',
+                        borderWidth: 1.5, borderColor: colors.textTertiary,
+                      }}
+                    >
+                      <Ionicons name="lock-closed-outline" size={14} color={colors.textTertiary} />
+                      <Text style={{ color: colors.textTertiary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                        Boost (Promote tier)
+                      </Text>
+                    </TouchableOpacity>
+                  )
                 )}
 
                 {/* Delete post */}

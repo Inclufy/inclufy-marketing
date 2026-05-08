@@ -239,6 +239,37 @@ async function rollupCampaignMetrics(supabase: any): Promise<{ updated: number; 
       if (incErr) {
         console.error('[ad-performance-monitor] Failed to update totals for', campaign.id, incErr);
       }
+
+      // ─── Commission rollup (Model C — hybride pricing) ────────────
+      // If user is on a tier with commission_pct > 0, write a daily
+      // commission row. Aggregated weekly/monthly for Stripe usage-based
+      // billing on marketing.inclufy.com. Only on real spend (not mock).
+      if (metrics.spent_cents > 0 && !mock) {
+        const { data: campaignWithUser } = await supabase
+          .from('ad_campaigns')
+          .select('user_id, profiles!inner(commission_pct)')
+          .eq('id', campaign.id)
+          .maybeSingle();
+
+        const userCommissionPct = (campaignWithUser as any)?.profiles?.commission_pct ?? 0;
+        if (userCommissionPct > 0) {
+          const commissionCents = Math.floor(metrics.spent_cents * userCommissionPct / 100);
+          await supabase
+            .from('ad_commissions')
+            .upsert(
+              {
+                user_id: (campaignWithUser as any).user_id,
+                campaign_id: campaign.id,
+                date: today,
+                spend_cents: metrics.spent_cents,
+                commission_pct: userCommissionPct,
+                commission_cents: commissionCents,
+              },
+              { onConflict: 'campaign_id,date' },
+            );
+        }
+      }
+
       updated++;
     }
   }

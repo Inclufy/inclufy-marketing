@@ -125,6 +125,44 @@ Deno.serve(async (req) => {
       );
     }
 
+    // ─── Server-side tier gate ──────────────────────────────────────
+    // Read tier from profiles. Mirror of mobile/web canBoostMeta().
+    // Required tier for boost: ≥ promote.
+    // For multi-channel ads (TikTok/LinkedIn/Pinterest): ≥ ads.
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('tier, commission_pct')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const tier = profile?.tier ?? 'free';
+    const TIER_ORDER: Record<string, number> = {
+      free: 0, pro: 1, promote: 2, ads: 3, enterprise: 4,
+    };
+
+    if (TIER_ORDER[tier] < TIER_ORDER['promote']) {
+      return new Response(
+        JSON.stringify({
+          error: `Boost requires Promote tier or higher. Current tier: ${tier}`,
+          upgrade_url: 'https://marketing.inclufy.com/pricing?upgrade=promote',
+          required_tier: 'promote',
+        }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
+    // Multi-channel ads (TikTok/LinkedIn/Pinterest) require ≥ ads tier
+    if (channel !== 'meta' && TIER_ORDER[tier] < TIER_ORDER['ads']) {
+      return new Response(
+        JSON.stringify({
+          error: `Multi-channel ads (${channel}) require Ads tier or higher. Current tier: ${tier}`,
+          upgrade_url: 'https://marketing.inclufy.com/pricing?upgrade=ads',
+          required_tier: 'ads',
+        }),
+        { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
+    }
+
     // Fetch source post
     const { data: post, error: postErr } = await supabase
       .from('go_posts')
