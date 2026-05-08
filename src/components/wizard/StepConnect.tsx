@@ -12,6 +12,8 @@ const PLATFORM_META: Record<PlatformKey, { label: string; icon: keyof typeof imp
   instagram: { label: 'Instagram', icon: 'logo-instagram', color: '#E4405F' },
   linkedin:  { label: 'LinkedIn',  icon: 'logo-linkedin',  color: '#0077B5' },
   tiktok:    { label: 'TikTok',    icon: 'musical-notes',  color: '#FE2C55' },
+  pinterest: { label: 'Pinterest', icon: 'logo-pinterest', color: '#E60023' },
+  threads:   { label: 'Threads',   icon: 'at-circle',      color: '#000000' },
   snapchat:  { label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00' },
 };
 
@@ -22,6 +24,8 @@ const SCOPE_LIST: Record<PlatformKey, string[]> = {
   instagram: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
   linkedin: ['openid', 'profile', 'email', 'w_member_social'],
   tiktok: ['user.info.basic', 'video.publish', 'video.list'],
+  pinterest: ['pins:read', 'pins:write', 'boards:read', 'boards:write', 'user_accounts:read'],
+  threads: ['threads_basic', 'threads_content_publish'],
   snapchat: [],
 };
 
@@ -127,6 +131,26 @@ export default function StepConnect({
       } else if (platformKey === 'tiktok') {
         const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
         authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
+      } else if (platformKey === 'pinterest') {
+        // Pinterest OAuth — requires Pinterest Developer App registered + verified.
+        // Set EXPO_PUBLIC_PINTEREST_CLIENT_ID via EAS secret after registration.
+        const pinClientId = process.env.EXPO_PUBLIC_PINTEREST_CLIENT_ID || '';
+        if (!pinClientId) {
+          throw new Error('Pinterest is nog niet geconfigureerd (Developer App registratie pending).');
+        }
+        const pinScopes = 'pins:read,pins:write,boards:read,boards:write,user_accounts:read';
+        authUrl = `https://www.pinterest.com/oauth/?response_type=code&client_id=${pinClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(pinScopes)}&state=${encodeURIComponent(state)}`;
+      } else if (platformKey === 'threads') {
+        // Threads uses Meta OAuth via existing Meta app (947950264797942).
+        // Requires "Access the Threads API" use case activated in Meta App Dashboard.
+        const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
+        const threadsScopes = 'threads_basic,threads_content_publish';
+        authUrl = `https://www.threads.net/oauth/authorize?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(threadsScopes)}&response_type=code&state=${encodeURIComponent(state)}`;
+      } else if (platformKey === 'snapchat') {
+        // Snapchat: no public publish API exists since Snap Kit deprecated 2023.
+        // We don't open OAuth — instead the wizard's "Connect Snapchat" tap should
+        // route to a manual-share flow handled in PostReview (deep-link to Snap app).
+        throw new Error('Snapchat ondersteunt geen API-koppeling. Gebruik manueel delen via de Snapchat-app.');
       }
 
       if (!authUrl) throw new Error('OAuth niet beschikbaar voor dit platform');

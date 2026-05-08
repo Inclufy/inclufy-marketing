@@ -618,6 +618,103 @@ Deno.serve(async (req) => {
       profileName = user.display_name || 'TikTok User';
       profilePicture = user.avatar_url || '';
 
+    } else if (platform === 'pinterest') {
+      // ─── Pinterest ────────────────────────────────────────────────
+      console.log('Pinterest token exchange');
+
+      const PINTEREST_CLIENT_ID = Deno.env.get('PINTEREST_CLIENT_ID') ?? '';
+      const PINTEREST_CLIENT_SECRET = Deno.env.get('PINTEREST_CLIENT_SECRET') ?? '';
+
+      if (!PINTEREST_CLIENT_ID || !PINTEREST_CLIENT_SECRET) {
+        return errorPage('Pinterest', 'Pinterest credentials niet geconfigureerd', 'PINTEREST_CLIENT_ID en _SECRET ontbreken in Supabase secrets');
+      }
+
+      const basicAuth = btoa(`${PINTEREST_CLIENT_ID}:${PINTEREST_CLIENT_SECRET}`);
+      const tokenRes = await fetch('https://api.pinterest.com/v5/oauth/token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Basic ${basicAuth}`,
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code,
+          redirect_uri: REDIRECT_URI,
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const err = await tokenRes.text();
+        console.error('Pinterest token exchange failed:', err);
+        return errorPage('Pinterest', 'Token exchange mislukt', err);
+      }
+
+      const tokenData = await tokenRes.json();
+      accessToken = tokenData.access_token;
+      tokenRefreshToken = tokenData.refresh_token ?? null;
+      if (tokenData.expires_in) {
+        tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+      }
+
+      const profileRes = await fetch('https://api.pinterest.com/v5/user_account', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      const profile = profileRes.ok ? await profileRes.json() : {};
+      profileId = profile.username ?? '';
+      profileName = profile.username ?? 'Pinterest User';
+      profilePicture = profile.profile_image ?? '';
+
+    } else if (platform === 'threads') {
+      // ─── Threads (Meta) ───────────────────────────────────────────
+      // Uses Meta OAuth via the same META_APP_ID. Threads-specific
+      // endpoints under graph.threads.net.
+      console.log('Threads token exchange');
+
+      const tokenUrl = new URL('https://graph.threads.net/oauth/access_token');
+      const tokenRes = await fetch(tokenUrl.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: META_APP_ID,
+          client_secret: META_APP_SECRET,
+          grant_type: 'authorization_code',
+          redirect_uri: REDIRECT_URI,
+          code,
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const err = await tokenRes.text();
+        console.error('Threads token exchange failed:', err);
+        return errorPage('Threads', 'Token exchange mislukt', err);
+      }
+
+      const tokenData = await tokenRes.json();
+      accessToken = tokenData.access_token;
+      const threadsUserId = tokenData.user_id ?? '';
+
+      // Optionally exchange for long-lived token (60 days)
+      try {
+        const longLivedRes = await fetch(
+          `https://graph.threads.net/access_token?grant_type=th_exchange_token&client_secret=${META_APP_SECRET}&access_token=${accessToken}`,
+        );
+        if (longLivedRes.ok) {
+          const longLivedData = await longLivedRes.json();
+          accessToken = longLivedData.access_token || accessToken;
+          if (longLivedData.expires_in) {
+            tokenExpiresAt = new Date(Date.now() + longLivedData.expires_in * 1000).toISOString();
+          }
+        }
+      } catch { /* keep short-lived */ }
+
+      // Fetch user profile
+      const profileRes = await fetch(
+        `https://graph.threads.net/v1.0/me?fields=id,username,name&access_token=${accessToken}`,
+      );
+      const profile = profileRes.ok ? await profileRes.json() : {};
+      profileId = profile.id ?? threadsUserId;
+      profileName = profile.username || profile.name || 'Threads User';
+
     } else {
       // ─── Meta (Facebook/Instagram) ────────────────────────────────
       console.log('Meta token exchange for platform:', platform);

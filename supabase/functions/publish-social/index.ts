@@ -598,6 +598,273 @@ async function publishToInstagram(
 }
 
 // ═══════════════════════════════════════════════════════
+// TikTok Publisher (video-only)
+// ═══════════════════════════════════════════════════════
+
+async function publishToTikTok(
+  accessToken: string,
+  text: string,
+  videoUrl?: string,
+): Promise<{ success: boolean; postId?: string; error?: string }> {
+  if (!videoUrl) {
+    return { success: false, error: 'TikTok requires a video. Photo-only posts are not supported.' };
+  }
+
+  try {
+    const TIKTOK_API = 'https://open.tiktokapis.com/v2';
+
+    // Step 1: Init publish (PULL_FROM_URL — TikTok downloads from our URL)
+    const initRes = await fetch(`${TIKTOK_API}/post/publish/video/init/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        post_info: {
+          title: text.substring(0, 2200), // TikTok max 2200 chars
+          privacy_level: 'PUBLIC_TO_EVERYONE', // alternatives: 'MUTUAL_FOLLOW_FRIENDS' | 'SELF_ONLY'
+          disable_duet: false,
+          disable_comment: false,
+          disable_stitch: false,
+          video_cover_timestamp_ms: 1000,
+        },
+        source_info: {
+          source: 'PULL_FROM_URL',
+          video_url: videoUrl,
+        },
+      }),
+    });
+
+    if (!initRes.ok) {
+      const errBody = await initRes.text();
+      console.error('[TikTok] Init error:', initRes.status, errBody);
+      return { success: false, error: `TikTok init error ${initRes.status}: ${errBody}` };
+    }
+
+    const initData = await initRes.json();
+    const publishId: string = initData.data?.publish_id ?? '';
+    if (!publishId) {
+      return { success: false, error: 'TikTok did not return publish_id' };
+    }
+
+    // Step 2: Poll status (TikTok processes async — usually 5-30 sec)
+    let attempts = 0;
+    const maxAttempts = 30; // 30 × 2s = 60s timeout
+    let videoId: string | undefined;
+    let lastStatus = 'PROCESSING_DOWNLOAD';
+
+    while (attempts < maxAttempts) {
+      await new Promise((r) => setTimeout(r, 2000));
+      attempts++;
+
+      const statusRes = await fetch(`${TIKTOK_API}/post/publish/status/fetch/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ publish_id: publishId }),
+      });
+      if (!statusRes.ok) continue;
+      const statusData = await statusRes.json();
+      lastStatus = statusData.data?.status ?? lastStatus;
+
+      if (lastStatus === 'PUBLISH_COMPLETE') {
+        videoId = statusData.data?.publicaly_available_post_id ?? statusData.data?.public_id;
+        break;
+      }
+      if (lastStatus === 'FAILED') {
+        return {
+          success: false,
+          error: `TikTok publish failed: ${statusData.data?.fail_reason ?? 'unknown'}`,
+        };
+      }
+    }
+
+    // Even if poll timed out, the publish_id can succeed async
+    return { success: true, postId: videoId ?? publishId };
+  } catch (err: any) {
+    return { success: false, error: `TikTok exception: ${err.message}` };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Pinterest Publisher (image pins with SEO description)
+// ═══════════════════════════════════════════════════════
+
+async function publishToPinterest(
+  accessToken: string,
+  text: string,
+  imageUrl?: string,
+  videoUrl?: string,
+  options?: {
+    title?: string;
+    boardId?: string;
+    boardName?: string;
+    clickThroughLink?: string;
+  },
+): Promise<{ success: boolean; postId?: string; error?: string; boardId?: string }> {
+  if (!imageUrl && !videoUrl) {
+    return { success: false, error: 'Pinterest requires an image or video.' };
+  }
+
+  try {
+    const PIN_API = 'https://api.pinterest.com/v5';
+
+    // Step 1: Resolve board (find existing or create new)
+    let boardId = options?.boardId;
+    if (!boardId) {
+      const boardName = options?.boardName ?? 'AMOS Captures';
+
+      // Try find existing
+      const listRes = await fetch(`${PIN_API}/boards?page_size=100`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        const existing = (listData.items ?? []).find(
+          (b: any) => (b.name ?? '').toLowerCase() === boardName.toLowerCase(),
+        );
+        if (existing) boardId = existing.id;
+      }
+
+      // Create if not exists
+      if (!boardId) {
+        const createRes = await fetch(`${PIN_API}/boards`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: boardName,
+            description: `${boardName} — managed by AMOS`,
+            privacy: 'PUBLIC',
+          }),
+        });
+        if (!createRes.ok) {
+          const err = await createRes.text();
+          return { success: false, error: `Pinterest board create error: ${err}` };
+        }
+        const createData = await createRes.json();
+        boardId = createData.id;
+      }
+    }
+
+    if (!boardId) {
+      return { success: false, error: 'Could not resolve Pinterest board' };
+    }
+
+    // Step 2: Create pin
+    const pinBody: any = {
+      board_id: boardId,
+      media_source: videoUrl
+        ? { source_type: 'video_id', cover_image_url: imageUrl, media_id: videoUrl } // legacy form
+        : { source_type: 'image_url', url: imageUrl },
+      title: (options?.title ?? text.split('\n')[0] ?? 'AMOS').substring(0, 100),
+      description: text.substring(0, 800),
+    };
+    if (options?.clickThroughLink) {
+      pinBody.link = options.clickThroughLink;
+    }
+
+    const pinRes = await fetch(`${PIN_API}/pins`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(pinBody),
+    });
+
+    if (!pinRes.ok) {
+      const errBody = await pinRes.text();
+      console.error('[Pinterest] Pin create error:', pinRes.status, errBody);
+      return { success: false, error: `Pinterest pin error ${pinRes.status}: ${errBody}` };
+    }
+
+    const pinData = await pinRes.json();
+    return { success: true, postId: pinData.id, boardId };
+  } catch (err: any) {
+    return { success: false, error: `Pinterest exception: ${err.message}` };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// Threads Publisher (Meta — text/image/video)
+// ═══════════════════════════════════════════════════════
+
+async function publishToThreads(
+  accessToken: string,
+  threadsUserId: string,
+  text: string,
+  imageUrl?: string,
+  videoUrl?: string,
+): Promise<{ success: boolean; postId?: string; error?: string }> {
+  try {
+    const THREADS_API = 'https://graph.threads.net/v1.0';
+
+    // Step 1: Create container
+    const containerBody: any = {
+      access_token: accessToken,
+      text: text.substring(0, 500), // Threads max 500 chars
+    };
+
+    if (videoUrl) {
+      containerBody.media_type = 'VIDEO';
+      containerBody.video_url = videoUrl;
+    } else if (imageUrl) {
+      containerBody.media_type = 'IMAGE';
+      containerBody.image_url = imageUrl;
+    } else {
+      containerBody.media_type = 'TEXT';
+    }
+
+    const createRes = await fetch(`${THREADS_API}/${threadsUserId}/threads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(containerBody),
+    });
+
+    if (!createRes.ok) {
+      const errBody = await createRes.text();
+      return { success: false, error: `Threads container error ${createRes.status}: ${errBody}` };
+    }
+
+    const containerData = await createRes.json();
+    const creationId = containerData.id;
+
+    // Step 2: Wait briefly for media processing (Meta recommends ~30 sec for video)
+    if (videoUrl) {
+      await new Promise((r) => setTimeout(r, 5000));
+    } else if (imageUrl) {
+      await new Promise((r) => setTimeout(r, 1500));
+    }
+
+    // Step 3: Publish container
+    const publishRes = await fetch(`${THREADS_API}/${threadsUserId}/threads_publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_token: accessToken,
+        creation_id: creationId,
+      }),
+    });
+
+    if (!publishRes.ok) {
+      const errBody = await publishRes.text();
+      return { success: false, error: `Threads publish error ${publishRes.status}: ${errBody}` };
+    }
+
+    const publishData = await publishRes.json();
+    return { success: true, postId: publishData.id };
+  } catch (err: any) {
+    return { success: false, error: `Threads exception: ${err.message}` };
+  }
+}
+
+// ═══════════════════════════════════════════════════════
 // First-Comment Publishers
 // ═══════════════════════════════════════════════════════
 
@@ -1018,6 +1285,47 @@ Deno.serve(async (req: Request) => {
           // WhatsApp Cloud API publishing not yet active — manual copy-paste only.
           // A separate agent will extend this case with WABA / Cloud API support.
           result = { success: false, error: 'WhatsApp API publishing nog niet actief. Ondersteunt nu alleen manual copy-paste.' };
+          break;
+        case 'tiktok':
+          // TikTok Content Publishing API — video-only.
+          // Requires TikTok Developer App + video.publish scope approval.
+          result = await publishToTikTok(tokenData.access_token, text, videoUrl);
+          break;
+        case 'pinterest':
+          // Pinterest API v5 — image pins with SEO description + board management.
+          // Requires Pinterest Developer App + pins:write scope.
+          result = await publishToPinterest(
+            tokenData.access_token,
+            text,
+            imageUrl,
+            videoUrl,
+            {
+              title: (proposal as any).pinterest_title,
+              boardId: (proposal as any).pinterest_board_id,
+              boardName: (proposal as any).pinterest_board_name,
+              clickThroughLink: (proposal as any).pinterest_click_through,
+            },
+          );
+          break;
+        case 'threads':
+          // Threads API (Meta) — text/image/video posts.
+          // Requires Meta App with "Access the Threads API" use case.
+          result = await publishToThreads(
+            tokenData.access_token,
+            socialAccount.platform_account_id,
+            text,
+            imageUrl,
+            videoUrl,
+          );
+          break;
+        case 'snapchat':
+          // Snapchat: no public publish API exists (Snap Kit deprecated 2023).
+          // AMOS only supports manual share via deep-link to Snapchat app.
+          // PostReview handles this client-side with snapchat:// URL scheme.
+          result = {
+            success: false,
+            error: 'Snapchat ondersteunt geen API-publishing. Gebruik de "Manueel delen" knop in PostReview om naar de Snapchat-app te springen.',
+          };
           break;
         default:
           result = { success: false, error: `Platform '${channel}' wordt nog niet ondersteund` };

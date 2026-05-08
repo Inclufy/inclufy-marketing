@@ -31,7 +31,14 @@ export type WizardStep =
   | 'firstPost'
   | 'done';
 
-export type PlatformKey = 'facebook' | 'instagram' | 'linkedin' | 'tiktok' | 'snapchat';
+export type PlatformKey =
+  | 'facebook'
+  | 'instagram'
+  | 'linkedin'
+  | 'tiktok'
+  | 'snapchat'
+  | 'pinterest'
+  | 'threads';
 
 export type ConnectionStatus =
   | 'pending'      // initial / not started

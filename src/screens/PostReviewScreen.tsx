@@ -47,6 +47,9 @@ const channelConfig: Record<Channel, { label: string; color: string; icon: strin
   facebook: { label: 'Facebook', color: '#1877F2', icon: 'logo-facebook' },
   tiktok: { label: 'TikTok', color: '#000000', icon: 'logo-tiktok' },
   whatsapp: { label: 'WhatsApp', color: '#25D366', icon: 'logo-whatsapp' },
+  pinterest: { label: 'Pinterest', color: '#E60023', icon: 'logo-pinterest' },
+  threads: { label: 'Threads', color: '#000000', icon: 'at-circle' },
+  snapchat: { label: 'Snapchat', color: '#FFFC00', icon: 'logo-snapchat' },
 };
 
 // Inline video preview — uses expo-video. Defined at module level so the hook

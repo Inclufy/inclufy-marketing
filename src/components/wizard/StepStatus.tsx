@@ -10,6 +10,8 @@ const PLATFORM_META: Record<PlatformKey, { label: string; icon: keyof typeof imp
   instagram: { label: 'Instagram', icon: 'logo-instagram', color: '#E4405F' },
   linkedin:  { label: 'LinkedIn',  icon: 'logo-linkedin',  color: '#0077B5' },
   tiktok:    { label: 'TikTok',    icon: 'musical-notes',  color: '#FE2C55' },
+  pinterest: { label: 'Pinterest', icon: 'logo-pinterest', color: '#E60023' },
+  threads:   { label: 'Threads',   icon: 'at-circle',      color: '#000000' },
   snapchat:  { label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00' },
 };
 
