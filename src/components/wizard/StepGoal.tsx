@@ -11,14 +11,16 @@ const PLATFORMS: Array<{
   label: string;
   icon: keyof typeof Ionicons.glyphMap;
   color: string;
-  status: 'ready' | 'beta' | 'unsupported';
+  status: 'ready' | 'beta' | 'manual' | 'unsupported';
   hint?: string;
 }> = [
   { key: 'facebook',  label: 'Facebook',  icon: 'logo-facebook',  color: '#1877F2', status: 'ready' },
   { key: 'instagram', label: 'Instagram', icon: 'logo-instagram', color: '#E4405F', status: 'ready' },
   { key: 'linkedin',  label: 'LinkedIn',  icon: 'logo-linkedin',  color: '#0077B5', status: 'ready' },
-  { key: 'tiktok',    label: 'TikTok',    icon: 'musical-notes',  color: '#FE2C55', status: 'beta',        hint: 'Beperkt: 5 video\'s/dag' },
-  { key: 'snapchat',  label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00', status: 'unsupported', hint: 'Geen publieke API' },
+  { key: 'tiktok',    label: 'TikTok',    icon: 'musical-notes',  color: '#FE2C55', status: 'beta',   hint: 'Beperkt: 5 video\'s/dag' },
+  { key: 'pinterest', label: 'Pinterest', icon: 'logo-pinterest', color: '#E60023', status: 'ready',  hint: 'Sterk voor F&B + product visuals' },
+  { key: 'threads',   label: 'Threads',   icon: 'at-circle',      color: '#000000', status: 'ready',  hint: 'Tekst-first kanaal, gekoppeld aan IG' },
+  { key: 'snapchat',  label: 'Snapchat',  icon: 'logo-snapchat',  color: '#FFFC00', status: 'manual', hint: 'Manueel delen via Snap-app' },
 ];
 
 type Props = {
@@ -145,6 +147,12 @@ export default function StepGoal({ selectedPlatforms, togglePlatform, fetchRecom
               {p.status === 'beta' ? (
                 <View style={{ backgroundColor: '#F59E0B' + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: spacing.sm }}>
                   <Text style={{ fontSize: fontSize.xs, color: '#F59E0B', fontWeight: fontWeight.semibold }}>BETA</Text>
+                </View>
+              ) : null}
+
+              {p.status === 'manual' ? (
+                <View style={{ backgroundColor: colors.success + '20', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginRight: spacing.sm }}>
+                  <Text style={{ fontSize: fontSize.xs, color: colors.success, fontWeight: fontWeight.semibold }}>MANUEEL</Text>
                 </View>
               ) : null}
 
