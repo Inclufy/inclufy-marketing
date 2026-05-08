@@ -257,7 +257,51 @@ export default function StepConnect({
 
       <View style={{ gap: spacing.md }}>
         {selectedPlatforms.map((p) => {
-          if (p === 'snapchat') return null;
+          // Snapchat — special case: no OAuth, manual share via deep-link only
+          if (p === 'snapchat') {
+            const meta = PLATFORM_META[p];
+            return (
+              <View
+                key={p}
+                style={{
+                  padding: spacing.md,
+                  borderRadius: borderRadius.md,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.success,
+                }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm }}>
+                  <View style={{
+                    width: 36, height: 36, borderRadius: 18,
+                    backgroundColor: meta.color + '20',
+                    alignItems: 'center', justifyContent: 'center',
+                    marginRight: spacing.md,
+                  }}>
+                    <Ionicons name={meta.icon} size={20} color={meta.color === '#FFFC00' ? '#000' : meta.color} />
+                  </View>
+                  <Text style={{ flex: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text }}>
+                    {meta.label}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+                    <Text style={{ color: colors.success, fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>Klaar</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: colors.background, padding: spacing.sm, borderRadius: borderRadius.sm }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 4 }}>
+                    <Ionicons name="hand-left-outline" size={14} color={colors.textSecondary} />
+                    <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.semibold }}>
+                      Manueel delen
+                    </Text>
+                  </View>
+                  <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 18 }}>
+                    Snapchat heeft geen publieke API voor automatische posts. Bij publiceren opent AMOS de Snap-app met je content — jij plaatst hem dan met één tik.
+                  </Text>
+                </View>
+              </View>
+            );
+          }
           const meta = PLATFORM_META[p];
           const connected = isConnected(p);
           const busy = busyPlatform === p;

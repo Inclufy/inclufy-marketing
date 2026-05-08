@@ -31,11 +31,19 @@ type Props = {
 };
 
 function getPlatformState(p: PlatformKey, accounts: SocialAccount[]): {
-  state: 'connected' | 'partial' | 'pending' | 'lmdp_pending';
+  state: 'connected' | 'partial' | 'pending' | 'lmdp_pending' | 'manual';
   message: string;
   details: string;
 } {
   const platformAccounts = accounts.filter(a => a.platform === p && a.status === 'active');
+
+  if (p === 'snapchat') {
+    return {
+      state: 'manual',
+      message: 'Manueel delen',
+      details: 'Geen API beschikbaar — AMOS opent de Snap-app met je content klaar om te delen',
+    };
+  }
 
   if (p === 'facebook') {
     const hasPage = platformAccounts.some(a => a.account_type === 'page');
@@ -96,12 +104,14 @@ export default function StepStatus({ selectedPlatforms, socialAccounts, goNext, 
 
           const stateColor =
             status.state === 'connected' ? colors.success :
+            status.state === 'manual' ? colors.success :
             status.state === 'lmdp_pending' ? '#F59E0B' :
             status.state === 'partial' ? '#F59E0B' :
             colors.textTertiary;
 
           const stateIcon =
             status.state === 'connected' ? 'checkmark-circle' :
+            status.state === 'manual' ? 'hand-left' :
             status.state === 'lmdp_pending' ? 'time' :
             status.state === 'partial' ? 'warning' :
             'ellipse-outline';
