@@ -144,7 +144,10 @@ export default function StepConnect({
         const igScope = 'instagram_business_basic,instagram_business_content_publish';
         // Override the state's platform suffix to flag IG-direct flow
         const igState = `${user.id}:${orgIdForState}:instagram-direct`;
-        authUrl = `https://www.instagram.com/oauth/authorize?client_id=${igAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
+        // force_reauth=true matches Meta's recommended Embed URL — bypasses
+        // any cached IG session state that could trigger "Ontwikkelaarsrol
+        // is niet voldoende" error even after Tester role accepted.
+        authUrl = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${igAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
       } else if (platformKey === 'tiktok') {
         // TikTok AMOS app (Inclufy ownership, App ID 7617756854004910092).
         // Sandbox credentials (sbaw0n7p637do602ql) for development testing
