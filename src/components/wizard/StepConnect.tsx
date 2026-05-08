@@ -140,8 +140,11 @@ export default function StepConnect({
         const igState = `${user.id}:${orgIdForState}:instagram-direct`;
         authUrl = `https://www.instagram.com/oauth/authorize?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
       } else if (platformKey === 'tiktok') {
-        // TikTok client key for AMOS app (Inclufy ownership, App ID 7617756854004910092)
-        const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'aww48c6q0ueh2pz1';
+        // TikTok AMOS app (Inclufy ownership, App ID 7617756854004910092).
+        // Currently using Sandbox credentials (sbaw0n7p637do602ql) until
+        // Production form is finalized + video.publish scope review approved.
+        // Sandbox requires Sami as registered Tester in TikTok dev portal.
+        const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
         authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'pinterest') {
         // Pinterest OAuth — requires Pinterest Developer App registered + verified.
