@@ -190,12 +190,29 @@ function successPage(platform: string, accountName: string, pages?: Array<{id: s
     }, 3000);
   </script>
 </body></html>`;
-  return new Response(html, {
+  // Wrap with immediate-redirect script to handle iOS in-app browser
+  // raw-HTML rendering bug. The deep link triggers AMOS to re-open;
+  // the visual UI is a brief 200ms flash before redirect.
+  const wrappedHtml = html.replace(
+    '<body>',
+    `<body>
+<script>
+  // Immediate deep-link redirect to bounce back to AMOS app
+  (function(){
+    try {
+      window.location.href = 'inclufy-go://oauth-success?platform=${encodeURIComponent(platform)}&account=${encodeURIComponent(accountName ?? '')}';
+    } catch(e) {}
+    // Fallback: try to close window after 200ms if app didn't open
+    setTimeout(function(){ try { window.close(); } catch(e) {} }, 200);
+  })();
+</script>`,
+  );
+
+  return new Response(wrappedHtml, {
     status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'no-store, no-cache, must-revalidate',
-      'X-Content-Type-Options': 'nosniff',
     },
   });
 }
