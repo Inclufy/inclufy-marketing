@@ -33,12 +33,15 @@ import { useLocation, formatRegion, type RegionData } from '../hooks/useLocation
 const BIOMETRIC_KEY = 'amos_biometric_enabled';
 
 const SOCIAL_PLATFORMS = [
-  { key: 'linkedin',  label: 'LinkedIn',    icon: 'logo-linkedin'  as keyof typeof Ionicons.glyphMap, color: '#0077B5', supported: true },
-  { key: 'instagram', label: 'Instagram',   icon: 'logo-instagram' as keyof typeof Ionicons.glyphMap, color: '#E4405F', supported: true },
-  { key: 'x',         label: 'X / Twitter', icon: 'logo-twitter'   as keyof typeof Ionicons.glyphMap, color: '#1DA1F2', supported: false },
-  { key: 'facebook',  label: 'Facebook',    icon: 'logo-facebook'  as keyof typeof Ionicons.glyphMap, color: '#1877F2', supported: true },
-  { key: 'tiktok',    label: 'TikTok',      icon: 'musical-notes'  as keyof typeof Ionicons.glyphMap, color: '#000000', supported: true },
-  { key: 'snapchat',  label: 'Snapchat',    icon: 'eye-outline'    as keyof typeof Ionicons.glyphMap, color: '#FFFC00', supported: false },
+  { key: 'linkedin',  label: 'LinkedIn',    icon: 'logo-linkedin'  as keyof typeof Ionicons.glyphMap, color: '#0077B5', supported: true,  manualOnly: false },
+  { key: 'instagram', label: 'Instagram',   icon: 'logo-instagram' as keyof typeof Ionicons.glyphMap, color: '#E4405F', supported: true,  manualOnly: false },
+  { key: 'facebook',  label: 'Facebook',    icon: 'logo-facebook'  as keyof typeof Ionicons.glyphMap, color: '#1877F2', supported: true,  manualOnly: false },
+  { key: 'tiktok',    label: 'TikTok',      icon: 'musical-notes'  as keyof typeof Ionicons.glyphMap, color: '#000000', supported: true,  manualOnly: false },
+  { key: 'pinterest', label: 'Pinterest',   icon: 'logo-pinterest' as keyof typeof Ionicons.glyphMap, color: '#E60023', supported: true,  manualOnly: false },
+  { key: 'threads',   label: 'Threads',     icon: 'at-circle'      as keyof typeof Ionicons.glyphMap, color: '#000000', supported: true,  manualOnly: false },
+  { key: 'snapchat',  label: 'Snapchat',    icon: 'logo-snapchat'  as keyof typeof Ionicons.glyphMap, color: '#FFFC00', supported: true,  manualOnly: true  },
+  { key: 'whatsapp',  label: 'WhatsApp',    icon: 'logo-whatsapp'  as keyof typeof Ionicons.glyphMap, color: '#25D366', supported: true,  manualOnly: true  },
+  { key: 'x',         label: 'X / Twitter', icon: 'logo-twitter'   as keyof typeof Ionicons.glyphMap, color: '#1DA1F2', supported: false, manualOnly: false },
 ] as const;
 
 
@@ -1171,22 +1174,47 @@ export default function SettingsScreen() {
                     {!platform.supported && !isConnected && (
                       <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, marginTop: 2 }}>Binnenkort</Text>
                     )}
+                    {(platform as any).manualOnly && !isConnected && (
+                      <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 }}>
+                        Manueel delen — geen koppeling nodig
+                      </Text>
+                    )}
                   </View>
                   <View style={{
                     flexDirection: 'row', alignItems: 'center', gap: 4,
-                    backgroundColor: isConnected ? colors.success + '12' : colors.primary + '12',
+                    backgroundColor: isConnected
+                      ? colors.success + '12'
+                      : (platform as any).manualOnly
+                        ? colors.success + '12'
+                        : colors.primary + '12',
                     paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12,
                   }}>
                     <Ionicons
-                      name={isConnected ? 'checkmark-circle-outline' : 'link-outline'}
+                      name={
+                        isConnected ? 'checkmark-circle-outline' :
+                        (platform as any).manualOnly ? 'hand-left-outline' :
+                        'link-outline'
+                      }
                       size={14}
-                      color={isConnected ? colors.success : colors.primary}
+                      color={
+                        isConnected ? colors.success :
+                        (platform as any).manualOnly ? colors.success :
+                        colors.primary
+                      }
                     />
                     <Text style={{
                       fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
-                      color: isConnected ? colors.success : colors.primary,
+                      color: isConnected
+                        ? colors.success
+                        : (platform as any).manualOnly
+                          ? colors.success
+                          : colors.primary,
                     }}>
-                      {isConnected ? `${connectedAccounts.length} verbonden` : 'Verbinden'}
+                      {isConnected
+                        ? `${connectedAccounts.length} verbonden`
+                        : (platform as any).manualOnly
+                          ? 'Klaar'
+                          : 'Verbinden'}
                     </Text>
                   </View>
                 </TouchableOpacity>
