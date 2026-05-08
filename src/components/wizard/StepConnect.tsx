@@ -23,7 +23,7 @@ const SCOPE_LIST: Record<PlatformKey, string[]> = {
   facebook: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
   instagram: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
   linkedin: ['openid', 'profile', 'email', 'w_member_social'],
-  tiktok: ['user.info.basic', 'video.publish', 'video.list'],
+  tiktok: ['user.info.basic', 'video.publish', 'video.upload'],
   pinterest: ['pins:read', 'pins:write', 'boards:read', 'boards:write', 'user_accounts:read'],
   threads: ['threads_basic', 'threads_content_publish'],
   snapchat: [],
@@ -141,11 +141,13 @@ export default function StepConnect({
         authUrl = `https://www.instagram.com/oauth/authorize?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
       } else if (platformKey === 'tiktok') {
         // TikTok AMOS app (Inclufy ownership, App ID 7617756854004910092).
-        // Currently using Sandbox credentials (sbaw0n7p637do602ql) until
-        // Production form is finalized + video.publish scope review approved.
-        // Sandbox requires Sami as registered Tester in TikTok dev portal.
+        // Sandbox credentials (sbaw0n7p637do602ql) for development testing
+        // until Production form approved. Sandbox enabled scopes match below.
         const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
-        authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
+        // Scopes match Sandbox-activated set: user.info.basic + video.publish + video.upload.
+        // We use video.publish for direct posting; video.upload allows draft uploads.
+        const tiktokScope = 'user.info.basic,video.publish,video.upload';
+        authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(tiktokScope)}&response_type=code&state=${encodeURIComponent(state)}`;
       } else if (platformKey === 'pinterest') {
         // Pinterest OAuth — requires Pinterest Developer App registered + verified.
         // Set EXPO_PUBLIC_PINTEREST_CLIENT_ID via EAS secret after registration.
