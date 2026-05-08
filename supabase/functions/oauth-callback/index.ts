@@ -715,8 +715,91 @@ Deno.serve(async (req) => {
       profileId = profile.id ?? threadsUserId;
       profileName = profile.username || profile.name || 'Threads User';
 
+    } else if (platform === 'instagram-direct') {
+      // ─── Instagram Direct Login (NEW 2024+ flow) ──────────────────
+      // Bypasses FB Pages dependency. User logs in directly with IG
+      // credentials. Token works directly for IG Business publishing
+      // without needing FB Pages API or Account Center IG-Page link.
+      //
+      // Required Meta App use case: "Instagram API with Instagram Login"
+      // (NOT the same as "Manage messaging & content on Instagram"
+      // which is for FB-Login → IG-via-Pages flow).
+      //
+      // OAuth URL: https://www.instagram.com/oauth/authorize
+      // Token exchange: https://api.instagram.com/oauth/access_token
+      // Long-lived: https://graph.instagram.com/access_token
+      console.log('Instagram Direct Login token exchange');
+
+      const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: META_APP_ID,
+          client_secret: META_APP_SECRET,
+          grant_type: 'authorization_code',
+          redirect_uri: REDIRECT_URI,
+          code,
+        }),
+      });
+
+      if (!tokenRes.ok) {
+        const err = await tokenRes.text();
+        console.error('Instagram Direct token exchange failed:', err);
+        return errorPage('Instagram', 'Token exchange mislukt', err);
+      }
+
+      const tokenData = await tokenRes.json();
+      accessToken = tokenData.access_token;
+      const igUserId = tokenData.user_id ? String(tokenData.user_id) : '';
+
+      // Exchange short-lived (1h) for long-lived (60d) token
+      try {
+        const longLivedRes = await fetch(
+          `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${META_APP_SECRET}&access_token=${accessToken}`,
+        );
+        if (longLivedRes.ok) {
+          const longLivedData = await longLivedRes.json();
+          accessToken = longLivedData.access_token || accessToken;
+          if (longLivedData.expires_in) {
+            tokenExpiresAt = new Date(Date.now() + longLivedData.expires_in * 1000).toISOString();
+          }
+        }
+      } catch (e) {
+        console.warn('IG long-lived token exchange failed (using short-lived):', e);
+      }
+
+      // Fetch IG profile
+      const profileRes = await fetch(
+        `https://graph.instagram.com/v20.0/me?fields=user_id,username,name,account_type&access_token=${accessToken}`,
+      );
+      if (!profileRes.ok) {
+        const err = await profileRes.text();
+        console.error('IG profile fetch failed:', err);
+        return errorPage('Instagram', 'Profiel ophalen mislukt', err);
+      }
+      const profile = await profileRes.json();
+      profileId = profile.user_id ? String(profile.user_id) : igUserId;
+      profileName = profile.username ? `@${profile.username}` : (profile.name || 'Instagram User');
+      profilePicture = '';
+
+      // For Instagram Direct: account_type from profile (BUSINESS / CREATOR / PERSONAL)
+      // We map all to 'business' for AMOS publishing logic since both
+      // BUSINESS and CREATOR can use the publishing API.
+      const igAccountType = profile.account_type ?? 'BUSINESS';
+      const accountTypeForDb = ['BUSINESS', 'CREATOR'].includes(igAccountType) ? 'business' : 'personal';
+
+      // Store directly — no FB Pages flow needed
+      const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+      await upsertSocialAccount(
+        db, userId, 'instagram', profileId, profileName, profilePicture,
+        accessToken, accountTypeForDb, undefined, tokenExpiresAt, tokenRefreshToken,
+      );
+
+      console.log(`Instagram Direct connected: ${profileName} (${accountTypeForDb})`);
+      return successPage('Instagram', profileName);
+
     } else {
-      // ─── Meta (Facebook/Instagram) ────────────────────────────────
+      // ─── Meta (Facebook/Instagram via FB Pages — legacy) ──────────
       console.log('Meta token exchange for platform:', platform);
 
       const tokenUrl = new URL('https://graph.facebook.com/v20.0/oauth/access_token');

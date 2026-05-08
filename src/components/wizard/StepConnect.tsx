@@ -117,17 +117,28 @@ export default function StepConnect({
         const clientId = process.env.EXPO_PUBLIC_LINKEDIN_CLIENT_ID || '789493c65q6j5e';
         const scopes = 'openid profile email w_member_social';
         authUrl = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scopes)}&state=${encodeURIComponent(state)}`;
-      } else if (platformKey === 'facebook' || platformKey === 'instagram') {
+      } else if (platformKey === 'facebook') {
+        // Facebook OAuth via Meta — for FB Pages publishing only.
+        // For Instagram we use a SEPARATE direct IG Login flow below
+        // because Meta's Pages API does NOT expose IG-Page links made
+        // via Account Center (verified empirically 2026-05-08).
         const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
-        // NOTES on scope choices:
-        // - `instagram_basic` was deprecated by Meta (2024) — removed.
-        // - `email` requires "Authenticate with Facebook Login" use case
-        //   which this app doesn't have configured — removed (we don't
-        //   need email for our flow anyway, public_profile gives us name).
-        // - IG Business is auto-discovered via FB Pages flow in
-        //   oauth-callback using /me/accounts?fields=instagram_business_account.
-        const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_content_publish,business_management,public_profile';
+        const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,business_management,public_profile';
         authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
+      } else if (platformKey === 'instagram') {
+        // Instagram Direct Login (NEW 2024+ flow) — bypasses FB Pages.
+        // User logs in DIRECTLY with their IG Business credentials at
+        // instagram.com/oauth/authorize. Token works directly for IG
+        // publishing without Pages API or Account Center dependency.
+        //
+        // The state parameter uses 'instagram-direct' as platform key so
+        // oauth-callback knows to use the IG-direct flow (api.instagram.com)
+        // instead of the legacy Meta+Pages flow.
+        const metaAppId = process.env.EXPO_PUBLIC_META_APP_ID || '947950264797942';
+        const igScope = 'instagram_business_basic,instagram_business_content_publish';
+        // Override the state's platform suffix to flag IG-direct flow
+        const igState = `${user.id}:${orgIdForState}:instagram-direct`;
+        authUrl = `https://www.instagram.com/oauth/authorize?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(igScope)}&response_type=code&state=${encodeURIComponent(igState)}`;
       } else if (platformKey === 'tiktok') {
         // TikTok client key for AMOS app (Inclufy ownership, App ID 7617756854004910092)
         const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'aww48c6q0ueh2pz1';
