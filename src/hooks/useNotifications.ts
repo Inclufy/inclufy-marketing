@@ -9,7 +9,11 @@ export type NotificationType =
   | 'system'
   | 'ai_suggestion'
   | 'post_published'
-  | 'event_update';
+  | 'event_update'
+  // Capture-to-Ad lifecycle types — written by ad-performance-monitor cron
+  | 'boost_candidate'  // top-performer detected → suggest Boost
+  | 'boost_completed'  // ad campaign duration ended
+  | 'boost_failed';    // Meta Marketing API rejection
 
 export interface AppNotification {
   id: string;
@@ -24,6 +28,14 @@ export interface AppNotification {
     event_name?: string;
     invited_by?: string;
     role?: string;
+    // boost_candidate / boost_completed / boost_failed
+    post_id?: string;
+    channel?: string;
+    multiplier?: number;
+    engagement_score?: number;
+    baseline_score?: number;
+    campaign_id?: string;
+    action_url?: string;
     // generic
     route?: string;
     [key: string]: unknown;

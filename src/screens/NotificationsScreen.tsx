@@ -332,12 +332,14 @@ export default function NotificationsScreen() {
     // Capture-to-Ad: boost_candidate notifications open BoostFlow wizard
     // for the related post. Inserted by ad-performance-monitor cron when a
     // post is detected as top-performer (3x baseline engagement).
+    // Reads post_id from notification.data (go_notifications schema).
     if (notification.type === 'boost_candidate') {
-      const postId = (notification as any).related_post_id ?? notification.data?.post_id;
+      const postId = notification.data?.post_id;
+      const channel = notification.data?.channel === 'instagram' ? 'instagram' : 'facebook';
       if (postId) {
         navigation.navigate('BoostFlow', {
           postId: String(postId),
-          channel: 'meta', // boost_candidate currently only triggers for FB/IG
+          channel,
         });
         return;
       }

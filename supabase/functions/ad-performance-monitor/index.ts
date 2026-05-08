@@ -121,26 +121,38 @@ async function detectTopPerformers(supabase: any): Promise<BoostCandidate[]> {
 }
 
 async function notifyBoostCandidates(supabase: any, candidates: BoostCandidate[]): Promise<number> {
+  // FIX: useNotifications hook + NotificationsScreen read from `go_notifications`,
+  // NOT from the new `public.notifications` table. To make boost_candidate
+  // alerts actually appear in the UI, we write to `go_notifications` with
+  // its existing schema (title/body/data jsonb, no separate columns for
+  // post_id/action_url — those go inside `data`).
   let inserted = 0;
   for (const c of candidates) {
-    // Avoid duplicate notifications for same post
+    // Avoid duplicate notifications for same post (check by data->>post_id
+    // since go_notifications has no related_post_id column)
     const { data: existing } = await supabase
-      .from('notifications')
+      .from('go_notifications')
       .select('id')
       .eq('user_id', c.user_id)
-      .eq('related_post_id', c.post_id)
       .eq('type', 'boost_candidate')
+      .filter('data->>post_id', 'eq', c.post_id)
       .maybeSingle();
     if (existing) continue;
 
-    const { error: insErr } = await supabase.from('notifications').insert({
+    const { error: insErr } = await supabase.from('go_notifications').insert({
       user_id: c.user_id,
       type: 'boost_candidate',
       title: '🚀 Top performer — Boost?',
-      message: `Je ${c.channel} post presteert ${c.multiplier.toFixed(1)}x boven je gemiddelde. Boost hem voor extra reach.`,
-      related_post_id: c.post_id,
-      action_url: `/posts/${c.post_id}?boost=1`,
-      priority: 'high',
+      body: `Je ${c.channel} post presteert ${c.multiplier.toFixed(1)}x boven je gemiddelde. Boost hem voor extra reach.`,
+      data: {
+        post_id: c.post_id,
+        channel: c.channel,
+        multiplier: c.multiplier,
+        engagement_score: c.engagement_score,
+        baseline_score: c.baseline_score,
+        route: 'BoostFlow', // navigation hint for mobile
+        action_url: `/posts/${c.post_id}/boost`, // for web
+      },
       read: false,
     });
     if (!insErr) inserted++;
@@ -244,7 +256,9 @@ async function rollupCampaignMetrics(supabase: any): Promise<{ updated: number; 
       // If user is on a tier with commission_pct > 0, write a daily
       // commission row. Aggregated weekly/monthly for Stripe usage-based
       // billing on marketing.inclufy.com. Only on real spend (not mock).
-      if (metrics.spent_cents > 0 && !mock) {
+      // FIX: was `!mock` referencing an undefined local var. The mock
+      // condition is `!META_ADS_API_LIVE` which is the module-level constant.
+      if (metrics.spent_cents > 0 && META_ADS_API_LIVE) {
         const { data: campaignWithUser } = await supabase
           .from('ad_campaigns')
           .select('user_id, profiles!inner(commission_pct)')
