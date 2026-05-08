@@ -721,7 +721,10 @@ export default function SettingsScreen() {
       //   instagram_basic             — read IG business profile
       //   instagram_content_publish   — publish to IG business account (requires Meta App Review for production)
       //   public_profile              — basic identity
-      const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish,public_profile';
+      // NOTE: `instagram_basic` was deprecated by Meta (2024). IG Business
+      // is auto-discovered via FB Pages flow (see oauth-callback.ts where
+      // /me/accounts?fields=instagram_business_account is called).
+      const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_content_publish,business_management,public_profile,email';
       authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'tiktok') {
       const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
