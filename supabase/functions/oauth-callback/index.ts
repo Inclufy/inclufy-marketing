@@ -190,22 +190,37 @@ function successPage(platform: string, accountName: string, pages?: Array<{id: s
     }, 3000);
   </script>
 </body></html>`;
-  // Return 302 redirect to deep-link scheme. The wizard uses
-  // WebBrowser.openAuthSessionAsync('inclufy-go://oauth-success') which
-  // detects this scheme redirect and auto-dismisses the in-app browser,
-  // returning control to the AMOS wizard. Much cleaner than the HTML
-  // page approach and fixes the "wizard hangs forever" bug.
+  // Return HTML success page with embedded JS deep-link redirect.
   //
-  // The HTML success page is included as a fallback for desktop browsers
-  // / web tests that hit oauth-callback directly (state=test for debugging).
-  // For real OAuth (with valid user state), the 302 fires before HTML renders.
+  // We tried HTTP 302 redirect to inclufy-go:// scheme but iOS in-app
+  // browsers (SFSafariViewController via expo-web-browser openBrowserAsync)
+  // show a WHITE SCREEN because they can't follow custom URL schemes via
+  // 302 Location header. They CAN follow them via document.location = '...'
+  // in JavaScript, which is what we use here.
+  //
+  // After Build 233+ where wizard uses openAuthSessionAsync (which DOES
+  // intercept custom-scheme redirects), we can switch back to 302.
+  // For now stick with HTML+JS approach to keep Build 232 functional.
   const deepLink = `inclufy-go://oauth-success?platform=${encodeURIComponent(platform)}&account=${encodeURIComponent(accountName ?? '')}`;
+  const wrappedHtml = html.replace(
+    '<body>',
+    `<body>
+<script>
+  (function(){
+    // Try deep-link to bounce back to AMOS app
+    setTimeout(function(){
+      try { window.location.href = ${JSON.stringify(deepLink)}; } catch(e) {}
+    }, 100);
+    // Fallback: try window.close() after 2.5s if still on this page
+    setTimeout(function(){ try { window.close(); } catch(e) {} }, 2500);
+  })();
+</script>`,
+  );
 
-  return new Response(html, {
-    status: 302,
+  return new Response(wrappedHtml, {
+    status: 200,
     headers: {
       'Content-Type': 'text/html; charset=utf-8',
-      'Location': deepLink,
       'Cache-Control': 'no-store, no-cache, must-revalidate',
     },
   });
