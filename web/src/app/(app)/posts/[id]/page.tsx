@@ -111,47 +111,14 @@ export default function PostDetailPage() {
   /**
    * Capture-to-Ad — Boost handler.
    *
-   * Web equivalent of mobile PostReviewScreen.handleBoost. Two-step flow:
-   *   1. Fire-and-forget call to boost-post edge fn (creates ad_campaigns
-   *      row + AI-generated creative variants, in DRY-RUN until Meta App
-   *      Review approves ads_management scope).
-   *   2. Open Meta Ads Manager in new tab with post pre-filled.
+   * Navigates to the in-app BoostFlow wizard at /posts/{id}/boost.
+   * The wizard handles budget/audience/variants/confirm in 4 steps and
+   * creates the ad_campaigns row internally. User can still open Meta
+   * Ads Manager from the wizard's final step if needed.
    */
-  const onBoost = async () => {
+  const onBoost = () => {
     if (!post) return;
-    const confirmed = confirm(
-      `🚀 Boost deze post\n\n` +
-        `AMOS opent Meta Ads Manager in een nieuw tabblad met je ${post.channel} post pre-filled. ` +
-        `Daar kies je zelf budget + doelgroep.\n\n` +
-        `Wij genereren ondertussen 3 AI ad-varianten die je later kunt gebruiken.`,
-    );
-    if (!confirmed) return;
-
-    // Step 1 — fire-and-forget background tracking
-    try {
-      const { supabase } = await import('@/services/supabase');
-      supabase.functions
-        .invoke('boost-post', {
-          body: {
-            post_id: post.id,
-            channel: 'meta',
-            budget_cents: 2500,
-            duration_days: 3,
-            objective: 'POST_ENGAGEMENT',
-            auto_generate_variants: true,
-            dry_run: true,
-          },
-        })
-        .catch((e) => console.warn('[Boost] background tracking failed:', e));
-    } catch (e) {
-      console.warn('[Boost] could not invoke boost-post:', e);
-    }
-
-    // Step 2 — open Meta Ads Manager in new tab
-    const externalPostId = (post as any).external_post_id || post.id;
-    const adsManagerUrl = `https://www.facebook.com/ads/manager/manage/ads/?post_id=${externalPostId}&boost=1`;
-    window.open(adsManagerUrl, '_blank', 'noopener,noreferrer');
-    toast.success('Meta Ads Manager geopend — kies budget + doelgroep daar');
+    router.push(`/posts/${post.id}/boost`);
   };
 
   const onPublish = async () => {
