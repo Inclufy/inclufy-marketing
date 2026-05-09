@@ -930,22 +930,23 @@ Deno.serve(async (req) => {
 
     // Store main personal account.
     //
-    // NOTE: For Instagram, we deliberately SKIP storing a 'personal' row.
-    // Reason: Instagram OAuth uses the same Facebook OAuth flow (the FB user
-    // logs in, and we discover IG Business accounts linked to their Pages
-    // below). There is no longer an Instagram-personal-publishing API since
-    // Meta deprecated the Instagram Basic Display API; IG content publishing
-    // requires a Business account linked to a Facebook Page.
+    // NOTE: For Instagram AND Facebook, we deliberately SKIP storing a
+    // 'personal' row.
     //
-    // If we stored a 'personal' IG row here with the user's Facebook profile
-    // ID, that row would appear in the AMOS account picker, the user could
-    // tap it to publish, and the publish would silently fail (publish-social
-    // skips IG rows where account_type !== 'business').
+    // Instagram: OAuth uses the FB OAuth flow; IG content publishing requires
+    // a Business account linked to a FB Page (Meta deprecated the IG Basic
+    // Display API). A personal IG row would appear in the picker but every
+    // publish attempt would silently fail.
     //
-    // We only store the FB-personal row for the Facebook platform, and let
-    // the Pages discovery block below (line ~510) populate FB Pages and
-    // their linked IG Business accounts.
-    if (platform !== 'instagram') {
+    // Facebook: Meta deprecated the `publish_actions` permission in 2018, so
+    // there is no API to publish to a personal Facebook profile any more —
+    // only Pages (`pages_manage_posts`). Storing a 'personal' FB row here
+    // produced cryptic 403 errors in the publish flow ("non-2xx") because
+    // the token simply lacks any publish scope. Pages are stored below.
+    //
+    // For both platforms, all publishable identities are populated via the
+    // Pages-discovery block further down (`/me/accounts`).
+    if (platform !== 'instagram' && platform !== 'facebook') {
       await upsertSocialAccount(db, userId, platform, profileId, profileName, profilePicture, accessToken, 'personal', undefined, tokenExpiresAt, tokenRefreshToken);
     }
 
@@ -1032,6 +1033,18 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Social account connected: platform=${platform} account=${profileName} pages=${connectedPages.length}`);
+
+    // Clean fix for Option A: Facebook publishing requires a Page. If the
+    // user has no admin Pages and no IG Business links, we have stored zero
+    // publishable rows — surface a clear error instead of returning success
+    // and letting the user discover the failure later in the publish flow.
+    if (platform === 'facebook' && connectedPages.length === 0) {
+      return errorPage(
+        'Facebook',
+        'Geen Facebook Pagina gevonden',
+        'AMOS publiceert via Facebook Pages — persoonlijke profielen ondersteunen geen API-publishing meer (Meta heeft de publish_actions-permissie verwijderd in 2018). Maak eerst een Pagina aan via facebook.com/pages/create en koppel je account opnieuw, of geef AMOS toegang tot een bestaande Pagina waar jij beheerder van bent.',
+      );
+    }
 
     return successPage(platform, profileName, connectedPages.length > 0 ? connectedPages : undefined);
 
