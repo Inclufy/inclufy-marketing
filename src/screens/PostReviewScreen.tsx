@@ -1389,13 +1389,19 @@ export default function PostReviewScreen() {
                   Alert.alert('📋 Klaar om te posten', manualMsg);
                 }
               } else {
-                // Feature B: build live URL button for LinkedIn / Facebook when postId is returned
+                // Feature B: build live URL button for every supported channel.
+                // Prefers the platform-supplied permalink/liveUrl from the edge function;
+                // otherwise falls back to a deterministic URL constructed from postId.
                 const publishedPostId: string | null | undefined = (pubResult as any)?.postId ?? null;
+                const serverLiveUrl: string | null = (pubResult as any)?.liveUrl ?? (pubResult as any)?.permalink ?? null;
                 const liveUrl = (() => {
+                  if (serverLiveUrl) return serverLiveUrl;
                   if (!publishedPostId) return null;
                   const ch = post.channel?.toLowerCase();
                   if (ch === 'linkedin') return `https://www.linkedin.com/feed/update/urn:li:activity:${publishedPostId}/`;
                   if (ch === 'facebook') return `https://www.facebook.com/${publishedPostId}`;
+                  if (ch === 'pinterest') return `https://www.pinterest.com/pin/${publishedPostId}/`;
+                  // IG, Threads, TikTok rely on platform-supplied permalink/liveUrl.
                   return null;
                 })();
                 const platformLabel = channelConfig[post.channel]?.label ?? post.channel;

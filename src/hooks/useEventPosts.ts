@@ -195,11 +195,33 @@ export function usePublishPost() {
       });
 
       if (pubErr) {
-        // Edge function returned an error — try to get the detailed message
+        // Edge function returned an error — try to get the detailed message.
+        // supabase-js wraps non-2xx responses in FunctionsHttpError where
+        // `.context` is a Response object. The body is a ReadableStream that we
+        // must read via .json()/.text(); JSON.stringify-ing the stream yields "{}"
+        // and loses the real error, so we explicitly consume it here.
         console.error('[publish-social] edge function error:', pubErr, 'result:', result);
-        const rawCtxBody = (pubErr as any)?.context?.body;
-        const ctxBody = typeof rawCtxBody === 'string' ? rawCtxBody : JSON.stringify(rawCtxBody);
-        const errorMsg = ctxBody
+        let bodyMsg = '';
+        const ctx = (pubErr as any)?.context;
+        if (ctx && typeof ctx === 'object') {
+          try {
+            if (typeof ctx.json === 'function') {
+              const j = await ctx.clone().json();
+              if (j && typeof j === 'object') {
+                bodyMsg = j.error || j.message || JSON.stringify(j);
+              } else if (typeof j === 'string') {
+                bodyMsg = j;
+              }
+            } else if (typeof ctx.text === 'function') {
+              bodyMsg = await ctx.clone().text();
+            } else if (typeof ctx.body === 'string') {
+              bodyMsg = ctx.body;
+            }
+          } catch (parseErr: any) {
+            console.warn('[publish-social] could not parse error body:', parseErr?.message);
+          }
+        }
+        const errorMsg = bodyMsg
           || (typeof pubErr === 'object' && 'message' in pubErr ? (pubErr as any).message : null)
           || String(pubErr);
         const finalMsg = errorMsg || 'Publicatie mislukt — edge function fout';
