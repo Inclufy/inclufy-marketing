@@ -1,0 +1,29 @@
+# ──────────────────────────────────────────────────────────────────────────
+# Cloudflare Worker — media-proxy-router
+#
+# Reverse-proxies https://images.inclufy.com/* to the Supabase
+# `media-proxy` edge function. Required because Cloudflare blocks direct
+# CNAMEs between two Cloudflare-protected zones (error 1014 — "CNAME
+# Cross-User Banned"). A Worker runs in our account and makes outbound
+# HTTPS to Supabase, bypassing that restriction.
+#
+# This domain (images.inclufy.com) is what we register in TikTok's
+# URL Properties and Meta's domain verification, so all platform
+# publishers can pull media from a single host we control.
+# ──────────────────────────────────────────────────────────────────────────
+
+name = "media-proxy-router"
+main = "src/index.js"
+compatibility_date = "2026-05-09"
+
+# Routes are configured via the Cloudflare dashboard while we validate
+# the setup. Once stable, uncomment to manage them as code:
+#
+# routes = [
+#   { pattern = "images.inclufy.com/*", zone_name = "inclufy.com" },
+# ]
+
+# Observability — keep logs flowing to the dashboard for debugging
+[observability]
+enabled = true
+head_sampling_rate = 1
