@@ -26,6 +26,7 @@ const navItems = [
   { label: 'Budget', href: '/budget', icon: Wallet },
   { divider: true },
   { label: 'Copilot', href: '/copilot', icon: MessageSquare },
+  { label: 'Agents', href: '/agents', icon: Bot },
   { label: 'Notifications', href: '/notifications', icon: Bell },
   { label: 'Contacts', href: '/contacts', icon: Contact },
   { divider: true },

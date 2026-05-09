@@ -10,6 +10,7 @@ import {
   Calendar, Megaphone, FileCheck, Zap, TrendingUp,
   ArrowRight, Activity, Clock, CheckCircle2
 } from 'lucide-react';
+import CounterfactualBanner from '@/components/CounterfactualBanner';
 
 function StatCard({ label, value, icon: Icon, color, href }: {
   label: string; value: string | number; icon: any; color: string; href: string;
@@ -55,6 +56,11 @@ export default function DashboardPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500">Welkom bij je Autonomous Marketing Operating System</p>
+      </div>
+
+      {/* Counterfactual nudge ("Left on the table") — hides itself when nothing to surface. */}
+      <div className="mb-4">
+        <CounterfactualBanner />
       </div>
 
       {/* Stats Grid */}

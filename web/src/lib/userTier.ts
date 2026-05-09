@@ -7,7 +7,7 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from './supabase';
+import { createClient } from './supabase';
 
 export type Tier = 'free' | 'pro' | 'promote' | 'ads' | 'enterprise';
 
@@ -67,6 +67,7 @@ export function useUserTier(): UseUserTierResult {
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['user-tier'],
     queryFn: async (): Promise<{ tier: Tier; commission_pct: number }> => {
+      const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return { tier: 'free', commission_pct: 0 };
       const { data: profile } = await supabase

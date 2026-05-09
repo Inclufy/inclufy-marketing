@@ -9,13 +9,13 @@
  * Route: /posts/[id]/boost
  */
 
-import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useState, useEffect, useMemo } from 'react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import {
   ArrowLeft, Sparkles, Check, Loader2, ExternalLink, Target, Wallet, Wand2, CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase';
 
 type BudgetPreset = { label: string; cents: number; days: number };
 const BUDGET_PRESETS: BudgetPreset[] = [
@@ -73,10 +73,46 @@ type Variant = {
 export default function BoostFlowPage() {
   const { id: postId } = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // ── Prefill from Ads Agent (Capture-to-Ads bridge) ──────────────────────
+  // When the user lands here from an Ads-Agent suggestion banner, the URL
+  // carries `runId`, `budget_cents`, `days`, and optionally `audienceKey`.
+  // We map them onto the closest existing preset so the chip UI stays clean.
+  const runId = searchParams?.get('runId') ?? null;
+  const prefillBudgetCents = (() => {
+    const v = searchParams?.get('budget_cents');
+    if (!v) return null;
+    const n = Number(v);
+    return isFinite(n) && n > 0 ? n : null;
+  })();
+  const prefillDays = (() => {
+    const v = searchParams?.get('days');
+    if (!v) return null;
+    const n = Number(v);
+    return isFinite(n) && n > 0 ? n : null;
+  })();
+  const prefillAudienceKey = searchParams?.get('audienceKey') ?? null;
+
+  const initialBudget = useMemo<BudgetPreset>(() => {
+    if (prefillBudgetCents == null || prefillDays == null) return BUDGET_PRESETS[1];
+    const closest = BUDGET_PRESETS
+      .map((p) => ({
+        p,
+        score: Math.abs(p.cents - prefillBudgetCents) + Math.abs(p.days - prefillDays) * 100,
+      }))
+      .sort((a, b) => a.score - b.score)[0];
+    return closest?.p ?? BUDGET_PRESETS[1];
+  }, [prefillBudgetCents, prefillDays]);
+
+  const initialAudience = useMemo<AudiencePreset>(() => {
+    if (!prefillAudienceKey) return AUDIENCE_PRESETS[0];
+    return AUDIENCE_PRESETS.find((a) => a.key === prefillAudienceKey) ?? AUDIENCE_PRESETS[0];
+  }, [prefillAudienceKey]);
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [budget, setBudget] = useState<BudgetPreset>(BUDGET_PRESETS[1]);
-  const [audience, setAudience] = useState<AudiencePreset>(AUDIENCE_PRESETS[0]);
+  const [budget, setBudget] = useState<BudgetPreset>(initialBudget);
+  const [audience, setAudience] = useState<AudiencePreset>(initialAudience);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [chosenVariant, setChosenVariant] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,6 +125,7 @@ export default function BoostFlowPage() {
     (async () => {
       setLoading(true);
       try {
+        const supabase = createClient();
         const { data, error } = await supabase.functions.invoke('boost-post', {
           body: {
             post_id: postId,
@@ -119,6 +156,7 @@ export default function BoostFlowPage() {
     if (!campaignId || !chosenVariant) return;
     setLoading(true);
     try {
+      const supabase = createClient();
       await supabase
         .from('campaign_creatives')
         .update({ is_winner: true })
@@ -180,6 +218,14 @@ export default function BoostFlowPage() {
           />
         ))}
       </div>
+
+      {/* Agent-suggested badge — only when prefill is supplied via URL. */}
+      {runId && (
+        <div className="inline-flex items-center gap-1.5 rounded-md border border-purple-300 bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
+          <Sparkles className="h-3.5 w-3.5" />
+          Suggested by Ads Agent
+        </div>
+      )}
 
       {/* Step 1: Budget */}
       {step === 1 && (

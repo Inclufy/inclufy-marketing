@@ -7,14 +7,88 @@ import Link from 'next/link';
 import {
   ArrowLeft, Trash2, Send, Calendar, Loader2, AlertCircle, CheckCircle2,
   Image as ImageIcon, Film, Hash, Sparkles, RefreshCw, Heart, MessageCircle,
-  Share2, Copy as CopyIcon, ExternalLink, Plus, X,
+  Share2, Copy as CopyIcon, ExternalLink, Plus, X, ChevronRight,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   useEventPost, useUpdatePost, usePublishPost, useDeletePost,
   useDuplicatePost, useFetchEngagement, useRewriteCaption, uploadPostMedia,
 } from '@/hooks/useEventPosts';
+import { createClient } from '@/lib/supabase';
 import type { Channel } from '@/types';
+
+/**
+ * Capture-to-Ads bridge — when the Ads agent has produced a draft for this
+ * post that's still awaiting approval, surface it as a banner so the user
+ * can jump straight into the BoostFlow wizard with the recommended pacing
+ * pre-filled.
+ */
+interface AdsAgentSuggestion {
+  runId: string;
+  budgetCents: number;
+  days: number;
+}
+
+function useAdsAgentSuggestion(postId: string | undefined): AdsAgentSuggestion | null {
+  const [suggestion, setSuggestion] = useState<AdsAgentSuggestion | null>(null);
+  useEffect(() => {
+    if (!postId) {
+      setSuggestion(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from('agent_runs')
+          .select('id, output, agent:agents(kind)')
+          .eq('related_post_id', postId)
+          .eq('status', 'awaiting_approval')
+          .limit(1)
+          .maybeSingle();
+        if (cancelled || !data) {
+          if (!cancelled) setSuggestion(null);
+          return;
+        }
+        const row = data as {
+          id: string;
+          output: Record<string, unknown> | null;
+          agent: { kind?: string } | { kind?: string }[] | null;
+        };
+        const agent = Array.isArray(row.agent) ? row.agent[0] : row.agent;
+        if (!agent || agent.kind !== 'ads') {
+          if (!cancelled) setSuggestion(null);
+          return;
+        }
+        const output = (row.output ?? {}) as Record<string, unknown>;
+        const draft = (output.draft ?? {}) as Record<string, unknown>;
+        const pacing = (draft.recommended_pacing ?? {}) as Record<string, unknown>;
+        const dailyCapEur =
+          typeof pacing.daily_cap_eur === 'number' ? pacing.daily_cap_eur : Number(pacing.daily_cap_eur);
+        const days =
+          typeof pacing.days === 'number' ? pacing.days : Number(pacing.days);
+        if (!isFinite(dailyCapEur) || !isFinite(days) || dailyCapEur <= 0 || days <= 0) {
+          if (!cancelled) setSuggestion(null);
+          return;
+        }
+        if (!cancelled) {
+          setSuggestion({
+            runId: row.id,
+            budgetCents: Math.round(dailyCapEur * days * 100),
+            days: Math.round(days),
+          });
+        }
+      } catch {
+        if (!cancelled) setSuggestion(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [postId]);
+  return suggestion;
+}
 
 const CHANNEL_LABEL: Record<Channel, string> = {
   linkedin: 'LinkedIn', facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok', x: 'X',
@@ -28,6 +102,7 @@ export default function PostDetailPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { data: post, isLoading } = useEventPost(id);
+  const adsSuggestion = useAdsAgentSuggestion(id);
   const update = useUpdatePost();
   const publish = usePublishPost();
   const del = useDeletePost();
@@ -255,6 +330,37 @@ export default function PostDetailPage() {
           {CHANNEL_LABEL[post.channel] ?? post.channel}
         </span>
       </div>
+
+      {/* Ads Agent suggestion bridge — appears when an ads agent run is awaiting
+          approval for this post. Tapping the CTA jumps to BoostFlow with the
+          agent's recommended pacing pre-filled. */}
+      {adsSuggestion && (
+        <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 p-4 text-white shadow-md">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-base">Ads Agent suggests boosting this post</p>
+              <p className="text-sm text-white/90 leading-snug mt-0.5">
+                Recommended budget €{Math.round(adsSuggestion.budgetCents / 100)} over {adsSuggestion.days} {adsSuggestion.days === 1 ? 'dag' : 'dagen'}.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/posts/${post.id}/boost?runId=${adsSuggestion.runId}&budget_cents=${adsSuggestion.budgetCents}&days=${adsSuggestion.days}`,
+                )
+              }
+              className="inline-flex items-center gap-1 rounded-full bg-white px-4 py-2 text-sm font-semibold text-purple-700 hover:bg-purple-50 transition-colors shrink-0"
+            >
+              Review suggestion
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="aspect-square w-full max-w-md mx-auto rounded-xl bg-slate-100 overflow-hidden relative group">
         {post.branded_image_url ? (
