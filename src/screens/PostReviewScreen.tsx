@@ -1464,22 +1464,12 @@ export default function PostReviewScreen() {
       return;
     }
 
-    // Check if any channel has no accounts — offer to connect first
-    const channelsWithoutAccounts: string[] = [];
-    for (const post of draftPosts) {
-      const accounts = await fetchAccountsForChannel(post.channel);
-      if (accounts.length === 0 && !channelsWithoutAccounts.includes(post.channel)) {
-        channelsWithoutAccounts.push(post.channel);
-      }
-    }
-    if (channelsWithoutAccounts.length > 0) {
-      // Show connect modal for the first missing channel
-      setPendingPublishPost(draftPosts[0]);
-      setPendingPublishAll(true);
-      setConnectPlatform(channelsWithoutAccounts[0]);
-      setShowConnectModal(true);
-      return;
-    }
+    // ─── Removed pre-flight blockade ────────────────────────────────────────
+    // The previous version checked all channels for accounts and aborted the
+    // ENTIRE publish-all if any one was missing. That meant tapping "Later" on
+    // (e.g.) the Snapchat connect-modal cancelled Facebook + LinkedIn + IG too.
+    // New behaviour: per-post check inside the loop, missing-account becomes a
+    // recorded failure with canReconnect=true, other channels still publish.
 
     Alert.alert(
       `${t.postReview.publishAll} ${draftPosts.length} posts?`,
@@ -1491,10 +1481,21 @@ export default function PostReviewScreen() {
           onPress: async () => {
             // Feature A: iterate every post individually; one failure must not abort the rest.
             const succeeded: EventPost[] = [];
-            const failed: Array<{ post: EventPost; error: string }> = [];
+            const failed: Array<{ post: EventPost; error: string; canReconnect: boolean }> = [];
 
             for (const post of draftPosts) {
               try {
+                // Per-post pre-flight: skip channels with no account, record as failure.
+                const accountsForPost = await fetchAccountsForChannel(post.channel);
+                if (accountsForPost.length === 0) {
+                  const label = channelConfig[post.channel]?.label ?? post.channel;
+                  failed.push({
+                    post,
+                    error: `Geen ${label} account gekoppeld`,
+                    canReconnect: true,
+                  });
+                  continue;
+                }
                 // Bake overlay (throws on hard failure; non-critical path already returns null)
                 await bakeOverlayIntoImage(post);
                 // Save any pending text edit before publishing
@@ -1514,7 +1515,16 @@ export default function PostReviewScreen() {
                     .single();
                   if (dbPost?.publish_error) errMsg = dbPost.publish_error;
                 } catch { /* ignore — use errMsg already set */ }
-                failed.push({ post, error: errMsg });
+                // Token-related errors are also reconnectable.
+                const lower = errMsg.toLowerCase();
+                const canReconnect =
+                  lower.includes('token') ||
+                  lower.includes('oauth') ||
+                  lower.includes('expired') ||
+                  lower.includes('verlopen') ||
+                  lower.includes('account') ||
+                  lower.includes('verbinding');
+                failed.push({ post, error: errMsg, canReconnect });
               }
             }
 
@@ -1522,52 +1532,65 @@ export default function PostReviewScreen() {
             const nOk = succeeded.length;
             const nFail = failed.length;
 
+            // ─── Always show summary (no auto-open connect modal on all-fail) ──
+            // Build the same details + reconnect-action list whether all-fail,
+            // partial success, or all-success.
+            const buildDetails = () =>
+              failed
+                .map((f) => `• ${channelConfig[f.post.channel]?.label ?? f.post.channel}: ${f.error}`)
+                .join('\n');
+
+            const reconnectableFailures = failed.filter((f) => f.canReconnect);
+
+            const showFailedDetailsWithReconnect = () => {
+              const details = buildDetails();
+              if (reconnectableFailures.length === 0) {
+                Alert.alert('Mislukte posts', details);
+                return;
+              }
+              const first = reconnectableFailures[0];
+              const firstLabel = channelConfig[first.post.channel]?.label ?? first.post.channel;
+              Alert.alert(
+                'Mislukte posts',
+                `${details}\n\n${reconnectableFailures.length === 1
+                  ? `Wil je ${firstLabel} nu koppelen?`
+                  : `${reconnectableFailures.length} kanalen kunnen opnieuw verbonden worden. Wil je beginnen met ${firstLabel}?`}`,
+                [
+                  { text: 'Sluiten', style: 'cancel' },
+                  {
+                    text: `${firstLabel} koppelen`,
+                    onPress: () => {
+                      setPendingPublishPost(first.post);
+                      setPendingPublishAll(false); // user explicitly chose this single channel
+                      setConnectPlatform(first.post.channel);
+                      setShowConnectModal(true);
+                    },
+                  },
+                ],
+              );
+            };
+
             if (nFail === 0) {
               // All succeeded
               Alert.alert(t.postReview.publishAllSuccess);
             } else if (nOk === 0) {
-              // All failed — fall back to existing connect-modal flow for the first post
-              const firstFailed = failed[0].post;
-              const accounts = await fetchAccountsForChannel(firstFailed.channel);
-              if (accounts.length === 0) {
-                setPendingPublishPost(firstFailed);
-                setPendingPublishAll(true);
-                setConnectPlatform(firstFailed.channel);
-                setShowConnectModal(true);
-              } else {
-                Alert.alert(
-                  t.common.error,
-                  `${nOk}/${total} gepubliceerd. ${nFail} mislukt.`,
-                  [
-                    { text: 'OK', style: 'cancel' },
-                    {
-                      text: 'Bekijk fouten',
-                      onPress: () => {
-                        const details = failed
-                          .map((f) => `• ${channelConfig[f.post.channel]?.label ?? f.post.channel}: ${f.error}`)
-                          .join('\n');
-                        Alert.alert('Mislukte posts', details);
-                      },
-                    },
-                  ],
-                );
-              }
+              // All failed — show summary (NEVER auto-open connect modal anymore)
+              Alert.alert(
+                t.common.error,
+                `0/${total} gepubliceerd. Alle ${nFail} kanalen mislukt.`,
+                [
+                  { text: 'OK', style: 'cancel' },
+                  { text: 'Bekijk fouten', onPress: showFailedDetailsWithReconnect },
+                ],
+              );
             } else {
-              // Partial success
+              // Partial success — same summary + reconnect action as all-fail
               Alert.alert(
                 `${nOk}/${total} gepubliceerd. ${nFail} mislukt.`,
                 undefined,
                 [
                   { text: 'OK', style: 'cancel' },
-                  {
-                    text: 'Bekijk fouten',
-                    onPress: () => {
-                      const details = failed
-                        .map((f) => `• ${channelConfig[f.post.channel]?.label ?? f.post.channel}: ${f.error}`)
-                        .join('\n');
-                      Alert.alert('Mislukte posts', details);
-                    },
-                  },
+                  { text: 'Bekijk fouten', onPress: showFailedDetailsWithReconnect },
                 ],
               );
             }
