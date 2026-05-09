@@ -9,6 +9,56 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 
+// Optional verified-domain proxy for media URLs that must be served under a
+// host registered in TikTok / Meta / Pinterest "URL Properties". Set this in
+// `supabase functions secrets set MEDIA_PROXY_BASE_URL=https://images.inclufy.com`
+// once the Cloudflare rewrite is live. When unset, publishers fall back to
+// fresh signed Supabase URLs.
+const MEDIA_PROXY_BASE_URL = Deno.env.get('MEDIA_PROXY_BASE_URL') ?? '';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Convert a Supabase storage URL into one any external platform can fetch.
+//
+// Strategy (in priority order):
+//   1. If MEDIA_PROXY_BASE_URL is set, rewrite Supabase URLs through that
+//      verified host (preferred — same proxy works for TikTok / Meta IG Reels
+//      / Pinterest / Facebook video without per-platform domain claims).
+//   2. Otherwise refresh as a 1-hour service-role signed URL.
+//   3. Non-Supabase URLs (already external CDN, public/ bucket) pass through.
+//
+// IMPORTANT: this helper is the single source of truth for media URLs that
+// leave the function. Don't inline `createSignedUrl` calls in publishers —
+// always go through here so the proxy/signing strategy stays consistent.
+// ═══════════════════════════════════════════════════════════════════════════
+async function toExternalMediaUrl(url: string): Promise<string> {
+  if (!url) return url;
+
+  // Strategy 1 — proxy rewrite (only for our `media` bucket)
+  if (MEDIA_PROXY_BASE_URL) {
+    const m = url.match(/\/(?:sign\/)?(media)\/(.+?)(\?|$)/);
+    if (m) {
+      const bucket = m[1];
+      const objectPath = m[2];
+      return `${MEDIA_PROXY_BASE_URL.replace(/\/$/, '')}/${bucket}/${objectPath}`;
+    }
+  }
+
+  // Strategy 3 — non-Supabase URLs pass through unchanged
+  if (!url.includes('supabase') || url.includes('/public/')) return url;
+
+  // Strategy 2 — refresh as a service-role signed URL
+  try {
+    const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const pathMatch = url.match(/\/(?:sign\/)?media\/(.+?)(\?|$)/);
+    if (!pathMatch) return url;
+    const { data: signData } = await db.storage.from('media').createSignedUrl(pathMatch[1], 3600);
+    return signData?.signedUrl ?? url;
+  } catch (err: any) {
+    console.warn('[media-url] could not refresh signed URL:', err?.message);
+    return url;
+  }
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -243,8 +293,14 @@ async function publishToLinkedIn(
       }
     } else {
       // ── Image post branch ──
-      // Upload all images (primary + extras) for multi-image LinkedIn posts
-      const allImageUrls = [imageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+      // Upload all images (primary + extras) for multi-image LinkedIn posts.
+      // Use the shared media-URL helper so LinkedIn fetches go through the
+      // verified proxy when configured (or a fresh signed URL otherwise).
+      const rawImageUrls = [imageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+      const allImageUrls: string[] = [];
+      for (const original of rawImageUrls) {
+        allImageUrls.push(await toExternalMediaUrl(original));
+      }
       if (allImageUrls.length > 0) {
         const uploadedAssets: string[] = [];
         for (const url of allImageUrls) {
@@ -257,6 +313,8 @@ async function publishToLinkedIn(
             status: 'READY',
             media: urn,
           }));
+        } else {
+          console.warn('[LinkedIn] All image uploads failed — posting as text-only');
         }
       }
     }
@@ -296,11 +354,12 @@ async function publishToFacebook(
     // Facebook /videos endpoint accepts a publicly accessible file_url and publishes it
     // as a native video post. The response includes { id } which is the video object ID.
     if (videoUrl) {
+      const externalVideoUrl = await toExternalMediaUrl(videoUrl);
       const videoRes = await fetch(`https://graph.facebook.com/v20.0/${pageId}/videos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          file_url: videoUrl,
+          file_url: externalVideoUrl,
           description: text,
           access_token: accessToken,
         }),
@@ -327,7 +386,7 @@ async function publishToFacebook(
 
     if (imageUrl) {
       url = `https://graph.facebook.com/v20.0/${pageId}/photos`;
-      params.url = imageUrl;
+      params.url = await toExternalMediaUrl(imageUrl);
       params.caption = text;
     }
 
@@ -359,7 +418,7 @@ async function publishToInstagram(
   extraImageUrls?: string[], // for carousel posts
   igFormat: 'feed' | 'story' | 'reel' = 'feed',
   videoUrl?: string,
-): Promise<{ success: boolean; postId?: string; error?: string }> {
+): Promise<{ success: boolean; postId?: string; error?: string; permalink?: string }> {
   try {
     // ── Story ──────────────────────────────────────────────────────────────
     if (igFormat === 'story') {
@@ -370,18 +429,9 @@ async function publishToInstagram(
 
       const storyBody: Record<string, string> = { media_type: 'STORIES', access_token: accessToken };
       if (videoUrl) {
-        storyBody.video_url = videoUrl;
+        storyBody.video_url = await toExternalMediaUrl(videoUrl);
       } else {
-        let publicImageUrl = imageUrl!;
-        if (imageUrl!.includes('supabase') && !imageUrl!.includes('/public/')) {
-          const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-          const pathMatch = imageUrl!.match(/\/(?:sign\/)?media\/(.+?)(\?|$)/);
-          if (pathMatch) {
-            const { data: signData } = await db.storage.from('media').createSignedUrl(pathMatch[1], 3600);
-            if (signData?.signedUrl) publicImageUrl = signData.signedUrl;
-          }
-        }
-        storyBody.image_url = publicImageUrl;
+        storyBody.image_url = await toExternalMediaUrl(imageUrl!);
       }
 
       const storyCreateRes = await fetch(
@@ -415,7 +465,8 @@ async function publishToInstagram(
       }
 
       const storyData = await storyPublishRes.json();
-      return { success: true, postId: storyData.id };
+      const storyPermalink = await fetchInstagramPermalink(storyData.id, accessToken);
+      return { success: true, postId: storyData.id, ...(storyPermalink ? { permalink: storyPermalink } : {}) };
     }
 
     // ── Reel ───────────────────────────────────────────────────────────────
@@ -429,7 +480,7 @@ async function publishToInstagram(
 
       const reelBody: Record<string, string> = {
         media_type: 'REELS',
-        video_url: videoUrl,
+        video_url: await toExternalMediaUrl(videoUrl),
         caption: text.slice(0, 2200), // Reels support captions up to 2200 chars
         share_to_feed: 'true',
         access_token: accessToken,
@@ -466,7 +517,8 @@ async function publishToInstagram(
       }
 
       const reelData = await reelPublishRes.json();
-      return { success: true, postId: reelData.id };
+      const reelPermalink = await fetchInstagramPermalink(reelData.id, accessToken);
+      return { success: true, postId: reelData.id, ...(reelPermalink ? { permalink: reelPermalink } : {}) };
     }
 
     // ── Feed (default) ────────────────────────────────────────────────────
@@ -474,21 +526,14 @@ async function publishToInstagram(
       return { success: false, error: 'Instagram vereist een afbeelding voor publicatie' };
     }
 
-    // Ensure image URL is publicly accessible — generate fresh signed URL if needed
-    let publicImageUrl = imageUrl;
-    if (imageUrl.includes('supabase') && !imageUrl.includes('/public/')) {
-      // Extract storage path and generate a long-lived signed URL
-      const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-      const pathMatch = imageUrl.match(/\/(?:sign\/)?media\/(.+?)(\?|$)/);
-      if (pathMatch) {
-        const { data: signData } = await db.storage.from('media').createSignedUrl(pathMatch[1], 3600);
-        if (signData?.signedUrl) publicImageUrl = signData.signedUrl;
-      } else {
-        console.warn('[publish-social] Could not extract storage path from image URL — using original URL:', imageUrl);
-      }
+    // Route every image URL through the shared media helper (proxy or
+    // signed-URL refresh). Both the primary image and carousel extras.
+    const publicImageUrl = await toExternalMediaUrl(imageUrl);
+    const extraPublicUrls: string[] = [];
+    for (const u of extraImageUrls || []) {
+      if (u) extraPublicUrls.push(await toExternalMediaUrl(u));
     }
-
-    const allImages = [publicImageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+    const allImages = [publicImageUrl, ...extraPublicUrls].filter(Boolean) as string[];
 
     // Multi-image: use carousel container
     if (allImages.length > 1) {
@@ -553,7 +598,8 @@ async function publishToInstagram(
         return { success: false, error: `Instagram carousel publish error: ${errBody}` };
       }
       const data = await publishRes.json();
-      return { success: true, postId: data.id };
+      const permalink = await fetchInstagramPermalink(data.id, accessToken);
+      return { success: true, postId: data.id, ...(permalink ? { permalink } : {}) };
     }
 
     // Single image post
@@ -597,29 +643,179 @@ async function publishToInstagram(
     }
 
     const data = await publishRes.json();
-    return { success: true, postId: data.id };
+    const permalink = await fetchInstagramPermalink(data.id, accessToken);
+    return { success: true, postId: data.id, ...(permalink ? { permalink } : {}) };
   } catch (err: any) {
     return { success: false, error: `Instagram exception: ${err.message}` };
   }
 }
 
+// Helper: after publishing, fetch the public permalink (best-effort).
+// Returns undefined on failure; callers should fall back to a generic URL.
+async function fetchInstagramPermalink(mediaId: string, accessToken: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/v20.0/${mediaId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`,
+    );
+    if (!res.ok) {
+      console.warn('[Instagram] permalink fetch returned', res.status);
+      return undefined;
+    }
+    const data = await res.json();
+    return data.permalink as string | undefined;
+  } catch (err: any) {
+    console.warn('[Instagram] permalink fetch exception:', err.message);
+    return undefined;
+  }
+}
+
 // ═══════════════════════════════════════════════════════
-// TikTok Publisher (video-only)
+// TikTok Publisher (video + photo carousel)
 // ═══════════════════════════════════════════════════════
+//
+// Two endpoints under the Content Posting API — same scope (`video.publish`)
+// despite the misleading name:
+//   • POST /v2/post/publish/video/init/    — single video file
+//   • POST /v2/post/publish/content/init/  — 1–35 photos (carousel)
+// Both return a `publish_id` we poll on `/v2/post/publish/status/fetch/`.
+//
+// PRODUCTION CAVEATS
+// 1. PULL_FROM_URL requires the source domain to be verified in the TikTok
+//    Developer Portal (see "URL Properties" in your app settings). For
+//    Supabase storage signed URLs the host is `<project-ref>.supabase.co`
+//    which TikTok generally accepts as a verifiable property. If TikTok
+//    rejects the host, switch to a verified inclufy.com proxy or implement
+//    FILE_UPLOAD (chunked) — both are larger refactors.
+// 2. The TikTok app must be "Audited" (out of Sandbox) for posts to be
+//    visible to anyone other than the connected account holder.
+
+const TIKTOK_API = 'https://open.tiktokapis.com/v2';
+
+// Shared: poll the TikTok publish/status endpoint until terminal state.
+// Returns the public post id on success or an error message on failure.
+async function pollTikTokPublishStatus(
+  accessToken: string,
+  publishId: string,
+  maxAttempts = 30, // 30 × 2s = 60s timeout
+): Promise<{ ok: true; postId: string } | { ok: false; error: string }> {
+  let attempts = 0;
+  let lastStatus = 'PROCESSING_DOWNLOAD';
+  while (attempts < maxAttempts) {
+    await new Promise((r) => setTimeout(r, 2000));
+    attempts++;
+    const statusRes = await fetch(`${TIKTOK_API}/post/publish/status/fetch/`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ publish_id: publishId }),
+    });
+    if (!statusRes.ok) continue;
+    const statusData = await statusRes.json();
+    lastStatus = statusData.data?.status ?? lastStatus;
+    if (lastStatus === 'PUBLISH_COMPLETE') {
+      const publicId =
+        statusData.data?.publicaly_available_post_id?.[0]
+        ?? statusData.data?.publicaly_available_post_id
+        ?? statusData.data?.public_id
+        ?? publishId;
+      return { ok: true, postId: String(publicId) };
+    }
+    if (lastStatus === 'FAILED') {
+      return {
+        ok: false,
+        error: `TikTok publish failed: ${statusData.data?.fail_reason ?? 'unknown'}`,
+      };
+    }
+  }
+  // Timed out — TikTok sometimes still completes async. Return publish_id
+  // so the row can be reconciled later.
+  return { ok: true, postId: publishId };
+}
+
+// Backwards-compat alias — kept so the TikTok publisher reads naturally.
+// All other publishers should use `toExternalMediaUrl` directly.
+const makeTikTokAccessibleUrl = (url: string) => toExternalMediaUrl(url);
 
 async function publishToTikTok(
   accessToken: string,
   text: string,
   videoUrl?: string,
+  imageUrl?: string,
+  extraImageUrls?: string[],
 ): Promise<{ success: boolean; postId?: string; error?: string }> {
+  // ── Photo carousel branch ───────────────────────────────────────────
+  // Triggered when no video is supplied but at least one image is.
+  // Uses /post/publish/content/init/ with media_type=PHOTO.
   if (!videoUrl) {
-    return { success: false, error: 'TikTok requires a video. Photo-only posts are not supported.' };
+    const rawImages = [imageUrl, ...(extraImageUrls || [])].filter(Boolean) as string[];
+    if (rawImages.length === 0) {
+      return { success: false, error: 'TikTok requires either a video or at least one image.' };
+    }
+    if (rawImages.length > 35) {
+      return { success: false, error: 'TikTok supports max 35 images per carousel post.' };
+    }
+    try {
+      const photoImages: string[] = [];
+      for (const u of rawImages) {
+        photoImages.push(await makeTikTokAccessibleUrl(u));
+      }
+
+      const initRes = await fetch(`${TIKTOK_API}/post/publish/content/init/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          post_info: {
+            title: text.substring(0, 90), // TikTok photo title max 90 chars
+            description: text.substring(0, 4000),
+            disable_comment: false,
+            privacy_level: 'PUBLIC_TO_EVERYONE',
+            auto_add_music: true,
+          },
+          source_info: {
+            source: 'PULL_FROM_URL',
+            photo_cover_index: 0,
+            photo_images: photoImages,
+          },
+          post_mode: 'DIRECT_POST',
+          media_type: 'PHOTO',
+        }),
+      });
+
+      if (!initRes.ok) {
+        const errBody = await initRes.text();
+        console.error('[TikTok] Photo init error:', initRes.status, errBody);
+        // 403 with "url_ownership_unverified" means the source domain is not
+        // verified in the TikTok Developer Portal — give the user actionable
+        // guidance instead of the raw error.
+        const friendly = errBody.includes('url_ownership_unverified')
+          ? 'TikTok weigert de afbeeldings-URL: het bron-domein is niet geverifieerd in de TikTok Developer Portal. Verifieer het Supabase-storage-domein bij je TikTok app of gebruik een geverifieerde inclufy.com proxy.'
+          : `TikTok photo init error ${initRes.status}: ${errBody}`;
+        return { success: false, error: friendly };
+      }
+
+      const initData = await initRes.json();
+      const publishId: string = initData.data?.publish_id ?? '';
+      if (!publishId) {
+        return { success: false, error: 'TikTok did not return publish_id for photo post' };
+      }
+
+      const poll = await pollTikTokPublishStatus(accessToken, publishId);
+      if (!poll.ok) return { success: false, error: poll.error };
+      return { success: true, postId: poll.postId };
+    } catch (err: any) {
+      return { success: false, error: `TikTok photo exception: ${err.message}` };
+    }
   }
 
+  // ── Video branch ─────────────────────────────────────────────────────
   try {
-    const TIKTOK_API = 'https://open.tiktokapis.com/v2';
+    const finalVideoUrl = await makeTikTokAccessibleUrl(videoUrl);
 
-    // Step 1: Init publish (PULL_FROM_URL — TikTok downloads from our URL)
     const initRes = await fetch(`${TIKTOK_API}/post/publish/video/init/`, {
       method: 'POST',
       headers: {
@@ -628,8 +824,8 @@ async function publishToTikTok(
       },
       body: JSON.stringify({
         post_info: {
-          title: text.substring(0, 2200), // TikTok max 2200 chars
-          privacy_level: 'PUBLIC_TO_EVERYONE', // alternatives: 'MUTUAL_FOLLOW_FRIENDS' | 'SELF_ONLY'
+          title: text.substring(0, 2200), // TikTok video caption max 2200 chars
+          privacy_level: 'PUBLIC_TO_EVERYONE',
           disable_duet: false,
           disable_comment: false,
           disable_stitch: false,
@@ -637,15 +833,18 @@ async function publishToTikTok(
         },
         source_info: {
           source: 'PULL_FROM_URL',
-          video_url: videoUrl,
+          video_url: finalVideoUrl,
         },
       }),
     });
 
     if (!initRes.ok) {
       const errBody = await initRes.text();
-      console.error('[TikTok] Init error:', initRes.status, errBody);
-      return { success: false, error: `TikTok init error ${initRes.status}: ${errBody}` };
+      console.error('[TikTok] Video init error:', initRes.status, errBody);
+      const friendly = errBody.includes('url_ownership_unverified')
+        ? 'TikTok weigert de video-URL: het bron-domein is niet geverifieerd in de TikTok Developer Portal.'
+        : `TikTok video init error ${initRes.status}: ${errBody}`;
+      return { success: false, error: friendly };
     }
 
     const initData = await initRes.json();
@@ -654,42 +853,9 @@ async function publishToTikTok(
       return { success: false, error: 'TikTok did not return publish_id' };
     }
 
-    // Step 2: Poll status (TikTok processes async — usually 5-30 sec)
-    let attempts = 0;
-    const maxAttempts = 30; // 30 × 2s = 60s timeout
-    let videoId: string | undefined;
-    let lastStatus = 'PROCESSING_DOWNLOAD';
-
-    while (attempts < maxAttempts) {
-      await new Promise((r) => setTimeout(r, 2000));
-      attempts++;
-
-      const statusRes = await fetch(`${TIKTOK_API}/post/publish/status/fetch/`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ publish_id: publishId }),
-      });
-      if (!statusRes.ok) continue;
-      const statusData = await statusRes.json();
-      lastStatus = statusData.data?.status ?? lastStatus;
-
-      if (lastStatus === 'PUBLISH_COMPLETE') {
-        videoId = statusData.data?.publicaly_available_post_id ?? statusData.data?.public_id;
-        break;
-      }
-      if (lastStatus === 'FAILED') {
-        return {
-          success: false,
-          error: `TikTok publish failed: ${statusData.data?.fail_reason ?? 'unknown'}`,
-        };
-      }
-    }
-
-    // Even if poll timed out, the publish_id can succeed async
-    return { success: true, postId: videoId ?? publishId };
+    const poll = await pollTikTokPublishStatus(accessToken, publishId);
+    if (!poll.ok) return { success: false, error: poll.error };
+    return { success: true, postId: poll.postId };
   } catch (err: any) {
     return { success: false, error: `TikTok exception: ${err.message}` };
   }
@@ -762,12 +928,15 @@ async function publishToPinterest(
       return { success: false, error: 'Could not resolve Pinterest board' };
     }
 
-    // Step 2: Create pin
+    // Step 2: Create pin — Pinterest fetches our cover_image_url / image_url
+    // server-side, so route both through the media helper.
+    const externalImageUrl = imageUrl ? await toExternalMediaUrl(imageUrl) : undefined;
+    const externalVideoRef = videoUrl ? await toExternalMediaUrl(videoUrl) : undefined;
     const pinBody: any = {
       board_id: boardId,
-      media_source: videoUrl
-        ? { source_type: 'video_id', cover_image_url: imageUrl, media_id: videoUrl } // legacy form
-        : { source_type: 'image_url', url: imageUrl },
+      media_source: externalVideoRef
+        ? { source_type: 'video_id', cover_image_url: externalImageUrl, media_id: externalVideoRef } // legacy form
+        : { source_type: 'image_url', url: externalImageUrl },
       title: (options?.title ?? text.split('\n')[0] ?? 'AMOS').substring(0, 100),
       description: text.substring(0, 800),
     };
@@ -807,7 +976,7 @@ async function publishToThreads(
   text: string,
   imageUrl?: string,
   videoUrl?: string,
-): Promise<{ success: boolean; postId?: string; error?: string }> {
+): Promise<{ success: boolean; postId?: string; error?: string; permalink?: string }> {
   try {
     const THREADS_API = 'https://graph.threads.net/v1.0';
 
@@ -819,10 +988,10 @@ async function publishToThreads(
 
     if (videoUrl) {
       containerBody.media_type = 'VIDEO';
-      containerBody.video_url = videoUrl;
+      containerBody.video_url = await toExternalMediaUrl(videoUrl);
     } else if (imageUrl) {
       containerBody.media_type = 'IMAGE';
-      containerBody.image_url = imageUrl;
+      containerBody.image_url = await toExternalMediaUrl(imageUrl);
     } else {
       containerBody.media_type = 'TEXT';
     }
@@ -864,7 +1033,20 @@ async function publishToThreads(
     }
 
     const publishData = await publishRes.json();
-    return { success: true, postId: publishData.id };
+    // Best-effort: fetch the public permalink so the client can deep-link to the thread.
+    let permalink: string | undefined;
+    try {
+      const permRes = await fetch(
+        `${THREADS_API}/${publishData.id}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`,
+      );
+      if (permRes.ok) {
+        const permData = await permRes.json();
+        permalink = permData.permalink as string | undefined;
+      }
+    } catch (permErr: any) {
+      console.warn('[Threads] permalink fetch exception:', permErr.message);
+    }
+    return { success: true, postId: publishData.id, ...(permalink ? { permalink } : {}) };
   } catch (err: any) {
     return { success: false, error: `Threads exception: ${err.message}` };
   }
@@ -1276,7 +1458,7 @@ Deno.serve(async (req: Request) => {
       }
 
       // Publish
-      let result: { success: boolean; postId?: string; error?: string };
+      let result: { success: boolean; postId?: string; error?: string; permalink?: string; boardId?: string };
       switch (channel) {
         case 'linkedin':
           result = await publishToLinkedIn(tokenData.access_token, socialAccount.platform_account_id, text, imageUrl, socialAccount.account_type === 'company' ? 'company' : 'personal', directExtraImageUrls, videoUrl, mediaType);
@@ -1293,26 +1475,40 @@ Deno.serve(async (req: Request) => {
           result = { success: false, error: 'WhatsApp API publishing nog niet actief. Ondersteunt nu alleen manual copy-paste.' };
           break;
         case 'tiktok':
-          // TikTok Content Publishing API — video-only.
-          // Requires TikTok Developer App + video.publish scope approval.
-          result = await publishToTikTok(tokenData.access_token, text, videoUrl);
+          // TikTok Content Posting API — supports both video AND photo carousel.
+          // Single scope (`video.publish`) covers both endpoints. The publisher
+          // routes internally based on which media is supplied: if no videoUrl
+          // is given, the photo-carousel branch (/post/publish/content/init/)
+          // is used with up to 35 images.
+          result = await publishToTikTok(
+            tokenData.access_token,
+            text,
+            videoUrl,
+            imageUrl,
+            directExtraImageUrls,
+          );
           break;
-        case 'pinterest':
+        case 'pinterest': {
           // Pinterest API v5 — image pins with SEO description + board management.
           // Requires Pinterest Developer App + pins:write scope.
+          // NOTE: in the post-based flow `proposal` is undefined — we read pinterest_*
+          // overrides from the request body (sent by useEventPosts/Library hooks)
+          // and fall back to sensible defaults inside publishToPinterest.
+          const b = body as any;
           result = await publishToPinterest(
             tokenData.access_token,
             text,
             imageUrl,
             videoUrl,
             {
-              title: (proposal as any).pinterest_title,
-              boardId: (proposal as any).pinterest_board_id,
-              boardName: (proposal as any).pinterest_board_name,
-              clickThroughLink: (proposal as any).pinterest_click_through,
+              title: b?.pinterest_title,
+              boardId: b?.pinterest_board_id,
+              boardName: b?.pinterest_board_name,
+              clickThroughLink: b?.pinterest_click_through_url ?? b?.pinterest_click_through,
             },
           );
           break;
+        }
         case 'threads':
           // Threads API (Meta) — text/image/video posts.
           // Requires Meta App with "Access the Threads API" use case.
@@ -1413,8 +1609,30 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // Compute a best-effort live URL so the client can link straight to the post.
+      // Prefers the permalink returned by the platform; otherwise falls back to a
+      // deterministic URL when the postId format makes that safe.
+      const liveUrl = (() => {
+        const r: any = result;
+        if (r.permalink) return r.permalink as string;
+        if (!r.postId) return null;
+        const pid = String(r.postId);
+        if (channel === 'linkedin') return `https://www.linkedin.com/feed/update/urn:li:activity:${pid}/`;
+        if (channel === 'facebook') return `https://www.facebook.com/${pid}`;
+        if (channel === 'pinterest') return `https://www.pinterest.com/pin/${pid}/`;
+        return null;
+      })();
+
       return new Response(
-        JSON.stringify({ success: true, published: true, postId: result.postId, channel, firstComment: firstCommentStatus }),
+        JSON.stringify({
+          success: true,
+          published: true,
+          postId: result.postId,
+          channel,
+          firstComment: firstCommentStatus,
+          ...(liveUrl ? { liveUrl } : {}),
+          ...(result.permalink ? { permalink: result.permalink } : {}),
+        }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
     }
