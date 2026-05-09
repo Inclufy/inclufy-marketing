@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import {
@@ -70,6 +71,9 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import AllPostsScreen from '../screens/AllPostsScreen';
 import MultiAgentScreen from '../screens/MultiAgentScreen';
+import AgentDetailScreen from '../screens/AgentDetailScreen';
+import AgentRunDetailScreen from '../screens/AgentRunDetailScreen';
+import VoiceCommandSheet from '../components/VoiceCommandSheet';
 import IntegrationsScreen from '../screens/IntegrationsScreen';
 import WhatsAppSettingsScreen from '../screens/WhatsAppSettingsScreen';
 import LibraryScreen from '../screens/LibraryScreen';
@@ -124,10 +128,29 @@ function AIStack() {
 }
 
 // ─── Main Tabs + Floating Camera FAB ────────────────────────────────
+// AsyncStorage key for the first-run voice tooltip (Tier-1 #5 discovery).
+const VOICE_TIP_DISMISSED_KEY = '@amos:voice_tip_dismissed_v1';
+
 function MainTabsWrapper() {
   const { colors } = useTheme();
   const navigation = useNavigation<Nav>();
+  const { locale } = useTranslation();
+  const isNl = locale === 'nl';
   const [showCaptureModal, setShowCaptureModal] = useState(false);
+  // Tier-1 #5 — Voice command sheet, opened via FAB long-press.
+  const [showVoiceSheet, setShowVoiceSheet] = useState(false);
+  // First-run hint that long-press = voice. Dismissed forever after one tap.
+  const [showVoiceTip, setShowVoiceTip] = useState(false);
+  useEffect(() => {
+    (async () => {
+      const dismissed = await AsyncStorage.getItem(VOICE_TIP_DISMISSED_KEY);
+      if (!dismissed) setShowVoiceTip(true);
+    })();
+  }, []);
+  const dismissVoiceTip = async () => {
+    setShowVoiceTip(false);
+    await AsyncStorage.setItem(VOICE_TIP_DISMISSED_KEY, '1');
+  };
 
   const handleCaptureCategory = (category: string) => {
     setShowCaptureModal(false);
@@ -220,10 +243,45 @@ function MainTabsWrapper() {
         accessibilityLabel="camera-fab"
         style={[fabStyles.fab, { backgroundColor: colors.primary, shadowColor: colors.primary }]}
         onPress={() => setShowCaptureModal(true)}
+        // Long-press → voice command (Tier-1 #5). 600ms is the React Native default.
+        onLongPress={() => { dismissVoiceTip(); setShowVoiceSheet(true); }}
+        delayLongPress={500}
         activeOpacity={0.85}
       >
         <MaterialCommunityIcons name="camera-plus" size={28} color="#fff" />
       </TouchableOpacity>
+
+      {/* ── First-run voice discovery tip (Tier-1 #5) ── */}
+      {showVoiceTip && (
+        <TouchableOpacity
+          accessibilityLabel="voice-tip"
+          activeOpacity={0.85}
+          onPress={dismissVoiceTip}
+          style={fabStyles.voiceTip}
+        >
+          <View style={[fabStyles.voiceTipBubble, { backgroundColor: colors.text }]}>
+            <MaterialCommunityIcons name="microphone-outline" size={14} color={colors.background} />
+            <Text style={[fabStyles.voiceTipText, { color: colors.background }]}>
+              {isNl ? 'Houd ingedrukt voor spraak' : 'Hold to speak'}
+            </Text>
+          </View>
+          <View style={[fabStyles.voiceTipArrow, { borderTopColor: colors.text }]} />
+        </TouchableOpacity>
+      )}
+
+      {/* ── Voice command sheet (Tier-1 #5) ── */}
+      <VoiceCommandSheet
+        visible={showVoiceSheet}
+        onClose={() => setShowVoiceSheet(false)}
+        onDispatched={(runId) => {
+          setShowVoiceSheet(false);
+          if (runId) {
+            navigation.navigate('AgentRunDetail' as any, { runId });
+          } else {
+            navigation.navigate('MultiAgent' as any);
+          }
+        }}
+      />
 
       {/* ── Capture Category Modal ── */}
       <Modal visible={showCaptureModal} transparent animationType="slide" onRequestClose={() => setShowCaptureModal(false)}>
@@ -345,6 +403,8 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AllPosts" component={AllPostsScreen} options={{ title: t.screenTitles.allPosts ?? 'Alle Posts' }} />
           <Stack.Screen name="MultiAgent" component={MultiAgentScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AgentDetail" component={AgentDetailScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="AgentRunDetail" component={AgentRunDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Integrations" component={IntegrationsScreen} options={{ headerShown: false }} />
 
           {/* ─── Content Library ─── */}
@@ -383,6 +443,40 @@ const fabStyles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 10,
     zIndex: 100,
+  },
+  // Tier-1 #5 — first-run voice discovery tooltip, sits above the FAB.
+  voiceTip: {
+    position: 'absolute',
+    bottom: Platform.OS === 'ios' ? 168 : 144,
+    alignSelf: 'center',
+    alignItems: 'center',
+    zIndex: 101,
+  },
+  voiceTipBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  voiceTipText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  voiceTipArrow: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    marginTop: -1,
   },
   modalOverlay: {
     flex: 1,

@@ -37,7 +37,10 @@ const AGENTS: AgentDef[] = [
     icon: 'create-outline',
     iconLib: 'ion',
     color: '#3B82F6',
-    status: 'active',
+    // Wired to event-studio-ai (single-shot copy generation). Promote to
+    // 'active' only once it dispatches via the orchestrator + writes to
+    // agent_runs. Until then, 'beta' is the honest signal.
+    status: 'beta',
     capabilities: ['Blog writing', 'Social posts', 'Email copy', 'Ad copy'],
     capabilitiesNl: ['Blog schrijven', 'Social posts', 'E-mail copy', 'Advertentieteksten'],
   },
@@ -338,10 +341,14 @@ export default function MultiAgentScreen() {
             const caps = isNl ? agent.capabilitiesNl : agent.capabilities;
 
             return (
-              <View key={agent.id} style={[
-                styles.agentCard,
-                agent.status === 'coming' && { opacity: 0.6 },
-              ]}>
+              <TouchableOpacity
+                key={agent.id}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('AgentDetail', { agentKind: agent.id as any })}
+                style={[
+                  styles.agentCard,
+                  agent.status === 'coming' && { opacity: 0.6 },
+                ]}>
                 {/* Agent Header */}
                 <View style={styles.agentHeader}>
                   <View style={[styles.agentIconWrap, { backgroundColor: agent.color + '18' }]}>
@@ -376,7 +383,7 @@ export default function MultiAgentScreen() {
                     </View>
                   ))}
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
 

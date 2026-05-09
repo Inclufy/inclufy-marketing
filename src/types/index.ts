@@ -178,7 +178,18 @@ export type RootStackParamList = {
   NFCShare: undefined;
   // Budget + Ads
   BudgetMonitor: undefined;
-  BoostFlow: { postId: string; channel: 'facebook' | 'instagram' | 'meta' };
+  BoostFlow: {
+    postId: string;
+    channel: 'facebook' | 'instagram' | 'meta';
+    // Prefill from Ads Agent (Tier-1 #3 connection). Optional — user can still
+    // override every step. agentRunId lets the screen post a confirmation
+    // back to public.agent_runs once the boost is launched.
+    agentRunId?: string;
+    prefillBudgetCents?: number;
+    prefillDurationDays?: number;
+    prefillAudienceKey?: string;
+    prefillSourceLabel?: string;  // e.g. "Suggested by Ads Agent" — shown in header
+  };
   // Opportunities & Automation
   OpportunityRadar: undefined;
   MarketingAutomation: undefined;
@@ -196,6 +207,8 @@ export type RootStackParamList = {
   // AMOS Hub
   AMOSHub: undefined;
   MultiAgent: undefined;
+  AgentDetail: { agentKind: 'content' | 'social' | 'ads' | 'analytics' | 'lead' };
+  AgentRunDetail: { runId: string };
   Integrations: undefined;
   // Event Scanner (attendee QR scanning)
   EventScanner: { eventId: string };

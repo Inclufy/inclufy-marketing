@@ -23,6 +23,8 @@ import { subtleShadow } from '../utils/shadows';
 import { useTranslation } from '../i18n';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
+import AgentActivityTile from '../components/AgentActivityTile';
+import CounterfactualNudge from '../components/CounterfactualNudge';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -388,6 +390,14 @@ export default function HomeScreen() {
             </View>
           </LinearGradient>
         </TouchableOpacity>
+
+        {/* ── Multi-Agent activity tile (Tier-1 #2) ─────────────────── */}
+        <AgentActivityTile />
+
+        {/* ── Counterfactual nudge (Tier-1 #6) ──────────────────────── */}
+        <View style={{ paddingHorizontal: spacing.md }}>
+          <CounterfactualNudge />
+        </View>
 
         {/* ── Quick Stats ────────────────────────────────────────────── */}
         <View style={styles.statsGrid}>

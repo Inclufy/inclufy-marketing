@@ -22,6 +22,14 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 // ─── Module Definitions ──────────────────────────────────────────────────────
 
+type SectionKey =
+  | 'today'
+  | 'capture'
+  | 'content'
+  | 'ads'
+  | 'intelligence'
+  | 'setup';
+
 interface AMOSModule {
   id: string;
   name: string;
@@ -32,26 +40,52 @@ interface AMOSModule {
   iconLib: 'ionicons' | 'mci';
   color: string;
   gradientColors: [string, string];
+  // Honest status:
+  //  - 'active'  → real DB read+write or real edge fn calls flowing in/out
+  //  - 'beta'    → screen renders but is partial (read-only display, no app-side mutations,
+  //                or single edge-fn barely wired)
+  //  - 'coming'  → mostly UI mock, no DB writes / static data only
   status: 'active' | 'beta' | 'coming';
   route: keyof RootStackParamList | string | null;
+  section: SectionKey;
 }
 
-// ── Grouped for layout ────────────────────────────────────────────────────────
-// Hero row (wide cards), Groups 1–3 shown as 2-col grid sections
-
-const HERO_MODULES: AMOSModule[] = [
+// ─── Single source of truth — all modules in display order ──────────────────
+// Sections are rendered in this order: today → capture → content → ads → intelligence → setup
+const ALL_MODULES: AMOSModule[] = [
+  // ── TODAY ─────────────────────────────────────────────────────────────────
   {
-    id: 'event',
-    name: 'Event Intelligence',
-    nameNl: 'Event Intelligence',
-    description: 'Capture, AI-generate & publish live from events',
-    descriptionNl: 'Capture, AI-post & publiceer live op events',
-    icon: 'calendar',
+    id: 'multiagent',
+    name: 'Multi-Agent System',
+    nameNl: 'Multi-Agent Systeem',
+    description: 'Autonomous AI agent network',
+    descriptionNl: 'AI-agentennetwerk',
+    icon: 'git-network',
     iconLib: 'ionicons',
-    color: '#9333EA',
-    gradientColors: ['#6D28D9', '#9333EA'],
-    status: 'active',
-    route: 'EventIntelligence',
+    color: '#A855F7',
+    gradientColors: ['#9333EA', '#A855F7'],
+    // DB tables (agents, agent_runs, agent_run_messages) live + orchestrator
+    // and agent-ads edge functions deployed; AgentDetailScreen does real DB
+    // reads + writes (kill switch, runs list). Mark 'beta' until in-app
+    // dispatch is tap-tested on a real device end-to-end.
+    status: 'beta',
+    route: 'MultiAgent',
+    section: 'today',
+  },
+  {
+    id: 'analytics',
+    name: 'Analytics & Reporting',
+    nameNl: 'Analytics & Rapportage',
+    description: 'Deep insights & ROI tracking',
+    descriptionNl: 'Diepgaande inzichten',
+    icon: 'bar-chart',
+    iconLib: 'ionicons',
+    color: '#84CC16',
+    gradientColors: ['#65A30D', '#84CC16'],
+    // Read-only dashboard — no writes from this screen
+    status: 'beta',
+    route: 'Analytics',
+    section: 'today',
   },
   {
     id: 'opportunity',
@@ -65,254 +99,246 @@ const HERO_MODULES: AMOSModule[] = [
     gradientColors: ['#D97706', '#F59E0B'],
     status: 'active',
     route: 'OpportunityFeed',
+    section: 'today',
   },
-];
 
-const GROUP_1: { label: string; modules: AMOSModule[] } = {
-  label: 'Creëren & Automatiseren',
-  modules: [
-    {
-      id: 'campaign',
-      name: 'Campaign Engine',
-      nameNl: 'Campaign Engine',
-      description: 'Multi-channel campaigns',
-      descriptionNl: 'Multi-channel campagnes',
-      icon: 'megaphone',
-      iconLib: 'ionicons',
-      color: '#3B82F6',
-      gradientColors: ['#2563EB', '#3B82F6'],
-      status: 'active',
-      route: 'CampaignList',
-    },
-    {
-      id: 'content',
-      name: 'Content Intelligence',
-      nameNl: 'Content Intelligence',
-      description: 'AI content creation & strategy',
-      descriptionNl: 'AI contentcreatie & strategie',
-      icon: 'create',
-      iconLib: 'ionicons',
-      color: '#EC4899',
-      gradientColors: ['#DB2777', '#EC4899'],
-      status: 'active',
-      route: 'ContentCreator',
-    },
-    {
-      id: 'proposals',
-      name: 'Content Proposals',
-      nameNl: 'Content Voorstellen',
-      description: 'Review & approve AI content',
-      descriptionNl: 'Beoordeel & keur AI content goed',
-      icon: 'file-document-check-outline',
-      iconLib: 'mci',
-      color: '#F59E0B',
-      gradientColors: ['#D97706', '#F59E0B'],
-      status: 'active',
-      route: 'ContentProposals',
-    },
-    {
-      id: 'library',
-      name: 'Content Library',
-      nameNl: 'Content Library',
-      description: 'Pre-designed product posts',
-      descriptionNl: 'Vooraf ontworpen productposts',
-      icon: 'images',
-      iconLib: 'ionicons',
-      color: '#10B981',
-      gradientColors: ['#059669', '#10B981'],
-      status: 'active',
-      route: 'Library',
-    },
-    {
-      id: 'calendar',
-      name: 'Content Calendar',
-      nameNl: 'Content Kalender',
-      description: 'Week & month planning view',
-      descriptionNl: 'Week- & maandplanning',
-      icon: 'calendar-month',
-      iconLib: 'mci',
-      color: '#9333EA',
-      gradientColors: ['#7C3AED', '#9333EA'],
-      status: 'active',
-      route: 'ContentCalendar',
-    },
-    {
-      id: 'ai',
-      name: 'AI Copilot',
-      nameNl: 'AI Copiloot',
-      description: 'Your AI marketing assistant',
-      descriptionNl: 'Jouw AI marketing-assistent',
-      icon: 'robot-outline',
-      iconLib: 'mci',
-      color: '#8B5CF6',
-      gradientColors: ['#7C3AED', '#8B5CF6'],
-      status: 'active',
-      route: 'AICommand',
-    },
-    {
-      id: 'automation',
-      name: 'Marketing Automation',
-      nameNl: 'Automatisering',
-      description: 'Trigger-based workflows',
-      descriptionNl: 'Trigger-gebaseerde flows',
-      icon: 'rocket',
-      iconLib: 'ionicons',
-      color: '#6366F1',
-      gradientColors: ['#4F46E5', '#6366F1'],
-      status: 'active',
-      route: 'MarketingAutomation',
-    },
-  ],
-};
-
-const GROUP_2: { label: string; modules: AMOSModule[] } = {
-  label: 'Netwerk & Leads',
-  modules: [
-    {
-      id: 'networking',
-      name: 'Networking Engine',
-      nameNl: 'Networking Engine',
-      description: 'Contacts via QR/NFC',
-      descriptionNl: 'Contacten via QR/NFC',
-      icon: 'account-network',
-      iconLib: 'mci',
-      color: '#10B981',
-      gradientColors: ['#059669', '#10B981'],
-      status: 'active',
-      route: 'NetworkingEngine',
-    },
-    {
-      id: 'lead',
-      name: 'Lead Intelligence',
-      nameNl: 'Lead Intelligence',
-      description: 'Capture & qualify leads with AI',
-      descriptionNl: 'AI-kwalificatie van leads',
-      icon: 'people',
-      iconLib: 'ionicons',
-      color: '#14B8A6',
-      gradientColors: ['#0D9488', '#14B8A6'],
-      status: 'active',
-      route: 'SmartLead',
-    },
-  ],
-};
-
-const GROUP_CONTENT: { label: string; modules: AMOSModule[] } = {
-  label: '📂 Content Hub',
-  modules: [
-    {
-      id: 'products',
-      name: 'Products',
-      nameNl: 'Producten',
-      description: 'Manage products & services catalog',
-      descriptionNl: 'Beheer producten & diensten catalogus',
-      icon: 'package-variant-closed',
-      iconLib: 'mci',
-      color: '#3B82F6',
-      gradientColors: ['#2563EB', '#3B82F6'],
-      status: 'active',
-      route: 'Products',
-    },
-    {
-      id: 'team',
-      name: 'Team Directory',
-      nameNl: 'Team',
-      description: 'Team members & expertise',
-      descriptionNl: 'Teamleden & expertise',
-      icon: 'account-group',
-      iconLib: 'mci',
-      color: '#8B5CF6',
-      gradientColors: ['#7C3AED', '#8B5CF6'],
-      status: 'active',
-      route: 'TeamDirectory',
-    },
-    {
-      id: 'organization',
-      name: 'Organization',
-      nameNl: 'Organisatie',
-      description: 'Company profile, pitch & boilerplate',
-      descriptionNl: 'Bedrijfsprofiel, pitch & boilerplate',
-      icon: 'office-building',
-      iconLib: 'mci',
-      color: '#F97316',
-      gradientColors: ['#EA580C', '#F97316'],
-      status: 'active',
-      route: 'Organization',
-    },
-  ],
-};
-
-const GROUP_3: { label: string; modules: AMOSModule[] } = {
-  label: 'Beheer & Optimalisatie',
-  modules: [
-    {
-      id: 'autonomous',
-      name: 'Autonomous Hub',
-      nameNl: 'Autonoom Hub',
-      description: 'AI autonomous marketing ops',
-      descriptionNl: 'Autonome AI marketingoperaties',
-      icon: 'brain',
-      iconLib: 'mci',
-      color: '#7C3AED',
-      gradientColors: ['#6D28D9', '#7C3AED'],
-      status: 'active',
-      route: 'AutonomousHub',
-    },
-    {
-      id: 'strategy',
-      name: 'Marketing Strategy',
-      nameNl: 'Marketing Strategie',
-      description: 'Plan goals, budget & content strategy',
-      descriptionNl: 'Plan doelen, budget & contentstrategie',
-      icon: 'chart-timeline-variant-shimmer',
-      iconLib: 'mci',
-      color: '#059669',
-      gradientColors: ['#047857', '#059669'],
-      status: 'active',
-      route: 'MarketingStrategy',
-    },
-    {
-      id: 'budget',
-      name: 'Budget Monitor',
-      nameNl: 'Budget Monitor',
-      description: 'Track & optimize marketing spend',
-      descriptionNl: 'Beheer marketingbudget',
-      icon: 'card',
-      iconLib: 'ionicons',
-      color: '#EF4444',
-      gradientColors: ['#DC2626', '#EF4444'],
-      status: 'active',
-      route: 'BudgetMonitor',
-    },
-  ],
-};
-
-const COMING_MODULES: AMOSModule[] = [
+  // ── CAPTURE ───────────────────────────────────────────────────────────────
   {
-    id: 'analytics',
-    name: 'Analytics & Reporting',
-    nameNl: 'Analytics & Rapportage',
-    description: 'Deep insights & ROI tracking',
-    descriptionNl: 'Diepgaande inzichten',
-    icon: 'bar-chart',
+    id: 'event',
+    name: 'Event Intelligence',
+    nameNl: 'Event Intelligence',
+    description: 'Capture, AI-generate & publish live from events',
+    descriptionNl: 'Capture, AI-post & publiceer live op events',
+    icon: 'calendar',
     iconLib: 'ionicons',
-    color: '#84CC16',
-    gradientColors: ['#65A30D', '#84CC16'],
+    color: '#9333EA',
+    gradientColors: ['#6D28D9', '#9333EA'],
     status: 'active',
-    route: 'Analytics',
+    route: 'EventIntelligence',
+    section: 'capture',
   },
   {
-    id: 'multiagent',
-    name: 'Multi-Agent System',
-    nameNl: 'Multi-Agent Systeem',
-    description: 'Autonomous AI agent network',
-    descriptionNl: 'AI-agentennetwerk',
-    icon: 'git-network',
+    id: 'library',
+    name: 'Content Library',
+    nameNl: 'Content Library',
+    description: 'Pre-designed product posts',
+    descriptionNl: 'Vooraf ontworpen productposts',
+    icon: 'images',
     iconLib: 'ionicons',
-    color: '#A855F7',
-    gradientColors: ['#9333EA', '#A855F7'],
+    color: '#10B981',
+    gradientColors: ['#059669', '#10B981'],
     status: 'active',
-    route: 'MultiAgent',
+    route: 'Library',
+    section: 'capture',
+  },
+  {
+    id: 'proposals',
+    name: 'Content Proposals',
+    nameNl: 'Content Voorstellen',
+    description: 'Review & approve AI content',
+    descriptionNl: 'Beoordeel & keur AI content goed',
+    icon: 'file-document-check-outline',
+    iconLib: 'mci',
+    color: '#F59E0B',
+    gradientColors: ['#D97706', '#F59E0B'],
+    status: 'active',
+    route: 'ContentProposals',
+    section: 'capture',
+  },
+
+  // ── CONTENT ───────────────────────────────────────────────────────────────
+  {
+    id: 'content',
+    name: 'Content Intelligence',
+    nameNl: 'Content Intelligence',
+    description: 'AI content creation & strategy',
+    descriptionNl: 'AI contentcreatie & strategie',
+    icon: 'create',
+    iconLib: 'ionicons',
+    color: '#EC4899',
+    gradientColors: ['#DB2777', '#EC4899'],
+    status: 'active',
+    route: 'ContentCreator',
+    section: 'content',
+  },
+  {
+    id: 'calendar',
+    name: 'Content Calendar',
+    nameNl: 'Content Kalender',
+    description: 'Week & month planning view',
+    descriptionNl: 'Week- & maandplanning',
+    icon: 'calendar-month',
+    iconLib: 'mci',
+    color: '#9333EA',
+    gradientColors: ['#7C3AED', '#9333EA'],
+    // Read-only display of proposals/campaigns; no writes
+    status: 'beta',
+    route: 'ContentCalendar',
+    section: 'content',
+  },
+  {
+    id: 'ai',
+    name: 'AI Copilot',
+    nameNl: 'AI Copiloot',
+    description: 'Your AI marketing assistant',
+    descriptionNl: 'Jouw AI marketing-assistent',
+    icon: 'robot-outline',
+    iconLib: 'mci',
+    color: '#8B5CF6',
+    gradientColors: ['#7C3AED', '#8B5CF6'],
+    status: 'active',
+    route: 'AICommand',
+    section: 'content',
+  },
+  {
+    id: 'automation',
+    name: 'Marketing Automation',
+    nameNl: 'Automatisering',
+    description: 'Trigger-based workflows',
+    descriptionNl: 'Trigger-gebaseerde flows',
+    icon: 'rocket',
+    iconLib: 'ionicons',
+    color: '#6366F1',
+    gradientColors: ['#4F46E5', '#6366F1'],
+    status: 'active',
+    route: 'MarketingAutomation',
+    section: 'content',
+  },
+
+  // ── ADS ───────────────────────────────────────────────────────────────────
+  {
+    id: 'boost',
+    name: 'Boost a Post',
+    nameNl: 'Promoot een post',
+    description: 'Pick a post → Boost it into a paid campaign',
+    descriptionNl: 'Kies een post → maak er een betaalde campagne van',
+    icon: 'rocket-launch-outline',
+    iconLib: 'mci',
+    color: '#FF6B35',
+    gradientColors: ['#C2410C', '#FF6B35'],
+    // BoostFlowScreen exists but the agent integration is pending; from the Hub we
+    // intentionally land users on AllPosts so they pick a post first (BoostFlow
+    // requires { postId, channel } params and would crash if opened bare).
+    status: 'beta',
+    route: 'AllPosts',
+    section: 'ads',
+  },
+  {
+    id: 'campaign',
+    name: 'Campaign Engine',
+    nameNl: 'Campaign Engine',
+    description: 'Multi-channel campaigns',
+    descriptionNl: 'Multi-channel campagnes',
+    icon: 'megaphone',
+    iconLib: 'ionicons',
+    color: '#3B82F6',
+    gradientColors: ['#2563EB', '#3B82F6'],
+    status: 'active',
+    route: 'CampaignList',
+    section: 'ads',
+  },
+  {
+    id: 'budget',
+    name: 'Budget Monitor',
+    nameNl: 'Budget Monitor',
+    description: 'Track & optimize marketing spend',
+    descriptionNl: 'Beheer marketingbudget',
+    icon: 'card',
+    iconLib: 'ionicons',
+    color: '#EF4444',
+    gradientColors: ['#DC2626', '#EF4444'],
+    // Read-only display of analytics + campaigns
+    status: 'beta',
+    route: 'BudgetMonitor',
+    section: 'ads',
+  },
+  {
+    id: 'strategy',
+    name: 'Marketing Strategy',
+    nameNl: 'Marketing Strategie',
+    description: 'Plan goals, budget & content strategy',
+    descriptionNl: 'Plan doelen, budget & contentstrategie',
+    icon: 'chart-timeline-variant-shimmer',
+    iconLib: 'mci',
+    color: '#059669',
+    gradientColors: ['#047857', '#059669'],
+    status: 'active',
+    route: 'MarketingStrategy',
+    section: 'ads',
+  },
+
+  // ── INTELLIGENCE ──────────────────────────────────────────────────────────
+  {
+    id: 'networking',
+    name: 'Networking Engine',
+    nameNl: 'Networking Engine',
+    description: 'Contacts via QR/NFC',
+    descriptionNl: 'Contacten via QR/NFC',
+    icon: 'account-network',
+    iconLib: 'mci',
+    color: '#10B981',
+    gradientColors: ['#059669', '#10B981'],
+    status: 'active',
+    route: 'NetworkingEngine',
+    section: 'intelligence',
+  },
+  {
+    id: 'lead',
+    name: 'Lead Intelligence',
+    nameNl: 'Lead Intelligence',
+    description: 'Capture & qualify leads with AI',
+    descriptionNl: 'AI-kwalificatie van leads',
+    icon: 'people',
+    iconLib: 'ionicons',
+    color: '#14B8A6',
+    gradientColors: ['#0D9488', '#14B8A6'],
+    status: 'active',
+    route: 'SmartLead',
+    section: 'intelligence',
+  },
+
+  // ── TEAM & SETUP ──────────────────────────────────────────────────────────
+  {
+    id: 'products',
+    name: 'Products',
+    nameNl: 'Producten',
+    description: 'Manage products & services catalog',
+    descriptionNl: 'Beheer producten & diensten catalogus',
+    icon: 'package-variant-closed',
+    iconLib: 'mci',
+    color: '#3B82F6',
+    gradientColors: ['#2563EB', '#3B82F6'],
+    status: 'active',
+    route: 'Products',
+    section: 'setup',
+  },
+  {
+    id: 'team',
+    name: 'Team Directory',
+    nameNl: 'Team',
+    description: 'Team members & expertise',
+    descriptionNl: 'Teamleden & expertise',
+    icon: 'account-group',
+    iconLib: 'mci',
+    color: '#8B5CF6',
+    gradientColors: ['#7C3AED', '#8B5CF6'],
+    status: 'active',
+    route: 'TeamDirectory',
+    section: 'setup',
+  },
+  {
+    id: 'organization',
+    name: 'Organization',
+    nameNl: 'Organisatie',
+    description: 'Company profile, pitch & boilerplate',
+    descriptionNl: 'Bedrijfsprofiel, pitch & boilerplate',
+    icon: 'office-building',
+    iconLib: 'mci',
+    color: '#F97316',
+    gradientColors: ['#EA580C', '#F97316'],
+    status: 'active',
+    route: 'Organization',
+    section: 'setup',
   },
   {
     id: 'integrations',
@@ -324,8 +350,25 @@ const COMING_MODULES: AMOSModule[] = [
     iconLib: 'ionicons',
     color: '#64748B',
     gradientColors: ['#475569', '#64748B'],
-    status: 'active',
+    // Hardcoded integration list, all `connected: false`, no OAuth/persist logic in screen
+    status: 'coming',
     route: 'Integrations',
+    section: 'setup',
+  },
+  {
+    id: 'autonomous',
+    name: 'Autonomous Hub',
+    nameNl: 'Autonoom Hub',
+    description: 'AI autonomous marketing ops',
+    descriptionNl: 'Autonome AI marketingoperaties',
+    icon: 'brain',
+    iconLib: 'mci',
+    color: '#7C3AED',
+    gradientColors: ['#6D28D9', '#7C3AED'],
+    // Dashboard reads via hooks but no app-side autonomous engine writes
+    status: 'beta',
+    route: 'AutonomousHub',
+    section: 'setup',
   },
   {
     id: 'onboarding',
@@ -337,13 +380,36 @@ const COMING_MODULES: AMOSModule[] = [
     iconLib: 'mci',
     color: '#EC4899',
     gradientColors: ['#DB2777', '#EC4899'],
-    status: 'active',
+    // Imports supabase but never calls it — wizard not yet wired to persistence
+    status: 'coming',
     route: 'Onboarding',
+    section: 'setup',
   },
 ];
 
-const ALL_ACTIVE_COUNT = HERO_MODULES.length + GROUP_1.modules.length + GROUP_2.modules.length + GROUP_CONTENT.modules.length + GROUP_3.modules.length;
-const ALL_TOTAL = ALL_ACTIVE_COUNT + COMING_MODULES.length;
+// Section order + bilingual labels (inline to avoid touching i18n files)
+const SECTION_ORDER: SectionKey[] = [
+  'today',
+  'capture',
+  'content',
+  'ads',
+  'intelligence',
+  'setup',
+];
+
+const SECTION_LABELS: Record<SectionKey, { en: string; nl: string }> = {
+  today:        { en: 'Today',          nl: 'Vandaag' },
+  capture:      { en: 'Capture',        nl: 'Vastleggen' },
+  content:      { en: 'Content',        nl: 'Content' },
+  ads:          { en: 'Ads',            nl: 'Advertenties' },
+  intelligence: { en: 'Intelligence',   nl: 'Intelligence' },
+  setup:        { en: 'Team & Setup',   nl: 'Team & Setup' },
+};
+
+const ACTIVE_COUNT = ALL_MODULES.filter((m) => m.status === 'active').length;
+const BETA_COUNT = ALL_MODULES.filter((m) => m.status === 'beta').length;
+const COMING_COUNT = ALL_MODULES.filter((m) => m.status === 'coming').length;
+const TOTAL_COUNT = ALL_MODULES.length;
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -351,6 +417,7 @@ export default function AMOSHubScreen() {
   const navigation = useNavigation<Nav>();
   const { locale, t } = useTranslation();
   const { colors, isDark } = useTheme();
+  const isNl = locale === 'nl';
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1 },
@@ -439,60 +506,6 @@ export default function AMOSHubScreen() {
       letterSpacing: 1.2,
     },
 
-    // Hero cards (full-width)
-    heroRow: { gap: spacing.sm },
-    heroCard: {
-      borderRadius: borderRadius.xl,
-      overflow: 'hidden' as const,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.35,
-      shadowRadius: 12,
-      elevation: 6,
-    },
-    heroGradient: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      justifyContent: 'space-between' as const,
-      paddingHorizontal: spacing.lg,
-      paddingVertical: spacing.md + 2,
-      gap: spacing.md,
-    },
-    heroLeft: {
-      flexDirection: 'row' as const,
-      alignItems: 'center' as const,
-      gap: spacing.md,
-      flex: 1,
-    },
-    heroIconWrap: {
-      width: 52,
-      height: 52,
-      borderRadius: borderRadius.lg,
-      backgroundColor: 'rgba(255,255,255,0.18)',
-      justifyContent: 'center' as const,
-      alignItems: 'center' as const,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.25)',
-    },
-    heroName: {
-      fontSize: fontSize.md,
-      fontWeight: fontWeight.bold as any,
-      color: '#fff',
-      marginBottom: 2,
-    },
-    heroDesc: {
-      fontSize: fontSize.xs,
-      color: 'rgba(255,255,255,0.75)',
-      lineHeight: 16,
-    },
-    heroArrow: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      backgroundColor: 'rgba(255,255,255,0.18)',
-      justifyContent: 'center' as const,
-      alignItems: 'center' as const,
-    },
-
     // Grid cards (2-col)
     grid: {
       flexDirection: 'row' as const,
@@ -539,6 +552,7 @@ export default function AMOSHubScreen() {
       marginTop: spacing.sm,
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
+      gap: spacing.xs,
     },
     badge: {
       paddingHorizontal: spacing.sm,
@@ -589,8 +603,10 @@ export default function AMOSHubScreen() {
     },
   }));
 
-  const getName = (m: AMOSModule) => locale === 'nl' ? m.nameNl : m.name;
-  const getDesc = (m: AMOSModule) => locale === 'nl' ? m.descriptionNl : m.description;
+  const getName = (m: AMOSModule) => (isNl ? m.nameNl : m.name);
+  const getDesc = (m: AMOSModule) => (isNl ? m.descriptionNl : m.description);
+  const getSectionLabel = (key: SectionKey) =>
+    isNl ? SECTION_LABELS[key].nl : SECTION_LABELS[key].en;
 
   const navigate = (m: AMOSModule) => {
     if (!m.route || m.status === 'coming') return;
@@ -602,43 +618,19 @@ export default function AMOSHubScreen() {
     }
   };
 
-  // ── Hero card (wide, full-row) ─────────────────────────────────────────────
-  const renderHeroCard = (m: AMOSModule) => (
-    <TouchableOpacity
-      key={m.id}
-      style={[styles.heroCard, { shadowColor: m.color }]}
-      onPress={() => navigate(m)}
-      activeOpacity={0.82}
-    >
-      <LinearGradient
-        colors={m.gradientColors}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroGradient}
-      >
-        <View style={styles.heroLeft}>
-          <View style={styles.heroIconWrap}>
-            {m.iconLib === 'mci' ? (
-              <MaterialCommunityIcons name={m.icon as any} size={28} color="#fff" />
-            ) : (
-              <Ionicons name={(m.icon) as any} size={28} color="#fff" />
-            )}
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Text style={styles.heroName}>{getName(m)}</Text>
-            <Text style={styles.heroDesc} numberOfLines={2}>{getDesc(m)}</Text>
-          </View>
-        </View>
-        <View style={styles.heroArrow}>
-          <Ionicons name="arrow-forward" size={18} color="rgba(255,255,255,0.9)" />
-        </View>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+  // ── Status badge label ─────────────────────────────────────────────────────
+  const getBadgeLabel = (m: AMOSModule): string | null => {
+    if (m.status === 'coming') return t.amosHub.comingSoon;
+    if (m.status === 'beta') return isNl ? 'Bèta' : 'Beta';
+    return null;
+  };
 
   // ── Grid card (half-width) ─────────────────────────────────────────────────
   const renderGridCard = (m: AMOSModule) => {
     const isComingSoon = m.status === 'coming';
+    const isBeta = m.status === 'beta';
+    const badgeLabel = getBadgeLabel(m);
+
     return (
       <TouchableOpacity
         key={m.id}
@@ -687,11 +679,26 @@ export default function AMOSHubScreen() {
 
           {/* Footer */}
           <View style={styles.gridFooter}>
-            {isComingSoon ? (
-              <View style={[styles.badge, { backgroundColor: colors.borderLight }]}>
-                <Text style={[styles.badgeText, { color: colors.textTertiary }]}>{t.amosHub.comingSoon}</Text>
+            {badgeLabel ? (
+              <View
+                style={[
+                  styles.badge,
+                  {
+                    backgroundColor: isBeta ? '#F59E0B22' : colors.borderLight,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.badgeText,
+                    { color: isBeta ? '#B45309' : colors.textTertiary },
+                  ]}
+                >
+                  {badgeLabel}
+                </Text>
               </View>
-            ) : (
+            ) : null}
+            {!isComingSoon && (
               <View style={[styles.arrowChip, { backgroundColor: m.color + '18' }]}>
                 <Ionicons name="arrow-forward" size={12} color={m.color} />
               </View>
@@ -712,6 +719,13 @@ export default function AMOSHubScreen() {
       <View style={[styles.sectionLine, { backgroundColor: colors.border }]} />
     </View>
   );
+
+  // ── Group modules by section, preserving SECTION_ORDER ─────────────────────
+  const sectionsToRender = SECTION_ORDER.map((key) => ({
+    key,
+    label: getSectionLabel(key),
+    modules: ALL_MODULES.filter((m) => m.section === key),
+  })).filter((s) => s.modules.length > 0);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -747,17 +761,22 @@ export default function AMOSHubScreen() {
         {/* Stats pill */}
         <View style={styles.statsPill}>
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{ALL_ACTIVE_COUNT}</Text>
+            <Text style={styles.statValue}>{ACTIVE_COUNT}</Text>
             <Text style={styles.statLabel}>{t.amosHub.statActive}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{COMING_MODULES.length}</Text>
+            <Text style={styles.statValue}>{BETA_COUNT}</Text>
+            <Text style={styles.statLabel}>{isNl ? 'Bèta' : 'Beta'}</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statItem}>
+            <Text style={styles.statValue}>{COMING_COUNT}</Text>
             <Text style={styles.statLabel}>{t.amosHub.statComing}</Text>
           </View>
           <View style={styles.statDivider} />
           <View style={styles.statItem}>
-            <Text style={styles.statValue}>{ALL_TOTAL}</Text>
+            <Text style={styles.statValue}>{TOTAL_COUNT}</Text>
             <Text style={styles.statLabel}>{t.amosHub.statTotal}</Text>
           </View>
         </View>
@@ -769,41 +788,14 @@ export default function AMOSHubScreen() {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Hero row: Event Intelligence + Opportunity Feed ─────────── */}
-        {renderSectionHeader(t.amosHub.sectionLiveIntelligence)}
-        <View style={styles.heroRow}>
-          {HERO_MODULES.map(renderHeroCard)}
-        </View>
-
-        {/* ── Group 1: Create & Automate ──────────────────────────────── */}
-        {renderSectionHeader(t.amosHub.sectionCreate)}
-        <View style={styles.grid}>
-          {GROUP_1.modules.map(renderGridCard)}
-        </View>
-
-        {/* ── Group 2: Network & Leads ────────────────────────────────── */}
-        {renderSectionHeader(t.amosHub.sectionNetwork)}
-        <View style={styles.grid}>
-          {GROUP_2.modules.map(renderGridCard)}
-        </View>
-
-        {/* ── Content Hub ────────────────────────────────────────────── */}
-        {renderSectionHeader('📂 Content Hub')}
-        <View style={styles.grid}>
-          {GROUP_CONTENT.modules.map(renderGridCard)}
-        </View>
-
-        {/* ── Group 3: Manage & Optimize ──────────────────────────────── */}
-        {renderSectionHeader(t.amosHub.sectionManage)}
-        <View style={styles.grid}>
-          {GROUP_3.modules.map(renderGridCard)}
-        </View>
-
-        {/* ── Coming Soon ─────────────────────────────────────────────── */}
-        {renderSectionHeader(t.amosHub.sectionComing)}
-        <View style={styles.grid}>
-          {COMING_MODULES.map(renderGridCard)}
-        </View>
+        {sectionsToRender.map((s) => (
+          <View key={s.key}>
+            {renderSectionHeader(s.label)}
+            <View style={styles.grid}>
+              {s.modules.map(renderGridCard)}
+            </View>
+          </View>
+        ))}
 
         {/* ── AMOS Engine status ──────────────────────────────────────── */}
         <View style={[styles.engineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>

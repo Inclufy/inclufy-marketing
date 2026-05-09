@@ -88,9 +88,31 @@ export default function BoostFlowScreen() {
   const navigation = useNavigation<Nav>();
   const { colors } = useTheme();
 
+  // ── Prefill from Ads Agent (Tier-1 #3 connection) ─────────────────
+  // If the route was opened by AgentRunDetail "Approve", these params
+  // carry the agent's recommended pacing + audience. Otherwise fall
+  // back to the safe defaults the manual flow has always used.
+  const initialBudget = useMemo<BudgetPreset>(() => {
+    const cents = params.prefillBudgetCents;
+    const days  = params.prefillDurationDays;
+    if (!cents || !days) return BUDGET_PRESETS[1];
+    // Pick the closest preset by cents+days (within 30% tolerance) to
+    // avoid creating a custom row that breaks the chip UI.
+    const closest = BUDGET_PRESETS
+      .map(p => ({ p, score: Math.abs(p.cents - cents) + Math.abs(p.days - days) * 100 }))
+      .sort((a, b) => a.score - b.score)[0];
+    return closest?.p ?? BUDGET_PRESETS[1];
+  }, [params.prefillBudgetCents, params.prefillDurationDays]);
+
+  const initialAudience = useMemo<AudiencePreset>(() => {
+    const key = params.prefillAudienceKey;
+    if (!key) return AUDIENCE_PRESETS[0];
+    return AUDIENCE_PRESETS.find(a => a.key === key) ?? AUDIENCE_PRESETS[0];
+  }, [params.prefillAudienceKey]);
+
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [budget, setBudget] = useState<BudgetPreset>(BUDGET_PRESETS[1]);
-  const [audience, setAudience] = useState<AudiencePreset>(AUDIENCE_PRESETS[0]);
+  const [budget, setBudget] = useState<BudgetPreset>(initialBudget);
+  const [audience, setAudience] = useState<AudiencePreset>(initialAudience);
   const [variants, setVariants] = useState<Variant[]>([]);
   const [chosenVariant, setChosenVariant] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -202,6 +224,22 @@ export default function BoostFlowScreen() {
           />
         ))}
       </View>
+
+      {/* Agent-suggested badge — only when prefill is supplied. */}
+      {params.prefillSourceLabel && (
+        <View style={{
+          backgroundColor: '#A855F722',
+          borderRadius: borderRadius.md,
+          paddingVertical: 6, paddingHorizontal: spacing.sm,
+          marginBottom: spacing.md,
+          flexDirection: 'row', alignItems: 'center', gap: 6,
+        }}>
+          <Ionicons name="sparkles" size={14} color="#A855F7" />
+          <Text style={{ fontSize: fontSize.sm, color: '#A855F7', fontWeight: fontWeight.semibold }}>
+            {params.prefillSourceLabel}
+          </Text>
+        </View>
+      )}
 
       {/* Step 1: Budget */}
       {step === 1 && (
