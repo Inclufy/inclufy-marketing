@@ -73,6 +73,25 @@ const ALL_MODULES: AMOSModule[] = [
     section: 'today',
   },
   {
+    id: 'goalmode',
+    name: 'Goal Mode',
+    nameNl: 'Doel-modus',
+    description: 'Quarterly outcome targets with autonomous agent dispatch',
+    descriptionNl: 'Kwartaaldoelen met autonome agent inzet',
+    // 'flag-checkered' is in MaterialCommunityIcons.
+    icon: 'flag-checkered',
+    iconLib: 'mci',
+    color: '#F97316',
+    gradientColors: ['#EA580C', '#F97316'],
+    // Backend (agent_goals + cron + orchestrator/run_goals) is deployed,
+    // but in-app dispatch from the wizard hasn't been field-tested e2e.
+    status: 'beta',
+    // New users → wizard. Users with an active goal are redirected to the
+    // detail screen by GoalSetupScreen logic / GoalModeTile tap.
+    route: 'GoalSetup',
+    section: 'today',
+  },
+  {
     id: 'analytics',
     name: 'Analytics & Reporting',
     nameNl: 'Analytics & Rapportage',

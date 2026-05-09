@@ -73,6 +73,8 @@ import AllPostsScreen from '../screens/AllPostsScreen';
 import MultiAgentScreen from '../screens/MultiAgentScreen';
 import AgentDetailScreen from '../screens/AgentDetailScreen';
 import AgentRunDetailScreen from '../screens/AgentRunDetailScreen';
+import GoalSetupScreen from '../screens/GoalSetupScreen';
+import GoalDetailScreen from '../screens/GoalDetailScreen';
 import VoiceCommandSheet from '../components/VoiceCommandSheet';
 import IntegrationsScreen from '../screens/IntegrationsScreen';
 import WhatsAppSettingsScreen from '../screens/WhatsAppSettingsScreen';
@@ -405,6 +407,9 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="MultiAgent" component={MultiAgentScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AgentDetail" component={AgentDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="AgentRunDetail" component={AgentRunDetailScreen} options={{ headerShown: false }} />
+          {/* ─── Goal Mode (Tier-2) ─── */}
+          <Stack.Screen name="GoalSetup" component={GoalSetupScreen} options={{ headerShown: false }} />
+          <Stack.Screen name="GoalDetail" component={GoalDetailScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Integrations" component={IntegrationsScreen} options={{ headerShown: false }} />
 
           {/* ─── Content Library ─── */}

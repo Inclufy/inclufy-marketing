@@ -24,6 +24,7 @@ import { useTranslation } from '../i18n';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import AgentActivityTile from '../components/AgentActivityTile';
+import GoalModeTile from '../components/GoalModeTile';
 import CounterfactualNudge from '../components/CounterfactualNudge';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -393,6 +394,9 @@ export default function HomeScreen() {
 
         {/* ── Multi-Agent activity tile (Tier-1 #2) ─────────────────── */}
         <AgentActivityTile />
+
+        {/* ── Goal Mode tile (Tier-2) ─────────────────────────────── */}
+        <GoalModeTile />
 
         {/* ── Counterfactual nudge (Tier-1 #6) ──────────────────────── */}
         <View style={{ paddingHorizontal: spacing.md }}>

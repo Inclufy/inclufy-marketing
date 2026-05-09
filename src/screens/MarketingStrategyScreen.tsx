@@ -492,6 +492,73 @@ export default function MarketingStrategyScreen() {
           <Switch value={requireApproval} onValueChange={setRequireApproval} trackColor={{ false: colors.border, true: colors.primary + '60' }} thumbColor={requireApproval ? colors.primary : colors.textTertiary} />
         </View>
       </View>
+      {/* ── Goal Mode CTA (Tier-2) ────────────────────────────────────── */}
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => {
+          // Map strategy primary_goal → Goal Mode metric. Per design risk #1
+          // there is no 'leads' metric in v1, so lead_gen falls back to undef
+          // (the wizard defaults to event_attendees).
+          const metricMap: Record<string, 'event_attendees' | 'revenue_eur' | 'posts_published' | 'roas' | 'followers'> = {
+            event_promo: 'event_attendees',
+            sales: 'revenue_eur',
+            brand_awareness: 'followers',
+            community: 'followers',
+            thought_leadership: 'posts_published',
+          };
+          const metric = metricMap[primaryGoal];
+          // Quarter spans 3 months → roughly 3× monthly budget.
+          const budget3mo = Math.max(0, (Number(monthlyBudget) || 0) * 3);
+          // Map strategy autonomy → Goal autonomy (1:1 keys).
+          const autonomy: 'conservative' | 'balanced' | 'aggressive' = autonomyLevel;
+          // Active strategy channels → agent kinds (loose mapping).
+          const hasActiveChannel = Object.values(channels).some(ch => ch.active);
+          const agentKinds: Array<'ads' | 'content' | 'social' | 'analytics' | 'lead'> =
+            hasActiveChannel ? ['ads', 'content', 'social'] : ['content', 'social'];
+
+          const today = new Date();
+          const q = Math.floor(today.getMonth() / 3);
+          const ps = new Date(today.getFullYear(), q * 3, 1);
+          const pe = new Date(today.getFullYear(), q * 3 + 3, 0);
+          const fmt = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+          navigation.navigate('GoalSetup', {
+            prefill: {
+              metric,
+              budget_eur: budget3mo,
+              period_start: fmt(ps),
+              period_end: fmt(pe),
+              agent_kinds: agentKinds,
+              autonomy_level: autonomy,
+            },
+          });
+        }}
+        style={[
+          s.section,
+          {
+            borderWidth: 1.5, borderColor: '#F97316',
+            backgroundColor: '#F9731612',
+            flexDirection: R, alignItems: C, gap: spacing.sm,
+          },
+        ]}
+      >
+        <View style={{
+          width: 36, height: 36, borderRadius: 10,
+          backgroundColor: '#F9731622',
+          justifyContent: C, alignItems: C,
+        }}>
+          <MaterialCommunityIcons name="flag-checkered" size={20} color="#F97316" />
+        </View>
+        <View style={{ flex: 1 }}>
+          <Text style={[s.sectionTitle, { color: '#EA580C' }]}>
+            Activeer Goal Mode
+          </Text>
+          <Text style={s.sectionSub}>
+            Eén kwartaaldoel met automatische agent inzet binnen je budget.
+          </Text>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={22} color="#F97316" />
+      </TouchableOpacity>
     </>
   );
 

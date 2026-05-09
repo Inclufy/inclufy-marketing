@@ -206,9 +206,21 @@ export type RootStackParamList = {
   DemoEnvironment: undefined;
   // AMOS Hub
   AMOSHub: undefined;
-  MultiAgent: undefined;
+  MultiAgent: { goalId?: string } | undefined;
   AgentDetail: { agentKind: 'content' | 'social' | 'ads' | 'analytics' | 'lead' };
   AgentRunDetail: { runId: string };
+  // Goal Mode (Tier-2)
+  GoalSetup: {
+    prefill?: {
+      metric?: 'event_attendees' | 'revenue_eur' | 'posts_published' | 'roas' | 'followers';
+      budget_eur?: number;
+      period_start?: string;
+      period_end?: string;
+      agent_kinds?: Array<'ads' | 'content' | 'social' | 'analytics' | 'lead'>;
+      autonomy_level?: 'conservative' | 'balanced' | 'aggressive';
+    };
+  } | undefined;
+  GoalDetail: { goalId: string };
   Integrations: undefined;
   // Event Scanner (attendee QR scanning)
   EventScanner: { eventId: string };

@@ -1,15 +1,22 @@
 // src/screens/MultiAgentScreen.tsx
 // Multi-Agent System — AI agents that work together autonomously
+//
+// Optional `goalId` route param: when set, the screen surfaces a "Filter:
+// Goal X" pill. The filter is informational here (this screen is the agent
+// catalogue, not the runs list) — it stays in the URL for round-tripping
+// to AgentRunDetail and back.
 
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
+import { supabase } from '../services/supabase';
+import type { RootStackParamList } from '../types';
 
 // ─── Agent Definitions ──────────────────────────────────────────────────────
 
@@ -108,9 +115,45 @@ const STATUS_CONFIG = {
 
 export default function MultiAgentScreen() {
   const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<RootStackParamList, 'MultiAgent'>>();
+  const goalId = route.params?.goalId;
   const { colors } = useTheme();
   const { t, locale } = useTranslation();
   const isNl = locale === 'nl';
+
+  // ── Resolve a friendly goal title for the filter pill ──
+  const [goalTitle, setGoalTitle] = useState<string | null>(null);
+  // Pre-fetch the parent_run_ids tied to this goal so future inline filtering
+  // is cheap (and the count is available for diagnostics). The runs catalogue
+  // is rendered statically in this version; the IDs sit ready for the next
+  // iteration that swaps to a real `agent_runs` list.
+  const [goalParentRunIds, setGoalParentRunIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!goalId) {
+      setGoalTitle(null);
+      setGoalParentRunIds([]);
+      return;
+    }
+    (async () => {
+      const [{ data: goalRow }, { data: goalRunRows }] = await Promise.all([
+        supabase.from('agent_goals').select('title').eq('id', goalId).maybeSingle(),
+        supabase.from('agent_goal_runs').select('parent_run_id').eq('goal_id', goalId),
+      ]);
+      if (!mounted) return;
+      setGoalTitle((goalRow?.title as string | undefined) ?? null);
+      const ids = ((goalRunRows ?? []) as Array<{ parent_run_id: string | null }>)
+        .map((r) => r.parent_run_id)
+        .filter((v): v is string => !!v);
+      setGoalParentRunIds(ids);
+    })();
+    return () => { mounted = false; };
+  }, [goalId]);
+
+  // Surface count for downstream consumers; suppress unused-warn safely.
+  const goalRunCount = useMemo(() => goalParentRunIds.length, [goalParentRunIds]);
+  void goalRunCount;
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.background },
@@ -306,6 +349,33 @@ export default function MultiAgentScreen() {
               ? 'AI-agents die autonoom samenwerken aan je marketingdoelen'
               : 'AI agents that work together autonomously on your marketing goals'}
           </Text>
+
+          {/* ── Goal filter pill (Tier-2) ───────────────────────────── */}
+          {goalId && (
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={() => navigation.setParams({ goalId: undefined } as any)}
+              style={{
+                marginTop: spacing.sm,
+                alignSelf: 'flex-start',
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 6,
+                backgroundColor: 'rgba(249,115,22,0.25)',
+                borderColor: '#F97316',
+                borderWidth: 1,
+                borderRadius: borderRadius.full,
+                paddingHorizontal: 10,
+                paddingVertical: 4,
+              }}
+            >
+              <MaterialCommunityIcons name="flag-checkered" size={11} color="#fff" />
+              <Text style={{ color: '#fff', fontSize: 11, fontWeight: fontWeight.semibold }}>
+                {isNl ? 'Filter: doel' : 'Filter: goal'} — {goalTitle ?? goalId.slice(0, 6)}
+              </Text>
+              <Ionicons name="close-circle" size={13} color="#fff" />
+            </TouchableOpacity>
+          )}
 
           {/* Stats */}
           <View style={styles.statsRow}>
