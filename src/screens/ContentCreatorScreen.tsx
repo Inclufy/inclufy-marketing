@@ -28,12 +28,13 @@ import { useTheme } from '../context/ThemeContext';
 import type { RootStackParamList } from '../types';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
+import { useConnectedChannels } from '../hooks/useConnectedChannels';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 
 // ─── Types ───────────────────────────────────────────────────────────
 type ContentType = 'social' | 'caption' | 'blog' | 'email' | 'ad';
-type PlatformKey = 'linkedin' | 'instagram' | 'x' | 'facebook' | 'tiktok';
+type PlatformKey = 'linkedin' | 'instagram' | 'x' | 'facebook' | 'tiktok' | 'pinterest' | 'threads' | 'snapchat' | 'whatsapp';
 type Tone = 'professional' | 'casual' | 'community' | 'inspirerend' | 'urgent' | 'storytelling';
 type ContentLength = 'short' | 'medium' | 'long';
 type WizardStep = 1 | 2 | 3 | 4;
@@ -47,12 +48,20 @@ const CONTENT_TYPES: Array<{ key: ContentType; label: string; icon: string; emoj
   { key: 'ad', label: 'Advertentie', icon: 'bullhorn', emoji: '📣', desc: 'Ad copy' },
 ];
 
+// All 9 platforms with their per-channel constraints for AI generation.
+// Filtered at render time via useConnectedChannels — only the user's
+// actually-connected platforms appear in selector UIs, but all 9 stay
+// in this array so any post can be regenerated for any platform later.
 const PLATFORMS: Array<{ key: PlatformKey; label: string; icon: string; color: string; maxChars: number; aspectRatio: string }> = [
-  { key: 'linkedin', label: 'LinkedIn', icon: 'linkedin', color: '#0A66C2', maxChars: 3000, aspectRatio: '1.91:1' },
-  { key: 'instagram', label: 'Instagram', icon: 'instagram', color: '#E1306C', maxChars: 2200, aspectRatio: '1:1' },
-  { key: 'x', label: 'X', icon: 'twitter', color: '#1DA1F2', maxChars: 280, aspectRatio: '16:9' },
-  { key: 'facebook', label: 'Facebook', icon: 'facebook', color: '#1877F2', maxChars: 63206, aspectRatio: '1.91:1' },
-  { key: 'tiktok', label: 'TikTok', icon: 'music-note', color: '#000000', maxChars: 2200, aspectRatio: '9:16' },
+  { key: 'linkedin',  label: 'LinkedIn',  icon: 'linkedin',     color: '#0A66C2', maxChars: 3000,  aspectRatio: '1.91:1' },
+  { key: 'instagram', label: 'Instagram', icon: 'instagram',    color: '#E1306C', maxChars: 2200,  aspectRatio: '1:1'    },
+  { key: 'facebook',  label: 'Facebook',  icon: 'facebook',     color: '#1877F2', maxChars: 63206, aspectRatio: '1.91:1' },
+  { key: 'tiktok',    label: 'TikTok',    icon: 'music-note',   color: '#000000', maxChars: 2200,  aspectRatio: '9:16'   },
+  { key: 'pinterest', label: 'Pinterest', icon: 'pinterest',    color: '#E60023', maxChars: 500,   aspectRatio: '2:3'    },
+  { key: 'threads',   label: 'Threads',   icon: 'at',           color: '#000000', maxChars: 500,   aspectRatio: '1:1'    },
+  { key: 'snapchat',  label: 'Snapchat',  icon: 'snapchat',     color: '#FFFC00', maxChars: 250,   aspectRatio: '9:16'   },
+  { key: 'whatsapp',  label: 'WhatsApp',  icon: 'whatsapp',     color: '#25D366', maxChars: 1024,  aspectRatio: '1:1'    },
+  { key: 'x',         label: 'X',         icon: 'twitter',      color: '#1DA1F2', maxChars: 280,   aspectRatio: '16:9'   },
 ];
 
 const TONES: Array<{ key: Tone; label: string; emoji: string }> = [
@@ -153,6 +162,14 @@ export default function ContentCreatorScreen() {
 
   const displayContent = editMode ? editedContent : generatedContent;
   const currentPlatform = PLATFORMS.find(p => p.key === platform);
+
+  // Filter PLATFORMS to only those the user has connected (OAuth) or can manually
+  // share to. Falls back to full list if user has no connections yet (so they can
+  // still preview / generate content even before connecting accounts).
+  const { allChannels: connectedChannels } = useConnectedChannels();
+  const visiblePlatforms = connectedChannels.length > 0
+    ? PLATFORMS.filter(p => connectedChannels.includes(p.key as any))
+    : PLATFORMS;
 
   const goToStep = (s: WizardStep) => {
     setStep(s);
@@ -549,7 +566,7 @@ export default function ContentCreatorScreen() {
             Platform
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
-            {PLATFORMS.map(p => {
+            {visiblePlatforms.map(p => {
               const isActive = platform === p.key;
               return (
                 <TouchableOpacity
@@ -1159,7 +1176,7 @@ export default function ContentCreatorScreen() {
         <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
           📐 Platform formaten
         </Text>
-        {PLATFORMS.map(p => (
+        {visiblePlatforms.map(p => (
           <View key={p.key} style={{
             flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
             paddingVertical: 6, borderBottomWidth: p.key !== 'tiktok' ? 1 : 0, borderBottomColor: colors.border + '40',
@@ -1238,7 +1255,7 @@ export default function ContentCreatorScreen() {
         <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: spacing.sm }}>
           Platforms
         </Text>
-        {PLATFORMS.map(p => {
+        {visiblePlatforms.map(p => {
           const isSelected = publishPlatforms.includes(p.key);
           return (
             <TouchableOpacity
