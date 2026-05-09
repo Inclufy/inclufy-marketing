@@ -935,15 +935,20 @@ export default function PostReviewScreen() {
     loading: { flex: 1, justifyContent: 'center' as const, alignItems: 'center' as const },
     emptyText: { color: c.textSecondary, fontSize: fontSize.md },
     channelTabs: {
-      flexDirection: 'row' as const,
       backgroundColor: c.surface,
       borderBottomWidth: 1,
       borderBottomColor: c.border,
     },
+    channelTabsContent: {
+      // Horizontal scroll: each tab gets its natural width so long labels
+      // (Facebook, Instagram, Pinterest, Snapchat, WhatsApp) fit on one line.
+      paddingHorizontal: spacing.xs,
+    },
     channelTab: {
-      flex: 1,
+      minWidth: 76,
       alignItems: 'center' as const,
       paddingVertical: spacing.sm,
+      paddingHorizontal: spacing.sm,
       borderBottomWidth: 2,
       borderBottomColor: 'transparent' as const,
     },
@@ -951,6 +956,7 @@ export default function PostReviewScreen() {
       fontSize: fontSize.xs,
       color: c.textSecondary,
       marginTop: 2,
+      textAlign: 'center' as const,
     },
     postContent: {
       padding: spacing.md,
@@ -1594,8 +1600,13 @@ export default function PostReviewScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Channel Tabs */}
-      <View style={styles.channelTabs}>
+      {/* Channel Tabs — horizontal scroll so each tab fits its label on one line */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.channelTabs}
+        contentContainerStyle={styles.channelTabsContent}
+      >
         {posts.map((post, index) => {
           const config = channelConfig[post.channel];
           const isActive = index === activeIndex;
@@ -1610,6 +1621,8 @@ export default function PostReviewScreen() {
             >
               <Ionicons name={config?.icon as any} size={18} color={config?.color || colors.textSecondary} />
               <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
                 style={[
                   styles.channelLabel,
                   isActive && { color: config?.color, fontWeight: fontWeight.semibold },
@@ -1620,7 +1633,7 @@ export default function PostReviewScreen() {
             </TouchableOpacity>
           );
         })}
-      </View>
+      </ScrollView>
 
       {/* Horizontal Pager */}
       <ScrollView
