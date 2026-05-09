@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Pin Turbopack workspace root so the parent-level package-lock.json files
+  // do not trip the "inferred workspace root" warning (Next 16 + Turbopack).
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'mpxkugfqzmxydxnlxqoj.supabase.co' },
