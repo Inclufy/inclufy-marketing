@@ -20,17 +20,6 @@ typecheck:mobile:
     - main
     - merge_requests
 
-typecheck:web:
-  stage: validate
-  image: node:${NODE_VERSION}
-  cache:
-    key: web-${CI_COMMIT_REF_SLUG}
-    paths:
-      - web/node_modules/
-  script:
-    - cd web
-    - npm ci
-    - npm run build
-  only:
-    - main
-    - merge_requests
+# typecheck:web — REMOVED 2026-05-09. The /web/ Next.js dashboard is archived
+# at /_archive/web/. Production marketing.inclufy.com lives in the separate
+# `inclufy-marketing-web` repo and has its own CI. See docs/GAP_ANALYSIS_8092_VS_8082.md.

@@ -18,17 +18,6 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
 
-  build-web:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: web
-    steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 20
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci
-      - run: npm run build
+# build-web — REMOVED 2026-05-09. The /web/ Next.js dashboard is archived
+# at /_archive/web/. Production marketing.inclufy.com lives in the separate
+# `inclufy-marketing-web` repo and has its own CI. See docs/GAP_ANALYSIS_8092_VS_8082.md.

@@ -72,3 +72,8 @@ web/test-results/
 
 # Audit & diagnostic artifacts (amos-operational-tester output)
 tmp/
+
+# _archive/ — keep source, ignore regeneratable build artifacts
+_archive/web/.next/
+_archive/web/node_modules/
+_archive/web/dist/
