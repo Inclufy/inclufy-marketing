@@ -80,6 +80,19 @@ const AGENTS: AgentDef[] = [
     capabilities: ['Lead scoring', 'Email sequences', 'CRM sync', 'Conversion tracking'],
     capabilitiesNl: ['Lead scoring', 'E-mailreeksen', 'CRM sync', 'Conversie tracking'],
   },
+  {
+    id: 'ads',
+    name: 'Ads Agent',
+    nameNl: 'Ads Agent',
+    description: 'Promotes top-performing posts, drafts campaign briefs for LinkedIn / Google / Meta, paces budgets in the Campaigns tab and reports ROAS.',
+    descriptionNl: 'Promoot best presterende posts, maakt campagne briefings voor LinkedIn / Google / Meta, bewaakt budget in het Campagnes-tabblad en rapporteert ROAS.',
+    icon: 'megaphone-outline',
+    iconLib: 'ion',
+    color: '#FF6B35',
+    status: 'coming',
+    capabilities: ['Post boosting', 'Audience targeting', 'Budget pacing', 'ROAS reporting'],
+    capabilitiesNl: ['Post boosten', 'Doelgroep targeting', 'Budget pacing', 'ROAS rapportage'],
+  },
 ];
 
 // ─── Status helpers ─────────────────────────────────────────────────────────
@@ -407,6 +420,11 @@ export default function MultiAgentScreen() {
                   text: isNl
                     ? 'Social Agent plant en publiceert op optimale tijden'
                     : 'Social Agent schedules and publishes at optimal times',
+                },
+                {
+                  text: isNl
+                    ? 'Ads Agent zet best presterende content om in betaalde campagnes'
+                    : 'Ads Agent turns top-performing content into paid campaigns',
                 },
                 {
                   text: isNl
