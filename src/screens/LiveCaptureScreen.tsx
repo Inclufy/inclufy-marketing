@@ -32,6 +32,7 @@ import { useProducts, Product } from '../hooks/useProducts';
 import { useTeamDirectory, TeamDirectoryMember } from '../hooks/useTeamDirectory';
 import { aiService } from '../services/ai.service';
 import { supabase } from '../services/supabase';
+import { fetchConnectedChannels } from '../hooks/useConnectedChannels';
 
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import type { RootStackParamList, MediaType, Channel } from '../types';
@@ -270,9 +271,21 @@ export default function LiveCaptureScreen() {
         // For audio captures, use the transcript as AI context
         const aiText = transcript || note.trim() || undefined;
 
-        const activeChannels: Channel[] = selectedChannels.length
-          ? selectedChannels
-          : ['linkedin', 'instagram', 'facebook', 'whatsapp'];
+        // Resolve channels for free-capture flow:
+        //   1. Explicit picker selection (selectedChannels)
+        //   2. Dynamic — every connected OAuth platform + manual-share
+        //      (snapchat/whatsapp). No hardcoded 4-channel fallback —
+        //      Sami had 6 OAuth + 2 manual connected and was only seeing
+        //      4 tabs because of the static fallback.
+        let activeChannels: Channel[];
+        if (selectedChannels.length) {
+          activeChannels = selectedChannels;
+        } else {
+          const { allChannels } = await fetchConnectedChannels();
+          activeChannels = allChannels.length
+            ? allChannels
+            : (['snapchat', 'whatsapp'] as Channel[]);
+        }
 
         let results: Record<string, any> = {};
         try {
@@ -436,34 +449,19 @@ export default function LiveCaptureScreen() {
         // Resolve which channels to generate posts for. Priority:
         //   1. Explicit selectedChannels (user picked in capture screen)
         //   2. Event-level configured channels
-        //   3. Dynamic fallback: all platforms the user has active accounts for
-        //      (queries social_accounts) + manual-share platforms (snapchat, whatsapp)
-        //   4. Static fallback: ['linkedin', 'instagram', 'facebook', 'whatsapp']
-        // Step 3 is critical — Sami connected 6 OAuth platforms today and was
-        // only seeing 4 tabs in PostReview because the static fallback was used.
+        //   3. Dynamic — every connected OAuth platform (social_accounts) +
+        //      manual-share (snapchat/whatsapp). Single source of truth via
+        //      fetchConnectedChannels() helper — same hook the rest of the
+        //      app uses, so picker / PostReview / Library stay in sync.
+        //   4. Final safety net: manual-share only (never hardcode the 4
+        //      OAuth platforms — that was the bug Sami hit when he had 6
+        //      OAuth + 2 manual connected and only saw 4 tabs).
         const resolveActiveChannels = async (): Promise<Channel[]> => {
           if (selectedChannels.length) return selectedChannels;
           if (event.channels?.length) return event.channels as Channel[];
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-              const { data: accounts } = await supabase
-                .from('social_accounts')
-                .select('platform')
-                .eq('user_id', user.id)
-                .in('status', ['active', 'connected']);
-              if (accounts && accounts.length) {
-                const oauthChannels = Array.from(new Set(accounts.map((a: any) => a.platform as Channel)));
-                // Always include manual-share platforms — they don't have rows in
-                // social_accounts but are still publishing destinations
-                const allChannels = Array.from(new Set([...oauthChannels, 'snapchat' as Channel, 'whatsapp' as Channel]));
-                return allChannels;
-              }
-            }
-          } catch (e) {
-            console.warn('[processCapture] Active-channels fetch failed:', e);
-          }
-          return ['linkedin', 'instagram', 'facebook', 'whatsapp'] as Channel[];
+          const { allChannels } = await fetchConnectedChannels();
+          if (allChannels.length) return allChannels;
+          return ['snapchat', 'whatsapp'] as Channel[];
         };
         const activeChannels: Channel[] = await resolveActiveChannels();
 
