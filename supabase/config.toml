@@ -46,3 +46,25 @@ verify_jwt = true
 # verify_jwt must be FALSE because Resend has no Supabase JWT to send.
 [functions.resend-webhook]
 verify_jwt = false
+
+# register-push-token: called by mobile app on cold-start with the user's
+# JWT. We need verify_jwt to extract user_id from the bearer.
+[functions.register-push-token]
+verify_jwt = true
+
+# send-push: server-to-server fan-out helper, called by triggers and other
+# edge functions using service-role auth. Same rationale as send-email —
+# no user JWT involved, no PII in request body beyond the user IDs already
+# scoped by the caller.
+[functions.send-push]
+verify_jwt = false
+
+# submit-post-for-approval: called by the post author (mobile/web) — needs
+# user JWT to identify caller and check membership.
+[functions.submit-post-for-approval]
+verify_jwt = true
+
+# process-post-approval: called by an admin/owner of the org — also needs
+# user JWT for the role check.
+[functions.process-post-approval]
+verify_jwt = true

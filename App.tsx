@@ -15,6 +15,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useShakeToReport } from './src/hooks/useShakeToReport';
 import { ShakeReportSheet } from './src/components/ShakeReportSheet';
+import { usePushNotifications } from './src/hooks/usePushNotifications';
 
 // Initialize Sentry as early as possible
 initSentry();
@@ -59,6 +60,9 @@ function AppInner({ session, biometricPassed, showBiometric, onBiometricSuccess,
     enabled: !!session && !shakeSheetVisible && biometricPassed,
     onShake: () => setShakeSheetVisible(true),
   });
+
+  // Native push registration — fires once per logged-in user, idempotent.
+  usePushNotifications(session);
 
   if (session && showBiometric && !biometricPassed) {
     return (

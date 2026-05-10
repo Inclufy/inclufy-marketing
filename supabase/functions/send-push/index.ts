@@ -1,0 +1,208 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// send-push — fan out an Expo push notification to all active devices of
+// one or more users.
+//
+// Called server-to-server, typically from:
+//  • The notify-on-go-notifications-insert DB trigger (default path —
+//    every new in-app notification also triggers a native push)
+//  • Other edge functions that want to ping a user directly (e.g.
+//    publish-social on critical failure)
+//
+// Wire format (all server-to-server):
+//   POST /functions/v1/send-push
+//   {
+//     user_ids: ["uuid", ...],          // fan out to all active devices
+//     title: "Post gepubliceerd",
+//     body: "Je post staat live op LinkedIn.",
+//     data?: { route: "Notifications", notification_id: "..." }
+//   }
+//
+// Returns: { ok: true, sent: <count>, failed: <count>, deactivated: [...] }
+//
+// Expo response handling:
+//  • status="ok" → success
+//  • status="error" + DeviceNotRegistered → mark device inactive
+//  • status="error" + InvalidCredentials → log + bail (re-issue creds)
+//
+// Expo accepts up to 100 messages per HTTP call — we batch automatically.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+// Optional Expo access token for higher rate limits + push receipts.
+// If unset, send-push still works for the unauthenticated public endpoint.
+const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') ?? '';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+interface PushBody {
+  user_ids: string[];
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  /** Override sound/vibration/priority. Defaults to 'default' (on iOS), high prio. */
+  sound?: 'default' | null;
+  /** iOS badge count override. */
+  badge?: number;
+  /** Channel id for Android Oreo+ — must match a channel created in the app. */
+  channel_id?: string;
+}
+
+interface ExpoMessage {
+  to: string;
+  title: string;
+  body: string;
+  data?: Record<string, unknown>;
+  sound?: 'default' | null;
+  badge?: number;
+  channelId?: string;
+  priority?: 'default' | 'normal' | 'high';
+  ttl?: number;
+}
+
+interface ExpoTicket {
+  status: 'ok' | 'error';
+  id?: string;
+  message?: string;
+  details?: { error?: string };
+}
+
+const supa = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+async function fetchActiveTokens(userIds: string[]): Promise<{ id: string; expo_push_token: string }[]> {
+  const { data, error } = await supa
+    .from('user_devices')
+    .select('id, expo_push_token')
+    .in('user_id', userIds)
+    .eq('is_active', true);
+  if (error) {
+    console.error('[send-push] fetch tokens failed', error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+async function postBatchToExpo(messages: ExpoMessage[]): Promise<ExpoTicket[]> {
+  if (messages.length === 0) return [];
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip, deflate',
+  };
+  if (EXPO_ACCESS_TOKEN) headers.Authorization = `Bearer ${EXPO_ACCESS_TOKEN}`;
+
+  const res = await fetch('https://exp.host/--/api/v2/push/send', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(messages),
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Expo HTTP ${res.status}: ${text}`);
+  }
+  const json = await res.json();
+  // Expo returns { data: [...tickets] } when sent as array
+  return Array.isArray(json?.data) ? json.data : [];
+}
+
+async function deactivateDevices(deviceIds: string[]): Promise<void> {
+  if (deviceIds.length === 0) return;
+  const { error } = await supa
+    .from('user_devices')
+    .update({ is_active: false })
+    .in('id', deviceIds);
+  if (error) console.error('[send-push] deactivate failed', error.message);
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  if (req.method !== 'POST') return jsonResponse({ error: 'POST only' }, 405);
+
+  let body: PushBody;
+  try {
+    body = await req.json();
+  } catch {
+    return jsonResponse({ error: 'Invalid JSON' }, 400);
+  }
+
+  const userIds = Array.isArray(body.user_ids) ? body.user_ids.filter(Boolean) : [];
+  if (userIds.length === 0) return jsonResponse({ error: 'user_ids required' }, 400);
+  if (!body.title || !body.body) return jsonResponse({ error: 'title and body required' }, 400);
+
+  const devices = await fetchActiveTokens(userIds);
+  if (devices.length === 0) {
+    return jsonResponse({ ok: true, sent: 0, failed: 0, reason: 'no active devices' });
+  }
+
+  // Build messages — keep token→device-id map so we can deactivate stale ones
+  const tokenToDevice = new Map<string, string>();
+  const messages: ExpoMessage[] = devices.map((d) => {
+    tokenToDevice.set(d.expo_push_token, d.id);
+    return {
+      to: d.expo_push_token,
+      title: body.title,
+      body: body.body,
+      data: body.data ?? {},
+      sound: body.sound === null ? null : 'default',
+      badge: body.badge,
+      channelId: body.channel_id,
+      priority: 'high',
+      ttl: 60 * 60 * 24, // 24h — drop if undelivered after a day
+    };
+  });
+
+  // Batch — Expo accepts ≤100 per call
+  const batchSize = 100;
+  let sent = 0;
+  let failed = 0;
+  const deactivate: string[] = [];
+
+  for (let i = 0; i < messages.length; i += batchSize) {
+    const batch = messages.slice(i, i + batchSize);
+    try {
+      const tickets = await postBatchToExpo(batch);
+      tickets.forEach((ticket, idx) => {
+        if (ticket.status === 'ok') {
+          sent += 1;
+        } else {
+          failed += 1;
+          // DeviceNotRegistered → token is dead, mark inactive
+          if (ticket.details?.error === 'DeviceNotRegistered') {
+            const tokenForThisTicket = batch[idx].to;
+            const deviceId = tokenToDevice.get(tokenForThisTicket);
+            if (deviceId) deactivate.push(deviceId);
+          }
+          console.warn(`[send-push] ticket error: ${ticket.message} (${ticket.details?.error})`);
+        }
+      });
+    } catch (e: any) {
+      failed += batch.length;
+      console.error('[send-push] batch failed', e?.message ?? String(e));
+    }
+  }
+
+  await deactivateDevices(deactivate);
+
+  return jsonResponse({
+    ok: true,
+    sent,
+    failed,
+    deactivated: deactivate.length,
+    total_devices: devices.length,
+  });
+});
