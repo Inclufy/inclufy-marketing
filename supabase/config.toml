@@ -25,3 +25,24 @@ verify_jwt = true
 
 [functions.product-issues]
 verify_jwt = true
+
+# send-email: server-to-server helper called by other edge functions
+# (notify-issue-reported). The new Supabase API-key system no longer exposes
+# the legacy JWT in auto-injected env vars, so the gateway rejects internal
+# calls from sibling functions with INVALID_JWT_FORMAT. This function holds
+# no PII and just forwards to Resend, so disabling verify_jwt is safe.
+[functions.send-email]
+verify_jwt = false
+
+# notify-issue-reported: invoked by Supabase Database Webhook on
+# product_issues INSERT. Webhooks send a service-role bearer the gateway
+# accepts, so verify_jwt stays true.
+[functions.notify-issue-reported]
+verify_jwt = true
+
+# resend-webhook: receives delivery events from Resend (delivered, bounced,
+# complained, opened, clicked). Resend posts unauthenticated requests but
+# signs them via Svix headers — the function verifies the signature itself.
+# verify_jwt must be FALSE because Resend has no Supabase JWT to send.
+[functions.resend-webhook]
+verify_jwt = false
