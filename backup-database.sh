@@ -175,8 +175,8 @@ esac
 
 # ─── Off-site copy — uncomment exactly ONE option ───────────────────────
 # Option A — iCloud Drive (zero-setup, EU servers, syncs to all Apple devices)
-#OFFSITE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/inclufy-backups/${PROJECT_NAME}/${MODE}"
-#mkdir -p "$OFFSITE" && cp "$ARCHIVE" "$OFFSITE/" && log "Copied to iCloud Drive"
+OFFSITE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/inclufy-backups/${PROJECT_NAME}/${MODE}"
+mkdir -p "$OFFSITE" && cp "$ARCHIVE" "$OFFSITE/" && log "Copied to iCloud Drive"
 
 # Option B — rclone to S3/B2/Drive (most flexible, scales)
 #rclone copy "$ARCHIVE" "b2:inclufy-backups-eu/${PROJECT_NAME}/${MODE}/" && log "Copied via rclone"
