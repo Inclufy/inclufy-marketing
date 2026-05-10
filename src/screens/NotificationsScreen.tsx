@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   FlatList,
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -24,18 +26,21 @@ import {
   useRespondToInvite,
   type AppNotification,
 } from '../hooks/useNotifications';
+import { useProcessApproval } from '../hooks/usePostApproval';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 type NotifConfig = { icon: string; color: string };
 
 const TYPE_CONFIG: Record<string, NotifConfig> = {
-  team_invite:    { icon: 'people',           color: '#7c3aed' },
-  ai_suggestion:  { icon: 'sparkles',         color: '#9333EA' },
-  post_published: { icon: 'checkmark-circle', color: '#10B981' },
-  event_update:   { icon: 'calendar',         color: '#3B82F6' },
-  boost_candidate:{ icon: 'rocket',           color: '#F59E0B' }, // Capture-to-Ad top-performer
-  system:         { icon: 'notifications',    color: '#6B7280' },
+  team_invite:           { icon: 'people',             color: '#7c3aed' },
+  ai_suggestion:         { icon: 'sparkles',           color: '#9333EA' },
+  post_published:        { icon: 'checkmark-circle',   color: '#10B981' },
+  event_update:          { icon: 'calendar',           color: '#3B82F6' },
+  boost_candidate:       { icon: 'rocket',             color: '#F59E0B' }, // Capture-to-Ad top-performer
+  post_approval_needed:  { icon: 'shield-checkmark',   color: '#ED1D96' }, // Brand magenta — admin action required
+  post_approval_decided: { icon: 'document-text',      color: '#0EA5E9' }, // submitter-side decision result
+  system:                { icon: 'notifications',      color: '#6B7280' },
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -262,9 +267,15 @@ export default function NotificationsScreen() {
   const markRead       = useMarkNotificationRead();
   const markAllRead    = useMarkAllNotificationsRead();
   const respondInvite  = useRespondToInvite();
+  const processApproval = useProcessApproval();
 
   const [respondingId, setRespondingId] = useState<string | null>(null);
   const [refreshing,   setRefreshing]   = useState(false);
+  // For post_approval_needed: when user taps "Afkeuren" on Android we render
+  // an inline TextInput (Alert.prompt is iOS-only). Tracks which notification
+  // is currently in "rejection-reason input" mode + the reason text.
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectReason, setRejectReason] = useState('');
 
   const unreadCount = notifications.filter((n) => !n.read).length;
   const invites  = notifications.filter((n) => n.type === 'team_invite' && !n.read);
@@ -324,6 +335,72 @@ export default function NotificationsScreen() {
         },
       ],
     );
+  };
+
+  // ─── Post approval handlers ────────────────────────────────────────
+  const finalizeApproval = async (
+    notification: AppNotification,
+    decision: 'approve' | 'reject',
+    reason?: string,
+  ) => {
+    const postId = notification.data?.post_id as string | undefined;
+    if (!postId) {
+      Alert.alert(t.common.error, 'post_id ontbreekt in melding');
+      return;
+    }
+    setRespondingId(notification.id);
+    try {
+      await processApproval.mutateAsync({ post_id: postId, decision, reason });
+      // Mark notification as read so the action buttons disappear
+      await markRead.mutateAsync(notification.id);
+      Alert.alert(decision === 'approve' ? t.postApproval.approved : t.postApproval.rejected);
+    } catch (err: any) {
+      Alert.alert(t.postApproval.decisionError, err?.message || t.common.error);
+    } finally {
+      setRespondingId(null);
+      setRejectingId(null);
+      setRejectReason('');
+    }
+  };
+
+  const handleApprovePost = (notification: AppNotification) => {
+    Alert.alert(
+      t.postApproval.confirmApprove,
+      undefined,
+      [
+        { text: t.common.cancel, style: 'cancel' },
+        { text: t.postApproval.approve, onPress: () => finalizeApproval(notification, 'approve') },
+      ],
+    );
+  };
+
+  const handleRejectPost = (notification: AppNotification) => {
+    if (Platform.OS === 'ios' && (Alert as any).prompt) {
+      (Alert as any).prompt(
+        t.postApproval.rejectPromptTitle,
+        t.postApproval.rejectPromptMsg,
+        [
+          { text: t.common.cancel, style: 'cancel' },
+          {
+            text: t.postApproval.reject,
+            style: 'destructive',
+            onPress: (reason?: string) => {
+              const trimmed = (reason || '').trim();
+              if (!trimmed) {
+                Alert.alert(t.postApproval.rejectReasonPlaceholder);
+                return;
+              }
+              finalizeApproval(notification, 'reject', trimmed);
+            },
+          },
+        ],
+        'plain-text',
+      );
+    } else {
+      // Android — inline TextInput in the card
+      setRejectingId(notification.id);
+      setRejectReason('');
+    }
   };
 
   const handleGenericPress = (notification: AppNotification) => {
@@ -470,11 +547,17 @@ export default function NotificationsScreen() {
             if (item.kind === 'notif') {
               const n = item.notification;
               const cfg = TYPE_CONFIG[n.type] || TYPE_CONFIG.system;
+              const isApprovalRequest = n.type === 'post_approval_needed' && !n.read;
+              const isRejectingThis = rejectingId === n.id;
               return (
                 <TouchableOpacity
                   style={[styles.card, !n.read && styles.cardUnread]}
-                  onPress={() => handleGenericPress(n)}
-                  activeOpacity={0.75}
+                  onPress={() => {
+                    // Don't toggle navigation while user is typing a rejection reason
+                    if (isApprovalRequest || isRejectingThis) return;
+                    handleGenericPress(n);
+                  }}
+                  activeOpacity={isApprovalRequest ? 1 : 0.75}
                 >
                   <View style={[styles.accentBar, { backgroundColor: cfg.color }]} />
                   <View style={styles.cardContent}>
@@ -490,7 +573,118 @@ export default function NotificationsScreen() {
                       </View>
                     </View>
                     {n.body ? <Text style={styles.cardBody}>{n.body}</Text> : null}
-                    {!n.read && <View style={styles.unreadDot} />}
+                    {/* Inline approve/reject buttons for post_approval_needed */}
+                    {isApprovalRequest && (
+                      <>
+                        {isRejectingThis ? (
+                          <View style={{ gap: spacing.sm, marginTop: 4 }}>
+                            <TextInput
+                              style={{
+                                borderWidth: 1,
+                                borderColor: colors.border,
+                                borderRadius: borderRadius.md,
+                                paddingHorizontal: 12,
+                                paddingVertical: 10,
+                                fontSize: fontSize.sm,
+                                color: colors.text,
+                                backgroundColor: colors.background,
+                                minHeight: 60,
+                                textAlignVertical: 'top',
+                              }}
+                              value={rejectReason}
+                              onChangeText={setRejectReason}
+                              placeholder={t.postApproval.rejectReasonPlaceholder}
+                              placeholderTextColor={colors.textTertiary}
+                              multiline
+                              autoFocus
+                            />
+                            <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+                              <TouchableOpacity
+                                style={{
+                                  flex: 1,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: borderRadius.md,
+                                  paddingVertical: 10,
+                                  borderWidth: 1.5,
+                                  borderColor: colors.border,
+                                }}
+                                onPress={() => { setRejectingId(null); setRejectReason(''); }}
+                              >
+                                <Text style={{ color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>
+                                  {t.common.cancel}
+                                </Text>
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                style={{
+                                  flex: 1,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: borderRadius.md,
+                                  paddingVertical: 10,
+                                  backgroundColor: '#EF4444',
+                                  opacity: rejectReason.trim().length === 0 ? 0.5 : 1,
+                                }}
+                                disabled={rejectReason.trim().length === 0 || respondingId === n.id}
+                                onPress={() => finalizeApproval(n, 'reject', rejectReason.trim())}
+                              >
+                                {respondingId === n.id
+                                  ? <ActivityIndicator size="small" color="#fff" />
+                                  : <Text style={{ color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                                      {t.postApproval.reject}
+                                    </Text>}
+                              </TouchableOpacity>
+                            </View>
+                          </View>
+                        ) : (
+                          <View style={{ flexDirection: 'row', gap: spacing.sm, marginTop: 4 }}>
+                            {respondingId === n.id ? (
+                              <ActivityIndicator size="small" color={cfg.color} />
+                            ) : (
+                              <>
+                                <TouchableOpacity
+                                  style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 5,
+                                    backgroundColor: '#10B981',
+                                    borderRadius: borderRadius.md,
+                                    paddingVertical: 10,
+                                  }}
+                                  onPress={() => handleApprovePost(n)}
+                                >
+                                  <Ionicons name="checkmark" size={14} color="#fff" />
+                                  <Text style={{ color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                                    {t.postApproval.approve}
+                                  </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                  style={{
+                                    flex: 1,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: 5,
+                                    backgroundColor: '#EF4444',
+                                    borderRadius: borderRadius.md,
+                                    paddingVertical: 10,
+                                  }}
+                                  onPress={() => handleRejectPost(n)}
+                                >
+                                  <Ionicons name="close" size={14} color="#fff" />
+                                  <Text style={{ color: '#fff', fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                                    {t.postApproval.reject}
+                                  </Text>
+                                </TouchableOpacity>
+                              </>
+                            )}
+                          </View>
+                        )}
+                      </>
+                    )}
+                    {!n.read && !isApprovalRequest && <View style={styles.unreadDot} />}
                   </View>
                 </TouchableOpacity>
               );

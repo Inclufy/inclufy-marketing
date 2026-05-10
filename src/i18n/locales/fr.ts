@@ -305,6 +305,31 @@ const fr: Translations = {
     tips: 'Conseils',
   },
 
+  // ─── Post Approval Flow ────────────────────────────────────────────
+  postApproval: {
+    submit: 'Soumettre pour validation',
+    submitting: 'Soumission en cours...',
+    submitted: 'Soumis pour validation',
+    submittedBody: 'En attente de l\'approbation de l\'admin',
+    submitError: 'Échec de la soumission',
+    inReview: 'En révision — en attente de validation',
+    rejected: 'Rejeté',
+    rejectedOn: 'Rejeté le',
+    rejectionReason: 'Motif du rejet',
+    editAndResubmit: 'Modifier et resoumettre',
+    approve: 'Approuver',
+    reject: 'Rejeter',
+    approving: 'Approbation...',
+    rejecting: 'Rejet...',
+    approved: 'Approuvé',
+    rejectPromptTitle: 'Motif du rejet',
+    rejectPromptMsg: 'Donnez une brève raison à l\'auteur',
+    rejectReasonPlaceholder: 'Pourquoi rejetez-vous ce post ?',
+    decisionError: 'Échec du traitement',
+    confirmApprove: 'Approuver ce post ?',
+    confirmReject: 'Rejeter ce post ?',
+  },
+
   // ─── Content Creator Screen ────────────────────────────────────────
   contentCreator: {
     title: 'Cr\u00E9ateur de contenu',

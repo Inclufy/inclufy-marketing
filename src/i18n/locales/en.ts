@@ -305,6 +305,31 @@ const en: Translations = {
     tips: 'Tips',
   },
 
+  // ─── Post Approval Flow ────────────────────────────────────────────
+  postApproval: {
+    submit: 'Submit for review',
+    submitting: 'Submitting...',
+    submitted: 'Submitted for review',
+    submittedBody: 'Waiting for admin approval',
+    submitError: 'Submission failed',
+    inReview: 'In review — waiting for approval',
+    rejected: 'Rejected',
+    rejectedOn: 'Rejected on',
+    rejectionReason: 'Rejection reason',
+    editAndResubmit: 'Edit and resubmit',
+    approve: 'Approve',
+    reject: 'Reject',
+    approving: 'Approving...',
+    rejecting: 'Rejecting...',
+    approved: 'Approved',
+    rejectPromptTitle: 'Rejection reason',
+    rejectPromptMsg: 'Give a short reason for the author',
+    rejectReasonPlaceholder: 'Why are you rejecting this post?',
+    decisionError: 'Processing failed',
+    confirmApprove: 'Approve this post?',
+    confirmReject: 'Reject this post?',
+  },
+
   // ─── Content Creator Screen ────────────────────────────────────────
   contentCreator: {
     title: 'Content Creator',

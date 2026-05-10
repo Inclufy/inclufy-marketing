@@ -13,7 +13,10 @@ export type NotificationType =
   // Capture-to-Ad lifecycle types — written by ad-performance-monitor cron
   | 'boost_candidate'  // top-performer detected → suggest Boost
   | 'boost_completed'  // ad campaign duration ended
-  | 'boost_failed';    // Meta Marketing API rejection
+  | 'boost_failed'     // Meta Marketing API rejection
+  // Post approval lifecycle — written by submit-post-for-approval / process-post-approval edge fns
+  | 'post_approval_needed'   // sent to admins when a user submits a draft for review
+  | 'post_approval_decided'; // sent to submitter when an admin approves/rejects
 
 export interface AppNotification {
   id: string;

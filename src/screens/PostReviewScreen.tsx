@@ -19,6 +19,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as ImagePicker from 'expo-image-picker';
 import { useCapturePosts, useUpdatePost, usePublishPost, useBatchPublish, useDeletePost } from '../hooks/useEventPosts';
+import { useRequiresApproval, useSubmitForApproval } from '../hooks/usePostApproval';
 import { uploadMedia } from '../hooks/useCaptures';
 import * as ImageManipulator from 'expo-image-manipulator';
 import { VideoView, useVideoPlayer } from 'expo-video';
@@ -94,6 +95,8 @@ export default function PostReviewScreen() {
   const { tier: userTier } = useUserTier();
   const batchPublish = useBatchPublish();
   const deletePost = useDeletePost();
+  const { data: requiresApproval = false } = useRequiresApproval();
+  const submitForApproval = useSubmitForApproval();
   const [flippingImage, setFlippingImage] = useState(false);
   const [rotatingImage, setRotatingImage] = useState(false);
 
@@ -1121,6 +1124,21 @@ export default function PostReviewScreen() {
     }
   };
 
+  // ── Submit-for-review (approval gate) ────────────────────────────────
+  const handleSubmitForApproval = async (post: EventPost) => {
+    try {
+      // Persist any pending text edits first so admins review the latest copy
+      const pendingText = editingText[post.id];
+      if (pendingText && pendingText !== post.text_content) {
+        await updatePost.mutateAsync({ id: post.id, text_content: pendingText });
+      }
+      await submitForApproval.mutateAsync({ post_id: post.id });
+      Alert.alert(t.postApproval.submitted, t.postApproval.submittedBody);
+    } catch (err: any) {
+      Alert.alert(t.postApproval.submitError, err?.message || t.common.error);
+    }
+  };
+
   const handleConnectAccount = async () => {
     if (!connectAccountName.trim()) {
       Alert.alert('Vul een accountnaam in');
@@ -2061,6 +2079,45 @@ export default function PostReviewScreen() {
                 })()}
               </View>
 
+              {/* ── Rejection banner (when admin rejected a previously-submitted post) ── */}
+              {(() => {
+                const rejReason = (post as any).rejection_reason as string | null | undefined;
+                const rejAt = (post as any).rejected_at as string | null | undefined;
+                if (post.status !== 'draft' || !rejReason) return null;
+                const rejDateLabel = rejAt
+                  ? new Date(rejAt).toLocaleDateString()
+                  : '';
+                return (
+                  <View
+                    style={{
+                      backgroundColor: colors.error + '15',
+                      borderLeftWidth: 4,
+                      borderLeftColor: colors.error,
+                      borderRadius: borderRadius.md,
+                      padding: spacing.sm,
+                      marginVertical: spacing.xs,
+                      gap: 4,
+                    }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="close-circle" size={16} color={colors.error} />
+                      <Text style={{ color: colors.error, fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>
+                        {t.postApproval.rejected}{rejDateLabel ? ` · ${rejDateLabel}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}>
+                      {t.postApproval.rejectionReason}:
+                    </Text>
+                    <Text style={{ color: colors.textSecondary, fontSize: fontSize.sm, lineHeight: 18 }}>
+                      {rejReason}
+                    </Text>
+                    <Text style={{ color: colors.textTertiary, fontSize: fontSize.xs, fontStyle: 'italic', marginTop: 2 }}>
+                      {t.postApproval.editAndResubmit}
+                    </Text>
+                  </View>
+                );
+              })()}
+
               {/* ── Language select ─────────────────────────────────── */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                 <Ionicons name="globe-outline" size={14} color={colors.textTertiary} />
@@ -2715,19 +2772,58 @@ export default function PostReviewScreen() {
 
               {/* ── Publish + Boost + Delete ─────────────────────────── */}
               <View style={styles.actions}>
-                <TouchableOpacity
-                  style={[styles.actionBtn, { backgroundColor: config?.color || colors.primary }]}
-                  onPress={() => handlePublish(post)}
-                  disabled={post.status === 'published' || publishPost.isPending}
-                >
-                  {publishPost.isPending ? (
-                    <ActivityIndicator color={colors.textOnPrimary} />
-                  ) : (
-                    <Text style={post.status === 'published' ? styles.actionBtnDisabledText : styles.actionBtnText}>
-                      {post.status === 'published' ? t.status.published : `${t.postReview.publishOn} ${config?.label}`}
+                {/* Approval-gated CTA:
+                    - org.requires_post_approval=true + draft → Submit for review (magenta)
+                    - status='in_review' → non-clickable info pill
+                    - everything else (incl. requires_post_approval=false) → original Publish button */}
+                {requiresApproval && post.status === 'draft' ? (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: '#ED1D96' }]}
+                    onPress={() => handleSubmitForApproval(post)}
+                    disabled={submitForApproval.isPending}
+                  >
+                    {submitForApproval.isPending ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text style={[styles.actionBtnText, { color: '#fff' }]}>
+                        {t.postApproval.submit}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                ) : post.status === 'in_review' ? (
+                  <View
+                    style={[
+                      styles.actionBtn,
+                      {
+                        backgroundColor: colors.surfaceElevated,
+                        borderWidth: 1.5,
+                        borderColor: colors.border,
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                        gap: 6,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="hourglass-outline" size={16} color={colors.textSecondary} />
+                    <Text style={[styles.actionBtnText, { color: colors.textSecondary }]}>
+                      {t.postApproval.inReview}
                     </Text>
-                  )}
-                </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { backgroundColor: config?.color || colors.primary }]}
+                    onPress={() => handlePublish(post)}
+                    disabled={post.status === 'published' || publishPost.isPending}
+                  >
+                    {publishPost.isPending ? (
+                      <ActivityIndicator color={colors.textOnPrimary} />
+                    ) : (
+                      <Text style={post.status === 'published' ? styles.actionBtnDisabledText : styles.actionBtnText}>
+                        {post.status === 'published' ? t.status.published : `${t.postReview.publishOn} ${config?.label}`}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
 
                 {/* Boost button — shows for published Meta posts (FB/IG).
                     Tier-gated: requires tier ≥ promote (read via useUserTier hook

@@ -317,6 +317,31 @@ const nl = {
     tips: 'Tips',
   },
 
+  // ─── Post Approval Flow ────────────────────────────────────────────
+  postApproval: {
+    submit: 'Indienen ter goedkeuring',
+    submitting: 'Wordt ingediend...',
+    submitted: 'Ingediend ter goedkeuring',
+    submittedBody: 'Wacht op admin goedkeuring',
+    submitError: 'Indienen mislukt',
+    inReview: 'In review — wachten op goedkeuring',
+    rejected: 'Afgekeurd',
+    rejectedOn: 'Afgekeurd op',
+    rejectionReason: 'Reden van afkeuring',
+    editAndResubmit: 'Bewerk en dien opnieuw in',
+    approve: 'Goedkeuren',
+    reject: 'Afkeuren',
+    approving: 'Goedkeuren...',
+    rejecting: 'Afkeuren...',
+    approved: 'Goedgekeurd',
+    rejectPromptTitle: 'Reden van afkeuring',
+    rejectPromptMsg: 'Geef een korte reden voor de auteur',
+    rejectReasonPlaceholder: 'Waarom keur je deze post af?',
+    decisionError: 'Verwerken mislukt',
+    confirmApprove: 'Wil je deze post goedkeuren?',
+    confirmReject: 'Wil je deze post afkeuren?',
+  },
+
   // ─── Content Creator Screen ────────────────────────────────────────
   contentCreator: {
     title: 'Content Creator',
