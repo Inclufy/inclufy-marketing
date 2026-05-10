@@ -1,40 +1,48 @@
 #!/bin/bash
 # ─────────────────────────────────────────────────────────────────────────
-# Inclufy Marketing (AMOS) — Database Restore Script
+# Inclufy Marketing (AMOS) — Production-grade Postgres restore
 #
-# Lists local backups, prompts for one, asks for the TARGET project ref
-# (default: a STAGING ref, NOT production — explicit override required to
-# restore into prod), then pipes the dumps through psql.
+# Always takes a "pre-restore safety dump" of the TARGET database before
+# overwriting, so you can roll back even if the restore goes wrong. The
+# safety dump goes into ~/backups/inclufy-marketing/pre-restore/ with the
+# timestamp of the restore attempt.
+#
+# Production restore demands typing the literal word PRODUCTION as
+# confirmation. This is intentional friction.
 #
 # Usage:
 #   ./restore-database.sh
-#
-# Safety: production restore demands typing the literal word "PRODUCTION".
-# This is a deliberate paper-cut — accidental prod restore wipes user data.
 # ─────────────────────────────────────────────────────────────────────────
 
 set -euo pipefail
 
-BACKUP_DIR="$HOME/backups/inclufy-marketing"
+PROJECT_NAME="inclufy-marketing"
 PROD_REF="mpxkugfqzmxydxnlxqoj"
+BACKUP_ROOT="$HOME/backups/${PROJECT_NAME}"
+POOLER_HOST="aws-1-eu-west-1.pooler.supabase.com"
 
-if [[ ! -d "$BACKUP_DIR" ]]; then
-  echo "❌ No backups directory at $BACKUP_DIR — run ./backup-database.sh first."
+[[ -f "$HOME/.inclufy-backup-secrets" ]] && source "$HOME/.inclufy-backup-secrets"
+if [[ -x /Applications/Postgres.app/Contents/Versions/latest/bin/psql ]]; then
+  export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
+fi
+
+if [[ ! -d "$BACKUP_ROOT" ]]; then
+  echo "❌ No backups directory at $BACKUP_ROOT — run ./backup-database.sh first."
   exit 1
 fi
 
-echo "Available backups in $BACKUP_DIR:"
-ls -lh "$BACKUP_DIR"/backup_*.tar.gz 2>/dev/null || { echo "  (none)"; exit 1; }
+# ─── Step 1: pick a backup ──────────────────────────────────────────────
+echo "Available backups:"
 echo ""
+for tier in daily weekly monthly; do
+  echo "  $tier/"
+  ls -lh "$BACKUP_ROOT/$tier"/backup_*.tar.gz* 2>/dev/null | awk '{ printf "    %s  %s  %s\n", $5, $9, $6" "$7" "$8 }' || echo "    (none)"
+done
+echo ""
+read -rp "Enter full path of backup to restore: " ARCHIVE
+[[ ! -f "$ARCHIVE" ]] && { echo "❌ File not found: $ARCHIVE"; exit 1; }
 
-read -rp "Enter backup filename to restore (e.g. backup_20260510_030000.tar.gz): " BACKUP_FILE
-ARCHIVE="$BACKUP_DIR/$BACKUP_FILE"
-
-if [[ ! -f "$ARCHIVE" ]]; then
-  echo "❌ Backup file not found: $ARCHIVE"
-  exit 1
-fi
-
+# ─── Step 2: pick target ────────────────────────────────────────────────
 echo ""
 echo "Target project options:"
 echo "  1) STAGING / new project (recommended for restore drills)"
@@ -44,60 +52,77 @@ read -rp "Choose 1 or 2: " CHOICE
 case "$CHOICE" in
   1)
     read -rp "Enter target project ref: " TARGET_REF
+    TARGET_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
     ;;
   2)
     echo ""
     echo "⚠️  ⚠️  ⚠️  PRODUCTION RESTORE  ⚠️  ⚠️  ⚠️"
     echo "This will OVERWRITE the AMOS production database."
-    echo "All current rows in public.* will be replaced by the backup contents."
+    echo "A pre-restore safety dump will be taken first — but if that fails,"
+    echo "the restore will be aborted."
     read -rp 'Type the literal word PRODUCTION to confirm: ' CONFIRM
-    if [[ "$CONFIRM" != "PRODUCTION" ]]; then
-      echo "❌ Confirmation failed. Aborting."
-      exit 1
-    fi
+    [[ "$CONFIRM" != "PRODUCTION" ]] && { echo "❌ Confirmation failed."; exit 1; }
     TARGET_REF="$PROD_REF"
+    TARGET_PASSWORD="${AMOS_DB_PASSWORD:-}"
     ;;
-  *)
-    echo "❌ Invalid choice. Aborting."
-    exit 1
-    ;;
+  *) echo "❌ Invalid choice."; exit 1 ;;
 esac
 
-if [[ -f "$HOME/.inclufy-backup-secrets" ]]; then
-  # shellcheck disable=SC1091
-  source "$HOME/.inclufy-backup-secrets"
+if [[ -z "$TARGET_PASSWORD" ]]; then
+  echo "Postgres password for project $TARGET_REF (Dashboard → Settings → Database):"
+  read -srp "Password: " TARGET_PASSWORD
+  echo ""
 fi
 
-# Pick the right password for the chosen target.
-if [[ -z "${SUPABASE_DB_PASSWORD:-}" ]]; then
-  if [[ "$TARGET_REF" == "$PROD_REF" && -n "${AMOS_DB_PASSWORD:-}" ]]; then
-    SUPABASE_DB_PASSWORD="$AMOS_DB_PASSWORD"
-  else
-    echo "Need the Postgres password for project $TARGET_REF."
-    echo "Find it in: Supabase Dashboard → Project Settings → Database → Connection string"
-    read -srp "Password: " SUPABASE_DB_PASSWORD
-    echo ""
-  fi
-fi
+CONN="postgresql://postgres.${TARGET_REF}:${TARGET_PASSWORD}@${POOLER_HOST}:5432/postgres"
 
-if [[ -x /Applications/Postgres.app/Contents/Versions/latest/bin/psql ]]; then
-  export PATH="/Applications/Postgres.app/Contents/Versions/latest/bin:$PATH"
-fi
+# ─── Step 3: pre-restore safety dump ────────────────────────────────────
+SAFETY_DIR="$BACKUP_ROOT/pre-restore"
+mkdir -p "$SAFETY_DIR"
+SAFETY_FILE="$SAFETY_DIR/pre_restore_${TARGET_REF}_$(date +%Y%m%d_%H%M%S).sql.gz"
 
+echo "🛟 Taking pre-restore safety dump of $TARGET_REF..."
+PGPASSWORD="$TARGET_PASSWORD" pg_dump \
+  -h "$POOLER_HOST" -p 5432 -U "postgres.${TARGET_REF}" -d postgres \
+  --schema=public --no-owner --no-privileges \
+  | gzip > "$SAFETY_FILE"
+SAFETY_SIZE=$(du -h "$SAFETY_FILE" | cut -f1)
+if [[ ! -s "$SAFETY_FILE" ]]; then
+  echo "❌ Safety dump came back empty — aborting restore. Don't risk it."
+  exit 1
+fi
+echo "   Saved $SAFETY_SIZE → $SAFETY_FILE"
+echo "   To roll back: gunzip -c '$SAFETY_FILE' | psql '<conn>'"
+
+# ─── Step 4: extract + decrypt ──────────────────────────────────────────
 WORK_DIR=$(mktemp -d)
 trap 'rm -rf "$WORK_DIR"' EXIT
-echo "📂 Extracting backup to $WORK_DIR..."
-tar -xzf "$ARCHIVE" -C "$WORK_DIR"
 
-# Restore via psql against the target project. Pooler in session mode
-# (port 5432) supports DDL + COPY which we need; transaction mode (6543)
-# does not. Both AMOS and Finance live in eu-west-1.
-POOLER_HOST="${SUPABASE_POOLER_HOST:-aws-1-eu-west-1.pooler.supabase.com}"
-CONN_STRING="postgresql://postgres.${TARGET_REF}:${SUPABASE_DB_PASSWORD}@${POOLER_HOST}:5432/postgres"
+EXTRACT_FROM="$ARCHIVE"
+if [[ "$ARCHIVE" == *.gpg ]]; then
+  [[ -z "${BACKUP_GPG_PASSPHRASE:-}" ]] && {
+    read -srp "Encrypted backup. GPG passphrase: " BACKUP_GPG_PASSPHRASE
+    echo ""
+  }
+  EXTRACT_FROM="$WORK_DIR/$(basename "${ARCHIVE%.gpg}")"
+  gpg --decrypt --batch --passphrase "$BACKUP_GPG_PASSPHRASE" "$ARCHIVE" > "$EXTRACT_FROM"
+fi
+
+tar -xzf "$EXTRACT_FROM" -C "$WORK_DIR"
+SCHEMA_FILE=$(ls "$WORK_DIR"/schema_*.sql)
+DATA_FILE=$(ls "$WORK_DIR"/data_*.sql)
+
+# ─── Step 5: restore (drop+recreate public, then schema, then data) ────
+echo "🔄 Wiping public schema on $TARGET_REF..."
+psql "$CONN" -v ON_ERROR_STOP=1 \
+  -c "DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO postgres, anon, authenticated, service_role;" >/dev/null
+
 echo "🔄 Restoring schema..."
-psql "$CONN_STRING" -v ON_ERROR_STOP=0 -f "$WORK_DIR"/schema_*.sql
-echo "🔄 Restoring data..."
-psql "$CONN_STRING" -v ON_ERROR_STOP=0 -f "$WORK_DIR"/data_*.sql
+psql "$CONN" -v ON_ERROR_STOP=0 -q -f "$SCHEMA_FILE" 2>&1 | tail -5
 
-echo "✅ Restore complete to project $TARGET_REF."
-echo "$(date '+%Y-%m-%d %H:%M:%S')  AMOS  RESTORE → $TARGET_REF  $BACKUP_FILE" >> "$BACKUP_DIR/backup.log"
+echo "🔄 Restoring data..."
+psql "$CONN" -v ON_ERROR_STOP=0 -q -f "$DATA_FILE" 2>&1 | tail -5
+
+echo "✅ Restore complete to $TARGET_REF."
+echo "   Pre-restore safety dump retained at: $SAFETY_FILE"
+echo "$(date '+%F %T')  AMOS  RESTORE → $TARGET_REF  $(basename "$ARCHIVE")  safety=$SAFETY_FILE" >> "$BACKUP_ROOT/backup.log"
