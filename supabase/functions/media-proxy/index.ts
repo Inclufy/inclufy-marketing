@@ -49,6 +49,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { decode as decodeImage, Image } from 'https://deno.land/x/imagescript@1.2.17/mod.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -125,22 +126,114 @@ Deno.serve(async (req) => {
     }
 
     const ext = objectPath.split('.').pop()?.toLowerCase() ?? '';
-    const contentType = MIME_BY_EXT[ext] ?? data.type ?? 'application/octet-stream';
-    const size = data.size;
+    let contentType = MIME_BY_EXT[ext] ?? data.type ?? 'application/octet-stream';
+    let bodyBytes: Uint8Array | null = null;
+
+    // ── Optional on-the-fly image resize ──────────────────────────────
+    // Triggered by query params: ?max=N (max width/height) or ?preset=tiktok
+    // Used by TikTok / Meta / Pinterest publishers to ensure the bytes
+    // delivered to the platform fit each platform's spec.
+    const presetParam = url.searchParams.get('preset');
+    const maxParam = url.searchParams.get('max');
+    let targetMaxW: number | null = null;
+    let targetMaxH: number | null = null;
+    if (presetParam === 'tiktok') {
+      // TikTok Photo Mode strict spec (Sandbox): 1080×1920 max for portrait,
+      // 1920×1080 for landscape. Center-crop to exact ratio.
+      targetMaxW = 1080;
+      targetMaxH = 1920;
+    } else if (presetParam === 'meta') {
+      // Meta (Threads / Instagram) photo: max recommended 1080×1920 portrait.
+      // Threads rejects oversized images with container error 400 (timeout
+      // pulling the URL). Fit-into-box without forced aspect-ratio crop.
+      targetMaxW = 1080;
+      targetMaxH = 1920;
+    } else if (maxParam) {
+      const n = parseInt(maxParam, 10);
+      if (!isNaN(n) && n > 0 && n <= 4096) {
+        targetMaxW = n;
+        targetMaxH = n;
+      }
+    }
+    const targetMax = targetMaxW ?? targetMaxH;
+
+    // Run resize for BOTH HEAD and GET so Content-Length is consistent.
+    // TikTok (and other platforms) probe with HEAD first; if HEAD's
+    // content-length doesn't match the GET body, the platform aborts with
+    // photo_pull_failed (or video_pull_failed for video).
+    if ((targetMaxW || targetMaxH || presetParam === 'tiktok') && contentType.startsWith('image/')) {
+      try {
+        const inputBytes = new Uint8Array(await data.arrayBuffer());
+        const img: any = await decodeImage(inputBytes);
+        const origW = img.width;
+        const origH = img.height;
+
+        const roundEven = (n: number) => Math.max(2, Math.floor(n / 2) * 2);
+
+        let newW = origW;
+        let newH = origH;
+
+        if (presetParam === 'tiktok') {
+          // TikTok Photo Mode (Sandbox) only accepts EXACT 9:16 portrait
+          // (1080×1920) or 16:9 landscape (1920×1080). Anything off-ratio
+          // returns picture_size_check_failed. Strategy: scale-to-cover the
+          // target box, then center-crop the overflow.
+          const isPortrait = origH >= origW;
+          const targetW = isPortrait ? 1080 : 1920;
+          const targetH = isPortrait ? 1920 : 1080;
+          const scaleW = targetW / origW;
+          const scaleH = targetH / origH;
+          const scale = Math.max(scaleW, scaleH); // cover
+          const scaledW = Math.round(origW * scale);
+          const scaledH = Math.round(origH * scale);
+          img.resize(scaledW, scaledH);
+          const cropX = Math.max(0, Math.floor((scaledW - targetW) / 2));
+          const cropY = Math.max(0, Math.floor((scaledH - targetH) / 2));
+          img.crop(cropX, cropY, targetW, targetH);
+          newW = targetW;
+          newH = targetH;
+          console.log(`[media-proxy] tiktok preset: ${origW}×${origH} → scaled ${scaledW}×${scaledH} → cropped ${cropX},${cropY} → ${targetW}×${targetH}`);
+        } else {
+          // Generic fit-into-box (preset=max or ?max=N)
+          const maxW = targetMaxW ?? Number.MAX_SAFE_INTEGER;
+          const maxH = targetMaxH ?? Number.MAX_SAFE_INTEGER;
+          const scale = Math.min(maxW / origW, maxH / origH, 1);
+          newW = roundEven(origW * scale);
+          newH = roundEven(origH * scale);
+          if (newW !== origW || newH !== origH) {
+            img.resize(newW, newH);
+            console.log(`[media-proxy] resized ${objectPath} from ${origW}×${origH} → ${newW}×${newH} (preset=${presetParam ?? 'max'})`);
+          } else {
+            console.log(`[media-proxy] no resize needed for ${objectPath} (${origW}×${origH} already fits)`);
+          }
+        }
+
+        // Always re-encode as JPEG for max platform compatibility
+        bodyBytes = await img.encodeJPEG(85);
+        contentType = 'image/jpeg';
+      } catch (resizeErr: any) {
+        console.warn('[media-proxy] resize failed, serving original:', resizeErr?.message);
+        bodyBytes = null;
+      }
+    }
+
+    const finalBody: BodyInit | null = bodyBytes ?? data;
+    const finalSize = bodyBytes ? bodyBytes.byteLength : data.size;
 
     const baseHeaders: Record<string, string> = {
       ...corsHeaders,
       'Content-Type': contentType,
-      'Content-Length': String(size),
+      'Content-Length': String(finalSize),
       'Cache-Control': 'public, max-age=3600, immutable',
       // Help debugging without leaking the full Supabase URL
       'X-Media-Proxy': 'inclufy-media-proxy',
+      ...(targetMaxW || targetMaxH ? { 'X-Media-Proxy-Resize': `${targetMaxW ?? '*'}x${targetMaxH ?? '*'}` } : {}),
     };
 
     if (req.method === 'HEAD') {
       return new Response(null, { status: 200, headers: baseHeaders });
     }
-    return new Response(data, { status: 200, headers: baseHeaders });
+    return new Response(finalBody, { status: 200, headers: baseHeaders });
   } catch (err: any) {
     console.error('[media-proxy] exception:', err?.message);
     return jsonError(500, 'media-proxy exception', err?.message);

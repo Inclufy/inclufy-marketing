@@ -16,6 +16,22 @@ const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 // fresh signed Supabase URLs.
 const MEDIA_PROXY_BASE_URL = Deno.env.get('MEDIA_PROXY_BASE_URL') ?? '';
 
+// TikTok privacy level. In Sandbox mode the API rejects PUBLIC_TO_EVERYONE
+// with `unaudited_client_can_only_post_to_private_accounts`. Set this to
+// `SELF_ONLY` for sandbox/testing (default) and to `PUBLIC_TO_EVERYONE`
+// after TikTok audits the app for production:
+//   supabase functions secrets set TIKTOK_PRIVACY_LEVEL=PUBLIC_TO_EVERYONE
+// Valid values: SELF_ONLY | MUTUAL_FOLLOW_FRIENDS | PUBLIC_TO_EVERYONE
+const TIKTOK_PRIVACY_LEVEL = Deno.env.get('TIKTOK_PRIVACY_LEVEL') ?? 'SELF_ONLY';
+
+// Pinterest API base. When the Pinterest Developer App is in "Trial access"
+// mode, all publish calls to api.pinterest.com return 403 with code 29 and
+// instruct the caller to use api-sandbox.pinterest.com. Once the app is
+// promoted to "Standard access" by Pinterest review, switch this to
+// `https://api.pinterest.com/v5` via:
+//   supabase functions secrets set PINTEREST_API_BASE=https://api.pinterest.com/v5
+const PINTEREST_API_BASE = Deno.env.get('PINTEREST_API_BASE') ?? 'https://api-sandbox.pinterest.com/v5';
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Convert a Supabase storage URL into one any external platform can fetch.
 //
@@ -698,6 +714,7 @@ async function pollTikTokPublishStatus(
   publishId: string,
   maxAttempts = 30, // 30 × 2s = 60s timeout
 ): Promise<{ ok: true; postId: string } | { ok: false; error: string }> {
+  console.log(`[TikTok] Polling publish status for publish_id=${publishId}`);
   let attempts = 0;
   let lastStatus = 'PROCESSING_DOWNLOAD';
   while (attempts < maxAttempts) {
@@ -711,26 +728,66 @@ async function pollTikTokPublishStatus(
       },
       body: JSON.stringify({ publish_id: publishId }),
     });
-    if (!statusRes.ok) continue;
+    if (!statusRes.ok) {
+      const errBody = await statusRes.text();
+      console.warn(`[TikTok] poll attempt ${attempts}: status fetch returned ${statusRes.status} body=${errBody}`);
+      continue;
+    }
     const statusData = await statusRes.json();
     lastStatus = statusData.data?.status ?? lastStatus;
+    console.log(`[TikTok] poll attempt ${attempts}: status=${lastStatus}`);
     if (lastStatus === 'PUBLISH_COMPLETE') {
       const publicId =
         statusData.data?.publicaly_available_post_id?.[0]
         ?? statusData.data?.publicaly_available_post_id
         ?? statusData.data?.public_id
         ?? publishId;
+      console.log(`[TikTok] PUBLISH_COMPLETE — public id: ${publicId}`);
       return { ok: true, postId: String(publicId) };
     }
     if (lastStatus === 'FAILED') {
+      const failReason = statusData.data?.fail_reason ?? 'unknown';
+      console.error(`[TikTok] PUBLISH FAILED — fail_reason=${failReason} — full response:`, JSON.stringify(statusData));
+      // Map TikTok's machine-readable fail_reason codes to user-friendly NL messages.
+      const friendly = (() => {
+        switch (failReason) {
+          case 'photo_pull_failed':
+            return 'TikTok kon de foto niet ophalen vanaf images.inclufy.com. Mogelijke oorzaken: '
+              + '(1) Foto te groot — TikTok eist max 1920×1920px en max 4MP. '
+              + '(2) Aspect ratio buiten 9:16-16:9. '
+              + '(3) Domein-verificatie nog aan het propageren bij TikTok (kan tot enkele uren duren — verifieer status in TikTok Developer Portal). '
+              + '(4) TikTok-pull-bot wordt geblokkeerd door Cloudflare Bot Fight Mode of een ander beschermingsmechanisme.';
+          case 'video_pull_failed':
+            return 'TikTok kon de video niet ophalen vanaf images.inclufy.com. Probeer een kortere/kleinere video, of check of het domein geverifieerd is in TikTok Developer Portal.';
+          case 'url_ownership_unverified':
+            return 'TikTok heeft images.inclufy.com nog niet geverifieerd als toegestane bron-URL. Verifieer het domein in TikTok Developer Portal → URL Properties.';
+          case 'unsupported_format':
+          case 'media_format_not_supported':
+            return 'TikTok ondersteunt het foto-formaat niet. Gebruik JPG, PNG of WEBP (geen HEIC of GIF).';
+          case 'media_too_large':
+            return 'Foto is te groot voor TikTok (max 4MP, max 10MB). Verklein de foto en probeer opnieuw.';
+          case 'media_resolution_too_low':
+            return 'Foto-resolutie te laag voor TikTok (min 360×360px).';
+          case 'unaudited_client_can_only_post_to_private_accounts':
+            return 'TikTok-app draait nog in Sandbox-mode en kan alleen privacy_level=SELF_ONLY/MUTUAL_FOLLOW_FRIENDS gebruiken. Server-config: zet TIKTOK_PRIVACY_LEVEL=SELF_ONLY (default).';
+          case 'spam_risk_account':
+          case 'spam_risk_video_lacks_metadata':
+            return 'TikTok markeert de account als spam-risico of de content mist metadata. Wacht enkele uren of probeer een ander account.';
+          case 'unknown':
+            return 'TikTok gaf geen specifieke fout-code. Probeer over een paar minuten opnieuw of bekijk de logs voor meer details.';
+          default:
+            return `TikTok publish faalde met fail_reason="${failReason}". Bekijk Supabase logs voor de volledige TikTok-response.`;
+        }
+      })();
       return {
         ok: false,
-        error: `TikTok publish failed: ${statusData.data?.fail_reason ?? 'unknown'}`,
+        error: friendly,
       };
     }
   }
   // Timed out — TikTok sometimes still completes async. Return publish_id
   // so the row can be reconciled later.
+  console.warn(`[TikTok] Poll timeout after ${maxAttempts * 2}s, last status=${lastStatus} — returning publish_id`);
   return { ok: true, postId: publishId };
 }
 
@@ -759,8 +816,17 @@ async function publishToTikTok(
     try {
       const photoImages: string[] = [];
       for (const u of rawImages) {
-        photoImages.push(await makeTikTokAccessibleUrl(u));
+        let proxied = await makeTikTokAccessibleUrl(u);
+        // Append ?preset=tiktok so the media-proxy resizes the image down to
+        // 1920px on the longest side. Bypasses TikTok's `photo_pull_failed`
+        // error for oversized images (e.g. iPhone camera 4032×3024 / 6.2MP+).
+        if (proxied.startsWith(MEDIA_PROXY_BASE_URL) && MEDIA_PROXY_BASE_URL) {
+          const sep = proxied.includes('?') ? '&' : '?';
+          proxied = `${proxied}${sep}preset=tiktok`;
+        }
+        photoImages.push(proxied);
       }
+      console.log(`[TikTok] Photo publish — ${photoImages.length} images, privacy_level=${TIKTOK_PRIVACY_LEVEL}, first_url=${photoImages[0]}`);
 
       const initRes = await fetch(`${TIKTOK_API}/post/publish/content/init/`, {
         method: 'POST',
@@ -773,7 +839,7 @@ async function publishToTikTok(
             title: text.substring(0, 90), // TikTok photo title max 90 chars
             description: text.substring(0, 4000),
             disable_comment: false,
-            privacy_level: 'PUBLIC_TO_EVERYONE',
+            privacy_level: TIKTOK_PRIVACY_LEVEL,
             auto_add_music: true,
           },
           source_info: {
@@ -799,8 +865,10 @@ async function publishToTikTok(
       }
 
       const initData = await initRes.json();
+      console.log('[TikTok] Photo init OK — response:', JSON.stringify(initData));
       const publishId: string = initData.data?.publish_id ?? '';
       if (!publishId) {
+        console.error('[TikTok] Photo init returned no publish_id:', JSON.stringify(initData));
         return { success: false, error: 'TikTok did not return publish_id for photo post' };
       }
 
@@ -808,6 +876,7 @@ async function publishToTikTok(
       if (!poll.ok) return { success: false, error: poll.error };
       return { success: true, postId: poll.postId };
     } catch (err: any) {
+      console.error('[TikTok] Photo exception:', err?.message, err?.stack);
       return { success: false, error: `TikTok photo exception: ${err.message}` };
     }
   }
@@ -825,7 +894,7 @@ async function publishToTikTok(
       body: JSON.stringify({
         post_info: {
           title: text.substring(0, 2200), // TikTok video caption max 2200 chars
-          privacy_level: 'PUBLIC_TO_EVERYONE',
+          privacy_level: TIKTOK_PRIVACY_LEVEL,
           disable_duet: false,
           disable_comment: false,
           disable_stitch: false,
@@ -882,7 +951,7 @@ async function publishToPinterest(
   }
 
   try {
-    const PIN_API = 'https://api.pinterest.com/v5';
+    const PIN_API = PINTEREST_API_BASE;
 
     // Step 1: Resolve board (find existing or create new)
     let boardId = options?.boardId;
@@ -986,12 +1055,20 @@ async function publishToThreads(
       text: text.substring(0, 500), // Threads max 500 chars
     };
 
+    // Helper: append ?preset=meta to media-proxy URLs so the proxy auto-resizes
+    // to ≤1080×1920 (Threads/IG reject oversized images with timeout / 400).
+    const withMetaPreset = (mediaUrl: string): string => {
+      if (!MEDIA_PROXY_BASE_URL || !mediaUrl.startsWith(MEDIA_PROXY_BASE_URL)) return mediaUrl;
+      const sep = mediaUrl.includes('?') ? '&' : '?';
+      return `${mediaUrl}${sep}preset=meta`;
+    };
+
     if (videoUrl) {
       containerBody.media_type = 'VIDEO';
-      containerBody.video_url = await toExternalMediaUrl(videoUrl);
+      containerBody.video_url = withMetaPreset(await toExternalMediaUrl(videoUrl));
     } else if (imageUrl) {
       containerBody.media_type = 'IMAGE';
-      containerBody.image_url = await toExternalMediaUrl(imageUrl);
+      containerBody.image_url = withMetaPreset(await toExternalMediaUrl(imageUrl));
     } else {
       containerBody.media_type = 'TEXT';
     }
@@ -1267,6 +1344,7 @@ Deno.serve(async (req: Request) => {
     });
     const { data: { user: jwtUserData }, error: jwtErr } = await authClient.auth.getUser();
     if (jwtErr || !jwtUserData) {
+      console.error('[publish-social] JWT validation failed:', jwtErr?.message ?? 'no user');
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -1353,7 +1431,23 @@ Deno.serve(async (req: Request) => {
       const mediaType = (directMediaType as string | undefined) ?? 'photo';
       const igFormat = (directIgFormat as 'feed' | 'story' | 'reel' | undefined) ?? 'feed';
 
+      // Always log incoming requests so we can trace silent early-returns
+      // (401 unauth, 422 missing account, etc) without instrumenting every
+      // exit path.
+      console.log('[publish-social] Incoming request:', JSON.stringify({
+        post_id,
+        user_id,
+        channel,
+        has_image: !!imageUrl,
+        has_video: !!videoUrl,
+        media_type: mediaType,
+        ig_format: igFormat,
+        has_account_id: !!directAccountId,
+        text_len: text?.length ?? 0,
+      }));
+
       if (!channel || !text) {
+        console.error('[publish-social] Bad request — missing channel or text');
         return new Response(
           JSON.stringify({ error: 'channel and text are required' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -1432,6 +1526,7 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (!tokenData?.access_token) {
+        console.error(`[publish-social] No OAuth access_token for ${channel} account ${socialAccount.id} (user ${user_id}) — needs reconnect`);
         return new Response(
           JSON.stringify({ error: 'Geen geldig OAuth token. Koppel je account opnieuw.', action: 'reconnect', channel }),
           { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
@@ -1441,6 +1536,7 @@ Deno.serve(async (req: Request) => {
       // Check if token is expired / refresh if needed
       const tokenCheck = await ensureValidToken(db, tokenData, socialAccount.id, channel);
       if (!tokenCheck.valid) {
+        console.error(`[publish-social] Token check failed for ${channel} account ${socialAccount.id}: ${tokenCheck.error} (action=${tokenCheck.action})`);
         const status = (channel === 'facebook' || channel === 'instagram') ? 401 : 422;
         return new Response(
           JSON.stringify({ success: false, action: tokenCheck.action, error: tokenCheck.error, channel }),
@@ -1534,11 +1630,13 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!result.success) {
+        console.error(`[publish-social] ${channel} publish failed: ${result.error}`);
         return new Response(
           JSON.stringify({ success: false, error: result.error }),
           { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
+      console.log(`[publish-social] ${channel} publish succeeded — postId=${result.postId}`);
 
       // ── First-comment auto-post ──────────────────────────────────────────
       // Post a first comment on the just-published post if configured.
