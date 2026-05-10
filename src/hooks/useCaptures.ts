@@ -1,5 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import * as FileSystem from 'expo-file-system';
+// `expo-file-system` (SDK 54+) deprecated `getInfoAsync` and `uploadAsync`
+// on the top-level export — they now live under `/legacy`. Importing from
+// the legacy submodule keeps the old API working without runtime
+// deprecation errors. Future migration: rewrite to the new File/Directory
+// classes from `expo-file-system`.
+import * as FileSystem from 'expo-file-system/legacy';
 import { supabase } from '../services/supabase';
 import type { EventCapture, CaptureInsert } from '../types';
 
