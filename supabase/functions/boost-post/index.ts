@@ -163,17 +163,36 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Fetch source post
+    // Fetch source post. go_posts has no organization_id or social_account_id
+    // columns (per-user data model); we resolve the FB social_account
+    // separately by channel + user when we need its access_token below.
     const { data: post, error: postErr } = await supabase
       .from('go_posts')
-      .select('id, channel, organization_id, social_account_id, text_content')
+      .select('id, channel, text_content, user_id, external_post_id')
       .eq('id', post_id)
       .maybeSingle();
     if (postErr || !post) {
+      console.error('[boost-post] post lookup failed:', postErr?.message);
       return new Response(
-        JSON.stringify({ error: 'Source post not found' }),
+        JSON.stringify({ error: 'Source post not found', detail: postErr?.message }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Resolve the user's social_account for this channel (used by Meta
+    // Marketing API call for the access_token). For 'meta' boosts we need
+    // a connected Facebook account; for other channels we leave null.
+    let postSocialAccountId: string | null = null;
+    if (channel === 'meta') {
+      const { data: acc } = await supabase
+        .from('social_accounts')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('channel', 'facebook')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      postSocialAccountId = acc?.id ?? null;
     }
 
     // Decide dry-run mode
@@ -185,10 +204,10 @@ Deno.serve(async (req) => {
     const { data: campaign, error: campErr } = await supabase
       .from('ad_campaigns')
       .insert({
-        organization_id: post.organization_id,
+        organization_id: null, // go_posts has no org link; left unscoped
         user_id: user.id,
         source_post_id: post.id,
-        social_account_id: post.social_account_id,
+        social_account_id: postSocialAccountId,
         channel,
         status: isDryRun ? 'draft' : 'pending_creative',
         budget_cents,
@@ -249,11 +268,11 @@ Deno.serve(async (req) => {
       //   - User has connected FB account with the Page they want to boost
       const META_AD_ACCOUNT_ID = Deno.env.get('META_AD_ACCOUNT_ID') ?? '';
       const FB_ACCESS_TOKEN = await (async () => {
-        if (!post.social_account_id) return '';
+        if (!postSocialAccountId) return '';
         const { data: acc } = await supabase
           .from('social_accounts')
           .select('access_token')
-          .eq('id', post.social_account_id)
+          .eq('id', postSocialAccountId)
           .maybeSingle();
         return acc?.access_token ?? '';
       })();
