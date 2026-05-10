@@ -73,7 +73,8 @@ export function usePushNotifications(session: Session) {
         const accessToken = freshSession?.access_token;
         if (!accessToken) return;
 
-        const supabaseUrl = supabase.supabaseUrl;
+        const supabaseUrl = (supabase as unknown as { supabaseUrl: string }).supabaseUrl
+          ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
         const url = `${supabaseUrl}/functions/v1/register-push-token`;
 
         const res = await fetch(url, {

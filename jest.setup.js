@@ -33,8 +33,12 @@ jest.mock("./src/services/supabase", () => {
   return {
     supabase: {
       auth: {
-        getSession: jest.fn().mockResolvedValue({ data: { session: null } }),
-        getUser: jest.fn().mockResolvedValue({ data: { user: null } }),
+        // Default: authenticated session so storage uploads (which check for access_token) can proceed.
+        // Tests that need an unauthenticated state should override this with mockResolvedValueOnce.
+        getSession: jest.fn().mockResolvedValue({
+          data: { session: { access_token: "test-token", user: { id: "user-123" } } },
+        }),
+        getUser: jest.fn().mockResolvedValue({ data: { user: { id: "user-123" } } }),
         onAuthStateChange: jest.fn().mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } }),
         signInWithPassword: jest.fn().mockResolvedValue({ data: {}, error: null }),
         signUp: jest.fn().mockResolvedValue({ data: {}, error: null }),

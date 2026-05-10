@@ -3,5 +3,5 @@
   "compilerOptions": {
     "strict": true
   },
-  "exclude": ["node_modules", "web", "supabase/functions", "inclufy-go", "src/__tests__"]
+  "exclude": ["node_modules", "web", "_archive", "supabase/functions", "inclufy-go", "src/__tests__"]
 }
