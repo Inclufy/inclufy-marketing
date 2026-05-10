@@ -33,8 +33,8 @@ const MANUAL_PLATFORMS: Record<PlatformKey, { description: string } | undefined>
 const SCOPE_LIST: Record<PlatformKey, string[]> = {
   // instagram_basic deprecated 2024 — IG Business auto-discovered via FB Pages flow
   // email removed — requires "Authenticate with Facebook Login" use case not configured
-  facebook: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
-  instagram: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile'],
+  facebook: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile', 'ads_management'],
+  instagram: ['pages_show_list', 'pages_manage_posts', 'pages_read_engagement', 'instagram_content_publish', 'business_management', 'public_profile', 'ads_management'],
   linkedin: ['openid', 'profile', 'email', 'w_member_social'],
   tiktok: ['user.info.basic', 'video.publish', 'video.upload'],
   pinterest: ['pins:read', 'pins:write', 'boards:read', 'boards:write', 'user_accounts:read'],
