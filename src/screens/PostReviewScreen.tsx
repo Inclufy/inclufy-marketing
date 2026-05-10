@@ -1534,24 +1534,30 @@ export default function PostReviewScreen() {
               }
             }
 
+            // Manual-share-only channels (no OAuth API): Snapchat + WhatsApp.
+            // These shouldn't appear as "Mislukte posts" — they're a separate
+            // class that needs the user to copy/paste or use a deep-link.
+            const MANUAL_ONLY_CHANNELS = new Set(['snapchat', 'whatsapp']);
+            const manualPending = failed.filter((f) => MANUAL_ONLY_CHANNELS.has(f.post.channel));
+            const realFailed = failed.filter((f) => !MANUAL_ONLY_CHANNELS.has(f.post.channel));
+
             const total = draftPosts.length;
             const nOk = succeeded.length;
-            const nFail = failed.length;
+            const nFail = realFailed.length;
+            const nManual = manualPending.length;
 
             // ─── Always show summary (no auto-open connect modal on all-fail) ──
-            // Build the same details + reconnect-action list whether all-fail,
-            // partial success, or all-success.
             const buildDetails = () =>
-              failed
+              realFailed
                 .map((f) => `• ${channelConfig[f.post.channel]?.label ?? f.post.channel}: ${f.error}`)
                 .join('\n');
 
-            const reconnectableFailures = failed.filter((f) => f.canReconnect);
+            const reconnectableFailures = realFailed.filter((f) => f.canReconnect);
 
             const showFailedDetailsWithReconnect = () => {
               const details = buildDetails();
               if (reconnectableFailures.length === 0) {
-                Alert.alert('Mislukte posts', details);
+                Alert.alert('Mislukte posts', details || 'Geen API-fouten.');
                 return;
               }
               const first = reconnectableFailures[0];
@@ -1576,29 +1582,50 @@ export default function PostReviewScreen() {
               );
             };
 
-            if (nFail === 0) {
+            // Build a status line that includes manual-pending separately
+            // so users see "3 gepubliceerd, 1 mislukt, 2 klaar voor handmatig delen"
+            // instead of the confusing all-in-one count.
+            const statusLine =
+              `${nOk}/${total} gepubliceerd`
+              + (nFail > 0 ? `, ${nFail} mislukt` : '')
+              + (nManual > 0 ? `, ${nManual} klaar voor handmatig delen` : '')
+              + '.';
+
+            const buttons: Array<{ text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }> = [
+              { text: 'OK', style: 'cancel' },
+            ];
+            if (nFail > 0) {
+              buttons.push({ text: 'Bekijk fouten', onPress: showFailedDetailsWithReconnect });
+            }
+            if (nManual > 0) {
+              buttons.push({
+                text: `Handmatig delen (${nManual})`,
+                onPress: () => {
+                  // Open the first manual channel; user can then come back for the next.
+                  const firstManual = manualPending[0];
+                  // Trigger the existing single-post manual share path by re-invoking
+                  // publish flow on this post; the post-level logic already handles
+                  // snapchat/whatsapp via deep-link/clipboard.
+                  publishPost.mutateAsync(firstManual.post.id).catch(() => {
+                    // Best-effort — single-post publish opens the right share UI.
+                  });
+                },
+              });
+            }
+
+            if (nFail === 0 && nManual === 0) {
               // All succeeded
               Alert.alert(t.postReview.publishAllSuccess);
-            } else if (nOk === 0) {
-              // All failed — show summary (NEVER auto-open connect modal anymore)
+            } else if (nOk === 0 && nFail > 0) {
+              // No API publishes worked
               Alert.alert(
                 t.common.error,
-                `0/${total} gepubliceerd. Alle ${nFail} kanalen mislukt.`,
-                [
-                  { text: 'OK', style: 'cancel' },
-                  { text: 'Bekijk fouten', onPress: showFailedDetailsWithReconnect },
-                ],
+                `0/${total} gepubliceerd. ${nFail} mislukt${nManual > 0 ? `, ${nManual} klaar voor handmatig delen` : ''}.`,
+                buttons,
               );
             } else {
-              // Partial success — same summary + reconnect action as all-fail
-              Alert.alert(
-                `${nOk}/${total} gepubliceerd. ${nFail} mislukt.`,
-                undefined,
-                [
-                  { text: 'OK', style: 'cancel' },
-                  { text: 'Bekijk fouten', onPress: showFailedDetailsWithReconnect },
-                ],
-              );
+              // Mixed success / partial
+              Alert.alert(statusLine, undefined, buttons);
             }
           },
         },
