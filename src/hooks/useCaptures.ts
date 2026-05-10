@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as FileSystem from 'expo-file-system';
 import { supabase } from '../services/supabase';
 import type { EventCapture, CaptureInsert } from '../types';
 
@@ -117,18 +118,51 @@ export async function uploadMedia(
     ? `events/${user.id}/${eventId}/${fileName}`
     : `content/${user.id}/${fileName}`;
 
-  // Read file as blob
-  const response = await fetch(uri);
-  const blob = await response.blob();
+  // ─── Upload via FileSystem.uploadAsync (BINARY_CONTENT) ────────────────
+  // The previous `fetch(uri).blob()` path silently produced 0-byte uploads
+  // for ViewShot-captured URIs on iOS (a known React Native issue with
+  // file:// URI's that come from native modules). Result: branded images
+  // ended up in storage as 0-byte placeholders, causing every PULL_FROM_URL
+  // platform (TikTok, Pinterest, IG, Threads) to fail with
+  // photo_pull_failed / "Unable to reach URL" / "Media not available".
+  //
+  // FileSystem.uploadAsync streams the file directly as the HTTP body
+  // without ever loading the bytes into JS memory, which both fixes the
+  // 0-byte issue and is significantly faster for larger files.
+  const supabaseUrl = (supabase as any).supabaseUrl ?? process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
+  const session = await supabase.auth.getSession();
+  const accessToken = session.data.session?.access_token;
+  if (!accessToken) {
+    throw new Error('Not authenticated — geen access token om naar storage te uploaden.');
+  }
 
-  const { error } = await supabase.storage
-    .from('media')
-    .upload(storagePath, blob, {
-      contentType, // use our normalised type — never rely on blob.type for iOS audio
-      upsert: false,
-    });
+  // Sanity-check that the local file actually exists and is non-empty before
+  // wasting an HTTP roundtrip on a phantom file.
+  const fileInfo = await FileSystem.getInfoAsync(uri);
+  if (!fileInfo.exists || (fileInfo.size ?? 0) === 0) {
+    throw new Error(`Lokaal bestand bestaat niet of is leeg (${uri})`);
+  }
 
-  if (error) throw error;
+  const uploadRes = await FileSystem.uploadAsync(
+    `${supabaseUrl}/storage/v1/object/media/${storagePath}`,
+    uri,
+    {
+      httpMethod: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'apikey': process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        'Content-Type': contentType,
+        'x-upsert': 'false',
+      },
+      uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+    },
+  );
+
+  if (uploadRes.status < 200 || uploadRes.status >= 300) {
+    console.error('[uploadMedia] Storage upload failed', uploadRes.status, uploadRes.body);
+    throw new Error(`Storage upload faalde (${uploadRes.status}): ${uploadRes.body?.slice(0, 200)}`);
+  }
+  console.log(`[uploadMedia] uploaded ${fileInfo.size} bytes → ${storagePath}`);
 
   // Prefer a long-lived signed URL (works for both public and private buckets).
   // Fall back to the always-available public URL if signing fails.
