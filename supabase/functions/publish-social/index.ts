@@ -32,6 +32,44 @@ const TIKTOK_PRIVACY_LEVEL = Deno.env.get('TIKTOK_PRIVACY_LEVEL') ?? 'SELF_ONLY'
 //   supabase functions secrets set PINTEREST_API_BASE=https://api.pinterest.com/v5
 const PINTEREST_API_BASE = Deno.env.get('PINTEREST_API_BASE') ?? 'https://api-sandbox.pinterest.com/v5';
 
+// ─── Email notification helper ─────────────────────────────────────────────
+// Looks up the user's email from auth.users and POSTs to the send-email
+// edge function. Fire-and-forget — caller should NOT await this so the
+// publish response stays fast even if email is slow.
+async function sendEmailNotification(
+  db: ReturnType<typeof createClient>,
+  userId: string,
+  type: 'publish_success' | 'publish_failed' | 'oauth_token_expired',
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const { data: userRow, error } = await db.auth.admin.getUserById(userId);
+    if (error || !userRow?.user?.email) {
+      console.warn(`[send-email hook] Could not find email for user ${userId}: ${error?.message ?? 'no email'}`);
+      return;
+    }
+    const fnUrl = `${SUPABASE_URL}/functions/v1/send-email`;
+    const res = await fetch(fnUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+      },
+      body: JSON.stringify({
+        to: userRow.user.email,
+        type,
+        data,
+      }),
+    });
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.warn(`[send-email hook] send-email returned ${res.status}: ${errBody.slice(0, 200)}`);
+    }
+  } catch (err: any) {
+    console.warn('[send-email hook] exception:', err?.message);
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Convert a Supabase storage URL into one any external platform can fetch.
 //
@@ -426,6 +464,49 @@ async function publishToFacebook(
   }
 }
 
+// Wait for an IG/Threads media container to leave PROCESSING / IN_PROGRESS
+// before calling /media_publish. Without this we hit "Media ID is not
+// available — Bitte warte noch einen Moment" (code 9007 / subcode 2207027)
+// because Meta's CDN is still fetching the source URL.
+//
+// Polls /<container-id>?fields=status_code,status until FINISHED, ERROR or
+// the timeout fires. Returns true when ready, false on terminal failure
+// (caller can still attempt publish — Meta will give the real error).
+async function waitForIgContainerReady(
+  apiBase: string,
+  containerId: string,
+  accessToken: string,
+  maxSeconds = 30,
+): Promise<boolean> {
+  const start = Date.now();
+  let attempt = 0;
+  while ((Date.now() - start) / 1000 < maxSeconds) {
+    attempt++;
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const res = await fetch(
+        `${apiBase}/${containerId}?fields=status_code,status&access_token=${encodeURIComponent(accessToken)}`,
+      );
+      if (!res.ok) {
+        // 400 here means container vanished; don't keep hammering.
+        const body = await res.text();
+        console.warn(`[Instagram] container ${containerId} status fetch ${res.status}: ${body}`);
+        return false;
+      }
+      const data = await res.json();
+      const status = data.status_code ?? data.status;
+      console.log(`[Instagram] container ${containerId} attempt ${attempt}: status_code=${status}`);
+      if (status === 'FINISHED' || status === 'PUBLISHED') return true;
+      if (status === 'ERROR' || status === 'EXPIRED') return false;
+      // IN_PROGRESS / PROCESSING / undefined → keep polling
+    } catch (err: any) {
+      console.warn(`[Instagram] container status fetch exception:`, err?.message);
+    }
+  }
+  console.warn(`[Instagram] container ${containerId} polling timed out after ${maxSeconds}s — attempting publish anyway`);
+  return false;
+}
+
 async function publishToInstagram(
   accessToken: string,
   igBusinessAccountId: string,
@@ -435,6 +516,18 @@ async function publishToInstagram(
   igFormat: 'feed' | 'story' | 'reel' = 'feed',
   videoUrl?: string,
 ): Promise<{ success: boolean; postId?: string; error?: string; permalink?: string }> {
+  // Detect token type by prefix to route to the correct API endpoint:
+  //   "IGAA…" = Instagram Direct API token (IG-Login flow, no FB Page)
+  //              → graph.instagram.com
+  //   "EAA…"  = Facebook Graph API token (FB-Login flow, IG via FB Page)
+  //              → graph.facebook.com
+  // Both speak the same JSON-shape, just on different hosts. Code 190
+  // "Cannot parse access token" surfaces when an IGAA token hits the
+  // graph.facebook.com endpoint (or vice versa).
+  const IG_API_BASE = accessToken.startsWith('IGAA')
+    ? 'https://graph.instagram.com/v20.0'
+    : 'https://graph.facebook.com/v20.0';
+  console.log(`[Instagram] Using API base: ${IG_API_BASE} (token prefix=${accessToken.slice(0, 4)})`);
   try {
     // ── Story ──────────────────────────────────────────────────────────────
     if (igFormat === 'story') {
@@ -451,7 +544,7 @@ async function publishToInstagram(
       }
 
       const storyCreateRes = await fetch(
-        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+        `${IG_API_BASE}/${igBusinessAccountId}/media`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -466,8 +559,10 @@ async function publishToInstagram(
 
       const { id: storyContainerId } = await storyCreateRes.json();
 
+      await waitForIgContainerReady(IG_API_BASE, storyContainerId, accessToken);
+
       const storyPublishRes = await fetch(
-        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
+        `${IG_API_BASE}/${igBusinessAccountId}/media_publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -503,7 +598,7 @@ async function publishToInstagram(
       };
 
       const reelCreateRes = await fetch(
-        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+        `${IG_API_BASE}/${igBusinessAccountId}/media`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -518,8 +613,11 @@ async function publishToInstagram(
 
       const { id: reelContainerId } = await reelCreateRes.json();
 
+      // Reels need extra processing time — give them up to 60s
+      await waitForIgContainerReady(IG_API_BASE, reelContainerId, accessToken, 60);
+
       const reelPublishRes = await fetch(
-        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
+        `${IG_API_BASE}/${igBusinessAccountId}/media_publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -557,7 +655,7 @@ async function publishToInstagram(
       const childIds: string[] = [];
       for (const url of allImages) {
         const childRes = await fetch(
-          `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+          `${IG_API_BASE}/${igBusinessAccountId}/media`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -580,7 +678,7 @@ async function publishToInstagram(
 
       // Step 2: Create carousel container
       const carouselRes = await fetch(
-        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+        `${IG_API_BASE}/${igBusinessAccountId}/media`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -600,9 +698,11 @@ async function publishToInstagram(
 
       const { id: containerId } = await carouselRes.json();
 
+      await waitForIgContainerReady(IG_API_BASE, containerId, accessToken);
+
       // Step 3: Publish carousel
       const publishRes = await fetch(
-        `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
+        `${IG_API_BASE}/${igBusinessAccountId}/media_publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -621,7 +721,7 @@ async function publishToInstagram(
     // Single image post
     // Step 1: Create media container
     const createRes = await fetch(
-      `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media`,
+      `${IG_API_BASE}/${igBusinessAccountId}/media`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -640,9 +740,11 @@ async function publishToInstagram(
 
     const { id: containerId } = await createRes.json();
 
+    await waitForIgContainerReady(IG_API_BASE, containerId, accessToken);
+
     // Step 2: Publish the container
     const publishRes = await fetch(
-      `https://graph.facebook.com/v20.0/${igBusinessAccountId}/media_publish`,
+      `${IG_API_BASE}/${igBusinessAccountId}/media_publish`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -669,9 +771,14 @@ async function publishToInstagram(
 // Helper: after publishing, fetch the public permalink (best-effort).
 // Returns undefined on failure; callers should fall back to a generic URL.
 async function fetchInstagramPermalink(mediaId: string, accessToken: string): Promise<string | undefined> {
+  // Same dual-host logic as publishToInstagram: IGAA tokens speak
+  // graph.instagram.com, EAA tokens speak graph.facebook.com.
+  const base = accessToken.startsWith('IGAA')
+    ? 'https://graph.instagram.com/v20.0'
+    : 'https://graph.facebook.com/v20.0';
   try {
     const res = await fetch(
-      `https://graph.facebook.com/v20.0/${mediaId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`,
+      `${base}/${mediaId}?fields=permalink&access_token=${encodeURIComponent(accessToken)}`,
     );
     if (!res.ok) {
       console.warn('[Instagram] permalink fetch returned', res.status);
@@ -952,26 +1059,49 @@ async function publishToPinterest(
 
   try {
     const PIN_API = PINTEREST_API_BASE;
+    console.log(`[Pinterest] Using API base: ${PIN_API}`);
 
-    // Step 1: Resolve board (find existing or create new)
+    // Step 1: Resolve board (find existing or create new).
+    // Walks all pages of the user's boards (Pinterest paginates with
+    // `bookmark`); falls back to creating a new board only when not found.
     let boardId = options?.boardId;
     if (!boardId) {
       const boardName = options?.boardName ?? 'AMOS Captures';
 
-      // Try find existing
-      const listRes = await fetch(`${PIN_API}/boards?page_size=100`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (listRes.ok) {
-        const listData = await listRes.json();
-        const existing = (listData.items ?? []).find(
-          (b: any) => (b.name ?? '').toLowerCase() === boardName.toLowerCase(),
-        );
-        if (existing) boardId = existing.id;
-      }
+      const findExistingBoard = async (): Promise<string | undefined> => {
+        let bookmark: string | undefined = undefined;
+        for (let page = 0; page < 10; page++) {
+          // 10-page hard cap = up to 1000 boards; sane upper bound.
+          const url = new URL(`${PIN_API}/boards`);
+          url.searchParams.set('page_size', '100');
+          if (bookmark) url.searchParams.set('bookmark', bookmark);
+          const res = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (!res.ok) {
+            console.warn(`[Pinterest] list boards page ${page} returned ${res.status} — stop paging`);
+            return undefined;
+          }
+          const data = await res.json();
+          const items: any[] = data.items ?? [];
+          const match = items.find(
+            (b: any) => (b.name ?? '').trim().toLowerCase() === boardName.toLowerCase(),
+          );
+          if (match) {
+            console.log(`[Pinterest] Found existing board "${boardName}" on page ${page}, id=${match.id}`);
+            return match.id;
+          }
+          if (!data.bookmark) return undefined;
+          bookmark = data.bookmark;
+        }
+        return undefined;
+      };
+
+      boardId = await findExistingBoard();
 
       // Create if not exists
       if (!boardId) {
+        console.log(`[Pinterest] Board "${boardName}" not found in listing — attempting create`);
         const createRes = await fetch(`${PIN_API}/boards`, {
           method: 'POST',
           headers: {
@@ -984,12 +1114,53 @@ async function publishToPinterest(
             privacy: 'PUBLIC',
           }),
         });
-        if (!createRes.ok) {
-          const err = await createRes.text();
-          return { success: false, error: `Pinterest board create error: ${err}` };
+        if (createRes.ok) {
+          const createData = await createRes.json();
+          boardId = createData.id;
+          console.log(`[Pinterest] Created board "${boardName}", id=${boardId}`);
+        } else {
+          // Inspect error: code 58 = "name already taken" — list-boards missed it,
+          // probably because the token lacks `boards:read` scope. Re-try the
+          // listing once more or surface a clear error.
+          const errText = await createRes.text();
+          let errCode = 0;
+          try { errCode = JSON.parse(errText)?.code ?? 0; } catch { /* */ }
+          if (errCode === 58) {
+            console.warn('[Pinterest] Board create returned code 58 (already exists) — retrying find');
+            boardId = await findExistingBoard();
+            if (!boardId) {
+              // Pinterest sandbox quirk: it claims the board exists but
+              // doesn't return it via /boards. Fall back to a unique
+              // timestamped name so we can keep publishing.
+              const fallbackName = `${boardName} ${new Date().toISOString().slice(0, 10)} ${Math.random().toString(36).slice(2, 6)}`;
+              console.warn(`[Pinterest] Falling back to unique board name: "${fallbackName}"`);
+              const retryRes = await fetch(`${PIN_API}/boards`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  name: fallbackName,
+                  description: `${fallbackName} — managed by AMOS (auto-fallback)`,
+                  privacy: 'PUBLIC',
+                }),
+              });
+              if (!retryRes.ok) {
+                const retryErr = await retryRes.text();
+                return {
+                  success: false,
+                  error: `Pinterest fallback board create faalde ook: ${retryErr}. Token mist mogelijk de boards:read/boards:write scope. Loskoppelen + opnieuw verbinden via AMOS Settings.`,
+                };
+              }
+              const retryData = await retryRes.json();
+              boardId = retryData.id;
+              console.log(`[Pinterest] Created fallback board "${fallbackName}", id=${boardId}`);
+            }
+          } else {
+            return { success: false, error: `Pinterest board create error: ${errText}` };
+          }
         }
-        const createData = await createRes.json();
-        boardId = createData.id;
       }
     }
 
@@ -1631,12 +1802,27 @@ Deno.serve(async (req: Request) => {
 
       if (!result.success) {
         console.error(`[publish-social] ${channel} publish failed: ${result.error}`);
+        // Fire-and-forget email notification to the user.
+        const isReconnect = /token|expired|verlopen|reconnect|unauthorized|access token/i.test(result.error ?? '');
+        sendEmailNotification(db, user_id, isReconnect ? 'oauth_token_expired' : 'publish_failed', {
+          channel,
+          error: result.error,
+          action: isReconnect ? 'reconnect' : '',
+        }).catch((e) => console.warn('[send-email hook]', e?.message));
         return new Response(
           JSON.stringify({ success: false, error: result.error }),
           { status: 422, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
       }
       console.log(`[publish-social] ${channel} publish succeeded — postId=${result.postId}`);
+
+      // Fire-and-forget success email (don't await — slow Resend shouldn't
+      // delay the publish response).
+      sendEmailNotification(db, user_id, 'publish_success', {
+        channel,
+        postUrl: (result as any).liveUrl ?? (result as any).permalink ?? '',
+        accountName: socialAccount.account_name ?? '',
+      }).catch((e) => console.warn('[send-email hook]', e?.message));
 
       // ── First-comment auto-post ──────────────────────────────────────────
       // Post a first comment on the just-published post if configured.

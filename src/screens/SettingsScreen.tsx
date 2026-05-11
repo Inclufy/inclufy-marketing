@@ -729,11 +729,24 @@ export default function SettingsScreen() {
       // - `email` requires "Authenticate with Facebook Login" use case
       //   which this app doesn't have configured — removed.
       // - IG Business is auto-discovered via FB Pages flow.
-      const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_content_publish,business_management,public_profile';
+      const scope = 'pages_show_list,pages_manage_posts,pages_read_engagement,instagram_content_publish,business_management,public_profile,ads_management';
       authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'tiktok') {
       const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
       authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
+    } else if (platformKey === 'pinterest') {
+      // Pinterest OAuth — Trial-Access apps still use the same UI domain
+      // (www.pinterest.com/oauth/) but the token-exchange happens against
+      // api-sandbox.pinterest.com (configured server-side via PINTEREST_API_BASE).
+      const pinClientId = process.env.EXPO_PUBLIC_PINTEREST_CLIENT_ID || '1568759';
+      const pinScopes = 'pins:read,pins:write,boards:read,boards:write,user_accounts:read';
+      authUrl = `https://www.pinterest.com/oauth/?response_type=code&client_id=${pinClientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(pinScopes)}&state=${encodeURIComponent(state)}`;
+    } else if (platformKey === 'threads') {
+      // Threads OAuth — separate THREADS_APP_ID (NOT same as META_APP_ID).
+      // graph.threads.net for token exchange (handled in oauth-callback).
+      const threadsAppId = process.env.EXPO_PUBLIC_THREADS_APP_ID || '952201194080195';
+      const threadsScopes = 'threads_basic,threads_content_publish,threads_manage_replies,threads_read_replies';
+      authUrl = `https://threads.net/oauth/authorize?client_id=${threadsAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(threadsScopes)}&response_type=code&state=${encodeURIComponent(state)}`;
     }
 
     if (authUrl) {

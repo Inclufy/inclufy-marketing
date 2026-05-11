@@ -624,13 +624,20 @@ Deno.serve(async (req) => {
 
       const PINTEREST_CLIENT_ID = Deno.env.get('PINTEREST_CLIENT_ID') ?? '';
       const PINTEREST_CLIENT_SECRET = Deno.env.get('PINTEREST_CLIENT_SECRET') ?? '';
+      // Mirror publish-social: token-exchange + profile-fetch must happen on
+      // the same API base as publish, otherwise Trial-Access apps get tokens
+      // that don't authenticate against the sandbox endpoint.
+      // Default = sandbox (Trial-Access). Override after Standard-access via:
+      //   supabase functions secrets set PINTEREST_API_BASE=https://api.pinterest.com/v5
+      const PINTEREST_API_BASE = Deno.env.get('PINTEREST_API_BASE') ?? 'https://api-sandbox.pinterest.com/v5';
 
       if (!PINTEREST_CLIENT_ID || !PINTEREST_CLIENT_SECRET) {
         return errorPage('Pinterest', 'Pinterest credentials niet geconfigureerd', 'PINTEREST_CLIENT_ID en _SECRET ontbreken in Supabase secrets');
       }
 
       const basicAuth = btoa(`${PINTEREST_CLIENT_ID}:${PINTEREST_CLIENT_SECRET}`);
-      const tokenRes = await fetch('https://api.pinterest.com/v5/oauth/token', {
+      console.log(`[Pinterest] OAuth token exchange via ${PINTEREST_API_BASE}/oauth/token`);
+      const tokenRes = await fetch(`${PINTEREST_API_BASE}/oauth/token`, {
         method: 'POST',
         headers: {
           'Authorization': `Basic ${basicAuth}`,
@@ -656,7 +663,7 @@ Deno.serve(async (req) => {
         tokenExpiresAt = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
       }
 
-      const profileRes = await fetch('https://api.pinterest.com/v5/user_account', {
+      const profileRes = await fetch(`${PINTEREST_API_BASE}/user_account`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
       const profile = profileRes.ok ? await profileRes.json() : {};
