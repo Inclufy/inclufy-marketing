@@ -71,7 +71,7 @@
         "android.permission.READ_CALENDAR",
         "android.permission.WRITE_CALENDAR"
       ],
-      "versionCode": 3
+      "versionCode": 100
     },
     "web": {
       "favicon": "./assets/favicon.png"
