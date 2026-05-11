@@ -68,3 +68,9 @@ verify_jwt = true
 # user JWT for the role check.
 [functions.process-post-approval]
 verify_jwt = true
+
+# gdpr-account-delete: GDPR Art. 17 — user-initiated. JWT required to
+# identify the user being deleted. Hard-deletes content + anonymizes profile
+# + bans auth user. See edge function for full retention notes.
+[functions.gdpr-account-delete]
+verify_jwt = true

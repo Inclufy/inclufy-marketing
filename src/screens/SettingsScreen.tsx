@@ -325,11 +325,24 @@ export default function SettingsScreen() {
                 try {
                   const { data: { user } = {} as any } = await supabase.auth.getUser();
                   if (!user) throw new Error('Niet ingelogd');
-                  // Try RPC first, fall back to deleting profile row
-                  const { error: rpcError } = await supabase.rpc('delete_user');
-                  if (rpcError) {
-                    await supabase.from('profiles').delete().eq('id', user.id);
+
+                  // GDPR Art. 17 — controlled deletion via edge function.
+                  // The previous flow tried delete_user RPC (which doesn't exist
+                  // — it was never created) then fell back to profiles.delete()
+                  // which only removed one row, leaving dangling FKs in 30+
+                  // AMOS content tables. The edge function hard-deletes all
+                  // user content + revokes OAuth tokens + anonymizes profile
+                  // + bans the auth user.
+                  const { data, error } = await supabase.functions.invoke(
+                    'gdpr-account-delete',
+                    { method: 'POST' },
+                  );
+
+                  if (error) throw error;
+                  if (!data || data.status !== 'deleted') {
+                    throw new Error('Onverwacht antwoord van server');
                   }
+
                   await supabase.auth.signOut();
                 } catch (err: any) {
                   Alert.alert('Fout', err?.message ?? 'Account kon niet worden verwijderd.');
