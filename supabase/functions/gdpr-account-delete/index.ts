@@ -3,29 +3,30 @@
 // -----------------------------------------------------------------------------
 // GDPR Art. 17 (Right to Erasure) — account deletion for AMOS Marketing.
 //
-// Why different from Finance's gdpr-account-delete:
-//   - AMOS holds marketing content (events, captures, posts, brand_kits,
-//     campaigns) NOT subject to fiscal retention. So we hard-delete user
-//     content + revoke OAuth + anonymize profile.
-//   - Finance must preserve invoices/transactions for 7 years (AWR art. 52);
-//     AMOS has no equivalent obligation.
+// Design choice — selective deletion (per user feedback 2026-05-11):
 //
-// What this function DOES:
-//   1. Revoke + delete oauth_tokens for all user's social accounts
-//   2. Delete user-owned content: go_events, go_captures, go_posts,
-//      brand_voice_profiles, automations, content_proposals, library_*,
-//      ad_campaigns, agent_*, social_accounts, etc.
-//   3. Anonymize profile PII (full_name, email)
-//   4. Ban auth.users (banned_until = 2100)
-//   5. Audit-log the action
+// AMOS content (events, captures, posts, brand kits, automations, campaigns)
+// is *organizational property*, not personal data of a single user. When a
+// user leaves the organization or deletes their account, this content stays:
+//   - Other team members may continue editing or publishing it
+//   - The organization paid for AI generation / Meta/LinkedIn API calls
+//   - Campaign attribution + analytics history must be preserved
 //
-// What it preserves:
-//   - audit_logs (security trail — legitimate interest)
-//   - admin/operational tables not linked to user
+// So we apply a 3-tier rule:
 //
-// Reversal:
-//   - Hard delete is NOT reversible. UI must show clear warning.
-//   - 30-day grace period only for profile reactivation (not content recovery)
+//   TIER 1 — HARD DELETE: tokens, AI conversations, notifications, personal
+//            cache. These are strictly personal and have privacy + security
+//            implications if kept (revoked OAuth tokens MUST go).
+//
+//   TIER 2 — PRESERVE WITH ANONYMIZATION: org content tables. The user_id
+//            column stays (it references the now-anonymized profile row), so
+//            display layers automatically render "[verwijderde gebruiker]"
+//            wherever the author is shown. Content + analytics intact.
+//
+//   TIER 3 — ANONYMIZE: profiles row PII (email, name).
+//
+//   PLUS:  auth.users banned_until = 2100, audit-log entry, 30-day support
+//          reversal window for profile-only restore.
 //
 // Deploy:
 //   supabase functions deploy gdpr-account-delete --project-ref mpxkugfqzmxydxnlxqoj
@@ -43,50 +44,59 @@ const corsHeaders = {
 
 const GRACE_DAYS = 30;
 
-// Tables to hard-delete by user_id. Ordered so that FK references are
-// removed before their parents (oauth_tokens before social_accounts, etc.).
-const USER_SCOPED_DELETE_ORDER: string[] = [
-  // OAuth + social
-  "oauth_tokens",          // FK to social_accounts (cascades there too)
+// ---------------------------------------------------------------------------
+// TIER 1 — HARD DELETE (strictly personal data)
+//
+// Order matters for FK integrity: tokens before social_accounts,
+// agent_run_messages before agent_runs, etc.
+// ---------------------------------------------------------------------------
+const TIER1_HARD_DELETE_ORDER: string[] = [
+  // OAuth + connected accounts — revoke for security
+  "oauth_tokens",
   "social_accounts",
-  // Captures + posts
-  "go_captures",
-  "content_posts",
-  "go_posts",
-  "go_content_proposals",
-  // Events
-  "go_event_attendees",
-  "go_events",
-  // Brand kit + voice
-  "brand_voice_profiles",
-  // Automations
-  "go_automation_logs",
-  "go_automations",
-  // Strategy + marketing
-  "go_marketing_strategy",
-  // Library
-  "library_posts",
-  "library_imports",
-  // Agents
+  // AI conversation history — strictly personal
   "agent_run_messages",
   "agent_goal_runs",
   "agent_runs",
   "agent_goals",
+  // Cached AI explanations + rate-limit data
+  "ai_explanation_cache",
+  "demo_request_rate_limit",
+  // Personal preferences
+  "followed_organizers",
+  "notifications",
+];
+
+// ---------------------------------------------------------------------------
+// TIER 2 — PRESERVE
+//
+// These tables hold organization content. We DO NOT delete or modify them.
+// The user_id column on each row continues to reference the anonymized
+// profile row (handled in TIER 3), so any UI that shows "author: <name>"
+// will automatically render the anonymized name.
+//
+// Listed here for documentation transparency — the function never touches them.
+// ---------------------------------------------------------------------------
+const TIER2_PRESERVED_TABLES: string[] = [
+  "go_captures",
+  "content_posts",
+  "go_posts",
+  "go_content_proposals",
+  "go_event_attendees",
+  "go_events",
+  "brand_voice_profiles",
+  "go_automation_logs",
+  "go_automations",
+  "go_marketing_strategy",
+  "library_posts",
+  "library_imports",
   "agents",
-  // Ads + campaigns
   "campaign_metrics",
   "campaign_revenue",
   "campaign_costs",
   "campaign_creatives",
   "ad_commissions",
   "ad_campaigns",
-  // AI explanations cache
-  "ai_explanation_cache",
-  // Followed organizers
-  "followed_organizers",
-  // Notifications
-  "notifications",
-  // Org/products/team
   "go_products",
   "go_team_directory",
   "go_organization",
@@ -101,6 +111,8 @@ interface DeleteEnvelope {
     table: string;
     rows_deleted: number;
   }[];
+  preserved_tables: string[];
+  preservation_notice: string;
   warnings: string[];
 }
 
@@ -109,18 +121,11 @@ async function hardDelete(
   table: string,
   userId: string,
 ): Promise<number> {
-  // Use `select("id", { count: "exact", head: true })` semantics: delete and
-  // return how many rows were affected. Supabase JS gives us `count` on
-  // delete() if we ask for it.
   const { error, count } = await admin
     .from(table)
     .delete({ count: "exact" })
     .eq("user_id", userId);
-
-  if (error) {
-    // Tables without user_id column will throw. Caller handles in try/catch.
-    throw error;
-  }
+  if (error) throw error;
   return count ?? 0;
 }
 
@@ -164,31 +169,28 @@ serve(async (req) => {
     const deleted: DeleteEnvelope["deleted_resources"] = [];
     const warnings: string[] = [];
 
-    // 1. Hard-delete all user-scoped content
-    for (const table of USER_SCOPED_DELETE_ORDER) {
+    // TIER 1 — hard delete strictly personal tables
+    for (const table of TIER1_HARD_DELETE_ORDER) {
       try {
         const rows = await hardDelete(admin, table, user.id);
         if (rows > 0) deleted.push({ table, rows_deleted: rows });
       } catch (err) {
-        // Table may not have user_id column, or may not exist anymore.
-        // Record as warning, continue with next.
         warnings.push(
-          `Table '${table}' delete failed: ${
+          `Tier-1 delete failed for '${table}': ${
             err instanceof Error ? err.message : String(err)
           }`,
         );
       }
     }
 
-    // 2. Anonymize profile (instead of hard-delete — Supabase auth.users has
-    //    a FK to profiles.id; deleting it would orphan the auth user).
+    // TIER 3 — anonymize profile (TIER 2 is "do nothing", by design)
     const anonEmail = `deleted-user-${user.id}@deleted.inclufy.com`;
     try {
       await admin
         .from("profiles")
         .update({
           email: anonEmail,
-          full_name: "[deleted]",
+          full_name: "[verwijderde gebruiker]",
           updated_at: now,
         })
         .eq("id", user.id);
@@ -200,7 +202,7 @@ serve(async (req) => {
       );
     }
 
-    // 3. Ban auth user
+    // Ban auth user (effectively permanent)
     try {
       await admin.auth.admin.updateUserById(user.id, {
         ban_duration: "876000h", // ~100 years
@@ -219,20 +221,21 @@ serve(async (req) => {
       );
     }
 
-    // 4. Audit log (best-effort)
+    // Audit log (best-effort)
     try {
       await admin.from("audit_logs").insert({
         user_id: user.id,
         action: "gdpr_account_deleted",
         resource_type: "gdpr",
         details: {
-          deleted_table_count: deleted.length,
-          total_rows_deleted: deleted.reduce(
+          tier1_deleted_table_count: deleted.length,
+          tier1_total_rows_deleted: deleted.reduce(
             (sum, d) => sum + d.rows_deleted,
             0,
           ),
+          tier2_preserved_table_count: TIER2_PRESERVED_TABLES.length,
           warning_count: warnings.length,
-          gdpr_article: "Art. 17",
+          gdpr_article: "Art. 17 (with org-content preservation derogation)",
         },
       });
     } catch {
@@ -242,13 +245,22 @@ serve(async (req) => {
     const envelope: DeleteEnvelope = {
       status: "deleted",
       message:
-        "Account verwijderd. OAuth-tokens ingetrokken, alle content (events, " +
-        "captures, posts, brand kits, automations) permanent gewist. " +
-        "Profielgegevens geanonimiseerd. Contact support@inclufy.com binnen " +
-        "30 dagen om reactivatie aan te vragen (content kan niet worden hersteld).",
+        "Account verwijderd. Persoonlijke data (OAuth-tokens, AI-gesprekken, " +
+        "notificaties, voorkeuren) zijn permanent gewist. Profielgegevens " +
+        "geanonimiseerd. Content die je voor de organisatie hebt gemaakt " +
+        "(events, captures, posts, brand kits, campagnes) blijft eigendom " +
+        "van de organisatie. Contact support@inclufy.com binnen 30 dagen om " +
+        "profielreactivatie aan te vragen.",
       deleted_at: now,
       grace_period_until: graceUntil,
       deleted_resources: deleted,
+      preserved_tables: TIER2_PRESERVED_TABLES,
+      preservation_notice:
+        "Onder GDPR Art. 17(3)(e) en op grond van legitieme bedrijfsbelangen " +
+        "van de organisatie waar je voor werkte, blijven de volgende content-" +
+        "categorieën behouden onder de organisatie: events, captures, posts, " +
+        "brand voice profiles, automations, marketing strategy, library, " +
+        "campaigns, ads, products, team directory.",
       warnings,
     };
 
