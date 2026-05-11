@@ -448,39 +448,39 @@ export default function SettingsScreen() {
   const handleDataExport = async () => {
     setExportLoading(true);
     try {
-      const { data: { user } = {} as any } = await supabase.auth.getUser();
-      if (!user) throw new Error('Niet ingelogd');
+      // GDPR Art. 15 — full data export via server-side edge function.
+      // The previous client-side implementation only covered 4 tables (events,
+      // captures, posts, brand_kits) and relied on RLS. The edge function
+      // exports ~30 user-scoped tables with controlled access via service_role
+      // and audit-logs every export. OAuth tokens are REDACTED in the export
+      // (the user is entitled to know what platforms are connected, but the
+      // raw access/refresh tokens would be a security risk if the file leaks).
+      const { data, error } = await supabase.functions.invoke('gdpr-export', {
+        method: 'POST',
+      });
+      if (error) throw error;
+      if (!data) throw new Error('Geen data ontvangen van server');
 
-      // Fetch all user data in parallel
-      const [eventsRes, capturesRes, postsRes, brandKitsRes] = await Promise.all([
-        supabase.from('go_events').select('*').eq('user_id', user.id),
-        supabase.from('go_captures').select('*').eq('user_id', user.id),
-        supabase.from('go_posts').select('*').eq('user_id', user.id),
-        supabase.from('brand_kits').select('id, name, is_active').eq('user_id', user.id),
-      ]);
+      const exportData = data as any;
 
-      // Log any query errors (non-fatal: still export what we have)
-      if (eventsRes.error)   console.warn('Export events error:', eventsRes.error.message);
-      if (capturesRes.error) console.warn('Export captures error:', capturesRes.error.message);
-      if (postsRes.error)    console.warn('Export posts error:', postsRes.error.message);
-
-      const exportData = {
-        exported_at: new Date().toISOString(),
-        app_version: '1.0.0 (Build 31)',
-        user_email:  user.email,
-        brand_kits:  brandKitsRes.data  || [],
-        events:      eventsRes.data     || [],
-        captures:    capturesRes.data   || [],
-        posts:       postsRes.data      || [],
-      };
+      // Build a friendly summary from the new envelope shape.
+      const tables = exportData?.tables ?? {};
+      const eventsCount    = tables.go_events?.count    ?? 0;
+      const capturesCount  = tables.go_captures?.count  ?? 0;
+      const postsCount     = tables.go_posts?.count     ?? 0;
+      const brandKitsCount = tables.brand_voice_profiles?.count ?? 0;
+      const totalTables    = Object.keys(tables).length;
+      const warningCount   = (exportData?.warnings ?? []).length;
 
       const json = JSON.stringify(exportData, null, 2);
       const summary =
         `✅ Export klaar\n\n` +
-        `• ${exportData.events.length} event(s)\n` +
-        `• ${exportData.captures.length} capture(s)\n` +
-        `• ${exportData.posts.length} post(s)\n` +
-        `• ${exportData.brand_kits.length} brand kit(s)`;
+        `• ${eventsCount} event(s)\n` +
+        `• ${capturesCount} capture(s)\n` +
+        `• ${postsCount} post(s)\n` +
+        `• ${brandKitsCount} brand voice profile(s)\n` +
+        `• ${totalTables} totaal tabellen` +
+        (warningCount ? `\n• ${warningCount} waarschuwing(en) — zie 'warnings' veld` : '');
 
       const result = await Share.share({
         message: json,

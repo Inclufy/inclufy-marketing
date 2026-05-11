@@ -70,7 +70,12 @@ verify_jwt = true
 verify_jwt = true
 
 # gdpr-account-delete: GDPR Art. 17 — user-initiated. JWT required to
-# identify the user being deleted. Hard-deletes content + anonymizes profile
-# + bans auth user. See edge function for full retention notes.
+# identify the user being deleted. 3-tier: hard-delete strictly personal
+# tables, preserve org content, anonymize profile + ban auth user.
 [functions.gdpr-account-delete]
+verify_jwt = true
+
+# gdpr-export: GDPR Art. 15 — JSON export of user's personal data across
+# ~30 user-scoped tables. Used by both AMOS mobile and marketing-web.
+[functions.gdpr-export]
 verify_jwt = true
