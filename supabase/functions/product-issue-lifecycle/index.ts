@@ -105,7 +105,12 @@ function parseEmails(raw: string): string[] {
 }
 
 function issueUrl(id: string): string {
-  return `${APP_BASE_URL.replace(/\/$/, "")}/admin/issues/${id}`;
+  // Use a public dashboard route with the issue ID as query param. Avoids
+  // /admin/... paths because some reverse-proxy setups (e.g. ProjeXtPal's
+  // nginx) route /admin/ to the backend, breaking the SPA. /dashboard
+  // always lands in the React app and the AI Copilot Issues panel can
+  // open the deep-linked issue.
+  return `${APP_BASE_URL.replace(/\/$/, "")}/dashboard?issue=${id}`;
 }
 
 async function reporterEmail(userId: string | null): Promise<string | null> {
