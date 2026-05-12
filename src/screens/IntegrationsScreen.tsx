@@ -1,8 +1,13 @@
 // src/screens/IntegrationsScreen.tsx
 // Integrations — Connect your tools & platforms
+//
+// Social integrations (linkedin / instagram / facebook) read live state from
+// `social_accounts` via useConnectedChannels and route Connect → SocialMediaWizard.
+// Non-social integrations (analytics / email / CRM) are still in-flight on the
+// backend; they render as "Coming soon" badges instead of broken Connect buttons.
 
 import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Platform, StatusBar } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Platform, StatusBar, ActivityIndicator } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -10,6 +15,8 @@ import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
+import { useConnectedChannels } from '../hooks/useConnectedChannels';
+import type { Channel } from '../types';
 
 // ─── Integration Definitions ────────────────────────────────────────────────
 
@@ -22,7 +29,10 @@ interface IntegrationDef {
   iconLib: 'ion' | 'mci';
   color: string;
   category: 'social' | 'analytics' | 'email' | 'crm';
-  connected: boolean;
+  /** Channel key in social_accounts (only for social-category items). */
+  channelKey?: Channel;
+  /** True when backend integration isn't wired yet — UI renders as "Coming soon". */
+  comingSoon?: boolean;
 }
 
 const INTEGRATIONS: IntegrationDef[] = [
@@ -35,7 +45,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     iconLib: 'ion',
     color: '#0A66C2',
     category: 'social',
-    connected: false,
+    channelKey: 'linkedin',
   },
   {
     id: 'instagram',
@@ -46,7 +56,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     iconLib: 'ion',
     color: '#E4405F',
     category: 'social',
-    connected: false,
+    channelKey: 'instagram',
   },
   {
     id: 'facebook',
@@ -57,7 +67,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     iconLib: 'ion',
     color: '#1877F2',
     category: 'social',
-    connected: false,
+    channelKey: 'facebook',
   },
   {
     id: 'google_analytics',
@@ -68,7 +78,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     iconLib: 'mci',
     color: '#E37400',
     category: 'analytics',
-    connected: false,
+    comingSoon: true,
   },
   {
     id: 'mailchimp',
@@ -79,7 +89,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     iconLib: 'mci',
     color: '#FFE01B',
     category: 'email',
-    connected: false,
+    comingSoon: true,
   },
   {
     id: 'hubspot',
@@ -90,7 +100,7 @@ const INTEGRATIONS: IntegrationDef[] = [
     iconLib: 'mci',
     color: '#FF7A59',
     category: 'crm',
-    connected: false,
+    comingSoon: true,
   },
 ];
 
@@ -108,6 +118,21 @@ export default function IntegrationsScreen() {
   const { colors } = useTheme();
   const { t, locale } = useTranslation();
   const isNl = locale === 'nl';
+
+  // Live OAuth status from social_accounts table.
+  const { oauthChannels, loading: channelsLoading } = useConnectedChannels();
+  const isConnected = (def: IntegrationDef): boolean => {
+    if (def.comingSoon) return false;
+    if (def.channelKey) return oauthChannels.includes(def.channelKey);
+    return false;
+  };
+
+  const handleConnect = (def: IntegrationDef) => {
+    if (def.comingSoon) return;
+    if (def.category === 'social') {
+      navigation.navigate('SocialMediaWizard');
+    }
+  };
 
   const styles = useThemedStyles((c) => ({
     container: { flex: 1, backgroundColor: c.background },
@@ -212,6 +237,17 @@ export default function IntegrationsScreen() {
       fontWeight: fontWeight.bold,
       color: '#10B981',
     },
+    comingSoonBadge: {
+      borderRadius: borderRadius.md,
+      paddingHorizontal: spacing.sm,
+      paddingVertical: spacing.xs,
+      backgroundColor: c.borderLight,
+    },
+    comingSoonText: {
+      fontSize: fontSize.xs,
+      fontWeight: fontWeight.semibold,
+      color: c.textSecondary,
+    },
     infoCard: {
       backgroundColor: c.surface,
       borderRadius: borderRadius.lg,
@@ -233,7 +269,8 @@ export default function IntegrationsScreen() {
     },
   }));
 
-  const connectedCount = INTEGRATIONS.filter(i => i.connected).length;
+  const connectedCount = INTEGRATIONS.filter(i => isConnected(i)).length;
+  const availableCount = INTEGRATIONS.filter(i => !i.comingSoon).length - connectedCount;
   const categories = [...new Set(INTEGRATIONS.map(i => i.category))];
 
   return (
@@ -279,11 +316,15 @@ export default function IntegrationsScreen() {
           {/* Stats */}
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{connectedCount}</Text>
+              {channelsLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.statValue}>{connectedCount}</Text>
+              )}
               <Text style={styles.statLabel}>{isNl ? 'Verbonden' : 'Connected'}</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={styles.statValue}>{INTEGRATIONS.length - connectedCount}</Text>
+              <Text style={styles.statValue}>{availableCount}</Text>
               <Text style={styles.statLabel}>{isNl ? 'Beschikbaar' : 'Available'}</Text>
             </View>
             <View style={styles.statItem}>
@@ -305,6 +346,7 @@ export default function IntegrationsScreen() {
                 </Text>
                 {catIntegrations.map((integration) => {
                   const Icon = integration.iconLib === 'ion' ? Ionicons : MaterialCommunityIcons;
+                  const connected = isConnected(integration);
                   return (
                     <View key={integration.id} style={styles.integrationCard}>
                       <View style={[styles.iconWrap, { backgroundColor: integration.color + '18' }]}>
@@ -316,7 +358,13 @@ export default function IntegrationsScreen() {
                           {isNl ? integration.descriptionNl : integration.description}
                         </Text>
                       </View>
-                      {integration.connected ? (
+                      {integration.comingSoon ? (
+                        <View style={styles.comingSoonBadge}>
+                          <Text style={styles.comingSoonText}>
+                            {isNl ? 'Binnenkort' : 'Coming soon'}
+                          </Text>
+                        </View>
+                      ) : connected ? (
                         <View style={styles.connectedBadge}>
                           <Ionicons name="checkmark-circle" size={14} color="#10B981" />
                           <Text style={styles.connectedText}>
@@ -327,6 +375,7 @@ export default function IntegrationsScreen() {
                         <TouchableOpacity
                           style={[styles.connectBtn, { borderColor: integration.color + '60' }]}
                           activeOpacity={0.7}
+                          onPress={() => handleConnect(integration)}
                         >
                           <Text style={[styles.connectBtnText, { color: integration.color }]}>
                             {isNl ? 'Verbinden' : 'Connect'}
