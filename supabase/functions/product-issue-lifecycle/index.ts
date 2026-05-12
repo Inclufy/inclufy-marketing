@@ -49,8 +49,11 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const APP_NAME = Deno.env.get("APP_NAME") ?? "AMOS";
-const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://amos.inclufy.com";
+// Defaults assume Marketing app (covers both AMOS mobile + marketing-web).
+// Override per environment via Supabase secrets — Finance sets:
+//   APP_NAME=Inclufy Finance, APP_BASE_URL=https://finance.inclufy.com
+const APP_NAME = Deno.env.get("APP_NAME") ?? "Inclufy Marketing";
+const APP_BASE_URL = Deno.env.get("APP_BASE_URL") ?? "https://www.inclufy.com";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -82,6 +85,9 @@ interface ProductIssueRow {
   severity: string | null;
   reproduction_result: string | null;
   resolution_summary: string | null;
+  // JSONB column — frontend bundles drop user_agent + page_url + app_version
+  // + build_sha here when reporting issues. We use it to detect web vs mobile.
+  environment: Record<string, unknown> | null;
   created_at?: string;
 }
 
@@ -111,6 +117,40 @@ function issueUrl(id: string): string {
   // always lands in the React app and the AI Copilot Issues panel can
   // open the deep-linked issue.
   return `${APP_BASE_URL.replace(/\/$/, "")}/dashboard?issue=${id}`;
+}
+
+/**
+ * Detect whether the issue was reported from a web client or a mobile client
+ * based on the `environment` JSONB the frontend bundles set when calling
+ * the reporter API. React Native sets a distinctive UA + adds a `platform`
+ * field (`ios` | `android`) plus `app_version`. Web clients set a Chrome /
+ * Safari / Firefox UA + a `browser` field.
+ *
+ * Falls back to empty string when origin can't be determined — caller
+ * skips the suffix in that case so the subject stays clean.
+ */
+function detectClient(env: Record<string, unknown> | null): "Web" | "Mobile" | "" {
+  if (!env || typeof env !== "object") return "";
+  const ua = String(env.user_agent ?? env.userAgent ?? "");
+  const platform = String(env.platform ?? "").toLowerCase();
+  const client = String(env.client ?? env.client_type ?? "").toLowerCase();
+
+  // Explicit signals win — frontend bundles can declare `client: "mobile"`
+  if (client === "mobile" || client === "ios" || client === "android") return "Mobile";
+  if (client === "web" || client === "browser") return "Web";
+  if (platform === "ios" || platform === "android") return "Mobile";
+
+  // UA-based heuristics. Expo / React Native dev bundles include
+  // "Expo" or "ReactNative" in UA; native iOS WebViews include "AMOS" or
+  // "Inclufy" bundle IDs depending on app.
+  if (/Expo|ReactNative|React Native|InclufyGO|com\.inclufy/i.test(ua)) return "Mobile";
+  if (ua) return "Web";
+  return "";
+}
+
+function clientSuffix(env: Record<string, unknown> | null): string {
+  const c = detectClient(env);
+  return c ? ` · ${c}` : "";
 }
 
 async function reporterEmail(userId: string | null): Promise<string | null> {
@@ -304,7 +344,7 @@ function needsEscalation(
 
 async function notifyAdminsNewIssue(issue: ProductIssueRow, reporterAddr: string) {
   const url = issueUrl(issue.id);
-  const subject = `[${APP_NAME}] Nieuwe issue: ${issue.title.slice(0, 80)}`;
+  const subject = `[${APP_NAME}${clientSuffix(issue.environment)}] Nieuwe issue: ${issue.title.slice(0, 80)}`;
   const text = [
     `Nieuwe ProductIssue gemeld op ${APP_NAME}.`,
     "",
@@ -332,7 +372,7 @@ async function notifyReporterProgress(
 ) {
   if (!reporterAddr) return;
   const url = issueUrl(issue.id);
-  const subject = `[${APP_NAME}] Update over jouw issue: ${issue.title.slice(0, 60)}`;
+  const subject = `[${APP_NAME}${clientSuffix(issue.environment)}] Update over jouw issue: ${issue.title.slice(0, 60)}`;
   const text = [
     `Hallo ${reporterFirst},`,
     "",
@@ -364,7 +404,7 @@ async function notifyReporterResolved(
 ) {
   if (!reporterAddr) return;
   const url = issueUrl(issue.id);
-  const subject = `[${APP_NAME}] Opgelost: ${issue.title.slice(0, 70)}`;
+  const subject = `[${APP_NAME}${clientSuffix(issue.environment)}] Opgelost: ${issue.title.slice(0, 70)}`;
   const resolution = issue.resolution_summary || "(geen samenvatting beschikbaar)";
   const text = [
     `Hallo ${reporterFirst},`,
@@ -400,7 +440,7 @@ async function notifyReporterResolved(
 
 async function notifyAdminsProgress(issue: ProductIssueRow, reporterAddr: string) {
   const url = issueUrl(issue.id);
-  const subject = `[${APP_NAME}] Issue → ${issue.status}: ${issue.title.slice(0, 60)}`;
+  const subject = `[${APP_NAME}${clientSuffix(issue.environment)}] Issue → ${issue.status}: ${issue.title.slice(0, 60)}`;
   const text = [
     "Issue status gewijzigd.",
     "",
@@ -424,7 +464,7 @@ async function notifySuperadminEscalation(
   reason: string,
 ) {
   const url = issueUrl(issue.id);
-  const subject = `[${APP_NAME} — AI ESCALATIE] ${issue.title.slice(0, 70)}`;
+  const subject = `[${APP_NAME}${clientSuffix(issue.environment)} — AI ESCALATIE] ${issue.title.slice(0, 70)}`;
   const text = [
     `AI-triage escalatie naar superadmin op ${APP_NAME}.`,
     "",
