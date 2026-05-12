@@ -79,3 +79,11 @@ verify_jwt = true
 # ~30 user-scoped tables. Used by both AMOS mobile and marketing-web.
 [functions.gdpr-export]
 verify_jwt = true
+
+# product-issue-lifecycle: Database Webhook receiver for product_issues
+# INSERT/UPDATE events. Sends Resend emails for new/progress/resolved +
+# AI-escalation to superadmins when triage can't auto-resolve. JWT off
+# because Supabase Database Webhooks deliver with a shared secret in
+# the Authorization header, not a user token.
+[functions.product-issue-lifecycle]
+verify_jwt = false
