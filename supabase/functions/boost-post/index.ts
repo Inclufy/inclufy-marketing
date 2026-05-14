@@ -184,11 +184,12 @@ Deno.serve(async (req) => {
     // a connected Facebook account; for other channels we leave null.
     let postSocialAccountId: string | null = null;
     if (channel === 'meta') {
+      // social_accounts column is `platform`, not `channel` (BUG-2026-06).
       const { data: acc } = await supabase
         .from('social_accounts')
         .select('id')
         .eq('user_id', user.id)
-        .eq('channel', 'facebook')
+        .eq('platform', 'facebook')
         .order('updated_at', { ascending: false })
         .limit(1)
         .maybeSingle();

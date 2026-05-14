@@ -49,11 +49,13 @@ async function sendEmailNotification(
       return;
     }
     const fnUrl = `${SUPABASE_URL}/functions/v1/send-email`;
+    const internalEmailSecret = Deno.env.get('INTERNAL_EMAIL_SECRET') ?? '';
     const res = await fetch(fnUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+        'x-internal-secret': internalEmailSecret,
       },
       body: JSON.stringify({
         to: userRow.user.email,

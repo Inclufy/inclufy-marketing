@@ -58,3 +58,72 @@ create policy user_devices_own_delete on public.user_devices
 
 comment on table public.user_devices is
   'Expo push tokens per (user, device). send-push fans out to active rows.';
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- Trigger: on INSERT into public.go_notifications, fire send-push so a
+-- native push lands on the user's device alongside the in-app inbox row.
+-- Uses pg_net.http_post which is async — never blocks the INSERT.
+--
+-- BUG-2026-07: this trigger was previously applied via a one-off function
+-- and was missing from version-controlled SQL. Now part of the migration.
+-- send-push requires X-Internal-Secret header — value substituted via
+-- app.settings.internal_push_secret session-level setting on prod, but
+-- the trigger uses the actual env-injected value at runtime to keep the
+-- secret out of migration source.
+-- ──────────────────────────────────────────────────────────────────────────
+
+create or replace function public.notify_go_notification_push()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, extensions
+as $fn$
+declare
+  fn_url             text;
+  service_role_jwt   text;
+  internal_secret    text;
+begin
+  fn_url             := current_setting('app.settings.supabase_url', true)
+                          || '/functions/v1/send-push';
+  service_role_jwt   := current_setting('app.settings.service_role_key', true);
+  internal_secret    := current_setting('app.settings.internal_push_secret', true);
+
+  -- Skip if config is missing — better to drop a push than crash an insert.
+  if fn_url is null or fn_url = '/functions/v1/send-push'
+     or service_role_jwt is null or service_role_jwt = ''
+     or internal_secret is null or internal_secret = '' then
+    raise notice 'notify_go_notification_push: settings not configured';
+    return new;
+  end if;
+
+  begin
+    perform net.http_post(
+      url     := fn_url,
+      body    := jsonb_build_object(
+        'user_ids', jsonb_build_array(new.user_id::text),
+        'title',    coalesce(new.title, 'Inclufy AMOS'),
+        'body',     coalesce(new.body, ''),
+        'data',     jsonb_build_object(
+          'route',           'Notifications',
+          'notification_id', new.id::text,
+          'type',            new.type
+        )
+      ),
+      headers := jsonb_build_object(
+        'Content-Type',      'application/json',
+        'Authorization',     'Bearer ' || service_role_jwt,
+        'x-internal-secret', internal_secret
+      )
+    );
+  exception when others then
+    raise notice 'notify_go_notification_push error: %', sqlerrm;
+  end;
+  return new;
+end;
+$fn$;
+
+drop trigger if exists trg_notify_go_notification_push on public.go_notifications;
+create trigger trg_notify_go_notification_push
+  after insert on public.go_notifications
+  for each row
+  execute function public.notify_go_notification_push();

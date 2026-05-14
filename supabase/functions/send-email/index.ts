@@ -26,6 +26,18 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY') ?? '';
+// Shared secret — REQUIRED. Internal callers (notify-issue-reported, DB
+// triggers, future bridges) must send X-Internal-Secret. Without this gate
+// the function is an open relay on the DKIM-signed inclufy.com domain
+// (free phishing-as-a-service).
+const INTERNAL_EMAIL_SECRET = Deno.env.get('INTERNAL_EMAIL_SECRET') ?? '';
+
+function constantTimeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 const FROM_ADDRESS = Deno.env.get('EMAIL_FROM_ADDRESS')
   ?? 'AMOS by Inclufy <noreply@inclufy.com>';
 const SUPPORT_ADDRESS = Deno.env.get('EMAIL_SUPPORT_ADDRESS')
@@ -454,6 +466,22 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ error: 'Email service not configured (RESEND_API_KEY missing)' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
+  // Fail closed if shared secret isn't configured. Better 503 than open relay.
+  if (!INTERNAL_EMAIL_SECRET) {
+    console.error('[send-email] INTERNAL_EMAIL_SECRET not set — refusing all calls');
+    return new Response(
+      JSON.stringify({ error: 'service unavailable' }),
+      { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+  const providedSecret = req.headers.get('x-internal-secret') ?? '';
+  if (!constantTimeEquals(providedSecret, INTERNAL_EMAIL_SECRET)) {
+    return new Response(
+      JSON.stringify({ error: 'unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 

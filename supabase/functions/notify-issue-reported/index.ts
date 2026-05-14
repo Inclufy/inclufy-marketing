@@ -124,8 +124,9 @@ serve(async (req) => {
   };
 
   // Use anon key for the gateway (guaranteed JWT format).
-  // send-email itself does not check role — it is a server-to-server helper.
+  // send-email now requires an X-Internal-Secret header for body auth.
   const internalAuth = SUPABASE_ANON_KEY || SUPABASE_SERVICE_ROLE_KEY;
+  const internalEmailSecret = Deno.env.get("INTERNAL_EMAIL_SECRET") ?? "";
 
   try {
     const res = await fetch(sendEmailUrl, {
@@ -134,6 +135,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${internalAuth}`,
         apikey: internalAuth,
+        "x-internal-secret": internalEmailSecret,
       },
       body: JSON.stringify(emailBody),
     });

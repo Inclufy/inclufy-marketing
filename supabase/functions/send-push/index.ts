@@ -32,8 +32,13 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 // Optional Expo access token for higher rate limits + push receipts.
-// If unset, send-push still works for the unauthenticated public endpoint.
+// If unset, send-push still works.
 const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') ?? '';
+// Shared secret — REQUIRED. The DB trigger on go_notifications INSERT
+// posts here with this header; any other unauthenticated invocation
+// (curl-spam, scraped UUID lists) is rejected. Without this gate, anyone
+// on the internet can push notifications to any user.
+const INTERNAL_PUSH_SECRET = Deno.env.get('INTERNAL_PUSH_SECRET') ?? '';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -129,9 +134,27 @@ async function deactivateDevices(deviceIds: string[]): Promise<void> {
   if (error) console.error('[send-push] deactivate failed', error.message);
 }
 
+function constantTimeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
   if (req.method !== 'POST') return jsonResponse({ error: 'POST only' }, 405);
+
+  // Refuse to run without the shared secret configured — better to fail
+  // closed than ship an open relay.
+  if (!INTERNAL_PUSH_SECRET) {
+    console.error('[send-push] INTERNAL_PUSH_SECRET not set — refusing all calls');
+    return jsonResponse({ error: 'service unavailable' }, 503);
+  }
+  const providedSecret = req.headers.get('x-internal-secret') ?? '';
+  if (!constantTimeEquals(providedSecret, INTERNAL_PUSH_SECRET)) {
+    return jsonResponse({ error: 'unauthorized' }, 401);
+  }
 
   let body: PushBody;
   try {
