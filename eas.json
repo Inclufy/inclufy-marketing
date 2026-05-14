@@ -20,7 +20,7 @@
     "production": {
       "autoIncrement": true,
       "env": {
-        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
+        "_COMMENT_SENTRY": "Source-maps auto-upload is enabled by default. Set SENTRY_AUTH_TOKEN + SENTRY_ORG + SENTRY_PROJECT in EAS Project → Environment Variables (secret-scoped) for the upload to succeed. Without them the build still succeeds but crash stacks remain minified."
       },
       "ios": {
         "buildConfiguration": "Release"

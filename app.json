@@ -7,8 +7,6 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "scheme": "inclufy-go",
-    "privacyPolicyUrl": "https://inclufy.com/privacy",
-    "supportUrl": "https://inclufy.com/support",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -83,7 +81,9 @@
       "eas": {
         "projectId": "1e7b33cf-2f76-4dab-b515-68db9ea482ff"
       },
-      "router": {}
+      "router": {},
+      "privacyPolicyUrl": "https://inclufy.com/privacy",
+      "supportUrl": "https://inclufy.com/support"
     },
     "plugins": [
       [
