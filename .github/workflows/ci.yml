@@ -70,23 +70,19 @@ jobs:
           done
           exit $fail
 
-  # Sprint-3 #15 — Supabase migrations syntax-lint.
-  # Catches accidental SQL syntax errors in new migration files BEFORE
-  # they are applied to prod. We don't have a running Postgres in CI so
-  # this is a parser-only check via pg_query.
+  # Sprint-3 #15 — Supabase migrations syntax-lint (cheap pre-check).
+  # Catches the obvious — empty files, merge-conflict markers, attempts
+  # to drop auth.users. Runs in ~5 sec without any DB.
   migrations-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - name: Install postgresql-client for pg_query equivalent
+      - name: Static checks on migration files
         run: |
           set -e
           shopt -s nullglob
           fail=0
           for f in supabase/migrations/*.sql; do
-            # Basic checks: file not empty, no merge-conflict markers,
-            # no obvious typos. Full parse would need pg_query or a
-            # running Postgres — out of scope for this gate.
             if [ ! -s "$f" ]; then
               echo "::error file=$f::empty migration file"
               fail=1
@@ -100,6 +96,124 @@ jobs:
               echo "::error file=$f::refuses migration that drops auth.users"
               fail=1
             fi
+          done
+          exit $fail
+
+  # Sprint-3 #14-pivot — Migrations APPLY check (semantic gate).
+  # Spins up postgres:16 as a service, bootstraps a minimal Supabase-like
+  # schema (auth.users, auth.uid(), and stubs of pre-migration-tracking
+  # tables that newer migrations reference), then applies every file in
+  # supabase/migrations/ in chronological order via `psql -v ON_ERROR_STOP=1`.
+  #
+  # This catches the class of bug that hit prod on 2026-05-15:
+  # v_push_engagement_by_type referenced gn.read_at which didn't exist —
+  # syntactically valid SQL, semantically broken, only detectable by
+  # actually running the migration. CI would have caught it in ~30s.
+  #
+  # Replaces the deferred cloud-staging plan (Sprint-3 #14): a 30-sec CI
+  # job gives us 80% of what staging would have caught, without the
+  # ongoing cost or maintenance of a second Supabase project.
+  migrations-apply-check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: postgres
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Bootstrap minimal Supabase-like schema
+        run: |
+          psql -v ON_ERROR_STOP=1 <<'SQL'
+          -- Extensions used by various migrations
+          create extension if not exists "uuid-ossp";
+          create extension if not exists pgcrypto;
+          create extension if not exists pg_trgm;
+
+          -- Auth schema mock — many RLS policies reference these
+          create schema if not exists auth;
+          create table if not exists auth.users (
+            id uuid primary key default gen_random_uuid(),
+            email text,
+            raw_user_meta_data jsonb,
+            created_at timestamptz default now()
+          );
+          create or replace function auth.uid()  returns uuid     language sql stable as $$ select null::uuid    $$;
+          create or replace function auth.jwt()  returns jsonb    language sql stable as $$ select '{}'::jsonb   $$;
+          create or replace function auth.role() returns text     language sql stable as $$ select 'anon'::text  $$;
+          create or replace function auth.email() returns text    language sql stable as $$ select null::text    $$;
+
+          -- Stub tables that pre-date migration tracking but newer
+          -- migrations reference via FK / RLS policies. Shape only —
+          -- enough to satisfy the parser + RLS dependency graph.
+          create table if not exists public.organization_members (
+            id uuid primary key default gen_random_uuid(),
+            user_id uuid,
+            role text,
+            created_at timestamptz default now()
+          );
+
+          create table if not exists public.go_notifications (
+            id uuid primary key default gen_random_uuid(),
+            user_id uuid,
+            type text,
+            title text,
+            body text,
+            read boolean default false,
+            created_at timestamptz default now()
+          );
+
+          create table if not exists public.email_send_log (
+            id uuid primary key default gen_random_uuid(),
+            recipient text,
+            status text,
+            sent_at timestamptz default now()
+          );
+
+          create table if not exists public.user_devices (
+            id uuid primary key default gen_random_uuid(),
+            user_id uuid,
+            expo_push_token text,
+            platform text,
+            is_active boolean default true,
+            last_seen_at timestamptz default now()
+          );
+
+          create table if not exists public.profiles (
+            id uuid primary key,
+            full_name text,
+            avatar_url text,
+            created_at timestamptz default now()
+          );
+          SQL
+
+      - name: Apply every migration in chronological order
+        run: |
+          set -e
+          shopt -s nullglob
+          fail=0
+          for f in $(ls supabase/migrations/*.sql | sort); do
+            echo "::group::psql $f"
+            if ! psql -v ON_ERROR_STOP=1 -f "$f" 2>&1; then
+              echo "::error file=$f::migration failed to apply against bootstrap schema"
+              fail=1
+            fi
+            echo "::endgroup::"
           done
           exit $fail
 
