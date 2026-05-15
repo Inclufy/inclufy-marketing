@@ -96,7 +96,9 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "AMOS heeft microfoon nodig voor audio-opname en transcriptie."
+          "microphonePermission": "AMOS heeft microfoon nodig voor audio-opname en transcriptie.",
+          "enableBackgroundPlayback": false,
+          "enableBackgroundRecording": false
         }
       ],
       [
