@@ -31,42 +31,75 @@ if [[ ! -d "$BACKUP_ROOT" ]]; then
   exit 1
 fi
 
-# ─── Step 1: pick a backup ──────────────────────────────────────────────
-echo "Available backups:"
-echo ""
-for tier in daily weekly monthly; do
-  echo "  $tier/"
-  ls -lh "$BACKUP_ROOT/$tier"/backup_*.tar.gz* 2>/dev/null | awk '{ printf "    %s  %s  %s\n", $5, $9, $6" "$7" "$8 }' || echo "    (none)"
+# ─── CLI flag: --target-ref <ref> ───────────────────────────────────────
+# Lets you skip the interactive STAGING/PRODUCTION prompt and aim directly
+# at any project ref. Useful for full-project-wipe disaster recovery into
+# a brand-new project ref. Pass the password via env: SUPABASE_DB_PASSWORD.
+CLI_TARGET_REF=""
+CLI_ARCHIVE=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --target-ref) CLI_TARGET_REF="$2"; shift 2 ;;
+    --archive)    CLI_ARCHIVE="$2"; shift 2 ;;
+    -h|--help)
+      echo "Usage: $0 [--target-ref <project_ref>] [--archive <path>]"
+      echo "  Interactive mode if no flags given."
+      exit 0 ;;
+    *) echo "Unknown flag: $1"; exit 2 ;;
+  esac
 done
-echo ""
-read -rp "Enter full path of backup to restore: " ARCHIVE
+
+# ─── Step 1: pick a backup ──────────────────────────────────────────────
+if [[ -n "$CLI_ARCHIVE" ]]; then
+  ARCHIVE="$CLI_ARCHIVE"
+else
+  echo "Available backups:"
+  echo ""
+  for tier in daily weekly monthly; do
+    echo "  $tier/"
+    ls -lh "$BACKUP_ROOT/$tier"/backup_*.tar.gz* 2>/dev/null | awk '{ printf "    %s  %s  %s\n", $5, $9, $6" "$7" "$8 }' || echo "    (none)"
+  done
+  echo ""
+  read -rp "Enter full path of backup to restore: " ARCHIVE
+fi
 [[ ! -f "$ARCHIVE" ]] && { echo "❌ File not found: $ARCHIVE"; exit 1; }
 
 # ─── Step 2: pick target ────────────────────────────────────────────────
-echo ""
-echo "Target project options:"
-echo "  1) STAGING / new project (recommended for restore drills)"
-echo "  2) PRODUCTION ($PROD_REF) — destructive, wipes current data"
-read -rp "Choose 1 or 2: " CHOICE
-
-case "$CHOICE" in
-  1)
-    read -rp "Enter target project ref: " TARGET_REF
-    TARGET_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
-    ;;
-  2)
-    echo ""
-    echo "⚠️  ⚠️  ⚠️  PRODUCTION RESTORE  ⚠️  ⚠️  ⚠️"
-    echo "This will OVERWRITE the AMOS production database."
-    echo "A pre-restore safety dump will be taken first — but if that fails,"
-    echo "the restore will be aborted."
-    read -rp 'Type the literal word PRODUCTION to confirm: ' CONFIRM
+if [[ -n "$CLI_TARGET_REF" ]]; then
+  TARGET_REF="$CLI_TARGET_REF"
+  TARGET_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
+  if [[ "$TARGET_REF" == "$PROD_REF" ]]; then
+    echo "⚠️  --target-ref points at PRODUCTION ($PROD_REF). Type PRODUCTION to confirm."
+    read -rp '> ' CONFIRM
     [[ "$CONFIRM" != "PRODUCTION" ]] && { echo "❌ Confirmation failed."; exit 1; }
-    TARGET_REF="$PROD_REF"
-    TARGET_PASSWORD="${AMOS_DB_PASSWORD:-}"
-    ;;
-  *) echo "❌ Invalid choice."; exit 1 ;;
-esac
+    TARGET_PASSWORD="${AMOS_DB_PASSWORD:-$TARGET_PASSWORD}"
+  fi
+else
+  echo ""
+  echo "Target project options:"
+  echo "  1) STAGING / new project (recommended for restore drills)"
+  echo "  2) PRODUCTION ($PROD_REF) — destructive, wipes current data"
+  read -rp "Choose 1 or 2: " CHOICE
+
+  case "$CHOICE" in
+    1)
+      read -rp "Enter target project ref: " TARGET_REF
+      TARGET_PASSWORD="${SUPABASE_DB_PASSWORD:-}"
+      ;;
+    2)
+      echo ""
+      echo "⚠️  ⚠️  ⚠️  PRODUCTION RESTORE  ⚠️  ⚠️  ⚠️"
+      echo "This will OVERWRITE the AMOS production database."
+      echo "A pre-restore safety dump will be taken first — but if that fails,"
+      echo "the restore will be aborted."
+      read -rp 'Type the literal word PRODUCTION to confirm: ' CONFIRM
+      [[ "$CONFIRM" != "PRODUCTION" ]] && { echo "❌ Confirmation failed."; exit 1; }
+      TARGET_REF="$PROD_REF"
+      TARGET_PASSWORD="${AMOS_DB_PASSWORD:-}"
+      ;;
+    *) echo "❌ Invalid choice."; exit 1 ;;
+  esac
+fi
 
 if [[ -z "$TARGET_PASSWORD" ]]; then
   echo "Postgres password for project $TARGET_REF (Dashboard → Settings → Database):"

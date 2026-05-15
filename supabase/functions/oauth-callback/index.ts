@@ -729,8 +729,10 @@ Deno.serve(async (req) => {
         `https://graph.threads.net/v1.0/me?fields=id,username,name&access_token=${accessToken}`,
       );
       const profile = profileRes.ok ? await profileRes.json() : {};
-      console.log('[Threads] Profile response:', JSON.stringify(profile));
-      console.log('[Threads] tokenData.user_id:', threadsUserId);
+      // GDPR log hygiene — don't dump full profile or external user_id;
+      // just enough to debug the OAuth flow.
+      console.log('[Threads] Profile response ok=', profileRes.ok, 'has_user_id=', !!profile?.id);
+      console.log('[Threads] tokenData.user_id present=', !!threadsUserId);
 
       profileId = String(profile.id ?? threadsUserId ?? '');
       profileName = profile.username || profile.name || 'Threads User';
@@ -996,7 +998,9 @@ Deno.serve(async (req) => {
               console.error(`Failed to store LinkedIn company page ${orgName}:`, e);
             }
           }
-          console.log(`LinkedIn: discovered ${orgs.length} admin company pages for user ${userId}`);
+          // userId redacted to a prefix — sufficient for cross-log correlation,
+          // not enough alone to identify the data subject.
+          console.log(`LinkedIn: discovered ${orgs.length} admin company pages for user ${userId.slice(0, 8)}…`);
         } else {
           const errBody = await aclsRes.text();
           console.warn(
