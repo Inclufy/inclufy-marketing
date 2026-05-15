@@ -40,6 +40,13 @@ verify_jwt = false
 [functions.notify-issue-reported]
 verify_jwt = true
 
+# record-consent: writes immutable consent_log rows. verify_jwt=false
+# because cookie-banner / landing-page consent fires BEFORE signup (no
+# JWT yet). When called WITH a Bearer JWT the function prefers that
+# user_id over body.user_id to prevent consent-spoofing.
+[functions.record-consent]
+verify_jwt = false
+
 # resend-webhook: receives delivery events from Resend (delivered, bounced,
 # complained, opened, clicked). Resend posts unauthenticated requests but
 # signs them via Svix headers — the function verifies the signature itself.
