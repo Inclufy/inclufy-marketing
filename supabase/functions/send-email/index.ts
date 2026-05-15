@@ -47,6 +47,13 @@ const APP_BASE_URL = Deno.env.get('APP_BASE_URL')
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
+// Per-user (= per recipient) rate-limit window. Default 20 emails per
+// recipient per hour. Override with env var for batch-job edge cases.
+// Set to 0 to DISABLE the rate-limit (not recommended in production).
+const MAX_EMAILS_PER_HOUR_PER_USER = Number(
+  Deno.env.get('MAX_EMAILS_PER_HOUR_PER_USER') ?? '20',
+);
+
 // Service-role client used purely for suppression-check + send-log writes.
 // Never serves user-facing reads, so a missing env var (e.g. local dev)
 // degrades gracefully: we just skip the DB plumbing and still send mail.
@@ -80,6 +87,28 @@ async function logSend(row: {
   if (!dbClient) return;
   const { error } = await dbClient.from('email_send_log').insert(row);
   if (error) console.error('[send-email] log insert failed', error.message);
+}
+
+/**
+ * Per-recipient rate-limit check. Returns the count of emails sent to
+ * the given address in the trailing hour (status in {sent, delivered}).
+ * Returns 0 when DB plumbing is unavailable (degrade open, prefer
+ * deliverability over rate-limiting).
+ */
+async function countRecentSendsTo(email: string): Promise<number> {
+  if (!dbClient || MAX_EMAILS_PER_HOUR_PER_USER <= 0) return 0;
+  const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { count, error } = await dbClient
+    .from('email_send_log')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipient', email)
+    .in('status', ['sent', 'delivered'])
+    .gte('sent_at', sinceIso);
+  if (error) {
+    console.warn('[send-email] rate-limit count failed', error.message);
+    return 0;
+  }
+  return count ?? 0;
 }
 
 const corsHeaders = {
@@ -522,6 +551,50 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: false, suppressed: suppressedHits, type }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       );
+    }
+
+    // Per-recipient rate-limit check. If ANY recipient is over the
+    // hour-cap, refuse the whole send (consistent with the suppression
+    // behaviour above — atomic resend_id semantics for callers).
+    if (MAX_EMAILS_PER_HOUR_PER_USER > 0) {
+      const overCap: string[] = [];
+      for (const r of recipients) {
+        const recent = await countRecentSendsTo(r);
+        if (recent >= MAX_EMAILS_PER_HOUR_PER_USER) overCap.push(r);
+      }
+      if (overCap.length > 0) {
+        const { subject } = renderTemplate(type, data as Record<string, any>, locale);
+        for (const r of recipients) {
+          await logSend({
+            resend_id: null,
+            recipient: r,
+            email_type: type,
+            locale,
+            subject,
+            status: 'rate_limited',
+            status_detail: overCap.includes(r)
+              ? `>${MAX_EMAILS_PER_HOUR_PER_USER} in last hour`
+              : 'sibling-rate-limited',
+          });
+        }
+        console.warn(`[send-email] rate-limited — over-cap=${overCap.join(',')}`);
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: 'rate_limited',
+            limit_per_hour: MAX_EMAILS_PER_HOUR_PER_USER,
+            over_cap_recipients: overCap,
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Retry-After': '3600',
+            },
+          },
+        );
+      }
     }
 
     const { subject, html, text } = renderTemplate(type, data as Record<string, any>, locale);

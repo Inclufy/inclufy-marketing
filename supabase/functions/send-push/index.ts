@@ -40,6 +40,13 @@ const EXPO_ACCESS_TOKEN = Deno.env.get('EXPO_ACCESS_TOKEN') ?? '';
 // on the internet can push notifications to any user.
 const INTERNAL_PUSH_SECRET = Deno.env.get('INTERNAL_PUSH_SECRET') ?? '';
 
+// Per-user rate-limit. Defense-in-depth against a logged-in user (or a
+// trigger gone runaway) hammering send-push. Default 100 pushes per
+// user per hour. Override via env. 0 = disabled (not recommended).
+const MAX_PUSHES_PER_HOUR_PER_USER = Number(
+  Deno.env.get('MAX_PUSHES_PER_HOUR_PER_USER') ?? '100',
+);
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -89,10 +96,10 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
-async function fetchActiveTokens(userIds: string[]): Promise<{ id: string; expo_push_token: string }[]> {
+async function fetchActiveTokens(userIds: string[]): Promise<{ id: string; user_id: string; expo_push_token: string }[]> {
   const { data, error } = await supa
     .from('user_devices')
-    .select('id, expo_push_token')
+    .select('id, user_id, expo_push_token')
     .in('user_id', userIds)
     .eq('is_active', true);
   if (error) {
@@ -167,15 +174,85 @@ Deno.serve(async (req) => {
   if (userIds.length === 0) return jsonResponse({ error: 'user_ids required' }, 400);
   if (!body.title || !body.body) return jsonResponse({ error: 'title and body required' }, 400);
 
-  const devices = await fetchActiveTokens(userIds);
-  if (devices.length === 0) {
-    return jsonResponse({ ok: true, sent: 0, failed: 0, reason: 'no active devices' });
+  // Per-user rate-limit. Count sends to each user_id in trailing 1h;
+  // any user over the cap gets short-circuited (and logged with
+  // status='rate_limited' for forensics — see Scenario D in
+  // BREACH_RESPONSE_RUNBOOK.md).
+  const overCap = new Set<string>();
+  if (MAX_PUSHES_PER_HOUR_PER_USER > 0) {
+    const sinceIso = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    for (const uid of userIds) {
+      const { count } = await supa
+        .from('push_send_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', uid)
+        .eq('status', 'sent')
+        .gte('sent_at', sinceIso);
+      if ((count ?? 0) >= MAX_PUSHES_PER_HOUR_PER_USER) overCap.add(uid);
+    }
+    if (overCap.size > 0) {
+      const rateLimitedRows = [...overCap].map((uid) => ({
+        user_id: uid,
+        title: body.title,
+        body: body.body,
+        status: 'rate_limited' as const,
+        status_detail: `>${MAX_PUSHES_PER_HOUR_PER_USER} in last hour`,
+      }));
+      await supa.from('push_send_log').insert(rateLimitedRows);
+      // If ALL recipients are over cap, refuse outright with 429.
+      if (overCap.size === userIds.length) {
+        return new Response(
+          JSON.stringify({
+            ok: false,
+            error: 'rate_limited',
+            limit_per_hour: MAX_PUSHES_PER_HOUR_PER_USER,
+            over_cap_users: [...overCap],
+          }),
+          {
+            status: 429,
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+              'Retry-After': '3600',
+            },
+          },
+        );
+      }
+      // Otherwise filter out the capped users and proceed with the rest
+      // — partial delivery is better than total failure for batch sends.
+    }
   }
 
-  // Build messages — keep token→device-id map so we can deactivate stale ones
+  const eligibleUserIds = userIds.filter((u) => !overCap.has(u));
+  const devices = await fetchActiveTokens(eligibleUserIds);
+  if (devices.length === 0) {
+    // Log no-devices for the eligible users
+    if (eligibleUserIds.length > 0) {
+      await supa.from('push_send_log').insert(
+        eligibleUserIds.map((uid) => ({
+          user_id: uid,
+          title: body.title,
+          body: body.body,
+          status: 'no_devices' as const,
+        })),
+      );
+    }
+    return jsonResponse({
+      ok: true,
+      sent: 0,
+      failed: 0,
+      rate_limited: overCap.size,
+      reason: 'no active devices',
+    });
+  }
+
+  // Build messages — keep token→device-id and token→user-id maps so we
+  // can deactivate stale tokens AND log per-user send results.
   const tokenToDevice = new Map<string, string>();
+  const tokenToUser = new Map<string, string>();
   const messages: ExpoMessage[] = devices.map((d) => {
     tokenToDevice.set(d.expo_push_token, d.id);
+    tokenToUser.set(d.expo_push_token, d.user_id);
     return {
       to: d.expo_push_token,
       title: body.title,
@@ -194,21 +271,50 @@ Deno.serve(async (req) => {
   let sent = 0;
   let failed = 0;
   const deactivate: string[] = [];
+  const logRows: Array<{
+    user_id: string;
+    expo_push_id: string | null;
+    title: string;
+    body: string;
+    status: 'sent' | 'failed';
+    status_detail: string | null;
+  }> = [];
 
   for (let i = 0; i < messages.length; i += batchSize) {
     const batch = messages.slice(i, i + batchSize);
     try {
       const tickets = await postBatchToExpo(batch);
       tickets.forEach((ticket, idx) => {
+        const tokenForThisTicket = batch[idx].to;
+        const userIdForThisTicket = tokenToUser.get(tokenForThisTicket) ?? null;
         if (ticket.status === 'ok') {
           sent += 1;
+          if (userIdForThisTicket) {
+            logRows.push({
+              user_id: userIdForThisTicket,
+              expo_push_id: ticket.id ?? null,
+              title: body.title,
+              body: body.body,
+              status: 'sent',
+              status_detail: null,
+            });
+          }
         } else {
           failed += 1;
           // DeviceNotRegistered → token is dead, mark inactive
           if (ticket.details?.error === 'DeviceNotRegistered') {
-            const tokenForThisTicket = batch[idx].to;
             const deviceId = tokenToDevice.get(tokenForThisTicket);
             if (deviceId) deactivate.push(deviceId);
+          }
+          if (userIdForThisTicket) {
+            logRows.push({
+              user_id: userIdForThisTicket,
+              expo_push_id: null,
+              title: body.title,
+              body: body.body,
+              status: 'failed',
+              status_detail: ticket.details?.error ?? ticket.message ?? 'unknown',
+            });
           }
           console.warn(`[send-push] ticket error: ${ticket.message} (${ticket.details?.error})`);
         }
@@ -219,12 +325,19 @@ Deno.serve(async (req) => {
     }
   }
 
+  // Best-effort log write — chunked to avoid hitting Supabase row limits.
+  if (logRows.length > 0) {
+    for (let i = 0; i < logRows.length; i += 200) {
+      await supa.from('push_send_log').insert(logRows.slice(i, i + 200));
+    }
+  }
   await deactivateDevices(deactivate);
 
   return jsonResponse({
     ok: true,
     sent,
     failed,
+    rate_limited: overCap.size,
     deactivated: deactivate.length,
     total_devices: devices.length,
   });
