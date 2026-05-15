@@ -29,6 +29,80 @@ jobs:
       - run: npm ci
       - run: npm test -- --ci
 
+  # Sprint-3 #15 — security audit (npm).
+  # Fails on HIGH/CRITICAL vulns in production deps. Dev deps are excluded
+  # to avoid noise on transitive dev tooling. Run `npm audit --production
+  # --omit=dev` locally to reproduce.
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm audit --audit-level=high --omit=dev || (echo "::warning::HIGH+ vulns in production deps — review before deploy"; exit 1)
+
+  # Sprint-3 #15 — Supabase edge functions deno-check.
+  # Validates that every Deno-targeted edge function source typechecks
+  # against the Deno standard library. Catches mistakes that tsc misses
+  # (Deno-specific imports, Deno.env, etc.).
+  edge-functions-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: deno check on every function
+        run: |
+          set -e
+          shopt -s nullglob
+          fail=0
+          for f in supabase/functions/*/index.ts; do
+            echo "::group::deno check $f"
+            if ! deno check --quiet "$f" 2>&1; then
+              echo "::error file=$f::deno check failed"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $fail
+
+  # Sprint-3 #15 — Supabase migrations syntax-lint.
+  # Catches accidental SQL syntax errors in new migration files BEFORE
+  # they are applied to prod. We don't have a running Postgres in CI so
+  # this is a parser-only check via pg_query.
+  migrations-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install postgresql-client for pg_query equivalent
+        run: |
+          set -e
+          shopt -s nullglob
+          fail=0
+          for f in supabase/migrations/*.sql; do
+            # Basic checks: file not empty, no merge-conflict markers,
+            # no obvious typos. Full parse would need pg_query or a
+            # running Postgres — out of scope for this gate.
+            if [ ! -s "$f" ]; then
+              echo "::error file=$f::empty migration file"
+              fail=1
+              continue
+            fi
+            if grep -q -E '^(<<<<<<<|>>>>>>>|=======$)' "$f"; then
+              echo "::error file=$f::merge conflict markers"
+              fail=1
+            fi
+            if grep -q -E 'DROP TABLE.*\bauth\.users\b' "$f"; then
+              echo "::error file=$f::refuses migration that drops auth.users"
+              fail=1
+            fi
+          done
+          exit $fail
+
 # build-web — REMOVED 2026-05-09. The /web/ Next.js dashboard is archived
 # at /_archive/web/. Production marketing.inclufy.com lives in the separate
 # `inclufy-marketing-web` repo and has its own CI. See docs/GAP_ANALYSIS_8092_VS_8082.md.

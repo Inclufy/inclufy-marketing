@@ -1,0 +1,67 @@
+# Dependabot — Sprint-3 item #13.
+#
+# Vulnerability + freshness scanning for AMOS mobile. Runs weekly so
+# we don't drown in PRs but still catch CVEs within 7 days of publish.
+# GitHub auto-opens PRs against `main` — the CI gate (typecheck + audit
+# + edge-functions-check) runs on each, so green-PR = safe to merge.
+#
+# Per-ecosystem rate limits keep notifications manageable. Expo SDK
+# updates are deliberately CAPPED at minor (no auto-major) because Expo
+# SDK majors require a coordinated EAS rebuild + smoke test of every
+# native module.
+
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 5
+    versioning-strategy: "increase-if-necessary"
+    labels:
+      - "dependencies"
+    groups:
+      # Group all Expo SDK packages into one PR — they need to upgrade
+      # in lockstep, otherwise expo-doctor flags mismatched versions.
+      expo-sdk:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # All Supabase JS clients in one PR (rare but coordinated).
+      supabase:
+        patterns:
+          - "@supabase/*"
+      # All Sentry packages together — runtime + native + CLI.
+      sentry:
+        patterns:
+          - "@sentry/*"
+          - "sentry-*"
+    ignore:
+      # React + React Native versions are pinned to what Expo SDK 55
+      # supports — Dependabot must not auto-bump these.
+      - dependency-name: "react"
+      - dependency-name: "react-native"
+      - dependency-name: "react-dom"
+      # Major Expo upgrades require a coordinated migration sprint.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "07:00"
+      timezone: "Europe/Amsterdam"
+    open-pull-requests-limit: 3
+    labels:
+      - "ci"
