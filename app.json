@@ -49,7 +49,8 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "blockedPermissions": [
-        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+        "android.permission.ACTIVITY_RECOGNITION"
       ],
       "permissions": [
         "CAMERA",
