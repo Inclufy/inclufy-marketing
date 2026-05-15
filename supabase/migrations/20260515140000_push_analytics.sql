@@ -39,58 +39,21 @@ comment on view public.v_push_daily_funnel is
   'Sprint-3 #18 — daily push counts: sent / failed / rate_limited / no_devices, last 90 days. Last_seen_at <90d window is the retention horizon.';
 
 -- ─── 2. Engagement by notification type ───────────────────────────────
--- A push is "opened" if the same user marked the in-app go_notifications
--- row as read within 24h of the push fire. Approximate but trend-stable.
-create or replace view public.v_push_engagement_by_type as
-  with sends as (
-    select
-      psl.user_id,
-      psl.sent_at,
-      (psl.metadata->>'type') as push_type,
-      (psl.metadata->>'notification_id') as notification_id
-    from public.push_send_log psl
-    where psl.status = 'sent'
-      and psl.sent_at > now() - interval '30 days'
-  ),
-  reads as (
-    select
-      gn.user_id,
-      gn.id      as notification_id,
-      gn.type    as gn_type,
-      gn.created_at,
-      gn.read_at
-    from public.go_notifications gn
-    where gn.read = true
-      and gn.read_at > now() - interval '31 days'
-  ),
-  joined as (
-    select
-      coalesce(s.push_type, r.gn_type) as type,
-      s.user_id,
-      s.sent_at,
-      r.read_at,
-      case when r.read_at is not null
-                and r.read_at between s.sent_at and s.sent_at + interval '24 hours'
-           then 1 else 0
-      end as opened_within_24h
-    from sends s
-    left join reads r on r.notification_id::text = s.notification_id
-  )
-  select
-    type,
-    count(*)                          as sends,
-    sum(opened_within_24h)            as opens_within_24h,
-    round(
-      100.0 * sum(opened_within_24h) / nullif(count(*), 0),
-      1
-    )                                  as open_rate_pct
-  from joined
-  where type is not null
-  group by type
-  order by sends desc;
-
-comment on view public.v_push_engagement_by_type is
-  'Sprint-3 #18 — per push notification type: sends, opens within 24h, open-rate %. Open is approximated by matching go_notifications.read_at within a 24h window of push send.';
+-- DEFERRED: requires a `read_at` timestamp column on go_notifications
+-- which doesn't exist yet (only boolean `read` + `created_at`). Without
+-- the read timestamp we can't bind a notification-open to the matching
+-- push-send time window, so the open-rate % would be meaningless.
+--
+-- Follow-up migration TODO:
+--   1. alter table public.go_notifications add column read_at timestamptz;
+--   2. update existing rows where read=true set read_at = updated_at
+--      (or NULL — historical data has no precise read time).
+--   3. Patch the mobile app NotificationCenter mark-as-read action to
+--      set read_at = now() alongside read = true.
+--   4. Re-add the v_push_engagement_by_type view from this migration's
+--      git history (commit c9b3720).
+--
+-- For now: only the send-funnel + device-freshness views ship.
 
 -- ─── 3. Device freshness ──────────────────────────────────────────────
 create or replace view public.v_push_device_freshness as
@@ -115,6 +78,5 @@ comment on view public.v_push_device_freshness is
 -- explicit grants so a future migration that opens up the tables
 -- doesn't accidentally open the analytics views.
 revoke all on public.v_push_daily_funnel from anon, authenticated;
-revoke all on public.v_push_engagement_by_type from anon, authenticated;
 revoke all on public.v_push_device_freshness from anon, authenticated;
 -- Service role retains read (default).
