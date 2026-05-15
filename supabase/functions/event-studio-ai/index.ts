@@ -3,11 +3,25 @@
 // event-post, story-arc, event-recap, transcribe, auto-tag, translate, audience-target
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  checkAiQuota,
+  logAiCall,
+  rateLimitResponse,
+} from '../_shared/ai-rate-limit.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
+
+const FN_NAME = 'event-studio-ai';
+
+/** Per-request AI logging context, threaded through the action handlers. */
+interface AiCtx {
+  supa: SupabaseClient;
+  userId: string;
+  organizationId: string | null;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,18 +35,51 @@ function jsonResp(data: unknown, status = 200) {
   });
 }
 
-async function callOpenAI(messages: object[], model = 'gpt-4o-mini', maxTokens = 1500, jsonMode = false) {
+async function callOpenAI(
+  ctx: AiCtx | null,
+  messages: object[],
+  model = 'gpt-4o-mini',
+  maxTokens = 1500,
+  jsonMode = false,
+) {
   const body: Record<string, unknown> = { model, messages, max_tokens: maxTokens, temperature: 0.7 };
   if (jsonMode) body.response_format = { type: 'json_object' };
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '';
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+        status: 'sent',
+      });
+    }
+    return data.choices?.[0]?.message?.content ?? '';
+  } catch (err) {
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        status: 'failed',
+        statusDetail: (err as Error).message?.slice(0, 500),
+      });
+    }
+    throw err;
+  }
 }
 
 function parseJSON(text: string, fallback: unknown) {
@@ -56,9 +103,9 @@ function buildBrandPrompt(base: string, brand?: Record<string, unknown>): string
 }
 
 // ─── Action: event-post ────────────────────────────────────────────
-async function handleEventPost(body: Record<string, unknown>) {
+async function handleEventPost(ctx: AiCtx, body: Record<string, unknown>) {
   const { platform, event_context, capture_note, capture_tags, image_base64, transcript, brand_context, language = 'nl' } = body;
-  const ctx = (event_context || {}) as Record<string, unknown>;
+  const evCtx = (event_context || {}) as Record<string, unknown>;
 
   // Language mapping for post generation
   const langMap: Record<string, string> = {
@@ -81,10 +128,10 @@ Always respond with valid JSON: {"text": string, "hashtags": string[], "image_de
     {
       type: 'text',
       text: `Create a ${platform} post for this event capture. Write the post in ${language || 'nl'}.
-Event: ${ctx.name || 'Event'}
-Description: ${ctx.description || ''}
-Location: ${ctx.location || ''}
-Hashtags: ${((ctx.hashtags as string[]) || []).join(' ')}
+Event: ${evCtx.name || 'Event'}
+Description: ${evCtx.description || ''}
+Location: ${evCtx.location || ''}
+Hashtags: ${((evCtx.hashtags as string[]) || []).join(' ')}
 Capture note: ${capture_note || ''}
 Tags: ${((capture_tags as string[]) || []).join(', ')}
 ${transcript ? `Audio transcript: ${transcript}` : ''}
@@ -101,17 +148,18 @@ Return JSON with: text (ready to post, in ${language || 'nl'}), hashtags (array,
   }
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }],
     image_base64 ? 'gpt-4o' : 'gpt-4o-mini',
     800,
     false,
   );
 
-  return parseJSON(result, { text: result, hashtags: ctx.hashtags || [], image_description: '', optimal_post_time: '' });
+  return parseJSON(result, { text: result, hashtags: evCtx.hashtags || [], image_description: '', optimal_post_time: '' });
 }
 
 // ─── Action: story-arc ─────────────────────────────────────────────
-async function handleStoryArc(body: Record<string, unknown>) {
+async function handleStoryArc(ctx: AiCtx, body: Record<string, unknown>) {
   const { event_name, event_date, event_start_time, event_end_time, channels, hashtags, goals, captures_so_far, brand_context } = body;
 
   const systemPrompt = buildBrandPrompt(
@@ -133,6 +181,7 @@ Plan 5-8 posts throughout the day as a narrative arc (arrival → keynote → ne
 Each arc item: time (HH:MM), phase (string), theme (string), channel (from list), content_type (photo/video/quote/reel), tip (shooting advice), caption_template (template with [brackets]).`;
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
     'gpt-4o-mini',
     1200,
@@ -143,7 +192,7 @@ Each arc item: time (HH:MM), phase (string), theme (string), channel (from list)
 }
 
 // ─── Action: event-recap ───────────────────────────────────────────
-async function handleEventRecap(body: Record<string, unknown>) {
+async function handleEventRecap(ctx: AiCtx, body: Record<string, unknown>) {
   const {
     event_name, event_date, location, posts, captures_count, published_count,
     output_format, brand_context, language = 'en', tone = 'standard',
@@ -200,6 +249,7 @@ ${formatInstructions[output_format as string] || formatInstructions.blog}
 Include 3-5 key highlights, a 1-2 sentence social teaser, and a call-to-action.`;
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
     'gpt-4o-mini',
     1800,
@@ -210,7 +260,7 @@ Include 3-5 key highlights, a 1-2 sentence social teaser, and a call-to-action.`
 }
 
 // ─── Action: transcribe ────────────────────────────────────────────
-async function handleTranscribe(body: Record<string, unknown>) {
+async function handleTranscribe(ctx: AiCtx, body: Record<string, unknown>) {
   const { audio_base64 } = body;
   if (!audio_base64) throw new Error('audio_base64 required');
 
@@ -220,18 +270,39 @@ async function handleTranscribe(body: Record<string, unknown>) {
   formData.append('model', 'whisper-1');
   formData.append('language', 'nl');
 
-  const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
-    body: formData,
-  });
-  if (!res.ok) throw new Error(`Whisper ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return { transcript: data.text || '', duration: 0 };
+  try {
+    const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(`Whisper ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    await logAiCall(ctx.supa, {
+      userId: ctx.userId,
+      organizationId: ctx.organizationId,
+      functionName: FN_NAME,
+      provider: 'openai',
+      model: 'whisper-1',
+      status: 'sent',
+    });
+    return { transcript: data.text || '', duration: 0 };
+  } catch (err) {
+    await logAiCall(ctx.supa, {
+      userId: ctx.userId,
+      organizationId: ctx.organizationId,
+      functionName: FN_NAME,
+      provider: 'openai',
+      model: 'whisper-1',
+      status: 'failed',
+      statusDetail: (err as Error).message?.slice(0, 500),
+    });
+    throw err;
+  }
 }
 
 // ─── Action: auto-tag ──────────────────────────────────────────────
-async function handleAutoTag(body: Record<string, unknown>) {
+async function handleAutoTag(ctx: AiCtx, body: Record<string, unknown>) {
   const { image_base64, existing_tags } = body;
 
   const systemPrompt = `You are an image analysis expert for event photography.
@@ -246,6 +317,7 @@ Tag types: person, product, location, activity, mood, branding, setup`;
   }
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }],
     'gpt-4o',
     600,
@@ -256,7 +328,7 @@ Tag types: person, product, location, activity, mood, branding, setup`;
 }
 
 // ─── Action: translate ─────────────────────────────────────────────
-async function handleTranslate(body: Record<string, unknown>) {
+async function handleTranslate(ctx: AiCtx, body: Record<string, unknown>) {
   const { text, source_language, target_languages, platform, brand_context } = body;
   const targets = ((target_languages as string[]) || ['en', 'nl', 'fr']);
 
@@ -270,6 +342,7 @@ Always respond with valid JSON: {"translations": {lang: {"text": string, "hashta
 Adapt tone, idioms, and hashtags culturally. Text: "${text}"`;
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
     'gpt-4o-mini',
     800,
@@ -280,9 +353,9 @@ Adapt tone, idioms, and hashtags culturally. Text: "${text}"`;
 }
 
 // ─── Action: audience-target ───────────────────────────────────────
-async function handleAudienceTarget(body: Record<string, unknown>) {
+async function handleAudienceTarget(ctx: AiCtx, body: Record<string, unknown>) {
   const { text_content, channel, event_context, hashtags, brand_context } = body;
-  const ctx = (event_context || {}) as Record<string, unknown>;
+  const evCtx = (event_context || {}) as Record<string, unknown>;
 
   const systemPrompt = buildBrandPrompt(
     `You are a marketing strategist. Analyze content and suggest optimal audiences.
@@ -291,11 +364,12 @@ Always respond with valid JSON: {"primary": string, "secondary": string, "reason
   );
 
   const userMsg = `Suggest the best target audience for this ${channel} post:
-Event: ${ctx.name || ''}
+Event: ${evCtx.name || ''}
 Content: "${text_content}"
 Hashtags: ${((hashtags as string[]) || []).join(' ')}`;
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userMsg }],
     'gpt-4o-mini',
     600,
@@ -306,7 +380,7 @@ Hashtags: ${((hashtags as string[]) || []).join(' ')}`;
 }
 
 // ─── Action: ocr-card ─────────────────────────────────────────────
-async function handleOcrCard(body: Record<string, unknown>) {
+async function handleOcrCard(ctx: AiCtx, body: Record<string, unknown>) {
   const { image_base64 } = body;
   if (!image_base64) throw new Error('image_base64 required');
 
@@ -323,6 +397,7 @@ Extract phone numbers in international format if possible.`;
   ];
 
   const result = await callOpenAI(
+    ctx,
     [{ role: 'system', content: systemPrompt }, { role: 'user', content: userContent }],
     'gpt-4o',
     500,
@@ -348,19 +423,34 @@ serve(async (req) => {
 
     if (!OPENAI_API_KEY) return jsonResp({ error: 'OpenAI API key not configured' }, 503);
 
+    // ─── AI rate-limit: per-user quota check (Sprint-3 #17) ───
+    const quota = await checkAiQuota(supabase, {
+      userId: user.id,
+      functionName: FN_NAME,
+    });
+    if (!quota.ok) return rateLimitResponse(quota);
+
     const body = await req.json() as Record<string, unknown>;
     const action = body.action as string;
 
+    // Optional org id from the body / brand_context (best effort).
+    const brand = body.brand_context as Record<string, unknown> | undefined;
+    const organizationId =
+      (typeof body.organization_id === 'string' ? body.organization_id : null) ??
+      (typeof brand?.organization_id === 'string' ? (brand.organization_id as string) : null);
+
+    const aiCtx: AiCtx = { supa: supabase, userId: user.id, organizationId };
+
     let result: unknown;
     switch (action) {
-      case 'event-post':      result = await handleEventPost(body); break;
-      case 'story-arc':       result = await handleStoryArc(body); break;
-      case 'event-recap':     result = await handleEventRecap(body); break;
-      case 'transcribe':      result = await handleTranscribe(body); break;
-      case 'auto-tag':        result = await handleAutoTag(body); break;
-      case 'translate':       result = await handleTranslate(body); break;
-      case 'audience-target': result = await handleAudienceTarget(body); break;
-      case 'ocr-card':        result = await handleOcrCard(body); break;
+      case 'event-post':      result = await handleEventPost(aiCtx, body); break;
+      case 'story-arc':       result = await handleStoryArc(aiCtx, body); break;
+      case 'event-recap':     result = await handleEventRecap(aiCtx, body); break;
+      case 'transcribe':      result = await handleTranscribe(aiCtx, body); break;
+      case 'auto-tag':        result = await handleAutoTag(aiCtx, body); break;
+      case 'translate':       result = await handleTranslate(aiCtx, body); break;
+      case 'audience-target': result = await handleAudienceTarget(aiCtx, body); break;
+      case 'ocr-card':        result = await handleOcrCard(aiCtx, body); break;
       default: return jsonResp({ error: `Unknown action: ${action}` }, 400);
     }
 

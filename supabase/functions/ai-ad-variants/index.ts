@@ -19,7 +19,12 @@
  */
 
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
-import { createClient } from 'jsr:@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'jsr:@supabase/supabase-js@2';
+import {
+  checkAiQuota,
+  logAiCall,
+  rateLimitResponse,
+} from '../_shared/ai-rate-limit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,8 +33,17 @@ const corsHeaders = {
 };
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
+
+const FN_NAME = 'ai-ad-variants';
+
+interface AiCtx {
+  supa: SupabaseClient;
+  userId: string;
+  organizationId: string | null;
+}
 
 // Per-channel character limits — copied from Meta/TikTok/LinkedIn ad specs
 const LIMITS: Record<string, { headline: number; primary: number; description: number }> = {
@@ -62,8 +76,9 @@ const VARIANT_BLUEPRINTS = [
   },
 ];
 
-async function callOpenAI(prompt: string, system: string): Promise<string> {
+async function callOpenAI(ctx: AiCtx | null, prompt: string, system: string): Promise<string> {
   if (!OPENAI_API_KEY) return '';
+  const model = 'gpt-4o-mini';
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -72,7 +87,7 @@ async function callOpenAI(prompt: string, system: string): Promise<string> {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model,
         messages: [
           { role: 'system', content: system },
           { role: 'user', content: prompt },
@@ -81,10 +96,46 @@ async function callOpenAI(prompt: string, system: string): Promise<string> {
         temperature: 0.8,
       }),
     });
-    if (!res.ok) return '';
+    if (!res.ok) {
+      if (ctx) {
+        await logAiCall(ctx.supa, {
+          userId: ctx.userId,
+          organizationId: ctx.organizationId,
+          functionName: FN_NAME,
+          provider: 'openai',
+          model,
+          status: 'failed',
+          statusDetail: `http_${res.status}`,
+        });
+      }
+      return '';
+    }
     const data = await res.json();
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+        status: 'sent',
+      });
+    }
     return data.choices?.[0]?.message?.content ?? '';
-  } catch {
+  } catch (err) {
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        status: 'failed',
+        statusDetail: (err as Error).message?.slice(0, 500),
+      });
+    }
     return '';
   }
 }
@@ -134,6 +185,25 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       global: { headers: { Authorization: auth } },
     });
+
+    // ─── AI rate-limit (Sprint-3 #17) ───
+    let aiCtx: AiCtx | null = null;
+    if (auth && auth !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+      try {
+        const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: auth } },
+          auth: { persistSession: false },
+        });
+        const { data: { user } } = await userClient.auth.getUser();
+        if (user) {
+          const quota = await checkAiQuota(supabase, { userId: user.id, functionName: FN_NAME });
+          if (!quota.ok) return rateLimitResponse(quota);
+          aiCtx = { supa: supabase, userId: user.id, organizationId: null };
+        }
+      } catch {
+        // best-effort
+      }
+    }
 
     // Fetch source post for context
     let originalText = '';
@@ -186,7 +256,7 @@ Limits: headline max ${limit.headline} chars, primary_text max ${limit.primary} 
 
 Generate the ad creative now. Stay native to ${channel} — no hashtags in headline, emojis OK in primary_text.`;
 
-      const aiResponse = await callOpenAI(prompt, system);
+      const aiResponse = await callOpenAI(aiCtx, prompt, system);
       let parsed: any = null;
       if (aiResponse) {
         try { parsed = JSON.parse(aiResponse); } catch { /* fall through to fallback */ }

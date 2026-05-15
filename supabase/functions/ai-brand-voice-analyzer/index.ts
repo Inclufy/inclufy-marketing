@@ -13,11 +13,25 @@
 // ════════════════════════════════════════════════════════════════════
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  checkAiQuota,
+  logAiCall,
+  rateLimitResponse,
+} from '../_shared/ai-rate-limit.ts';
 
 const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
+const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+const FN_NAME = 'ai-brand-voice-analyzer';
+
+interface AiCtx {
+  supa: SupabaseClient;
+  userId: string;
+  organizationId: string | null;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -79,7 +93,7 @@ async function fetchLinkedInPosts(personUrn: string, accessToken: string): Promi
 }
 
 // ─── LLM analysis ───────────────────────────────────────────────────
-async function analyzeWithLLM(posts: Array<{ message: string }>): Promise<any> {
+async function analyzeWithLLM(ctx: AiCtx | null, posts: Array<{ message: string }>): Promise<any> {
   if (posts.length === 0) {
     return {
       tone: 'unknown',
@@ -112,27 +126,55 @@ Geef een JSON-analyse met deze velden:
 
 Antwoord met PURE JSON, geen markdown wrappers.`;
 
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 800,
-      temperature: 0.3,
-      response_format: { type: 'json_object' },
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
-  }
-  const data = await res.json();
-  const content = data.choices?.[0]?.message?.content ?? '{}';
+  const model = 'gpt-4o-mini';
   try {
-    return JSON.parse(content);
-  } catch {
-    throw new Error('LLM returned invalid JSON');
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 800,
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+    }
+    const data = await res.json();
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+        status: 'sent',
+      });
+    }
+    const content = data.choices?.[0]?.message?.content ?? '{}';
+    try {
+      return JSON.parse(content);
+    } catch {
+      throw new Error('LLM returned invalid JSON');
+    }
+  } catch (err) {
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        status: 'failed',
+        statusDetail: (err as Error).message?.slice(0, 500),
+      });
+    }
+    throw err;
   }
 }
 
@@ -169,6 +211,26 @@ serve(async (req) => {
 
     const db = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ─── AI rate-limit (Sprint-3 #17) ───
+    let aiCtx: AiCtx | null = null;
+    const authHeader = req.headers.get('Authorization') ?? '';
+    if (authHeader && authHeader !== `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`) {
+      try {
+        const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+          global: { headers: { Authorization: authHeader } },
+          auth: { persistSession: false },
+        });
+        const { data: { user } } = await userClient.auth.getUser();
+        if (user) {
+          const quota = await checkAiQuota(db, { userId: user.id, functionName: FN_NAME });
+          if (!quota.ok) return rateLimitResponse(quota);
+          aiCtx = { supa: db, userId: user.id, organizationId: null };
+        }
+      } catch {
+        // best-effort
+      }
+    }
+
     // Check cache first (90-day reuse window)
     const { data: cached } = await db
       .from('brand_voice_profiles')
@@ -204,7 +266,12 @@ serve(async (req) => {
     }
 
     // Analyze
-    const analysis = await analyzeWithLLM(posts);
+    // Fall back to account.user_id when caller wasn't a JWT user (service-role
+    // invocation) — the brand-voice analysis is always tied to a user.
+    if (!aiCtx && account?.user_id) {
+      aiCtx = { supa: db, userId: account.user_id as string, organizationId: null };
+    }
+    const analysis = await analyzeWithLLM(aiCtx, posts);
     const avgLen = Math.round(posts.reduce((sum, p) => sum + p.message.length, 0) / posts.length);
 
     const dateRange = posts.length > 0

@@ -20,11 +20,25 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  checkAiQuota,
+  logAiCall,
+  rateLimitResponse,
+} from '../_shared/ai-rate-limit.ts';
 
 const OPENAI_API_KEY      = Deno.env.get('OPENAI_API_KEY') ?? '';
 const SUPABASE_URL        = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY   = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+
+const FN_NAME = 'orchestrator';
+
+/** Per-request AI logging context. Null when running service-role (cron). */
+interface AiCtx {
+  supa: SupabaseClient;
+  userId: string;
+  organizationId: string | null;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -184,21 +198,49 @@ async function assertOrgMember(svc: SupabaseClient, orgId: string, userId: strin
   return !!data;
 }
 
-async function callOpenAI(messages: object[], tools: object[], model = 'gpt-4o-mini') {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify({
-      model,
-      messages,
-      tools,
-      tool_choice: 'auto',
-      max_tokens: 1500,
-      temperature: 0.3,
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
-  return await res.json();
+async function callOpenAI(ctx: AiCtx | null, messages: object[], tools: object[], model = 'gpt-4o-mini') {
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model,
+        messages,
+        tools,
+        tool_choice: 'auto',
+        max_tokens: 1500,
+        temperature: 0.3,
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+        status: 'sent',
+      });
+    }
+    return data;
+  } catch (err) {
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        status: 'failed',
+        statusDetail: (err as Error).message?.slice(0, 500),
+      });
+    }
+    throw err;
+  }
 }
 
 // ─── Action: dispatch ──────────────────────────────────────────────────────
@@ -213,6 +255,11 @@ async function handleDispatch(req: Request) {
   const svc = serviceClient();
   const isMember = await assertOrgMember(svc, body.organization_id, ctx.user.id);
   if (!isMember) return errResp('Not a member of this organization', 403);
+
+  // ─── AI rate-limit (Sprint-3 #17): per-user cap on planner LLM calls ──
+  const quota = await checkAiQuota(svc, { userId: ctx.user.id, functionName: FN_NAME });
+  if (!quota.ok) return rateLimitResponse(quota);
+  const aiCtx: AiCtx = { supa: svc, userId: ctx.user.id, organizationId: body.organization_id };
 
   // Look up registered agents for this org.
   const { data: agents, error: agentsErr } = await svc
@@ -246,7 +293,7 @@ async function handleDispatch(req: Request) {
         content: `Goal: ${body.goal}\nInput: ${JSON.stringify(body.input ?? {})}`,
       },
     ];
-    const plan = await callOpenAI(planMessages, AGENT_TOOLS);
+    const plan = await callOpenAI(aiCtx, planMessages, AGENT_TOOLS);
     const calls = plan.choices?.[0]?.message?.tool_calls ?? [];
     plannedToolCalls = calls.map((c: any) => ({
       name: c.function.name,
@@ -725,6 +772,11 @@ async function handleRunGoals(req: Request) {
     } else {
       return errResp('organization_id query param required (multiple goal-bearing orgs)', 400);
     }
+
+    // ─── AI rate-limit (Sprint-3 #17): per-user cap on goal-planner LLM ──
+    // Cron / service-role invocations bypass the cap (no user to bill).
+    const quota = await checkAiQuota(svc, { userId: callerUserId, functionName: FN_NAME });
+    if (!quota.ok) return rateLimitResponse(quota);
   }
 
   // ── 2. Advisory lock + load active goals ──
@@ -882,12 +934,17 @@ async function handleRunGoals(req: Request) {
       },
     ];
 
+    // AI logging context: only when a user initiated the run (skip cron/service).
+    const goalAiCtx: AiCtx | null = callerUserId
+      ? { supa: svc, userId: callerUserId, organizationId: goal.organization_id }
+      : null;
+
     let plannedToolCalls: Array<{ name: string; args: Record<string, unknown> }> = [];
     if (allowedTools.length === 0) {
       plannedToolCalls = [];
     } else {
       try {
-        const plan = await callOpenAI(plannerMessages, allowedTools);
+        const plan = await callOpenAI(goalAiCtx, plannerMessages, allowedTools);
         const calls = plan.choices?.[0]?.message?.tool_calls ?? [];
         plannedToolCalls = calls
           .map((c: any) => ({

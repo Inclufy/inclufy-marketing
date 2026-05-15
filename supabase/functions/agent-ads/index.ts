@@ -20,11 +20,25 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  checkAiQuota,
+  logAiCall,
+  rateLimitResponse,
+} from '../_shared/ai-rate-limit.ts';
 
 const SUPABASE_URL         = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_ANON_KEY    = Deno.env.get('SUPABASE_ANON_KEY') ?? '';
 const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 const OPENAI_API_KEY       = Deno.env.get('OPENAI_API_KEY') ?? '';
+
+const FN_NAME = 'agent-ads';
+
+/** Per-request AI logging context (null when invoked service-role w/o user JWT). */
+interface AiCtx {
+  supa: SupabaseClient;
+  userId: string;
+  organizationId: string | null;
+}
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,18 +63,50 @@ function svcClient(): SupabaseClient {
   });
 }
 
-async function callOpenAI(messages: object[], model = 'gpt-4o-mini', maxTokens = 1500): Promise<string> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
-    body: JSON.stringify({
-      model, messages, max_tokens: maxTokens, temperature: 0.4,
-      response_format: { type: 'json_object' },
-    }),
-  });
-  if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? '{}';
+async function callOpenAI(
+  ctx: AiCtx | null,
+  messages: object[],
+  model = 'gpt-4o-mini',
+  maxTokens = 1500,
+): Promise<string> {
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${OPENAI_API_KEY}` },
+      body: JSON.stringify({
+        model, messages, max_tokens: maxTokens, temperature: 0.4,
+        response_format: { type: 'json_object' },
+      }),
+    });
+    if (!res.ok) throw new Error(`OpenAI ${res.status}: ${await res.text()}`);
+    const data = await res.json();
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        inputTokens: data.usage?.prompt_tokens ?? null,
+        outputTokens: data.usage?.completion_tokens ?? null,
+        status: 'sent',
+      });
+    }
+    return data.choices?.[0]?.message?.content ?? '{}';
+  } catch (err) {
+    if (ctx) {
+      await logAiCall(ctx.supa, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        functionName: FN_NAME,
+        provider: 'openai',
+        model,
+        status: 'failed',
+        statusDetail: (err as Error).message?.slice(0, 500),
+      });
+    }
+    throw err;
+  }
 }
 
 interface ReqBody {
@@ -87,7 +133,7 @@ async function isLinkedInProgrammaticAllowed(svc: SupabaseClient, orgId: string)
 }
 
 // ─── Action: boost_post ────────────────────────────────────────────────────
-async function actionBoostPost(svc: SupabaseClient, body: ReqBody) {
+async function actionBoostPost(svc: SupabaseClient, body: ReqBody, aiCtx: AiCtx | null) {
   if (!body.post_id) return errResp('post_id required for boost_post');
   if (!body.channel) return errResp('channel required for boost_post');
   if (!body.budget_eur || body.budget_eur <= 0)
@@ -140,7 +186,7 @@ async function actionBoostPost(svc: SupabaseClient, body: ReqBody) {
   ];
   let draft: Record<string, unknown> = {};
   try {
-    draft = JSON.parse(await callOpenAI(prompt));
+    draft = JSON.parse(await callOpenAI(aiCtx, prompt));
   } catch {
     draft = { headline: '', body: '', audience_summary: '', recommended_pacing: {}, risk_flags: ['llm_parse_failed'] };
   }
@@ -174,7 +220,7 @@ async function actionBoostPost(svc: SupabaseClient, body: ReqBody) {
 }
 
 // ─── Action: draft_campaign ────────────────────────────────────────────────
-async function actionDraftCampaign(svc: SupabaseClient, body: ReqBody) {
+async function actionDraftCampaign(svc: SupabaseClient, body: ReqBody, aiCtx: AiCtx | null) {
   if (!body.channel) return errResp('channel required for draft_campaign');
   // Load social accounts available for this channel.
   const { data: accounts } = await svc
@@ -210,7 +256,7 @@ async function actionDraftCampaign(svc: SupabaseClient, body: ReqBody) {
   ];
 
   let brief: Record<string, unknown> = {};
-  try { brief = JSON.parse(await callOpenAI(prompt, 'gpt-4o-mini', 2000)); }
+  try { brief = JSON.parse(await callOpenAI(aiCtx, prompt, 'gpt-4o-mini', 2000)); }
   catch { brief = { error: 'llm_parse_failed' }; }
 
   return jsonResp({
@@ -287,6 +333,29 @@ serve(async (req) => {
 
   const svc = svcClient();
 
+  // ─── AI rate-limit context (Sprint-3 #17) ───
+  // Only enforce the quota when this call is made by an end user (JWT). When
+  // invoked by the orchestrator (service-role) or another internal worker, we
+  // skip the check — the orchestrator already paid the "user-initiated" tax.
+  let aiCtx: AiCtx | null = null;
+  const authHeader = req.headers.get('Authorization') ?? '';
+  if (authHeader && authHeader !== `Bearer ${SUPABASE_SERVICE_KEY}`) {
+    try {
+      const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        global: { headers: { Authorization: authHeader } },
+        auth: { persistSession: false },
+      });
+      const { data: { user } } = await userClient.auth.getUser();
+      if (user) {
+        const quota = await checkAiQuota(svc, { userId: user.id, functionName: FN_NAME });
+        if (!quota.ok) return rateLimitResponse(quota);
+        aiCtx = { supa: svc, userId: user.id, organizationId: body.organization_id };
+      }
+    } catch {
+      // Best-effort — fall through with aiCtx = null (no logging, no enforcement)
+    }
+  }
+
   // If invoked with a run_id, mark the run as running.
   if (body.run_id) {
     await svc.from('agent_runs').update({
@@ -297,8 +366,8 @@ serve(async (req) => {
   let result: Response;
   try {
     switch (body.action) {
-      case 'boost_post':     result = await actionBoostPost(svc, body);     break;
-      case 'draft_campaign': result = await actionDraftCampaign(svc, body); break;
+      case 'boost_post':     result = await actionBoostPost(svc, body, aiCtx);     break;
+      case 'draft_campaign': result = await actionDraftCampaign(svc, body, aiCtx); break;
       case 'pace_budget':    result = await actionPaceBudget(svc, body);    break;
       case 'report_roas':    result = await actionReportRoas(svc, body);    break;
       default: return errResp(`Unknown action: ${body.action}`);
