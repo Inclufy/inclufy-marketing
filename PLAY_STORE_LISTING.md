@@ -1,4 +1,4 @@
-# Google Play Store Listing — InclufyGO
+# Google Play Store Listing — AMOS
 
 **Package:** com.inclufy.go
 **Category:** Business
@@ -9,7 +9,7 @@
 
 ## App Name
 
-InclufyGO
+AMOS
 
 ---
 
@@ -31,13 +31,13 @@ AI-powered event marketing: publish instantly to all social channels.
 
 ### Nederlands (NL)
 
-**InclufyGO — Jouw AI Eventmarketing Assistent**
+**AMOS — Jouw AI Eventmarketing Assistent**
 
-Sta je op een beurs, netwerkevent of productlancering? Met InclufyGO zet je iedere interactie direct om in professionele content die jouw merk versterkt. Van live foto's en video's tot AI-gegenereerde posts — alles gepubliceerd op LinkedIn, Instagram, Facebook, X en TikTok in enkele seconden.
+Sta je op een beurs, netwerkevent of productlancering? Met AMOS zet je iedere interactie direct om in professionele content die jouw merk versterkt. Van live foto's en video's tot AI-gegenereerde posts — alles gepubliceerd op LinkedIn, Instagram, Facebook, X en TikTok in enkele seconden.
 
 **Maak indruk op elk event**
 
-Evenementen zijn vluchtig. Jouw content hoeft dat niet te zijn. InclufyGO geeft marketeers en eventteams de kracht om op het moment zelf te publiceren, zonder te wachten op een designer of copywriter. De AI schrijft voor je, jij goedkeurt en publiceert.
+Evenementen zijn vluchtig. Jouw content hoeft dat niet te zijn. AMOS geeft marketeers en eventteams de kracht om op het moment zelf te publiceren, zonder te wachten op een designer of copywriter. De AI schrijft voor je, jij goedkeurt en publiceert.
 
 **Kernfuncties**
 
@@ -51,9 +51,9 @@ Evenementen zijn vluchtig. Jouw content hoeft dat niet te zijn. InclufyGO geeft 
 • **Campagnebeheer** — Beheer meerdere evenementen en campagnes overzichtelijk in één dashboard.
 • **AI Copilot** — Stel vragen over je event, vraag om contentideeën of laat de AI je volledige social media planning schrijven.
 • **Meerdere Accounts** — Beheer LinkedIn Company Pages en persoonlijke profielen van meerdere gebruikers in één app.
-• **Realtime Analytics** — Volg bereik, betrokkenheid en prestaties van je posts direct vanuit InclufyGO.
+• **Realtime Analytics** — Volg bereik, betrokkenheid en prestaties van je posts direct vanuit AMOS.
 
-**Voor wie is InclufyGO?**
+**Voor wie is AMOS?**
 
 - Marketingteams die op events aanwezig zijn
 - Eventmanagers en beursorganisatoren
@@ -63,25 +63,25 @@ Evenementen zijn vluchtig. Jouw content hoeft dat niet te zijn. InclufyGO geeft 
 
 **Betrouwbaar & Veilig**
 
-InclufyGO werkt met OAuth 2.0-verbindingen voor alle sociale platformen. Jouw inloggegevens worden nooit opgeslagen in de app. Alle data wordt versleuteld opgeslagen conform GDPR-richtlijnen.
+AMOS werkt met OAuth 2.0-verbindingen voor alle sociale platformen. Jouw inloggegevens worden nooit opgeslagen in de app. Alle data wordt versleuteld opgeslagen conform GDPR-richtlijnen.
 
 **Meertalig**
 
-InclufyGO is beschikbaar in het Nederlands, Engels en Frans.
+AMOS is beschikbaar in het Nederlands, Engels en Frans.
 
-Download InclufyGO en maak van elk event een marketing succes.
+Download AMOS en maak van elk event een marketing succes.
 
 ---
 
 ### English (EN)
 
-**InclufyGO — Your AI Event Marketing Assistant**
+**AMOS — Your AI Event Marketing Assistant**
 
-At a trade show, networking event, or product launch? InclufyGO turns every interaction into professional branded content published to LinkedIn, Instagram, Facebook, X, and TikTok in seconds. No waiting for a designer or copywriter — your AI writes it, you approve it, and it goes live instantly.
+At a trade show, networking event, or product launch? AMOS turns every interaction into professional branded content published to LinkedIn, Instagram, Facebook, X, and TikTok in seconds. No waiting for a designer or copywriter — your AI writes it, you approve it, and it goes live instantly.
 
 **Make Every Event Count**
 
-Events are fleeting. Your content doesn't have to be. InclufyGO gives marketing and event teams the power to publish in the moment, reaching your audience while the energy is still high.
+Events are fleeting. Your content doesn't have to be. AMOS gives marketing and event teams the power to publish in the moment, reaching your audience while the energy is still high.
 
 **Key Features**
 
@@ -95,9 +95,9 @@ Events are fleeting. Your content doesn't have to be. InclufyGO gives marketing 
 • **Campaign Management** — Manage multiple events and campaigns in one clear dashboard.
 • **AI Copilot** — Ask questions about your event, request content ideas, or let the AI write your full social media plan.
 • **Multiple Accounts** — Manage LinkedIn Company Pages and personal profiles for multiple users in one app.
-• **Real-Time Analytics** — Track reach, engagement, and post performance directly within InclufyGO.
+• **Real-Time Analytics** — Track reach, engagement, and post performance directly within AMOS.
 
-**Who is InclufyGO for?**
+**Who is AMOS for?**
 
 - Marketing teams present at events
 - Event managers and trade show organisers
@@ -107,13 +107,13 @@ Events are fleeting. Your content doesn't have to be. InclufyGO gives marketing 
 
 **Trusted & Secure**
 
-InclufyGO uses OAuth 2.0 connections for all social platforms. Your login credentials are never stored in the app. All data is encrypted in compliance with GDPR guidelines.
+AMOS uses OAuth 2.0 connections for all social platforms. Your login credentials are never stored in the app. All data is encrypted in compliance with GDPR guidelines.
 
 **Multilingual**
 
-InclufyGO is available in Dutch, English, and French.
+AMOS is available in Dutch, English, and French.
 
-Download InclufyGO and turn every event into a marketing success.
+Download AMOS and turn every event into a marketing success.
 
 ---
 

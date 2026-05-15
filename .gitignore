@@ -79,3 +79,6 @@ tmp/
 _archive/web/.next/
 _archive/web/node_modules/
 _archive/web/dist/
+
+# Supabase CLI ephemeral state — must not be tracked
+supabase/.temp/

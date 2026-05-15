@@ -17,14 +17,14 @@
       "bundleIdentifier": "com.inclufy.go",
       "buildNumber": "290",
       "infoPlist": {
-        "NSCameraUsageDescription": "Inclufy GO needs camera access to capture photos and videos at events.",
-        "NSMicrophoneUsageDescription": "Inclufy GO needs microphone access for video and audio recording.",
-        "NSPhotoLibraryUsageDescription": "Inclufy GO saves branded content to your photo library.",
-        "NSFaceIDUsageDescription": "Inclufy GO uses Face ID for secure app access.",
-        "NFCReaderUsageDescription": "Inclufy GO uses NFC to instantly share and receive contact cards.",
-        "NSLocationWhenInUseUsageDescription": "Inclufy GO uses your location to tag scanned contacts with region data (city, province, country).",
-        "NSCalendarsUsageDescription": "Inclufy GO adds events to your calendar with automatic reminders.",
-        "NSCalendarsFullAccessUsageDescription": "Inclufy GO adds events to your calendar with automatic reminders.",
+        "NSCameraUsageDescription": "AMOS needs camera access to capture photos and videos at events.",
+        "NSMicrophoneUsageDescription": "AMOS needs microphone access for video and audio recording.",
+        "NSPhotoLibraryUsageDescription": "AMOS saves branded content to your photo library.",
+        "NSFaceIDUsageDescription": "AMOS uses Face ID for secure app access.",
+        "NFCReaderUsageDescription": "AMOS uses NFC to instantly share and receive contact cards.",
+        "NSLocationWhenInUseUsageDescription": "AMOS uses your location to tag scanned contacts with region data (city, province, country).",
+        "NSCalendarsUsageDescription": "AMOS adds events to your calendar with automatic reminders.",
+        "NSCalendarsFullAccessUsageDescription": "AMOS adds events to your calendar with automatic reminders.",
         "CFBundleLocalizations": [
           "nl",
           "en",
@@ -77,44 +77,44 @@
       "favicon": "./assets/favicon.png"
     },
     "owner": "inclufy",
+    "privacyPolicyUrl": "https://inclufy.com/privacy",
+    "supportUrl": "https://inclufy.com/support",
     "extra": {
       "eas": {
         "projectId": "1e7b33cf-2f76-4dab-b515-68db9ea482ff"
       },
-      "router": {},
-      "privacyPolicyUrl": "https://inclufy.com/privacy",
-      "supportUrl": "https://inclufy.com/support"
+      "router": {}
     },
     "plugins": [
       [
         "expo-camera",
         {
-          "cameraPermission": "Inclufy GO heeft camera nodig om event content te maken."
+          "cameraPermission": "AMOS heeft camera nodig om event content te maken."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "Inclufy GO heeft microfoon nodig voor audio-opname en transcriptie."
+          "microphonePermission": "AMOS heeft microfoon nodig voor audio-opname en transcriptie."
         }
       ],
       [
         "expo-media-library",
         {
-          "photosPermission": "Inclufy GO slaat branded afbeeldingen op in je fotobibliotheek."
+          "photosPermission": "AMOS slaat branded afbeeldingen op in je fotobibliotheek."
         }
       ],
       "expo-router",
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Inclufy GO gebruikt je locatie om gescande contacten te taggen met regio-informatie."
+          "locationWhenInUsePermission": "AMOS gebruikt je locatie om gescande contacten te taggen met regio-informatie."
         }
       ],
       [
         "expo-calendar",
         {
-          "calendarPermission": "Inclufy GO voegt events toe aan je agenda met automatische herinneringen."
+          "calendarPermission": "AMOS voegt events toe aan je agenda met automatische herinneringen."
         }
       ],
       [
@@ -127,7 +127,7 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Inclufy GO heeft toegang nodig tot je fotobibliotheek om een logo te selecteren."
+          "photosPermission": "AMOS heeft toegang nodig tot je fotobibliotheek om een logo te selecteren."
         }
       ],
       "expo-web-browser",
