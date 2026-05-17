@@ -32,7 +32,7 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
-import { useUserTier, canBoostMeta, canHideWatermark } from '../utils/userTier';
+import { useUserTier, canBoostMeta, canHideWatermark, postsPerDayLimit, channelsPerPostLimit } from '../utils/userTier';
 import { AmosWatermark } from '../components/AmosWatermark';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
@@ -1358,6 +1358,43 @@ export default function PostReviewScreen() {
   };
 
   const doPublish = async (post: EventPost, accountId?: string, account?: any) => {
+    // ── Free-tier daily publish cap ─────────────────────────────────────
+    // Enforce BEFORE the confirm Alert so the user doesn't see a publish
+    // dialog that's going to fail. Server-side mirror should be added to
+    // publish-social edge fn for bypass-proof enforcement.
+    const dailyCap = postsPerDayLimit(userTier);
+    if (dailyCap > 0) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user?.id) {
+          const todayIso = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+          const { count, error } = await supabase
+            .from('event_posts')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id)
+            .eq('status', 'published')
+            .gte('published_at', todayIso);
+          if (!error && (count ?? 0) >= dailyCap) {
+            Alert.alert(
+              'Dagelijkse limiet bereikt',
+              `Je free-tier abonnement staat ${dailyCap} posts per dag toe. Upgrade naar Pro voor ongelimiteerd publiceren + cross-channel publishing.`,
+              [
+                { text: 'Sluiten', style: 'cancel' },
+                {
+                  text: 'Upgrade',
+                  onPress: () => Linking.openURL('https://marketing.inclufy.com/pricing?upgrade=daily-cap'),
+                },
+              ],
+            );
+            return;
+          }
+        }
+      } catch {
+        // Fail-open on count errors — Postgres outage shouldn't block paid users
+        // by blocking the count query that returns nothing meaningful anyway.
+      }
+    }
+
     const accountLabel = account?.account_name || account?.platform_account_id;
     const confirmMsg = accountLabel
       ? `Publiceren op ${channelConfig[post.channel]?.label} als "${accountLabel}"?`

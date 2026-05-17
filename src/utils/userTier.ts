@@ -77,8 +77,31 @@ export function platformsLimit(tier: Tier | null | undefined): number {
 }
 
 export function postsPerMonthLimit(tier: Tier | null | undefined): number {
-  // -1 = unlimited
-  return tier === 'free' ? 5 : -1;
+  // -1 = unlimited.
+  // DEPRECATED: replaced by postsPerDayLimit below. Kept here so any external
+  // pricing pages that imported this still compile. Use postsPerDayLimit in
+  // new enforcement paths.
+  return -1;
+}
+
+/**
+ * Daily publish cap per user. Free tier is allowed 3 publish actions per
+ * rolling 24 hours; paid tiers are unlimited. Enforced client-side in
+ * PostReviewScreen.doPublish (DB count) and should be mirrored server-side
+ * in the publish-social edge function to prevent custom-client bypass.
+ */
+export function postsPerDayLimit(tier: Tier | null | undefined): number {
+  return tier === 'free' ? 3 : -1;
+}
+
+/**
+ * Maximum number of channels a single post can fan out to in one publish
+ * action. Free users post to 1 channel per post — cross-channel publishing
+ * (the AMOS killer feature: capture once → push to LinkedIn + IG + FB + X
+ * at once) is a paid feature.
+ */
+export function channelsPerPostLimit(tier: Tier | null | undefined): number {
+  return tier === 'free' ? 1 : -1;
 }
 
 export function boostsIncludedPerMonth(tier: Tier | null | undefined): number {
