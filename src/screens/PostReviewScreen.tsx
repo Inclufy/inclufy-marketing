@@ -1357,6 +1357,62 @@ export default function PostReviewScreen() {
     setShowAccountPicker(true);
   };
 
+  // ── Free-tier storage retention: nuke media after successful publish ──
+  // Free tier doesn't get a content library. Once the post is live on the
+  // social platform, the AMOS-internal copy is deleted to keep Supabase
+  // storage costs predictable. Paid tiers retain everything (the archive
+  // IS one of the value props of upgrading).
+  //
+  // Order matters: do this AFTER the publish API call succeeds (so the
+  // image URL was reachable by the upstream provider) and AFTER any
+  // manual-share deep-link flow (which depends on the URL to still
+  // resolve in the user's browser). We skip cleanup entirely for manual
+  // channels (snapchat / whatsapp) — those rely on the URL post-publish.
+  const cleanupFreeStoragePostPublish = async (post: EventPost) => {
+    if (canHideWatermark(userTier)) return; // paid tiers keep their archive
+    // Skip cleanup for manual-share platforms — the URL must keep
+    // resolving so the user can deep-link share into Snapchat / WhatsApp.
+    if (post.channel === 'snapchat' || post.channel === 'whatsapp') return;
+
+    const extractPath = (url: string | null | undefined): string | null => {
+      if (!url) return null;
+      // Matches both signed (/storage/v1/object/sign/<bucket>/<path>?token=...)
+      // and public (/storage/v1/object/public/<bucket>/<path>) URLs.
+      const m = url.match(/\/storage\/v1\/object\/(?:public|sign)\/media\/([^?]+)/);
+      return m?.[1] ?? null;
+    };
+
+    const extras: string[] =
+      (post.engagement as any)?.extra_images ?? [];
+    const urls: (string | null | undefined)[] = [
+      post.branded_image_url,
+      (post as any).image_url ?? null,
+      (post as any).cover_image_url ?? null,
+      ...extras,
+    ];
+    const paths = urls.map(extractPath).filter((p): p is string => !!p);
+    if (paths.length === 0) return;
+
+    try {
+      const { error } = await supabase.storage.from('media').remove(paths);
+      if (error) {
+        console.warn('[cleanupFreeStorage] storage.remove returned error:', error.message);
+        return; // don't null URLs if delete failed — avoids ghost-broken posts
+      }
+      // Null out URLs on the post so the UI can render an "archived" tile
+      // instead of a broken image. The post itself stays — only the media
+      // pointer is wiped.
+      await updatePost.mutateAsync({
+        id: post.id,
+        branded_image_url: null,
+      } as any);
+      console.log(`[cleanupFreeStorage] removed ${paths.length} object(s) for post ${post.id}`);
+    } catch (err: any) {
+      console.warn('[cleanupFreeStorage] threw:', err?.message);
+      // Fail-open: storage cleanup is best-effort, never blocks publish.
+    }
+  };
+
   const doPublish = async (post: EventPost, accountId?: string, account?: any) => {
     // ── Free-tier daily publish cap ─────────────────────────────────────
     // Enforce BEFORE the confirm Alert so the user doesn't see a publish
@@ -1534,6 +1590,9 @@ export default function PostReviewScreen() {
                 } else {
                   Alert.alert('✅ Gepubliceerd', successMsg);
                 }
+                // Fire-and-forget: free-tier storage cleanup. Runs after the
+                // success alert so the user is not blocked by network latency.
+                void cleanupFreeStoragePostPublish(post);
               }
             } catch (err: any) {
               if (err?.message === 'SOCIAL_NOT_CONNECTED') {
