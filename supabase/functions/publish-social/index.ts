@@ -4,6 +4,12 @@
 // Fetches OAuth tokens from oauth_tokens table, posts content, updates proposal status.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import {
+  fetchUserTier,
+  checkDailyCap,
+  checkChannelsPerPost,
+  policyDenyResponse,
+} from '../_shared/free-tier-policy.ts';
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -1625,6 +1631,39 @@ Deno.serve(async (req: Request) => {
           JSON.stringify({ error: 'channel and text are required' }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
         );
+      }
+
+      // ── Free-tier policy gates ─────────────────────────────────────────
+      // Internal/service-role callers (scheduled-publisher cron, recovery
+      // scripts) bypass the gates — they're already trusted code and
+      // shouldn't be capped by end-user policy.
+      if (!isInternalCall) {
+        const tier = await fetchUserTier(db, user_id);
+
+        // 1. Daily cap: max 1 unique post / day on free.
+        const dailyCheck = await checkDailyCap(db, {
+          userId: user_id,
+          tier,
+          postId: post_id,
+        });
+        if (!dailyCheck.ok) {
+          console.warn(`[publish-social] free-tier daily cap hit for user ${user_id}`);
+          return policyDenyResponse(dailyCheck, corsHeaders);
+        }
+
+        // 2. Channels-per-post cap: max 3 distinct channel fanouts on free.
+        if (directAccountId) {
+          const channelCheck = await checkChannelsPerPost(db, {
+            userId: user_id,
+            tier,
+            postId: post_id,
+            targetAccountId: directAccountId,
+          });
+          if (!channelCheck.ok) {
+            console.warn(`[publish-social] free-tier channels-per-post cap hit for post ${post_id}`);
+            return policyDenyResponse(channelCheck, corsHeaders);
+          }
+        }
       }
 
       // Find social account — use specific account_id if provided, else smart-default
