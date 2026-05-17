@@ -1433,7 +1433,9 @@ export default function PostReviewScreen() {
           if (!error && (count ?? 0) >= dailyCap) {
             Alert.alert(
               'Dagelijkse limiet bereikt',
-              `Je free-tier abonnement staat ${dailyCap} posts per dag toe. Upgrade naar Pro voor ongelimiteerd publiceren + cross-channel publishing.`,
+              dailyCap === 1
+                ? 'Je free-tier abonnement staat 1 post per dag toe (op maximaal 3 channels). Upgrade naar Pro voor ongelimiteerd publiceren.'
+                : `Je free-tier abonnement staat ${dailyCap} posts per dag toe. Upgrade naar Pro voor ongelimiteerd publiceren.`,
               [
                 { text: 'Sluiten', style: 'cancel' },
                 {

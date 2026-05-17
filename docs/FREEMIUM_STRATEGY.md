@@ -21,8 +21,8 @@
 | Laag | Free | Pro+ |
 |------|------|------|
 | **Content maken** in app | ✅ onbeperkt | ✅ onbeperkt |
-| **Publish-actions / dag** | 3 | onbeperkt |
-| **Channels / post** | 1 (geen cross-channel) | onbeperkt |
+| **Publish-actions / dag** | 1 | onbeperkt |
+| **Channels / post** | 3 (kennismaking met cross-channel USP) | onbeperkt |
 | **Watermark** "AMOS · by Inclufy" | ✅ gebakken in foto | ❌ |
 | **Storage retention** | 0 dagen (auto-delete na publish) | onbeperkt (Pro/Promote) of langer |
 | **AI calls** | gedeeld met paid: 100/uur + 1000/dag | idem (cap blijft als safety net) |
@@ -33,9 +33,8 @@
 **Doel**: laat user de capture→AI→publish flow ervaren binnen één werkdag.
 Genoeg om te zeggen "wow", niet genoeg om er een merk op te bouwen.
 
-- 1 connected social account (uit: LinkedIn personal, IG personal, FB pers, X)
-- 3 publishes / dag
-- 1 channel per post (geen cross-channel)
+- 3 connected social accounts (mix uit: LinkedIn personal, IG personal, FB persoonlijk, X — geen LinkedIn pages, geen TikTok, geen Pinterest)
+- 1 publish / dag — die ene post mag fan-out naar tot 3 channels
 - 5 AI generations / dag (event-studio-ai + ai-ad-variants gecombineerd)
 - AMOS watermark op elke foto (server-side gehandhaafd zodra de bypass fix er is)
 - 0 dagen storage retention (auto-delete na publish ✅ geïmplementeerd)

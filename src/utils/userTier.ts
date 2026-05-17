@@ -85,23 +85,31 @@ export function postsPerMonthLimit(tier: Tier | null | undefined): number {
 }
 
 /**
- * Daily publish cap per user. Free tier is allowed 3 publish actions per
+ * Daily publish cap per user. Free tier is allowed 1 unique post per
  * rolling 24 hours; paid tiers are unlimited. Enforced client-side in
- * PostReviewScreen.doPublish (DB count) and should be mirrored server-side
- * in the publish-social edge function to prevent custom-client bypass.
+ * PostReviewScreen.doPublish (DB count of distinct post rows where
+ * status='published' AND published_at >= now()-24h). Should be mirrored
+ * server-side in publish-social to prevent custom-client bypass.
+ *
+ * Counter semantics: counts the post row, NOT the per-channel fanout.
+ * So one post fanned out to 3 channels = 1 toward the daily cap. This
+ * lets free users experience the cross-channel USP within the cap.
  */
 export function postsPerDayLimit(tier: Tier | null | undefined): number {
-  return tier === 'free' ? 3 : -1;
+  return tier === 'free' ? 1 : -1;
 }
 
 /**
- * Maximum number of channels a single post can fan out to in one publish
- * action. Free users post to 1 channel per post — cross-channel publishing
- * (the AMOS killer feature: capture once → push to LinkedIn + IG + FB + X
- * at once) is a paid feature.
+ * Maximum number of channels a single post can fan out to. Free users
+ * get 3 — enough to see the cross-channel USP (capture once → LinkedIn
+ * + IG + FB) without paying. Paid tiers get unlimited so an enterprise
+ * user can push to 8+ platforms in one go.
+ *
+ * Enforcement TODO: filter the "publish to multiple" account picker so
+ * a free user can select at most 3 accounts in one publish action.
  */
 export function channelsPerPostLimit(tier: Tier | null | undefined): number {
-  return tier === 'free' ? 1 : -1;
+  return tier === 'free' ? 3 : -1;
 }
 
 export function boostsIncludedPerMonth(tier: Tier | null | undefined): number {
