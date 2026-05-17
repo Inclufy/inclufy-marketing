@@ -352,6 +352,8 @@ export default function PostReviewScreen() {
     showLogo: boolean;
     logoType: 'brand' | 'event' | 'both';
     logoPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+    /** Sponsor / partner / co-organizer logos appended after brand+event. */
+    extraLogos?: string[];
   }>>({});
   const [editingOverlay, setEditingOverlay] = useState<string | null>(null); // postId being edited
   const [overlayDraft, setOverlayDraft] = useState<{
@@ -360,7 +362,10 @@ export default function PostReviewScreen() {
     showLogo: boolean;
     logoType: 'brand' | 'event' | 'both';
     logoPosition: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
-  }>({ text: '', textPosition: 'bottom', showLogo: false, logoType: 'brand', logoPosition: 'bottom-right' });
+    extraLogos?: string[];
+  }>({ text: '', textPosition: 'bottom', showLogo: false, logoType: 'brand', logoPosition: 'bottom-right', extraLogos: [] });
+  // Track upload-in-progress for the extra-logo picker (disables the add button)
+  const [extraLogoUploading, setExtraLogoUploading] = useState(false);
 
   // ── Instagram format picker (feed / story / reel) ────────────────────
   const [igFormatDraft, setIgFormatDraft] = useState<Record<string, 'feed' | 'story' | 'reel'>>({});
@@ -498,10 +503,54 @@ export default function PostReviewScreen() {
 
   const openOverlayEditor = (post: EventPost) => {
     const existing = overlayConfig[post.id] ?? {
-      text: '', textPosition: 'bottom' as const, showLogo: false, logoType: 'brand' as const, logoPosition: 'bottom-right' as const,
+      text: '', textPosition: 'bottom' as const, showLogo: false, logoType: 'brand' as const, logoPosition: 'bottom-right' as const, extraLogos: [],
     };
-    setOverlayDraft({ ...existing });
+    setOverlayDraft({ ...existing, extraLogos: existing.extraLogos ?? [] });
     setEditingOverlay(post.id);
+  };
+
+  // ── Multi-logo helpers (sponsors / partners) ──────────────────────────
+  // Maximum 4 extras alongside brand + event = 6 logos max per overlay.
+  // More than that crowds the image and reads as visual noise on a phone.
+  const EXTRA_LOGOS_MAX = 4;
+
+  const addExtraLogo = async () => {
+    if (extraLogoUploading) return;
+    if ((overlayDraft.extraLogos ?? []).length >= EXTRA_LOGOS_MAX) {
+      Alert.alert('Maximum bereikt', `Je kunt maximaal ${EXTRA_LOGOS_MAX} extra logo's toevoegen.`);
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Geen toegang', 'AMOS heeft toegang tot je fotobibliotheek nodig om een logo te selecteren.');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+    if (result.canceled || !result.assets?.[0]) return;
+    try {
+      setExtraLogoUploading(true);
+      const { url } = await uploadMedia(result.assets[0].uri, safeEventId, 'photo');
+      setOverlayDraft((d) => ({
+        ...d,
+        extraLogos: [...(d.extraLogos ?? []), url],
+      }));
+    } catch (e: any) {
+      Alert.alert('Upload mislukt', e?.message ?? 'Kon logo niet uploaden.');
+    } finally {
+      setExtraLogoUploading(false);
+    }
+  };
+
+  const removeExtraLogo = (idx: number) => {
+    setOverlayDraft((d) => ({
+      ...d,
+      extraLogos: (d.extraLogos ?? []).filter((_, i) => i !== idx),
+    }));
   };
 
   const saveOverlay = async (postId: string) => {
@@ -1866,10 +1915,13 @@ export default function PostReviewScreen() {
                           const logos: string[] = [];
                           if ((lt === 'brand' || lt === 'both') && brandLogoUrl) logos.push(brandLogoUrl);
                           if ((lt === 'event' || lt === 'both') && eventLogoUrl) logos.push(eventLogoUrl);
+                          // Sponsor / partner logos appended after brand+event
+                          const extras = overlayConfig[post.id].extraLogos ?? [];
+                          extras.forEach((u) => { if (u) logos.push(u); });
                           return (
-                            <View style={{ position: 'absolute', ...posStyle, flexDirection: 'row', gap: 4 }}>
+                            <View style={{ position: 'absolute', ...posStyle, flexDirection: 'row', gap: 4, flexWrap: 'wrap', maxWidth: '70%' }}>
                               {logos.length > 0 ? logos.map((lurl, li) => (
-                                <Image key={li} source={{ uri: lurl }} style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.4)' }} resizeMode="contain" />
+                                <Image key={`${lurl}-${li}`} source={{ uri: lurl }} style={{ width: 32, height: 32, borderRadius: 6, backgroundColor: 'rgba(0,0,0,0.4)' }} resizeMode="contain" />
                               )) : (
                                 <View style={{ backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 8, padding: 6 }}>
                                   <Ionicons name="business-outline" size={16} color="#fff" />
@@ -3545,12 +3597,65 @@ export default function PostReviewScreen() {
                   );
                 })}
               </View>
-              {overlayDraft.showLogo && !brandLogoUrl && !eventLogoUrl && (
+              {overlayDraft.showLogo && !brandLogoUrl && !eventLogoUrl && (overlayDraft.extraLogos ?? []).length === 0 && (
                 <Text style={{ fontSize: 11, color: colors.warning, marginTop: 6 }}>
-                  ⚠️ Geen logo gevonden. Voeg een logo toe aan je Brand Kit of Event.
+                  ⚠️ Geen logo gevonden. Voeg een logo toe aan je Brand Kit, Event, of via "Extra logo's" hieronder.
                 </Text>
               )}
             </View>
+
+            {/* Extra logos: sponsors / partners / co-organizers */}
+            {overlayDraft.showLogo && (
+              <View>
+                <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text, marginBottom: 4 }}>
+                  Extra logo's (sponsors, partners)
+                </Text>
+                <Text style={{ fontSize: 11, color: colors.textSecondary, marginBottom: 10 }}>
+                  Max {EXTRA_LOGOS_MAX} extra logo's. Verschijnen naast brand + event logo.
+                </Text>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                  {(overlayDraft.extraLogos ?? []).map((url, i) => (
+                    <View key={`${url}-${i}`} style={{ position: 'relative' }}>
+                      <Image
+                        source={{ uri: url }}
+                        style={{ width: 56, height: 56, borderRadius: borderRadius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
+                        resizeMode="contain"
+                      />
+                      <TouchableOpacity
+                        onPress={() => removeExtraLogo(i)}
+                        accessibilityLabel={`Verwijder logo ${i + 1}`}
+                        style={{
+                          position: 'absolute', top: -6, right: -6,
+                          backgroundColor: '#ef4444',
+                          borderRadius: 11, width: 22, height: 22,
+                          alignItems: 'center', justifyContent: 'center',
+                          borderWidth: 2, borderColor: colors.surface,
+                        }}
+                      >
+                        <Ionicons name="close" size={13} color="#fff" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                  {(overlayDraft.extraLogos ?? []).length < EXTRA_LOGOS_MAX && (
+                    <TouchableOpacity
+                      onPress={addExtraLogo}
+                      disabled={extraLogoUploading}
+                      accessibilityLabel="Voeg extra logo toe"
+                      style={{
+                        width: 56, height: 56, borderRadius: borderRadius.md,
+                        borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.border,
+                        alignItems: 'center', justifyContent: 'center',
+                        opacity: extraLogoUploading ? 0.5 : 1,
+                      }}
+                    >
+                      {extraLogoUploading
+                        ? <ActivityIndicator size="small" color={colors.primary} />
+                        : <Ionicons name="add" size={26} color={colors.textSecondary} />}
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
 
             {/* Logo corner picker (only when logo is enabled) */}
             {overlayDraft.showLogo && (
