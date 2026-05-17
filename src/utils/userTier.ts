@@ -52,6 +52,21 @@ export function canWhiteLabel(tier: Tier | null | undefined): boolean {
   return tierAtLeast(tier, 'enterprise');
 }
 
+/**
+ * True when the user's tier allows hiding the "AMOS · by Inclufy" watermark
+ * from published photos/videos. Free tier always carries the watermark as a
+ * brand-visibility lever AND as a freemium upgrade-driver. Pro and above
+ * publish without it.
+ *
+ * Visual contract: see src/components/AmosWatermark.tsx (rendered inside
+ * the ViewShot that bakes the overlay before publish — so the watermark
+ * is permanently composited into the uploaded image, not a runtime overlay
+ * that can be screenshot'd around).
+ */
+export function canHideWatermark(tier: Tier | null | undefined): boolean {
+  return tierAtLeast(tier, 'pro');
+}
+
 export function platformsLimit(tier: Tier | null | undefined): number {
   switch (tier) {
     case 'free': return 1;

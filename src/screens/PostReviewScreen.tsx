@@ -32,7 +32,8 @@ import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
-import { useUserTier, canBoostMeta } from '../utils/userTier';
+import { useUserTier, canBoostMeta, canHideWatermark } from '../utils/userTier';
+import { AmosWatermark } from '../components/AmosWatermark';
 import AIConsentModal from '../components/AIConsentModal';
 import { useAIConsent } from '../hooks/useAIConsent';
 import ViewShot, { captureRef } from 'react-native-view-shot';
@@ -1215,9 +1216,14 @@ export default function PostReviewScreen() {
   // and updates the post's branded_image_url with the baked version.
   const bakeOverlayIntoImage = async (post: EventPost): Promise<string | null> => {
     const config = overlayConfig[post.id];
+    const needsAmosWatermark = !canHideWatermark(userTier);
     if (!config || (!config.text && !config.showLogo)) {
-      // No overlay configured — use existing image
-      return post.branded_image_url || null;
+      // No user-configured overlay — but on free tier we STILL bake the
+      // AMOS watermark into the image. Pro+ tiers skip baking entirely.
+      if (!needsAmosWatermark) {
+        return post.branded_image_url || null;
+      }
+      // Fall through: bake just the watermark, no user overlay.
     }
 
     // Wait for ViewShot ref to be available. On duplicated or freshly-
@@ -1878,6 +1884,20 @@ export default function PostReviewScreen() {
                           </View>
                         )}
                       </>
+                    )}
+                    {/* ── AMOS watermark (freemium gate) ── */}
+                    {/* Free tier always carries the watermark; Pro+ tiers skip it. */}
+                    {/* Position prefers bottom-left when user's own logo is bottom-right (avoid overlap). */}
+                    {!canHideWatermark(userTier) && (
+                      <AmosWatermark
+                        position={
+                          overlayConfig[post.id]?.showLogo &&
+                          (overlayConfig[post.id]?.logoPosition === 'bottom-right' ||
+                            !overlayConfig[post.id]?.logoPosition)
+                            ? 'bottom-left'
+                            : 'bottom-right'
+                        }
+                      />
                     )}
                   </TouchableOpacity>
                   </ViewShot>
