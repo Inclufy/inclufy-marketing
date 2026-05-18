@@ -2035,20 +2035,8 @@ export default function PostReviewScreen() {
                         )}
                       </>
                     )}
-                    {/* ── AMOS watermark (freemium gate) ── */}
-                    {/* Free tier always carries the watermark; Pro+ tiers skip it. */}
-                    {/* Position prefers bottom-left when user's own logo is bottom-right (avoid overlap). */}
-                    {!canHideWatermark(userTier) && (
-                      <AmosWatermark
-                        position={
-                          overlayConfig[post.id]?.showLogo &&
-                          (overlayConfig[post.id]?.logoPosition === 'bottom-right' ||
-                            !overlayConfig[post.id]?.logoPosition)
-                            ? 'bottom-left'
-                            : 'bottom-right'
-                        }
-                      />
-                    )}
+                    {/* ── AMOS watermark TEMPORARILY DISABLED for crash bisect ── */}
+                    {/* Re-enable once render-time bug in PostReview is diagnosed. */}
                   </TouchableOpacity>
                   </ViewShot>
                   {/* Zoom-hint intentionally rendered OUTSIDE the ViewShot so it
