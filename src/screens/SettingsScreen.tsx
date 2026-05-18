@@ -29,6 +29,10 @@ import type { RootStackParamList } from '../types';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { useLocation, formatRegion, type RegionData } from '../hooks/useLocation';
+import { useIsSuperadmin } from '../utils/superadmin';
+import TierSwitcher from '../components/TierSwitcher';
+import WatermarkPreview from '../components/WatermarkPreview';
+import WatermarkSettings from '../components/WatermarkSettings';
 
 const BIOMETRIC_KEY = 'amos_biometric_enabled';
 
@@ -51,6 +55,7 @@ export default function SettingsScreen() {
   const { t, locale, setLocale } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { scheme, setScheme, colors } = useTheme();
+  const { isSuperadmin } = useIsSuperadmin();
 
   const [email, setEmail]                         = useState<string | null>(null);
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
@@ -862,6 +867,44 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
           </TouchableOpacity>
         </View>
+
+        {/* ── Watermerk-instellingen (alle users) ──────────────────────
+            Free tier krijgt automatisch het AMOS-watermerk; iedereen kan
+            kiezen WAAR het terechtkomt op je foto's. Server-side bake
+            resolveert per request via:
+              post.engagement.watermark_position
+                → profiles.watermark_positions_by_channel[channel]
+                  → profiles.watermark_position
+                    → 'top-left'                                          */}
+        <Text style={styles.sectionLabel}>Watermerk</Text>
+        <View style={styles.card}>
+          <WatermarkSettings />
+        </View>
+
+        {/* ── Developer Tools (superadmin-only) ─────────────────────────
+            Tier-switcher + WatermarkPreview voor QA-testen. Alleen
+            zichtbaar voor emails in SUPERADMIN_EMAILS. */}
+        {isSuperadmin && (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, marginTop: spacing.md, marginBottom: 4 }}>
+              <Ionicons name="shield-checkmark" size={12} color={colors.primary} />
+              <Text style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>
+                DEVELOPER TOOLS
+              </Text>
+            </View>
+            <View style={styles.card}>
+              <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: 4 }}>
+                <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>
+                  Tier switcher
+                </Text>
+              </View>
+              <View style={styles.separator} />
+              <TierSwitcher />
+              <View style={styles.separator} />
+              <WatermarkPreview />
+            </View>
+          </>
+        )}
 
         {/* ── Mijn QR-kaart ─────────────────────────────────────────── */}
         <Text style={styles.sectionLabel}>Mijn QR-kaart</Text>
