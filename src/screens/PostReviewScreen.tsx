@@ -2035,20 +2035,14 @@ export default function PostReviewScreen() {
                         )}
                       </>
                     )}
-                    {/* ── AMOS watermark (freemium gate) ── */}
-                    {/* Rewritten 2026-05-18 — minimal text-only badge after
-                        original Image+require version crashed in build 294. */}
-                    {!canHideWatermark(userTier) && (
-                      <AmosWatermark
-                        position={
-                          overlayConfig[post.id]?.showLogo &&
-                          (overlayConfig[post.id]?.logoPosition === 'bottom-right' ||
-                            !overlayConfig[post.id]?.logoPosition)
-                            ? 'bottom-left'
-                            : 'bottom-right'
-                        }
-                      />
-                    )}
+                    {/* ── AMOS watermark — DISABLED 2026-05-18 ──
+                        Multiple iterations (V1 require+image, V2 inline text,
+                        V3 minimal View+Text) all crashed PostReview render on
+                        iOS Hermes with TypeError "undefined is not a function".
+                        Root cause not pinpointed without source-maps.
+                        Re-enable via image-bake (ImageManipulator + hosted
+                        watermark PNG) in a future sprint — bypasses JSX
+                        render path entirely. */}
                   </TouchableOpacity>
                   </ViewShot>
                   {/* Zoom-hint intentionally rendered OUTSIDE the ViewShot so it
