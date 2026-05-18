@@ -2049,25 +2049,6 @@ export default function PostReviewScreen() {
                         }
                       />
                     )}
-                    {/* DEBUG: tier indicator — REMOVE after diagnostic */}
-                    {/* Renders unconditionally so we know if the JSX path is even hit. */}
-                    <View
-                      style={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        backgroundColor: 'rgba(220, 38, 38, 0.95)',
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        borderRadius: 6,
-                        zIndex: 9999,
-                        elevation: 20,
-                      }}
-                    >
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>
-                        TIER: {String(userTier ?? 'null')} · WM: {!canHideWatermark(userTier) ? 'ON' : 'OFF'}
-                      </Text>
-                    </View>
                   </TouchableOpacity>
                   </ViewShot>
                   {/* Zoom-hint intentionally rendered OUTSIDE the ViewShot so it
