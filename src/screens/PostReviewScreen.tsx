@@ -2035,8 +2035,20 @@ export default function PostReviewScreen() {
                         )}
                       </>
                     )}
-                    {/* ── AMOS watermark TEMPORARILY DISABLED for crash bisect ── */}
-                    {/* Re-enable once render-time bug in PostReview is diagnosed. */}
+                    {/* ── AMOS watermark (freemium gate) ── */}
+                    {/* Rewritten 2026-05-18 — minimal text-only badge after
+                        original Image+require version crashed in build 294. */}
+                    {!canHideWatermark(userTier) && (
+                      <AmosWatermark
+                        position={
+                          overlayConfig[post.id]?.showLogo &&
+                          (overlayConfig[post.id]?.logoPosition === 'bottom-right' ||
+                            !overlayConfig[post.id]?.logoPosition)
+                            ? 'bottom-left'
+                            : 'bottom-right'
+                        }
+                      />
+                    )}
                   </TouchableOpacity>
                   </ViewShot>
                   {/* Zoom-hint intentionally rendered OUTSIDE the ViewShot so it
