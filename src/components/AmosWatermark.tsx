@@ -1,17 +1,21 @@
 // ──────────────────────────────────────────────────────────────────────
 // AmosWatermark — freemium watermark composited into every published photo.
 //
-// Lives INSIDE the ViewShot in PostReviewScreen so when bakeOverlayIntoImage
-// captures the ref, the watermark is permanently baked into the uploaded
-// image. Free-tier users always see this; Pro+ users skip rendering it
-// (see canHideWatermark in src/utils/userTier.ts).
+// V3 — minimal, bullet-proof. Renders a single View with Text. No
+// require() of images. No StyleSheet.create. No array style merging.
+// No accessibility props. pointerEvents="none" so it never intercepts
+// touches.
 //
-// Rewrite history: original version (commits 812b6ba/3089e41) used
-// require() of icon.png + accessibility props + array-style merging. That
-// combination crashed on iOS build 294 with "TypeError: undefined is not
-// a function" during PostReviewScreen render — root cause was never
-// fully pinpointed without source-maps. This minimal text-only version
-// avoids require() / accessibilityRole / array styles entirely.
+// Iterations history:
+//   V1 (812b6ba): Image (require icon.png) + StyleSheet + accessibility
+//                 → crashed PostReview render on iOS Hermes (TypeError
+//                 "undefined is not a function").
+//   V2 (53ff8a5): Inline styles + text-only — failed visually somehow,
+//                 Sami reported "issue met het watermerk".
+//   V3 (this):    Strip every potentially-fragile pattern. Compute
+//                 position via plain ternary on string prefix/suffix
+//                 instead of object lookup. Use solid color + opacity
+//                 instead of rgba string. Use simple borderRadius.
 // ──────────────────────────────────────────────────────────────────────
 
 import React from 'react';
@@ -25,38 +29,37 @@ export type WatermarkPosition =
 
 interface Props {
   position?: WatermarkPosition;
-  inset?: number;
-  compact?: boolean;
 }
 
-export function AmosWatermark({
-  position = 'bottom-right',
-  inset = 12,
-  compact = false,
-}: Props) {
-  // Inline position computation — avoids the dict-lookup pattern from the
-  // crashed version.
-  const positionStyle =
-    position === 'bottom-right' ? { bottom: inset, right: inset } :
-    position === 'bottom-left'  ? { bottom: inset, left: inset } :
-    position === 'top-right'    ? { top: inset, right: inset } :
-                                  { top: inset, left: inset };
+export function AmosWatermark({ position = 'bottom-right' }: Props) {
+  const isBottom = position === 'bottom-right' || position === 'bottom-left';
+  const isRight  = position === 'bottom-right' || position === 'top-right';
 
   return (
     <View
+      pointerEvents="none"
       style={{
         position: 'absolute',
-        ...positionStyle,
-        backgroundColor: 'rgba(0, 0, 0, 0.78)',
-        paddingHorizontal: 11,
-        paddingVertical: 6,
-        borderRadius: 999,
-        zIndex: 999,
-        elevation: 10,
+        bottom: isBottom ? 12 : undefined,
+        top:    isBottom ? undefined : 12,
+        right:  isRight  ? 12 : undefined,
+        left:   isRight  ? undefined : 12,
+        backgroundColor: '#000000',
+        opacity: 0.85,
+        paddingHorizontal: 10,
+        paddingVertical: 5,
+        borderRadius: 12,
       }}
     >
-      <Text style={{ color: '#ffffff', fontSize: 13, fontWeight: '700', letterSpacing: 0.5 }}>
-        AMOS{compact ? '' : ' · by Inclufy'}
+      <Text
+        style={{
+          color: '#ffffff',
+          fontSize: 12,
+          fontWeight: '700',
+          letterSpacing: 0.4,
+        }}
+      >
+        AMOS · by Inclufy
       </Text>
     </View>
   );
