@@ -410,7 +410,7 @@ export default function Step5Confirm() {
               onPress={() => {
                 // Navigate to PostReview without closing the wizard (in case user
                 // wants to come back). Caller of WizardProvider decides exit policy.
-                try { navigation.navigate('PostReview' as any, {}); } catch { /* route may not be in stack */ }
+                try { navigation.navigate('PostReview' as any, { captureId: wiz.capture.captureId, eventId: wiz.capture.eventId }); } catch { /* route may not be in stack */ }
               }}
               activeOpacity={0.85}
               style={{

@@ -147,7 +147,7 @@ function WizardBody() {
 
         <TouchableOpacity
           style={styles.skipBtn}
-          onPress={() => nav.replace('PostReview', { eventId: wiz.capture.eventId ?? '' } as any)}
+          onPress={() => nav.replace('PostReview', { captureId: wiz.capture.captureId, eventId: wiz.capture.eventId ?? '' } as any)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <SkipForward size={14} color={colors.textSecondary} weight="bold" />
