@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: MaterialCommunityIcons name=<dynamic: cat.icon> | MaterialCommunityIcons name=<dynamic: focused ? 'bullhorn' : 'bullhorn-outline'> | MaterialCommunityIcons name=<dynamic: focused ? 'calendar-star' : 'calendar-blank-outline'> | MaterialCommunityIcons name=<dynamic: focused ? 'post' : 'post-outline'> | MaterialCommunityIcons name=<dynamic: focused ? 'robot' : 'robot-outline'> | MaterialCommunityIcons name=<dynamic: focused ? 'view-dashboard' : 'view-dashboard-outline'>
 import React, { useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -22,6 +23,7 @@ import { useTranslation } from '../i18n';
 // ─── Screens ────────────────────────────────────────────────────────
 import LoginScreen from '../screens/LoginScreen';
 import HomeScreen from '../screens/HomeScreen';
+import HomeScreenV2 from '../screens/HomeScreenV2';
 import EventListScreen from '../screens/EventListScreen';
 import AutonomousHubScreen from '../screens/AutonomousHubScreen';
 import NetworkingEngineScreen from '../screens/NetworkingEngineScreen';
@@ -30,6 +32,7 @@ import CampaignListScreen from '../screens/CampaignListScreen';
 import AICommandScreen from '../screens/AICommandScreen';
 import EventSetupScreen from '../screens/EventSetupScreen';
 import LiveCaptureScreen from '../screens/LiveCaptureScreen';
+import CaptureWizardScreen from '../screens/CaptureWizardScreen';
 import PostReviewScreen from '../screens/PostReviewScreen';
 import EventDashboardScreen from '../screens/EventDashboardScreen';
 import StoryArcScreen from '../screens/StoryArcScreen';
@@ -82,6 +85,7 @@ import LibraryScreen from '../screens/LibraryScreen';
 import LibraryImportScreen from '../screens/LibraryImportScreen';
 import LibraryPostDetailScreen from '../screens/LibraryPostDetailScreen';
 
+import { CameraPlus, CameraSlash, Microphone } from 'phosphor-react-native';
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -156,7 +160,7 @@ function MainTabsWrapper() {
 
   const handleCaptureCategory = (category: string) => {
     setShowCaptureModal(false);
-    setTimeout(() => navigation.navigate('LiveCapture' as any, { captureCategory: category }), 200);
+    setTimeout(() => navigation.navigate('CaptureWizard' as any, { category }), 200);
   };
 
   return (
@@ -181,7 +185,7 @@ function MainTabsWrapper() {
         {/* Tab 1 — Dashboard */}
         <Tab.Screen
           name="HomeTab"
-          component={HomeScreen}
+          component={HomeScreenV2}
           options={{
             tabBarLabel: 'Dashboard',
             tabBarIcon: ({ focused, color }) => (
@@ -250,7 +254,7 @@ function MainTabsWrapper() {
         delayLongPress={500}
         activeOpacity={0.85}
       >
-        <MaterialCommunityIcons name="camera-plus" size={28} color="#fff" />
+        <CameraPlus size={28} color="#fff" weight="duotone" />
       </TouchableOpacity>
 
       {/* ── First-run voice discovery tip (Tier-1 #5) ── */}
@@ -262,7 +266,7 @@ function MainTabsWrapper() {
           style={fabStyles.voiceTip}
         >
           <View style={[fabStyles.voiceTipBubble, { backgroundColor: colors.text }]}>
-            <MaterialCommunityIcons name="microphone-outline" size={14} color={colors.background} />
+            <Microphone size={14} color={colors.background} weight="regular" />
             <Text style={[fabStyles.voiceTipText, { color: colors.background }]}>
               {isNl ? 'Houd ingedrukt voor spraak' : 'Hold to speak'}
             </Text>
@@ -316,7 +320,7 @@ function MainTabsWrapper() {
                 style={[fabStyles.quickCapture, { borderColor: colors.border, backgroundColor: colors.background }]}
                 onPress={() => handleCaptureCategory('quick')}
               >
-                <MaterialCommunityIcons name="camera-burst" size={20} color={colors.primary} />
+                <CameraSlash size={20} color={colors.primary} weight="duotone" />
                 <Text style={[fabStyles.quickCaptureText, { color: colors.primary }]}>Snel vastleggen</Text>
               </TouchableOpacity>
 
@@ -422,6 +426,7 @@ export default function AppNavigator({ isLoggedIn }: { isLoggedIn: boolean }) {
           <Stack.Screen name="WhatsAppSettings" component={WhatsAppSettingsScreen} options={{ title: 'WhatsApp Business' }} />
           <Stack.Screen name="BrandKit" component={BrandKitScreen} options={{ title: t.screenTitles.brandKit ?? 'Brand Kit' }} />
           <Stack.Screen name="SocialMediaWizard" component={SocialMediaWizard} options={{ headerShown: false }} />
+          <Stack.Screen name="CaptureWizard" component={CaptureWizardScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: t.screenTitles.notifications }} />
           <Stack.Screen name="DemoEnvironment" component={DemoEnvironmentScreen} options={{ title: t.screenTitles.demoEnvironment ?? 'Demo Omgeving' }} />
         </>

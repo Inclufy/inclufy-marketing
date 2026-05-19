@@ -15,7 +15,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.inclufy.go",
-      "buildNumber": "298",
+      "buildNumber": "305",
       "infoPlist": {
         "NSCameraUsageDescription": "AMOS needs camera access to capture photos and videos at events.",
         "NSMicrophoneUsageDescription": "AMOS needs microphone access for video and audio recording.",
@@ -136,7 +136,13 @@
       "expo-web-browser",
       "expo-font",
       "expo-asset",
-      "@sentry/react-native",
+      [
+        "@sentry/react-native",
+        {
+          "organization": "inclufy",
+          "project": "marketing-frontend"
+        }
+      ],
       "expo-video"
     ]
   }

@@ -157,6 +157,7 @@ export type RootStackParamList = {
   // Events
   EventSetup: { eventId?: string };
   LiveCapture: { eventId: string };
+  CaptureWizard: { category?: string } | undefined;
   PostReview: { captureId: string; eventId?: string; localMediaUri?: string; extraImageUrls?: string[] };
   EventDashboard: { eventId: string };
   StoryArc: { eventId: string };
