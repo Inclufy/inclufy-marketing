@@ -1210,7 +1210,7 @@ export default function HomeScreenV2() {
             )}
           </View>
           {recentPublications.length === 0 ? (
-            <View style={styles.emptyCard}>
+            <View style={styles.emptyState}>
               <Sparkle size={28} color={colors.textTertiary} weight="duotone" />
               <Text style={styles.emptyTitle}>
                 {locale === 'fr' ? 'Aucune publication' : locale === 'nl' ? 'Nog geen publicaties' : 'No publications yet'}

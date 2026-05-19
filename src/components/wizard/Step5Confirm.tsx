@@ -121,6 +121,9 @@ export default function Step5Confirm() {
       liveResults[acc.id] = 'in_flight';
       wiz.setConfirm({ results: { ...liveResults }, errors: { ...liveErrors } });
 
+      // Declared outside try so the catch block can use it for status='failed' update
+      let postId: string | null = null;
+
       try {
         // 1. Create the post row (capture_id is NOT NULL → must include)
         const { data: postRow, error: insertErr } = await supabase
@@ -138,7 +141,7 @@ export default function Step5Confirm() {
           .single();
 
         if (insertErr || !postRow) throw new Error(insertErr?.message ?? 'Kon post niet aanmaken');
-        const postId = (postRow as any).id as string;
+        postId = (postRow as any).id as string;
 
         // 2. Invoke publish-social with a 90s timeout (some channels — IG video,
         // TikTok upload — legitimately take 30-60s; >90s is broken). Without
@@ -200,10 +203,38 @@ export default function Step5Confirm() {
 
         liveResults[acc.id] = 'ok';
         wiz.setConfirm({ results: { ...liveResults }, errors: { ...liveErrors } });
+
+        // 317: flip the go_posts row from 'draft' to 'published' so the Posts
+        // tab shows correct status (bug: Posts tab showed all wizard-created
+        // rows as "Concept" even after successful publish).
+        await supabase
+          .from('go_posts')
+          .update({
+            status: 'published',
+            published_at: new Date().toISOString(),
+            external_post_id: result.postId ?? result.post_id ?? null,
+            external_permalink: result.permalink ?? null,
+          } as any)
+          .eq('id', postId);
       } catch (err: any) {
         liveResults[acc.id] = 'error';
         liveErrors[acc.id]  = err?.message ?? 'fout';
         wiz.setConfirm({ results: { ...liveResults }, errors: { ...liveErrors } });
+
+        // 317: also mark row as 'failed' with error message so PostReview /
+        // Posts tab can show real status + offer retry. Skip if postId is
+        // null (failure happened before insert succeeded).
+        if (postId) {
+          try {
+            await supabase
+              .from('go_posts')
+              .update({
+                status: 'failed',
+                error_message: (err?.message ?? 'fout').slice(0, 500),
+              } as any)
+              .eq('id', postId);
+          } catch { /* best effort */ }
+        }
       }
     }
 
