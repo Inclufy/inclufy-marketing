@@ -207,13 +207,14 @@ export default function Step5Confirm() {
         // 317: flip the go_posts row from 'draft' to 'published' so the Posts
         // tab shows correct status (bug: Posts tab showed all wizard-created
         // rows as "Concept" even after successful publish).
+        // 318: corrected column names — schema is published_post_id (not
+        // external_post_id) and publish_error (not error_message).
         await supabase
           .from('go_posts')
           .update({
             status: 'published',
             published_at: new Date().toISOString(),
-            external_post_id: result.postId ?? result.post_id ?? null,
-            external_permalink: result.permalink ?? null,
+            published_post_id: result.postId ?? result.post_id ?? null,
           } as any)
           .eq('id', postId);
       } catch (err: any) {
@@ -224,13 +225,14 @@ export default function Step5Confirm() {
         // 317: also mark row as 'failed' with error message so PostReview /
         // Posts tab can show real status + offer retry. Skip if postId is
         // null (failure happened before insert succeeded).
+        // 318: corrected column name — schema uses publish_error.
         if (postId) {
           try {
             await supabase
               .from('go_posts')
               .update({
                 status: 'failed',
-                error_message: (err?.message ?? 'fout').slice(0, 500),
+                publish_error: (err?.message ?? 'fout').slice(0, 500),
               } as any)
               .eq('id', postId);
           } catch { /* best effort */ }
