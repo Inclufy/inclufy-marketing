@@ -9,10 +9,10 @@
 // "binnenkort" stub.
 
 import React, { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, KeyboardAvoidingView, Platform, ActivityIndicator, Modal, SafeAreaView } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import {
-  ArrowRight, Sparkle, PencilSimple, Crop, ArrowsClockwise,
+  ArrowRight, Sparkle, PencilSimple, Crop, ArrowsClockwise, ArrowsOut, X, Check,
   FacebookLogo, InstagramLogo, LinkedinLogo, TiktokLogo, PinterestLogo, SnapchatLogo, ShareNetwork,
 } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -64,6 +64,8 @@ export default function Step4PerChannel() {
 
   const [bulkGenerating, setBulkGenerating] = useState(false);
   const [perPlatformLoading, setPerPlatformLoading] = useState<Record<string, boolean>>({});
+  const [expandedPlatform, setExpandedPlatform] = useState<string | null>(null);
+  const [inputHeights, setInputHeights] = useState<Record<string, number>>({});
   // Track whether we've auto-generated for this set already — prevents loop
   // if API returns blank for some platform.
   const autoRanForRef = useRef<string>('');
@@ -212,25 +214,134 @@ export default function Step4PerChannel() {
                 </Text>
               </TouchableOpacity>
             </View>
-            <TextInput
-              value={current}
-              onChangeText={(v) => wiz.setPerChannel({ textVariants: { ...wiz.perChannel.textVariants, [p]: v } })}
-              placeholder={bulkGenerating ? 'AI schrijft…' : `Schrijf je eigen ${p}-caption of tap ✨ Regenereer`}
-              placeholderTextColor={colors.textTertiary}
-              multiline
-              numberOfLines={3}
-              style={{
-                backgroundColor: colors.background,
-                borderWidth: 1, borderColor: colors.border,
-                borderRadius: borderRadius.md,
-                paddingHorizontal: 12, paddingVertical: 10,
-                fontSize: fontSize.sm, color: colors.text,
-                minHeight: 64, textAlignVertical: 'top',
-              }}
-            />
+            <View style={{ position: 'relative' }}>
+              <TextInput
+                value={current}
+                onChangeText={(v) => wiz.setPerChannel({ textVariants: { ...wiz.perChannel.textVariants, [p]: v } })}
+                placeholder={bulkGenerating ? 'AI schrijft…' : `Schrijf je eigen ${p}-caption of tap ✨ Regenereer`}
+                placeholderTextColor={colors.textTertiary}
+                multiline
+                onContentSizeChange={(e) => {
+                  const h = Math.min(Math.max(e.nativeEvent.contentSize.height, 64), 320);
+                  setInputHeights(s => (s[p] === h ? s : { ...s, [p]: h }));
+                }}
+                style={{
+                  backgroundColor: colors.background,
+                  borderWidth: 1, borderColor: colors.border,
+                  borderRadius: borderRadius.md,
+                  paddingHorizontal: 12, paddingVertical: 10,
+                  paddingRight: 38, // room for expand icon
+                  fontSize: fontSize.sm, color: colors.text,
+                  minHeight: 64,
+                  height: inputHeights[p] ?? Math.min(Math.max(64, Math.ceil(current.length / 38) * 22), 320),
+                  textAlignVertical: 'top',
+                }}
+              />
+              {/* Expand-to-fullscreen button */}
+              <TouchableOpacity
+                onPress={() => setExpandedPlatform(p)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={{
+                  position: 'absolute', top: 8, right: 8,
+                  width: 24, height: 24, borderRadius: 12,
+                  backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,
+                  justifyContent: 'center', alignItems: 'center',
+                }}
+                testID={`expand-${p}`}
+              >
+                <ArrowsOut size={12} color={colors.textSecondary} weight="bold" />
+              </TouchableOpacity>
+              {!!current && (
+                <Text style={{ fontSize: 10, color: colors.textTertiary, marginTop: 4, marginLeft: 4 }}>
+                  {current.length} tekens
+                </Text>
+              )}
+            </View>
           </View>
         );
       })}
+
+      {/* Full-screen edit modal — open by tapping the expand icon on a card */}
+      <Modal
+        visible={expandedPlatform !== null}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setExpandedPlatform(null)}
+      >
+        {expandedPlatform && (() => {
+          const Icon = PLATFORM_ICON[expandedPlatform] ?? ShareNetwork;
+          const color = PLATFORM_COLOR[expandedPlatform] ?? colors.primary;
+          const value = wiz.perChannel.textVariants[expandedPlatform] ?? '';
+          return (
+            <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+                <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: color + '20', justifyContent: 'center', alignItems: 'center' }}>
+                  <Icon size={18} color={color === '#000000' ? colors.text : color} weight="duotone" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text, textTransform: 'capitalize' }}>
+                    {expandedPlatform} caption
+                  </Text>
+                  <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }}>
+                    {value.length} tekens · {value.split(/\s+/).filter(Boolean).length} woorden
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => regenerateOne(expandedPlatform)}
+                  disabled={!!perPlatformLoading[expandedPlatform]}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: color + '15', borderWidth: 1, borderColor: color + '40' }}
+                >
+                  {perPlatformLoading[expandedPlatform]
+                    ? <ActivityIndicator size="small" color={color} />
+                    : <ArrowsClockwise size={11} color={color} weight="bold" />}
+                  <Text style={{ fontSize: 10, fontWeight: '700', color: color === '#000000' ? colors.text : color }}>✨ Regenereer</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setExpandedPlatform(null)}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: colors.surface, justifyContent: 'center', alignItems: 'center' }}
+                >
+                  <X size={16} color={colors.text} weight="bold" />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: spacing.lg }} keyboardShouldPersistTaps="handled">
+                <TextInput
+                  value={value}
+                  onChangeText={(v) => wiz.setPerChannel({ textVariants: { ...wiz.perChannel.textVariants, [expandedPlatform]: v } })}
+                  placeholder={`Bewerk je ${expandedPlatform}-caption volledig…`}
+                  placeholderTextColor={colors.textTertiary}
+                  multiline
+                  autoFocus
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderWidth: 1, borderColor: colors.border,
+                    borderRadius: borderRadius.md,
+                    paddingHorizontal: 14, paddingVertical: 12,
+                    fontSize: fontSize.md, color: colors.text,
+                    minHeight: 280, textAlignVertical: 'top',
+                  }}
+                />
+              </ScrollView>
+              <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
+                <TouchableOpacity
+                  onPress={() => setExpandedPlatform(null)}
+                  activeOpacity={0.85}
+                  style={{ borderRadius: borderRadius.lg, overflow: 'hidden' }}
+                >
+                  <LinearGradient
+                    colors={brandGradient.deep as unknown as [string, string, string]}
+                    start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+                    style={{ paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 }}
+                  >
+                    <Check size={16} color="#fff" weight="bold" />
+                    <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.md }}>Klaar</Text>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </SafeAreaView>
+          );
+        })()}
+      </Modal>
 
       {/* Bulk regenerate-all button */}
       <TouchableOpacity

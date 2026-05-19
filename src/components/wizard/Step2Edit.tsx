@@ -11,9 +11,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert, KeyboardAvoidingView, Platform } from 'react-native';
 import ViewShot, { captureRef } from 'react-native-view-shot';
+import * as ImagePicker from 'expo-image-picker';
 import {
   TextT, MapPin, Image as PhImage, ArrowsClockwise, ArrowRight, CheckCircle, MagicWand,
-  Buildings, Calendar,
+  Buildings, Calendar, UploadSimple, X,
 } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +25,18 @@ import { useBrandKits } from '../../hooks/useBrandMemory';
 import { uploadMedia } from '../../hooks/useCaptures';
 import { supabase } from '../../services/supabase';
 import WatermarkPositionPicker, { type WatermarkPosition } from '../WatermarkPositionPicker';
+
+const WATERMARK_POS_TO_CORNER: Record<WatermarkPosition, { top?: number | string; bottom?: number; left?: number; right?: number; alignSelf?: 'flex-start' | 'center' | 'flex-end' }> = {
+  'top-left':       { top: 10, left: 10 },
+  'top-center':     { top: 10, alignSelf: 'center' },
+  'top-right':      { top: 10, right: 10 },
+  'middle-left':    { top: '45%', left: 10 },
+  'middle-center':  { top: '45%', alignSelf: 'center' },
+  'middle-right':   { top: '45%', right: 10 },
+  'bottom-left':    { bottom: 10, left: 10 },
+  'bottom-center':  { bottom: 10, alignSelf: 'center' },
+  'bottom-right':   { bottom: 10, right: 10 },
+};
 
 const CORNER_LABEL: Record<LogoCorner, string> = {
   'top-left': '↖ Linksboven',
@@ -52,10 +65,52 @@ export default function Step2Edit() {
   const [bakeFailedOnce, setBakeFailedOnce] = useState(false);
   const [position, setPosition] = useState<WatermarkPosition>('bottom-right');
 
-  // Brand logo from the user's default brand kit
+  // Brand logo source priority: customLogoUri (one-off upload) > selected kit > default kit
   const { data: brandKits = [] } = useBrandKits();
+  const selectedKit =
+    (wiz.edit.selectedBrandKitId && brandKits.find((k: any) => k.id === wiz.edit.selectedBrandKitId)) ||
+    brandKits.find((k: any) => k.is_default) ||
+    brandKits[0];
   const brandLogoUrl: string | null =
-    (brandKits.find((k: any) => k.is_default) ?? brandKits[0])?.logo_url ?? null;
+    wiz.edit.customLogoUri ?? selectedKit?.logo_url ?? null;
+  const [uploadingCustom, setUploadingCustom] = useState(false);
+
+  async function pickCustomLogo() {
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert('Toestemming nodig', 'Geef AMOS toegang tot je foto-bibliotheek.');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.85,
+      });
+      if (result.canceled || !result.assets?.[0]?.uri) return;
+      setUploadingCustom(true);
+      try {
+        // Upload to Supabase so the URL is reachable from publish-social server-bake.
+        // Fallback to local URI if upload fails — preview still works.
+        const { url } = await uploadMedia(result.assets[0].uri, wiz.capture.eventId ?? 'wizard-logo', 'photo');
+        wiz.setEdit({
+          customLogoUri: url,
+          showBrandLogo: true,
+          brandedImageUrl: null,
+        });
+      } catch (upErr: any) {
+        console.warn('[Step2.customLogo] upload failed, using local URI', upErr?.message);
+        wiz.setEdit({
+          customLogoUri: result.assets[0].uri,
+          showBrandLogo: true,
+          brandedImageUrl: null,
+        });
+      }
+    } finally {
+      setUploadingCustom(false);
+    }
+  }
 
   // Event logo via events.cover_image_url (only if a capture is event-bound)
   const eventId = wiz.capture.eventId ?? null;
@@ -231,6 +286,21 @@ export default function Step2Edit() {
                 />
               </View>
             )}
+            {/* AMOS chip preview — informational; server still bakes the real chip on publish */}
+            <View
+              style={{
+                position: 'absolute',
+                ...(WATERMARK_POS_TO_CORNER[position] as any),
+                paddingHorizontal: 8, paddingVertical: 4,
+                borderRadius: 999,
+                backgroundColor: 'rgba(232,49,122,0.92)',
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+              }}
+              pointerEvents="none"
+            >
+              <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>AMOS</Text>
+            </View>
           </View>
         ) : (
           <View style={{ width: '100%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -307,50 +377,121 @@ export default function Step2Edit() {
           <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary }}>(max. 2)</Text>
         </View>
 
-        {/* Brand logo row */}
+        {/* Brand logo block — kit picker + custom upload + toggle/position */}
         <View
           style={{
-            flexDirection: 'row', alignItems: 'center', gap: 10,
             padding: spacing.sm, borderRadius: borderRadius.md,
             backgroundColor: brandLogoActive ? colors.primary + '10' : colors.surface,
             borderWidth: 1, borderColor: brandLogoActive ? colors.primary + '40' : colors.border,
+            gap: 8,
           }}
         >
-          <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
-            {brandLogoUrl
-              ? <Image source={{ uri: brandLogoUrl }} style={{ width: 36, height: 36 }} resizeMode="contain" />
-              : <Buildings size={20} color={colors.textTertiary} weight="duotone" />}
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Brand logo</Text>
-            <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }}>
-              {brandLogoUrl ? 'Uit je default brand kit' : 'Geen brand logo — voeg toe in BrandKit'}
-            </Text>
-          </View>
-          {brandLogoActive && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+              {brandLogoUrl
+                ? <Image source={{ uri: brandLogoUrl }} style={{ width: 36, height: 36 }} resizeMode="contain" />
+                : <Buildings size={20} color={colors.textTertiary} weight="duotone" />}
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Brand logo</Text>
+              <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }} numberOfLines={1}>
+                {wiz.edit.customLogoUri
+                  ? 'Custom upload (alleen deze post)'
+                  : (selectedKit as any)?.name
+                    ? `Kit: ${(selectedKit as any).name}`
+                    : brandLogoUrl
+                      ? 'Default kit'
+                      : 'Geen logo — kies kit of upload'}
+              </Text>
+            </View>
+            {brandLogoActive && (
+              <TouchableOpacity
+                onPress={() => wiz.setEdit({ brandLogoPosition: cycleCorner(wiz.edit.brandLogoPosition), brandedImageUrl: null })}
+                style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '40' }}
+              >
+                <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>{CORNER_LABEL[wiz.edit.brandLogoPosition]}</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              onPress={() => {
-                wiz.setEdit({ brandLogoPosition: cycleCorner(wiz.edit.brandLogoPosition), brandedImageUrl: null });
+              disabled={!brandLogoUrl}
+              onPress={() => wiz.setEdit({ showBrandLogo: !wiz.edit.showBrandLogo, brandedImageUrl: null })}
+              style={{
+                paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
+                backgroundColor: brandLogoActive ? colors.primary : colors.background,
+                borderWidth: 1, borderColor: brandLogoActive ? colors.primary : colors.border,
+                opacity: brandLogoUrl ? 1 : 0.4,
               }}
-              style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '40' }}
             >
-              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>{CORNER_LABEL[wiz.edit.brandLogoPosition]}</Text>
+              <Text style={{ fontSize: 11, fontWeight: '700', color: brandLogoActive ? '#fff' : colors.textSecondary }}>
+                {brandLogoActive ? 'Aan' : 'Uit'}
+              </Text>
             </TouchableOpacity>
-          )}
-          <TouchableOpacity
-            disabled={!brandLogoUrl}
-            onPress={() => wiz.setEdit({ showBrandLogo: !wiz.edit.showBrandLogo, brandedImageUrl: null })}
-            style={{
-              paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
-              backgroundColor: brandLogoActive ? colors.primary : colors.background,
-              borderWidth: 1, borderColor: brandLogoActive ? colors.primary : colors.border,
-              opacity: brandLogoUrl ? 1 : 0.4,
-            }}
-          >
-            <Text style={{ fontSize: 11, fontWeight: '700', color: brandLogoActive ? '#fff' : colors.textSecondary }}>
-              {brandLogoActive ? 'Aan' : 'Uit'}
-            </Text>
-          </TouchableOpacity>
+          </View>
+
+          {/* Kit picker chips (horizontaal scrollable) + custom upload chip */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+            {brandKits.map((kit: any) => {
+              const isPicked = wiz.edit.customLogoUri == null &&
+                ((wiz.edit.selectedBrandKitId === kit.id) ||
+                 (wiz.edit.selectedBrandKitId == null && kit.is_default));
+              return (
+                <TouchableOpacity
+                  key={kit.id}
+                  onPress={() => wiz.setEdit({
+                    selectedBrandKitId: kit.id,
+                    customLogoUri: null,
+                    brandedImageUrl: null,
+                  })}
+                  style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    paddingHorizontal: 9, paddingVertical: 5,
+                    borderRadius: 999,
+                    backgroundColor: isPicked ? colors.primary + '20' : colors.background,
+                    borderWidth: 1, borderColor: isPicked ? colors.primary : colors.border,
+                  }}
+                >
+                  {kit.logo_url
+                    ? <Image source={{ uri: kit.logo_url }} style={{ width: 16, height: 16, borderRadius: 3 }} resizeMode="contain" />
+                    : <Buildings size={12} color={colors.textTertiary} weight="duotone" />}
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: isPicked ? colors.primary : colors.textSecondary }} numberOfLines={1}>
+                    {kit.name || 'Kit'}
+                  </Text>
+                  {kit.is_default && (
+                    <Text style={{ fontSize: 9, color: colors.textTertiary }}>· default</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+            {/* Upload custom button */}
+            <TouchableOpacity
+              onPress={pickCustomLogo}
+              disabled={uploadingCustom}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 5,
+                paddingHorizontal: 9, paddingVertical: 5,
+                borderRadius: 999,
+                backgroundColor: wiz.edit.customLogoUri ? colors.primary + '20' : colors.background,
+                borderWidth: 1, borderStyle: 'dashed', borderColor: wiz.edit.customLogoUri ? colors.primary : colors.border,
+                opacity: uploadingCustom ? 0.5 : 1,
+              }}
+            >
+              {uploadingCustom
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <UploadSimple size={12} color={wiz.edit.customLogoUri ? colors.primary : colors.textSecondary} weight="bold" />}
+              <Text style={{ fontSize: 11, fontWeight: '700', color: wiz.edit.customLogoUri ? colors.primary : colors.textSecondary }}>
+                {uploadingCustom ? 'Uploaden…' : wiz.edit.customLogoUri ? 'Custom ✓' : 'Upload eigen'}
+              </Text>
+              {wiz.edit.customLogoUri && (
+                <TouchableOpacity
+                  onPress={() => wiz.setEdit({ customLogoUri: null, brandedImageUrl: null })}
+                  style={{ marginLeft: 2 }}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                >
+                  <X size={11} color={colors.primary} weight="bold" />
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Event logo row */}

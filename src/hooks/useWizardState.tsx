@@ -51,6 +51,10 @@ export interface WizardEdit {
   brandLogoPosition: LogoCorner;
   showEventLogo: boolean;
   eventLogoPosition: LogoCorner;
+  /** 309+: pick a specific brand kit (null = default kit) */
+  selectedBrandKitId: string | null;
+  /** 309+: one-off custom logo URL uploaded for this post (overrides brand kit logo) */
+  customLogoUri: string | null;
   /** Set by Step2 after bakeOverlayIntoImage succeeds — propagates to Step5 preview. */
   brandedImageUrl: string | null;
   /** Optimistic preview URI (local, pre-upload). Step5 falls back to this if brandedImageUrl is null. */
@@ -97,6 +101,8 @@ const defaultState: WizardState = {
     brandLogoPosition: 'top-left',
     showEventLogo: false,
     eventLogoPosition: 'bottom-right',
+    selectedBrandKitId: null,
+    customLogoUri: null,
     brandedImageUrl: null,
     livePreviewUri: null,
   },
