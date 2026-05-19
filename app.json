@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "AMOS",
+    "name": "AMOS by Inclufy",
     "slug": "inclufy-go",
     "version": "1.0.2",
     "orientation": "portrait",
@@ -15,16 +15,16 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.inclufy.go",
-      "buildNumber": "310",
+      "buildNumber": "311",
       "infoPlist": {
-        "NSCameraUsageDescription": "AMOS needs camera access to capture photos and videos at events.",
-        "NSMicrophoneUsageDescription": "AMOS needs microphone access for video and audio recording.",
-        "NSPhotoLibraryUsageDescription": "AMOS saves branded content to your photo library.",
-        "NSFaceIDUsageDescription": "AMOS uses Face ID for secure app access.",
-        "NFCReaderUsageDescription": "AMOS uses NFC to instantly share and receive contact cards.",
-        "NSLocationWhenInUseUsageDescription": "AMOS uses your location to tag scanned contacts with region data (city, province, country).",
-        "NSCalendarsUsageDescription": "AMOS adds events to your calendar with automatic reminders.",
-        "NSCalendarsFullAccessUsageDescription": "AMOS adds events to your calendar with automatic reminders.",
+        "NSCameraUsageDescription": "AMOS by Inclufy needs camera access to capture photos and videos at events.",
+        "NSMicrophoneUsageDescription": "AMOS by Inclufy needs microphone access for video and audio recording.",
+        "NSPhotoLibraryUsageDescription": "AMOS by Inclufy saves branded content to your photo library.",
+        "NSFaceIDUsageDescription": "AMOS by Inclufy uses Face ID for secure app access.",
+        "NFCReaderUsageDescription": "AMOS by Inclufy uses NFC to instantly share and receive contact cards.",
+        "NSLocationWhenInUseUsageDescription": "AMOS by Inclufy uses your location to tag scanned contacts with region data (city, province, country).",
+        "NSCalendarsUsageDescription": "AMOS by Inclufy adds events to your calendar with automatic reminders.",
+        "NSCalendarsFullAccessUsageDescription": "AMOS by Inclufy adds events to your calendar with automatic reminders.",
         "CFBundleLocalizations": [
           "nl",
           "en",
@@ -90,13 +90,13 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "AMOS heeft camera nodig om event content te maken."
+          "cameraPermission": "AMOS by Inclufy heeft camera nodig om event content te maken."
         }
       ],
       [
         "expo-audio",
         {
-          "microphonePermission": "AMOS heeft microfoon nodig voor audio-opname en transcriptie.",
+          "microphonePermission": "AMOS by Inclufy heeft microfoon nodig voor audio-opname en transcriptie.",
           "enableBackgroundPlayback": false,
           "enableBackgroundRecording": false
         }
@@ -104,20 +104,20 @@
       [
         "expo-media-library",
         {
-          "photosPermission": "AMOS slaat branded afbeeldingen op in je fotobibliotheek."
+          "photosPermission": "AMOS by Inclufy slaat branded afbeeldingen op in je fotobibliotheek."
         }
       ],
       "expo-router",
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "AMOS gebruikt je locatie om gescande contacten te taggen met regio-informatie."
+          "locationWhenInUsePermission": "AMOS by Inclufy gebruikt je locatie om gescande contacten te taggen met regio-informatie."
         }
       ],
       [
         "expo-calendar",
         {
-          "calendarPermission": "AMOS voegt events toe aan je agenda met automatische herinneringen."
+          "calendarPermission": "AMOS by Inclufy voegt events toe aan je agenda met automatische herinneringen."
         }
       ],
       [
@@ -130,19 +130,12 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "AMOS heeft toegang nodig tot je fotobibliotheek om een logo te selecteren."
+          "photosPermission": "AMOS by Inclufy heeft toegang nodig tot je fotobibliotheek om een logo te selecteren."
         }
       ],
       "expo-web-browser",
       "expo-font",
       "expo-asset",
-      [
-        "@sentry/react-native",
-        {
-          "organization": "inclufy",
-          "project": "marketing-frontend"
-        }
-      ],
       "expo-video"
     ]
   }

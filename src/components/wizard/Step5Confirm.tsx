@@ -10,8 +10,9 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, Image, ActivityIndicator, Alert } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
 import {
-  Rocket, CheckCircle, XCircle, CircleNotch, Clock, Sparkle,
+  Rocket, CheckCircle, XCircle, CircleNotch, Clock, Sparkle, ArrowsClockwise, Eye, Confetti,
   FacebookLogo, InstagramLogo, LinkedinLogo, TiktokLogo, PinterestLogo, SnapchatLogo, ShareNetwork,
 } from 'phosphor-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -32,17 +33,32 @@ const PLATFORM_COLOR: Record<string, string> = {
 export default function Step5Confirm() {
   const { colors } = useTheme();
   const wiz = useWizardState();
+  const navigation = useNavigation<any>();
   const [done, setDone] = useState(false);
 
   const selected = wiz.channels.availableAccounts.filter(a =>
     wiz.channels.selectedAccountIds.has(a.id)
   );
 
+  // Tallies for the post-publish report
+  const okIds = selected.filter(a => wiz.confirm.results[a.id] === 'ok');
+  const errIds = selected.filter(a => wiz.confirm.results[a.id] === 'error');
+
   const previewUri = wiz.edit.brandedImageUrl ?? wiz.edit.livePreviewUri ?? wiz.capture.mediaUri;
 
-  async function publishAll() {
-    if (selected.length === 0) return;
-    wiz.setConfirm({ isPublishing: true, results: {}, errors: {} });
+  async function publishAll(only?: typeof selected) {
+    const targets = only ?? selected;
+    if (targets.length === 0) return;
+
+    // Preserve previous results when retrying — only reset entries for the
+    // targets we're about to re-run. Full publish (no `only`) starts fresh.
+    const initialResults: Record<string, PublishStatus> = only
+      ? { ...wiz.confirm.results, ...Object.fromEntries(only.map(a => [a.id, 'pending' as PublishStatus])) }
+      : {};
+    const initialErrors: Record<string, string> = only
+      ? Object.fromEntries(Object.entries(wiz.confirm.errors).filter(([id]) => !only.find(a => a.id === id)))
+      : {};
+    wiz.setConfirm({ isPublishing: true, results: initialResults, errors: initialErrors });
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user?.id) {
@@ -56,13 +72,13 @@ export default function Step5Confirm() {
     // `wiz.confirm.results` (a closed-over value), which captured a stale
     // snapshot in the for-loop and caused intermediate flicker for 3+
     // accounts (caught by static QA agent).
-    const liveResults: Record<string, PublishStatus> = {};
-    const liveErrors:  Record<string, string>        = {};
+    const liveResults: Record<string, PublishStatus> = { ...initialResults };
+    const liveErrors:  Record<string, string>        = { ...initialErrors };
 
     // Create one go_posts row per channel so each has its own publish state.
     // This keeps the existing publish-social contract intact and lets
     // partial-failures be retried later from PostReview.
-    for (const acc of selected) {
+    for (const acc of targets) {
       const channel = acc.platform;
       const text = wiz.perChannel.textVariants[channel] ?? wiz.edit.overlayText ?? '';
 
@@ -88,6 +104,7 @@ export default function Step5Confirm() {
         const postId = (postRow as any).id as string;
 
         // 2. Invoke publish-social
+        console.log(`[Step5.publish] → ${channel} acc=${acc.id} postId=${postId} text=${text?.slice(0, 40)}…`);
         const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
           body: {
             post_id: postId,
@@ -100,12 +117,21 @@ export default function Step5Confirm() {
             media_type: 'photo',
           },
         });
+        console.log(`[Step5.publish] ← ${channel} pubErr=${pubErr ? JSON.stringify(pubErr) : 'none'} result=${result ? JSON.stringify(result).slice(0, 200) : 'null'}`);
 
+        // Strict validation:
+        // 1. transport error → throw
+        // 2. no response at all → throw (silent failure; previously fell through to 'ok')
+        // 3. result.success !== true → throw with whatever detail we can find
         if (pubErr) {
-          throw new Error((pubErr as any)?.message ?? 'Edge function error');
+          throw new Error((pubErr as any)?.message ?? 'Edge function transport error (geen response)');
         }
-        if (result && !result.success && result.error) {
-          throw new Error(String(result.error));
+        if (!result) {
+          throw new Error('Geen response van publish-social (timeout of CORS?)');
+        }
+        if (result.success !== true) {
+          const detail = result.error ?? result.message ?? JSON.stringify(result).slice(0, 160);
+          throw new Error(`publish-social failed: ${detail}`);
         }
 
         liveResults[acc.id] = 'ok';
@@ -181,8 +207,35 @@ export default function Step5Confirm() {
                 </View>
                 <StatusBadge status={status} colors={colors} />
               </View>
-              {/* Caption preview — what will actually publish */}
-              {caption ? (
+              {/* Result-specific row after publish: status detail + full error if any */}
+              {done && status === 'error' && err ? (
+                <View
+                  style={{
+                    paddingHorizontal: 10, paddingVertical: 8,
+                    borderRadius: borderRadius.sm,
+                    backgroundColor: '#FEE2E2', borderLeftWidth: 3, borderLeftColor: '#DC2626',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: '#7F1D1D', fontWeight: '700', marginBottom: 2, letterSpacing: 0.4 }}>
+                    MISLUKT
+                  </Text>
+                  <Text style={{ fontSize: fontSize.xs, color: '#7F1D1D', lineHeight: 18 }}>
+                    {err}
+                  </Text>
+                </View>
+              ) : done && status === 'ok' ? (
+                <View
+                  style={{
+                    paddingHorizontal: 10, paddingVertical: 8,
+                    borderRadius: borderRadius.sm,
+                    backgroundColor: '#D1FAE5', borderLeftWidth: 3, borderLeftColor: '#10B981',
+                  }}
+                >
+                  <Text style={{ fontSize: 11, color: '#065F46', fontWeight: '700', letterSpacing: 0.4 }}>
+                    ✓ GEPUBLICEERD NAAR {acc.platform.toUpperCase()}
+                  </Text>
+                </View>
+              ) : caption ? (
                 <View
                   style={{
                     paddingHorizontal: 10, paddingVertical: 8,
@@ -191,7 +244,7 @@ export default function Step5Confirm() {
                   }}
                 >
                   <Text style={{ fontSize: 11, color: colors.textTertiary, fontWeight: '600', marginBottom: 2, letterSpacing: 0.4 }}>
-                    PUBLICEERT ALS
+                    {wiz.confirm.isPublishing && status === 'in_flight' ? 'PUBLICEREN…' : 'PUBLICEERT ALS'}
                   </Text>
                   <Text style={{ fontSize: fontSize.xs, color: colors.text, lineHeight: 18 }} numberOfLines={4}>
                     {caption}
@@ -218,7 +271,7 @@ export default function Step5Confirm() {
       {/* CTA */}
       {!done ? (
         <TouchableOpacity
-          onPress={publishAll}
+          onPress={() => publishAll()}
           disabled={wiz.confirm.isPublishing || selected.length === 0}
           activeOpacity={0.85}
           style={{ marginTop: spacing.lg, borderRadius: borderRadius.lg, overflow: 'hidden', opacity: wiz.confirm.isPublishing ? 0.6 : 1 }}
@@ -240,17 +293,85 @@ export default function Step5Confirm() {
           </LinearGradient>
         </TouchableOpacity>
       ) : (
-        <View style={{ marginTop: spacing.lg, padding: spacing.md, borderRadius: borderRadius.lg, backgroundColor: colors.primary + '10', borderWidth: 1, borderColor: colors.primary + '30', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Sparkle size={22} color={colors.primary} weight="duotone" />
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.text }}>Klaar! 🎉</Text>
-            <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, marginTop: 2 }}>
-              Volg de resultaten in PostReview / Analytics.
-            </Text>
+        <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+          {/* Publish-rapport — explicit summary block */}
+          <View
+            style={{
+              padding: spacing.md, borderRadius: borderRadius.lg,
+              backgroundColor: errIds.length > 0 ? '#FEF3C7' : '#D1FAE5',
+              borderWidth: 1, borderColor: errIds.length > 0 ? '#F59E0B' : '#10B981',
+              flexDirection: 'row', alignItems: 'center', gap: 10,
+            }}
+          >
+            {errIds.length === 0
+              ? <Confetti size={26} color="#10B981" weight="fill" />
+              : <Sparkle size={26} color="#F59E0B" weight="fill" />}
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.bold, color: errIds.length > 0 ? '#92400E' : '#065F46' }}>
+                {errIds.length === 0
+                  ? `Alle ${okIds.length} posts gepubliceerd 🎉`
+                  : `${okIds.length} gelukt · ${errIds.length} mislukt`}
+              </Text>
+              <Text style={{ fontSize: fontSize.xs, color: errIds.length > 0 ? '#92400E' : '#065F46', marginTop: 2 }}>
+                {errIds.length === 0
+                  ? 'Bekijk per channel hierboven of in PostReview voor analytics.'
+                  : `${errIds.map(a => a.platform).join(', ')} hierboven met foutmelding.`}
+              </Text>
+            </View>
           </View>
-          <TouchableOpacity onPress={() => wiz.exit()} style={{ paddingHorizontal: 14, paddingVertical: 8, backgroundColor: colors.primary, borderRadius: borderRadius.md }}>
-            <Text style={{ color: '#fff', fontWeight: fontWeight.bold, fontSize: fontSize.xs }}>Sluiten</Text>
-          </TouchableOpacity>
+
+          {/* Quick-action row: retry failed + open PostReview + close */}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            {errIds.length > 0 && (
+              <TouchableOpacity
+                onPress={() => { setDone(false); publishAll(errIds); }}
+                disabled={wiz.confirm.isPublishing}
+                activeOpacity={0.85}
+                style={{
+                  flex: 1, paddingVertical: 12, paddingHorizontal: spacing.sm,
+                  borderRadius: borderRadius.md,
+                  backgroundColor: '#DC2626',
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  opacity: wiz.confirm.isPublishing ? 0.5 : 1,
+                }}
+                testID="retry-failed"
+              >
+                <ArrowsClockwise size={15} color="#fff" weight="bold" />
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: fontSize.xs }}>
+                  Retry {errIds.length} mislukt{errIds.length === 1 ? 'e' : 'en'}
+                </Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              onPress={() => {
+                // Navigate to PostReview without closing the wizard (in case user
+                // wants to come back). Caller of WizardProvider decides exit policy.
+                try { navigation.navigate('PostReview' as any, {}); } catch { /* route may not be in stack */ }
+              }}
+              activeOpacity={0.85}
+              style={{
+                flex: 1, paddingVertical: 12, paddingHorizontal: spacing.sm,
+                borderRadius: borderRadius.md,
+                borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <Eye size={15} color={colors.text} weight="duotone" />
+              <Text style={{ color: colors.text, fontWeight: '700', fontSize: fontSize.xs }}>PostReview</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => wiz.exit()}
+              activeOpacity={0.85}
+              style={{
+                flex: 1, paddingVertical: 12, paddingHorizontal: spacing.sm,
+                borderRadius: borderRadius.md,
+                backgroundColor: colors.primary,
+                flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+              }}
+            >
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: fontSize.xs }}>Sluiten</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 

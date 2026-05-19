@@ -195,7 +195,7 @@ const nl = {
 
   // ─── Event List Screen ─────────────────────────────────────────────
   eventList: {
-    title: 'Inclufy GO',
+    title: 'AMOS by Inclufy',
     subtitle: 'Event Marketing',
     all: 'Alles',
     logout: 'Logout',
@@ -495,7 +495,7 @@ const nl = {
     dataExport: 'Data Export',
     about: 'Over',
     appVersion: 'App versie',
-    inclufy: 'Inclufy GO',
+    inclufy: 'AMOS by Inclufy',
     inclufyDesc: 'for Event Marketing',
     demo: 'Demo',
     demoEnvironment: 'Demo Omgeving',
@@ -595,7 +595,7 @@ const nl = {
     copied: 'Gekopieerd!',
     nfc: 'NFC Delen',
     qrLabel: 'Scan om contact toe te voegen',
-    qrHint: 'Anderen kunnen dit scannen met Inclufy GO of elke QR-app',
+    qrHint: 'Anderen kunnen dit scannen met AMOS by Inclufy of elke QR-app',
     editInSettings: 'Bewerk je gegevens in Instellingen',
   },
 
@@ -848,7 +848,7 @@ const nl = {
   // ─── AI Data Consent ──────────────────────────────────────────────
   aiConsent: {
     title: 'AI-gegevensverwerking',
-    subtitle: 'InclufyGO gebruikt AI om content te genereren',
+    subtitle: 'AMOS by Inclufy gebruikt AI om content te genereren',
     dataSentTitle: 'Welke gegevens worden verwerkt',
     dataItems: {
       photos: 'Foto\'s die je maakt tijdens events',

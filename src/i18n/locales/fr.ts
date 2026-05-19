@@ -184,7 +184,7 @@ const fr: Translations = {
 
   // ─── Event List Screen ─────────────────────────────────────────────
   eventList: {
-    title: 'Inclufy GO',
+    title: 'AMOS by Inclufy',
     subtitle: 'Marketing \u00E9v\u00E9nementiel',
     all: 'Tous',
     logout: 'D\u00E9connexion',
@@ -477,7 +477,7 @@ const fr: Translations = {
     dataExport: 'Export de donn\u00E9es',
     about: '\u00C0 propos',
     appVersion: 'Version de l\'app',
-    inclufy: 'Inclufy GO',
+    inclufy: 'AMOS by Inclufy',
     inclufyDesc: 'pour le Marketing \u00E9v\u00E9nementiel',
     demo: 'D\u00E9mo',
     demoEnvironment: 'Environnement D\u00E9mo',
@@ -576,7 +576,7 @@ const fr: Translations = {
     copied: 'Copié !',
     nfc: 'Partage NFC',
     qrLabel: 'Scanner pour ajouter le contact',
-    qrHint: 'D\'autres peuvent scanner ceci avec Inclufy GO ou toute application QR',
+    qrHint: 'D\'autres peuvent scanner ceci avec AMOS by Inclufy ou toute application QR',
     editInSettings: 'Modifiez vos informations dans Paramètres',
   },
 
@@ -829,7 +829,7 @@ const fr: Translations = {
   // ─── AI Data Consent ──────────────────────────────────────────────
   aiConsent: {
     title: 'Traitement des donn\u00E9es IA',
-    subtitle: 'InclufyGO utilise l\'IA pour g\u00E9n\u00E9rer du contenu',
+    subtitle: 'AMOS by Inclufy utilise l\'IA pour g\u00E9n\u00E9rer du contenu',
     dataSentTitle: 'Quelles donn\u00E9es sont trait\u00E9es',
     dataItems: {
       photos: 'Photos prises lors d\'\u00E9v\u00E9nements',

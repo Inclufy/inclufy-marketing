@@ -1,5 +1,5 @@
 /**
- * Calendar sync hook — syncs Inclufy GO events to the device calendar.
+ * Calendar sync hook — syncs AMOS by Inclufy events to the device calendar.
  * Also schedules local push notifications as reminders.
  */
 
@@ -33,13 +33,13 @@ function buildEventDate(eventDate: string, time: string | null): Date {
 }
 
 /**
- * Get or create an "Inclufy GO" calendar on the device.
+ * Get or create an "AMOS by Inclufy" calendar on the device.
  */
 async function getOrCreateCalendar(): Promise<string> {
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
 
   // Look for existing Inclufy calendar
-  const existing = calendars.find(c => c.title === 'Inclufy GO');
+  const existing = calendars.find(c => c.title === 'AMOS by Inclufy');
   if (existing) return existing.id;
 
   // Create new calendar
@@ -47,10 +47,10 @@ async function getOrCreateCalendar(): Promise<string> {
     Platform.OS === 'ios'
       ? calendars.find(c => c.source?.name === 'iCloud')?.source ||
         calendars.find(c => c.source?.isLocalAccount)?.source
-      : { isLocalAccount: true, name: 'Inclufy GO', type: Calendar.CalendarType.LOCAL as any };
+      : { isLocalAccount: true, name: 'AMOS by Inclufy', type: Calendar.CalendarType.LOCAL as any };
 
   const newCalendarId = await Calendar.createCalendarAsync({
-    title: 'Inclufy GO',
+    title: 'AMOS by Inclufy',
     color: '#A855F7',
     entityType: Calendar.EntityTypes.EVENT,
     sourceId: (defaultCalendarSource as any)?.id,

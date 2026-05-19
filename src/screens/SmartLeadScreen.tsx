@@ -21,10 +21,11 @@ import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 import { useContacts } from '../hooks/useContacts';
 
+import { CaretRight, Envelope, IdentificationCard, WhatsappLogo } from 'phosphor-react-native';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const INVITE_MESSAGE =
-  "Hi! I'd like to connect with you on Inclufy GO. Scan my digital card or download the app: https://inclufy.com/connect";
+  "Hi! I'd like to connect with you on AMOS by Inclufy. Scan my digital card or download the app: https://inclufy.com/connect";
 
 const CAPTURE_MODES = [
   {
@@ -188,7 +189,7 @@ export default function SmartLeadScreen() {
       await Share.share({
         message: INVITE_MESSAGE,
         url: 'https://inclufy.com/connect',
-        title: 'Connect on Inclufy GO',
+        title: 'Connect on AMOS by Inclufy',
       });
     } catch (err: any) {
       Alert.alert('Could not share', err?.message ?? 'Something went wrong.');
@@ -226,27 +227,27 @@ export default function SmartLeadScreen() {
       >
         <View style={styles.myCardLeft}>
           <View style={styles.myCardIconWrap}>
-            <MaterialCommunityIcons name="card-account-details" size={22} color="#fff" />
+            <IdentificationCard size={22} color="#fff" weight="duotone" />
           </View>
           <View>
             <Text style={styles.myCardTitle}>{t.smartLead?.myCard ?? 'My Digital Card'}</Text>
             <Text style={styles.myCardSub}>{t.smartLead?.myCardSub ?? 'Share your contact & QR code'}</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color="rgba(255,255,255,0.8)" />
+        <CaretRight size={20} color="rgba(255,255,255,0.8)" weight="bold" />
       </TouchableOpacity>
 
       {/* Send Invitation Row */}
       <View style={styles.inviteRow}>
         <TouchableOpacity style={styles.inviteBtn} onPress={handleSendInvite} activeOpacity={0.8}>
-          <Ionicons name="mail-outline" size={18} color="#DB2777" />
+          <Envelope size={18} color="#DB2777" weight="duotone" />
           <Text style={[styles.inviteBtnText, { color: '#DB2777' }]}>
             {t.smartLead?.sendInvite ?? 'Send Invite'}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.inviteBtn} onPress={handleWhatsApp} activeOpacity={0.8}>
-          <Ionicons name="logo-whatsapp" size={18} color="#25D366" />
+          <WhatsappLogo size={18} color="#25D366" weight="fill" />
           <Text style={[styles.inviteBtnText, { color: '#25D366' }]}>
             {t.smartLead?.whatsapp ?? 'WhatsApp'}
           </Text>

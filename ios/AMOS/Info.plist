@@ -41,7 +41,7 @@
       </dict>
     </array>
     <key>CFBundleVersion</key>
-    <string>211</string>
+    <string>311</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>LSMinimumSystemVersion</key>
@@ -49,7 +49,7 @@
     <key>LSRequiresIPhoneOS</key>
     <true/>
     <key>NFCReaderUsageDescription</key>
-    <string>Inclufy GO uses NFC to instantly share and receive contact cards.</string>
+    <string>AMOS by Inclufy uses NFC to instantly share and receive contact cards.</string>
     <key>NSAppTransportSecurity</key>
     <dict>
       <key>NSAllowsArbitraryLoads</key>
@@ -58,25 +58,25 @@
       <true/>
     </dict>
     <key>NSCalendarsFullAccessUsageDescription</key>
-    <string>Inclufy GO voegt events toe aan je agenda met automatische herinneringen.</string>
+    <string>AMOS by Inclufy voegt events toe aan je agenda met automatische herinneringen.</string>
     <key>NSCalendarsUsageDescription</key>
-    <string>Inclufy GO voegt events toe aan je agenda met automatische herinneringen.</string>
+    <string>AMOS by Inclufy voegt events toe aan je agenda met automatische herinneringen.</string>
     <key>NSCameraUsageDescription</key>
-    <string>Inclufy GO heeft camera nodig om event content te maken.</string>
+    <string>AMOS by Inclufy heeft camera nodig om event content te maken.</string>
     <key>NSFaceIDUsageDescription</key>
-    <string>Inclufy GO uses Face ID for secure app access.</string>
+    <string>AMOS by Inclufy uses Face ID for secure app access.</string>
     <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSLocationAlwaysUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your location</string>
     <key>NSLocationWhenInUseUsageDescription</key>
-    <string>Inclufy GO gebruikt je locatie om gescande contacten te taggen met regio-informatie.</string>
+    <string>AMOS by Inclufy gebruikt je locatie om gescande contacten te taggen met regio-informatie.</string>
     <key>NSMicrophoneUsageDescription</key>
-    <string>Inclufy GO heeft microfoon nodig voor audio-opname en transcriptie.</string>
+    <string>AMOS by Inclufy heeft microfoon nodig voor audio-opname en transcriptie.</string>
     <key>NSPhotoLibraryAddUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to save photos</string>
     <key>NSPhotoLibraryUsageDescription</key>
-    <string>Inclufy GO slaat branded afbeeldingen op in je fotobibliotheek.</string>
+    <string>AMOS by Inclufy slaat branded afbeeldingen op in je fotobibliotheek.</string>
     <key>NSRemindersFullAccessUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your reminders</string>
     <key>NSRemindersUsageDescription</key>

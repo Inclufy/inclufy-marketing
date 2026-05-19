@@ -184,7 +184,7 @@ const en: Translations = {
 
   // ─── Event List Screen ─────────────────────────────────────────────
   eventList: {
-    title: 'Inclufy GO',
+    title: 'AMOS by Inclufy',
     subtitle: 'Event Marketing',
     all: 'All',
     logout: 'Logout',
@@ -477,7 +477,7 @@ const en: Translations = {
     dataExport: 'Data Export',
     about: 'About',
     appVersion: 'App version',
-    inclufy: 'Inclufy GO',
+    inclufy: 'AMOS by Inclufy',
     inclufyDesc: 'for Event Marketing',
     demo: 'Demo',
     demoEnvironment: 'Demo Environment',
@@ -576,7 +576,7 @@ const en: Translations = {
     copied: 'Copied!',
     nfc: 'NFC share',
     qrLabel: 'Scan to add contact',
-    qrHint: 'Others can scan this with Inclufy GO or any QR app',
+    qrHint: 'Others can scan this with AMOS by Inclufy or any QR app',
     editInSettings: 'Edit your info in Settings',
   },
 
@@ -829,7 +829,7 @@ const en: Translations = {
   // ─── AI Data Consent ──────────────────────────────────────────────
   aiConsent: {
     title: 'AI Data Processing',
-    subtitle: 'InclufyGO uses AI to generate content',
+    subtitle: 'AMOS by Inclufy uses AI to generate content',
     dataSentTitle: 'What data is processed',
     dataItems: {
       photos: 'Photos you take during events',

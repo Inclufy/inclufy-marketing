@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: MaterialCommunityIcons name=<dynamic: a.icon as any> | MaterialCommunityIcons name=<dynamic: editMode ? (hasChanges ? 'content-save' : 'check') : 'pencil'> | MaterialCommunityIcons name=<dynamic: icon as any> | MaterialCommunityIcons name=<dynamic: isShared(item.key) ? 'toggle-switch' : 'toggle-switch-off-outline'> | MaterialCommunityIcons name=<dynamic: item.icon as any> | MaterialCommunityIcons name=<dynamic: sp.icon>
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -22,6 +23,7 @@ import { subtleShadow } from '../utils/shadows';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 
+import { Buildings, XCircle } from 'phosphor-react-native';
 // ─── Types ──────────────────────────────────────────────────────────
 interface UserProfile {
   first_name?: string;
@@ -283,7 +285,7 @@ export default function MyDigitalCardScreen() {
             {profile.title ? <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: 2 }}>{profile.title}</Text> : null}
             {profile.company ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 }}>
-                <MaterialCommunityIcons name="office-building" size={13} color={colors.textTertiary} />
+                <Buildings size={13} color={colors.textTertiary} weight="duotone" />
                 <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary }}>{profile.company}</Text>
               </View>
             ) : null}
@@ -460,7 +462,7 @@ export default function MyDigitalCardScreen() {
 
                   {editMode && value ? (
                     <TouchableOpacity onPress={() => updateField(sp.key, '')}>
-                      <MaterialCommunityIcons name="close-circle" size={18} color={colors.textTertiary} />
+                      <XCircle size={18} color={colors.textTertiary} weight="fill" />
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -539,7 +541,7 @@ export default function MyDigitalCardScreen() {
               />
             </View>
             <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary, textAlign: 'center', maxWidth: 260 }}>
-              Scan met Inclufy GO of een andere QR-app
+              Scan met AMOS by Inclufy of een andere QR-app
             </Text>
           </View>
         )}

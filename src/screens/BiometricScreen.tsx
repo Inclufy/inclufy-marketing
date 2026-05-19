@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: Ionicons name=<dynamic: isFaceId ? 'scan-outline' : 'finger-print-outline'>
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View,
@@ -146,7 +147,7 @@ export default function BiometricScreen({ onSuccess, onSkip }: Props) {
       </View>
 
       {/* Title */}
-      <Text style={styles.title}>Inclufy GO</Text>
+      <Text style={styles.title}>AMOS by Inclufy</Text>
       <Text style={styles.subtitle}>
         Gebruik {biometricType} om de app te ontgrendelen
       </Text>

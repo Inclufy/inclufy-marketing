@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: Ionicons name=<dynamic: cfg.icon as any> | Ionicons name=<dynamic: typeIcon as any>
 import React, { useState } from 'react';
 import {
   View,
@@ -19,6 +20,7 @@ import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 
+import { Calendar, CurrencyDollar, Megaphone, Plus, TrendDown, TrendUp } from 'phosphor-react-native';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 // ─── Filter Tabs ────────────────────────────────────────────────────
@@ -46,13 +48,13 @@ function CampaignROIBadge({ campaignId, colors: c }: { campaignId: string; color
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-        <Ionicons name="trending-down" size={12} color={c.error} />
+        <TrendDown size={12} color={c.error} weight="bold" />
         <Text style={{ fontSize: 11, color: c.error }}>
           €{totalCosts.toLocaleString()}
         </Text>
       </View>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
-        <Ionicons name="trending-up" size={12} color={c.success} />
+        <TrendUp size={12} color={c.success} weight="bold" />
         <Text style={{ fontSize: 11, color: c.success }}>
           €{totalRevenue.toLocaleString()}
         </Text>
@@ -388,13 +390,13 @@ export default function CampaignListScreen() {
         {/* Bottom row: budget + date range */}
         <View style={styles.cardFooter}>
           <View style={styles.footerItem}>
-            <Ionicons name="cash-outline" size={13} color={colors.textSecondary} />
+            <CurrencyDollar size={13} color={colors.textSecondary} weight="duotone" />
             <Text style={styles.footerText}>
               {formatBudget(item.budget_amount)}
             </Text>
           </View>
           <View style={styles.footerItem}>
-            <Ionicons name="calendar-outline" size={13} color={colors.textSecondary} />
+            <Calendar size={13} color={colors.textSecondary} weight="duotone" />
             <Text style={styles.footerText}>
               {formatDate(item.start_date)}
               {item.end_date ? ` – ${formatDate(item.end_date)}` : ''}
@@ -415,7 +417,7 @@ export default function CampaignListScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.title}>{t.campaignList.title}</Text>
-        <Text style={styles.subtitle}>Inclufy GO</Text>
+        <Text style={styles.subtitle}>AMOS by Inclufy</Text>
       </View>
 
       {/* Filter Tabs */}
@@ -453,7 +455,7 @@ export default function CampaignListScreen() {
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Ionicons name="megaphone-outline" size={48} color={colors.textSecondary} />
+            <Megaphone size={48} color={colors.textSecondary} weight="duotone" />
             <Text style={styles.emptyTitle}>{t.campaignList.noCampaignsFound}</Text>
             <Text style={styles.emptyText}>
               {activeTab === 'all'
@@ -470,7 +472,7 @@ export default function CampaignListScreen() {
         activeOpacity={0.85}
         onPress={handleNewCampaign}
       >
-        <Ionicons name="add" size={22} color={colors.textOnPrimary} />
+        <Plus size={22} color={colors.textOnPrimary} weight="bold" />
         <Text style={styles.fabLabel}>{t.campaignList.newCampaign}</Text>
       </TouchableOpacity>
     </View>
