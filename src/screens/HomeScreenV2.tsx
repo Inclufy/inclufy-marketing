@@ -63,6 +63,7 @@ import {
   TiktokLogo,
   PinterestLogo,
   SnapchatLogo,
+  Robot,
 } from 'phosphor-react-native';
 
 import { useDashboardStats } from '../hooks/useAnalytics';
@@ -158,6 +159,21 @@ function timeAgoShort(iso: string | Date, locale: string): string {
   const wk = Math.floor(day / 7);
   if (wk < 5) return locale === 'fr' ? `il y a ${wk}sem` : locale === 'nl' ? `${wk}w` : `${wk}w`;
   return new Date(t).toLocaleDateString(locale === 'fr' ? 'fr-FR' : locale === 'nl' ? 'nl-NL' : 'en-US', { day: '2-digit', month: 'short' });
+}
+
+function formatTokensCompact(n: number): string {
+  if (!n) return '0';
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return String(n);
+}
+
+function formatCostCompact(n: number): string {
+  if (!n) return '€0';
+  if (n < 0.01) return '<€0.01';
+  if (n < 1) return `€${n.toFixed(2)}`;
+  if (n < 100) return `€${n.toFixed(1)}`;
+  return `€${Math.round(n)}`;
 }
 
 function formatNumber(n: number | undefined | null): string {
@@ -337,7 +353,100 @@ export default function HomeScreenV2() {
       fontWeight: fontWeight.semibold,
     },
 
-    // AMOS Hub banner
+    // AMOS aan het werk — combined hub + agent stats card (313)
+    amosCard: {
+      marginHorizontal: spacing.lg,
+      marginTop: spacing.lg,
+      borderRadius: borderRadius.xl,
+      overflow: 'hidden' as const,
+      ...cardShadow,
+    },
+    amosCardGradient: {
+      padding: spacing.md,
+      gap: spacing.md,
+    },
+    amosCardHeader: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: spacing.sm,
+    },
+    amosCardTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: '#fff', letterSpacing: -0.3 },
+    amosCardSub: { fontSize: fontSize.xs, color: 'rgba(255,255,255,0.85)', marginTop: 2 },
+    amosCardChevron: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+    amosStatsGrid: {
+      flexDirection: 'row' as const,
+      gap: 8,
+    },
+    amosStatCell: {
+      flex: 1,
+      backgroundColor: 'rgba(255,255,255,0.12)',
+      borderRadius: borderRadius.md,
+      paddingVertical: 10,
+      paddingHorizontal: 8,
+      alignItems: 'center' as const,
+    },
+    amosStatCellHi: {
+      backgroundColor: 'rgba(255,255,255,0.28)',
+      borderWidth: 1.5,
+      borderColor: 'rgba(255,255,255,0.6)',
+    },
+    amosStatValue: {
+      fontSize: 22,
+      fontWeight: '800' as const,
+      color: '#fff',
+      letterSpacing: -0.5,
+    },
+    amosStatLabel: {
+      fontSize: 10,
+      fontWeight: '600' as const,
+      color: 'rgba(255,255,255,0.88)',
+      marginTop: 2,
+      letterSpacing: 0.2,
+      textAlign: 'center' as const,
+    },
+    amosCtaRow: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      justifyContent: 'space-between' as const,
+      gap: 8,
+    },
+    amosCtaSecondary: {
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 999,
+      backgroundColor: 'rgba(255,255,255,0.18)',
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.3)',
+    },
+    amosCtaText: {
+      fontSize: fontSize.xs,
+      fontWeight: '700' as const,
+      color: '#fff',
+    },
+    amosCtaBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 5,
+      borderRadius: 999,
+      backgroundColor: '#fff',
+    },
+    amosCtaBadgeText: {
+      fontSize: 10,
+      fontWeight: '800' as const,
+      color: '#E8317A',
+      letterSpacing: 0.3,
+    },
+
+    // ─── Legacy AMOS Hub banner (kept for back-compat — replaced by amosCard) ───
     amosBanner: {
       marginHorizontal: spacing.lg,
       marginTop: spacing.lg,
@@ -593,6 +702,31 @@ export default function HomeScreenV2() {
   const unreadNotifCount = useUnreadNotificationCount();
   const { data: streak, refetch: refetchStreak } = usePublishStreak();
   const { data: allLibraryPosts = [], refetch: refetchLibraryPosts } = useLibraryPosts();
+
+  // Agent activity stats — powers the unified "AMOS aan het werk" card
+  // (replaces the separate AMOS Hub banner + AgentActivityTile components).
+  const { data: agentStats = { awaitingApproval: 0, blockedToday: 0, tokensToday: 0, costUsdToday: 0 } } = useQuery({
+    queryKey: ['amos-agent-stats-today'],
+    queryFn: async () => {
+      const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+      const [{ count: awaitingApproval }, { data: todayRuns }] = await Promise.all([
+        supabase
+          .from('agent_runs')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'awaiting_approval'),
+        supabase
+          .from('agent_runs')
+          .select('status, prompt_tokens, completion_tokens, cost_usd')
+          .gte('created_at', todayStart.toISOString()),
+      ]);
+      const runs = (todayRuns ?? []) as any[];
+      const blockedToday = runs.filter(r => r.status === 'blocked').length;
+      const tokensToday  = runs.reduce((s, r) => s + (r.prompt_tokens ?? 0) + (r.completion_tokens ?? 0), 0);
+      const costUsdToday = runs.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0);
+      return { awaitingApproval: awaitingApproval ?? 0, blockedToday, tokensToday, costUsdToday };
+    },
+    staleTime: 60_000,
+  });
 
   const { data: profile } = useQuery({
     queryKey: ['home_v2_profile'],
@@ -913,35 +1047,90 @@ export default function HomeScreenV2() {
           </View>
         </View>
 
-        {/* ── AMOS Hub Banner ──────────────────────────────────────── */}
+        {/* ── AMOS aan het werk — gecombineerde hub + agent-stats card ── */}
         <TouchableOpacity
-          style={styles.amosBanner}
+          style={styles.amosCard}
           onPress={() => navigation.navigate('AMOSHub' as any)}
-          activeOpacity={0.9}
+          activeOpacity={0.92}
         >
           <LinearGradient
             colors={brandGradient.deep as any}
             start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.amosBannerGradient}
+            end={{ x: 1, y: 1 }}
+            style={styles.amosCardGradient}
           >
-            <View style={styles.amosBannerLeft}>
+            {/* Header */}
+            <View style={styles.amosCardHeader}>
               <Animated.View style={[styles.amosBrainCircle, { transform: [{ scale: brainScale }] }]}>
                 <Brain size={28} color="#fff" weight="duotone" />
               </Animated.View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.amosBannerTitle} numberOfLines={1}>{t.home.amosBannerTitle}</Text>
-                <Text style={styles.amosBannerSub} numberOfLines={1}>{t.home.amosBannerSub}</Text>
+                <Text style={styles.amosCardTitle} numberOfLines={1}>AMOS aan het werk</Text>
+                <Text style={styles.amosCardSub} numberOfLines={1}>Je AI marketing brein — 24/7 actief</Text>
+              </View>
+              <View style={styles.amosCardChevron}>
+                <CaretRight size={16} color="#fff" weight="bold" />
               </View>
             </View>
-            <View style={styles.amosBannerChevron}>
-              <CaretRight size={18} color="#fff" weight="bold" />
+
+            {/* Stats grid — each cell is tappable + deep-links into MultiAgent with filter */}
+            <View style={styles.amosStatsGrid}>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={(e) => { e.stopPropagation(); navigation.navigate('MultiAgent' as any, { filter: 'awaiting_approval' }); }}
+                style={[styles.amosStatCell, agentStats.awaitingApproval > 0 && styles.amosStatCellHi]}
+              >
+                <Text style={styles.amosStatValue}>{agentStats.awaitingApproval}</Text>
+                <Text style={styles.amosStatLabel}>Wacht op jou</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={(e) => { e.stopPropagation(); navigation.navigate('MultiAgent' as any, { filter: 'blocked' }); }}
+                style={styles.amosStatCell}
+              >
+                <Text style={styles.amosStatValue}>{agentStats.blockedToday}</Text>
+                <Text style={styles.amosStatLabel}>Geblokkeerd</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={(e) => { e.stopPropagation(); navigation.navigate('Analytics' as any); }}
+                style={styles.amosStatCell}
+              >
+                <Text style={styles.amosStatValue}>{formatTokensCompact(agentStats.tokensToday)}</Text>
+                <Text style={styles.amosStatLabel}>Tokens vandaag</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.75}
+                onPress={(e) => { e.stopPropagation(); navigation.navigate('Analytics' as any); }}
+                style={styles.amosStatCell}
+              >
+                <Text style={styles.amosStatValue}>{formatCostCompact(agentStats.costUsdToday)}</Text>
+                <Text style={styles.amosStatLabel}>Kosten vandaag</Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* CTA row */}
+            <View style={styles.amosCtaRow}>
+              <TouchableOpacity
+                onPress={(e) => { e.stopPropagation(); navigation.navigate('MultiAgent' as any); }}
+                activeOpacity={0.7}
+                style={styles.amosCtaSecondary}
+              >
+                <Robot size={14} color="#fff" weight="duotone" />
+                <Text style={styles.amosCtaText}>Agents beheren</Text>
+              </TouchableOpacity>
+              {agentStats.awaitingApproval > 0 && (
+                <TouchableOpacity
+                  onPress={(e) => { e.stopPropagation(); navigation.navigate('MultiAgent' as any, { filter: 'awaiting_approval' }); }}
+                  activeOpacity={0.8}
+                  style={styles.amosCtaBadge}
+                >
+                  <Text style={styles.amosCtaBadgeText}>{agentStats.awaitingApproval} review{agentStats.awaitingApproval === 1 ? '' : 's'} →</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </LinearGradient>
         </TouchableOpacity>
-
-        {/* ── Multi-Agent activity tile ────────────────────────────── */}
-        <AgentActivityTile />
 
         {/* ── Goal Mode tile ──────────────────────────────────────── */}
         <GoalModeTile />

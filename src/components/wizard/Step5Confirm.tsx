@@ -67,6 +67,42 @@ export default function Step5Confirm() {
       return;
     }
 
+    // 312 fix: go_posts.capture_id is NOT NULL. The wizard didn't create a
+    // capture row before Step 5 (only LiveCapture flow did). Lazy-create one
+    // here so the foreign key is satisfied. Persisted into wiz.capture.captureId
+    // so a retry reuses the same row.
+    let captureId: string | null = wiz.capture.captureId ?? null;
+    if (!captureId) {
+      try {
+        const { data: capRow, error: capErr } = await supabase
+          .from('go_captures')
+          .insert({
+            user_id: user.id,
+            event_id: wiz.capture.eventId ?? null,
+            media_type: wiz.capture.mediaType ?? 'photo',
+            media_url: wiz.edit.brandedImageUrl ?? wiz.capture.mediaUri ?? '',
+            storage_path: '',
+            thumbnail_url: wiz.edit.brandedImageUrl ?? wiz.capture.mediaUri ?? null,
+            tags: [],
+            note: wiz.edit.overlayText ?? '',
+            ai_status: 'completed',
+            captured_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single();
+        if (capErr || !capRow) {
+          throw new Error(`Kon capture niet aanmaken: ${capErr?.message ?? 'unknown'}`);
+        }
+        captureId = (capRow as any).id as string;
+        wiz.setCapture({ captureId });
+        console.log(`[Step5.publish] created capture ${captureId}`);
+      } catch (err: any) {
+        Alert.alert('Capture-fout', err?.message ?? 'Kon capture-record niet aanmaken.');
+        wiz.setConfirm({ isPublishing: false });
+        return;
+      }
+    }
+
     // Per-account status tracker — written directly here and mirrored to
     // wiz.confirm at the end of each iteration. The old code spread
     // `wiz.confirm.results` (a closed-over value), which captured a stale
@@ -86,11 +122,12 @@ export default function Step5Confirm() {
       wiz.setConfirm({ results: { ...liveResults }, errors: { ...liveErrors } });
 
       try {
-        // 1. Create the post row
+        // 1. Create the post row (capture_id is NOT NULL → must include)
         const { data: postRow, error: insertErr } = await supabase
           .from('go_posts')
           .insert({
             user_id: user.id,
+            capture_id: captureId,
             event_id: wiz.capture.eventId ?? null,
             channel,
             text_content: text,

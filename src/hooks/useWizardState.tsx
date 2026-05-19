@@ -33,6 +33,9 @@ export interface WizardCapture {
   mediaType: 'photo' | 'video' | null;
   eventId?: string | null;
   postId?: string | null;        // created server-side after step 1 → step 2
+  /** 312+: go_captures row id — required by go_posts.capture_id NOT NULL constraint.
+   * Lazy-created in Step5.publishAll if missing. */
+  captureId?: string | null;
 }
 
 export type LogoCorner = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';

@@ -207,7 +207,7 @@ export type RootStackParamList = {
   DemoEnvironment: undefined;
   // AMOS Hub
   AMOSHub: undefined;
-  MultiAgent: { goalId?: string } | undefined;
+  MultiAgent: { goalId?: string; filter?: 'awaiting_approval' | 'blocked' } | undefined;
   AgentDetail: { agentKind: 'content' | 'social' | 'ads' | 'analytics' | 'lead' };
   AgentRunDetail: { runId: string };
   // Goal Mode (Tier-2)
