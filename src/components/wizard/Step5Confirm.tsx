@@ -169,7 +169,26 @@ export default function Step5Confirm() {
         // 2. no response at all → throw (silent failure; previously fell through to 'ok')
         // 3. result.success !== true → throw with whatever detail we can find
         if (pubErr) {
-          throw new Error((pubErr as any)?.message ?? 'Edge function transport error (geen response)');
+          // 315: extract the real edge-function response body. supabase-js wraps
+          // 4xx/5xx responses in FunctionsHttpError with context = Response object.
+          // Without this, MISLUKT rows just say "Edge Function returned a non-2xx
+          // status code" — useless for diagnosing TikTok URL-properties / token /
+          // sandbox issues.
+          let detail = (pubErr as any)?.message ?? 'Edge function transport error (geen response)';
+          try {
+            const ctx = (pubErr as any)?.context;
+            if (ctx && typeof ctx.json === 'function') {
+              const body = await ctx.clone().json().catch(() => null) ?? await ctx.clone().text().catch(() => null);
+              if (body) {
+                const errMsg = typeof body === 'string' ? body : (body.error ?? body.message ?? JSON.stringify(body));
+                detail = `${detail}: ${String(errMsg).slice(0, 200)}`;
+              }
+            } else if (ctx && typeof ctx.text === 'function') {
+              const text = await ctx.clone().text().catch(() => null);
+              if (text) detail = `${detail}: ${text.slice(0, 200)}`;
+            }
+          } catch { /* extraction is best-effort */ }
+          throw new Error(detail);
         }
         if (!result) {
           throw new Error('Geen response van publish-social (timeout of CORS?)');
