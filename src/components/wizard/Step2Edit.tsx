@@ -256,14 +256,14 @@ export default function Step2Edit() {
                   position: 'absolute',
                   ...CORNER_STYLE[wiz.edit.brandLogoPosition],
                   backgroundColor: 'rgba(255,255,255,0.9)',
-                  borderRadius: 10,
-                  padding: 5,
+                  borderRadius: 8,
+                  padding: 3,
                   shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
                 }}
               >
                 <Image
                   source={{ uri: brandLogoUrl as string }}
-                  style={{ width: 44, height: 44, borderRadius: 6 }}
+                  style={{ width: 28, height: 28, borderRadius: 4 }}
                   resizeMode="contain"
                 />
               </View>
@@ -275,14 +275,14 @@ export default function Step2Edit() {
                   position: 'absolute',
                   ...CORNER_STYLE[wiz.edit.eventLogoPosition],
                   backgroundColor: 'rgba(255,255,255,0.9)',
-                  borderRadius: 10,
-                  padding: 5,
+                  borderRadius: 8,
+                  padding: 3,
                   shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
                 }}
               >
                 <Image
                   source={{ uri: eventLogoUrl as string }}
-                  style={{ width: 44, height: 44, borderRadius: 6 }}
+                  style={{ width: 28, height: 28, borderRadius: 4 }}
                   resizeMode="cover"
                 />
               </View>
@@ -294,14 +294,14 @@ export default function Step2Edit() {
                   position: 'absolute',
                   ...CORNER_STYLE[wiz.edit.customLogoPosition],
                   backgroundColor: 'rgba(255,255,255,0.9)',
-                  borderRadius: 10,
-                  padding: 5,
+                  borderRadius: 8,
+                  padding: 3,
                   shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
                 }}
               >
                 <Image
                   source={{ uri: wiz.edit.customLogoUri as string }}
-                  style={{ width: 44, height: 44, borderRadius: 6 }}
+                  style={{ width: 28, height: 28, borderRadius: 4 }}
                   resizeMode="contain"
                 />
               </View>

@@ -52,9 +52,20 @@ export default function Step3Channels() {
       // Filter client-side to keep the query simple and to also accept
       // rows where is_active=true (some legacy rows have neither status nor
       // status='connected' but is_active=true).
+      // ALSO filter out Facebook Personal accounts: Meta deprecated the
+      // Personal-publish API in 2024 — only Pages can be published via API
+      // (314 bug: Loukile Sami FB Personal returned non-2xx in publish-social).
       const filtered = (data ?? []).filter((a: any) => {
         const s = (a.status ?? '').toString().toLowerCase();
-        return s === 'active' || s === 'connected' || a.is_active === true;
+        const isActive = s === 'active' || s === 'connected' || a.is_active === true;
+        if (!isActive) return false;
+        const isFbPersonal = a.platform === 'facebook'
+          && (a.account_type ?? '').toString().toLowerCase() === 'personal';
+        if (isFbPersonal) {
+          console.warn(`[Step3] hiding Facebook Personal account ${a.id} — Meta API deprecated personal-publish 2024`);
+          return false;
+        }
+        return true;
       });
       return filtered.map((a: any) => {
         // Some platforms (Pinterest, TikTok) save open_id / username UUIDs in
