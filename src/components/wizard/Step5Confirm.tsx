@@ -140,9 +140,13 @@ export default function Step5Confirm() {
         if (insertErr || !postRow) throw new Error(insertErr?.message ?? 'Kon post niet aanmaken');
         const postId = (postRow as any).id as string;
 
-        // 2. Invoke publish-social
+        // 2. Invoke publish-social with a 90s timeout (some channels — IG video,
+        // TikTok upload — legitimately take 30-60s; >90s is broken). Without
+        // this, supabase-js await hangs forever on edge function 504 / network
+        // drop, blocking the entire sequential publish loop (313 bug: 6 channels
+        // stuck on "Bezig met publiceren…").
         console.log(`[Step5.publish] → ${channel} acc=${acc.id} postId=${postId} text=${text?.slice(0, 40)}…`);
-        const { data: result, error: pubErr } = await supabase.functions.invoke('publish-social', {
+        const invokePromise = supabase.functions.invoke('publish-social', {
           body: {
             post_id: postId,
             user_id: user.id,
@@ -154,6 +158,10 @@ export default function Step5Confirm() {
             media_type: 'photo',
           },
         });
+        const timeoutPromise = new Promise<{ data: null; error: any }>((resolve) =>
+          setTimeout(() => resolve({ data: null, error: { message: 'Timeout — publish-social geen response binnen 90s' } }), 90_000),
+        );
+        const { data: result, error: pubErr } = await Promise.race([invokePromise, timeoutPromise]) as any;
         console.log(`[Step5.publish] ← ${channel} pubErr=${pubErr ? JSON.stringify(pubErr) : 'none'} result=${result ? JSON.stringify(result).slice(0, 200) : 'null'}`);
 
         // Strict validation:
