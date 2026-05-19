@@ -85,7 +85,9 @@ import LibraryScreen from '../screens/LibraryScreen';
 import LibraryImportScreen from '../screens/LibraryImportScreen';
 import LibraryPostDetailScreen from '../screens/LibraryPostDetailScreen';
 
-import { CameraPlus, CameraSlash, Microphone } from 'phosphor-react-native';
+import { CameraPlus, CameraSlash, Microphone, Sparkle, ArrowRight } from 'phosphor-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { brandGradient } from '../theme';
 // ─── Navigators ─────────────────────────────────────────────────────
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator();
@@ -161,6 +163,11 @@ function MainTabsWrapper() {
   const handleCaptureCategory = (category: string) => {
     setShowCaptureModal(false);
     setTimeout(() => navigation.navigate('CaptureWizard' as any, { category }), 200);
+  };
+
+  const handleOpenWizard = () => {
+    setShowCaptureModal(false);
+    setTimeout(() => navigation.navigate('CaptureWizard' as any), 200);
   };
 
   return (
@@ -297,7 +304,33 @@ function MainTabsWrapper() {
               <View style={[fabStyles.handleBar, { backgroundColor: colors.border }]} />
 
               <Text style={[fabStyles.modalTitle, { color: colors.text }]}>Wat wil je vastleggen?</Text>
-              <Text style={[fabStyles.modalSubtitle, { color: colors.textSecondary }]}>Kies een categorie voor je content</Text>
+              <Text style={[fabStyles.modalSubtitle, { color: colors.textSecondary }]}>Start de wizard of pak een snelkoppeling</Text>
+
+              {/* ── NIEUW: prominente Wizard CTA ── */}
+              <TouchableOpacity
+                style={fabStyles.wizardCta}
+                onPress={handleOpenWizard}
+                activeOpacity={0.85}
+                testID="wizard-cta"
+              >
+                <LinearGradient
+                  colors={brandGradient.deep as any}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={fabStyles.wizardCtaGradient}
+                >
+                  <View style={fabStyles.wizardCtaIcon}>
+                    <Sparkle size={22} color="#fff" weight="fill" />
+                  </View>
+                  <View style={fabStyles.wizardCtaText}>
+                    <Text style={fabStyles.wizardCtaTitle}>Capture-to-Publish Wizard</Text>
+                    <Text style={fabStyles.wizardCtaSubtitle}>5 stappen: foto → bake → kanalen → preview → publish</Text>
+                  </View>
+                  <ArrowRight size={20} color="#fff" weight="bold" />
+                </LinearGradient>
+              </TouchableOpacity>
+
+              <Text style={[fabStyles.sectionDivider, { color: colors.textTertiary }]}>OF KIES EEN CATEGORIE</Text>
 
               <View style={fabStyles.categoriesGrid}>
                 {CAPTURE_CATEGORIES.map(cat => (
@@ -515,6 +548,52 @@ const fabStyles = StyleSheet.create({
   modalSubtitle: {
     fontSize: 14,
     marginBottom: 20,
+  },
+  wizardCta: {
+    borderRadius: 18,
+    overflow: 'hidden',
+    marginBottom: 16,
+    shadowColor: '#E8317A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  wizardCtaGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  wizardCtaIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  wizardCtaText: {
+    flex: 1,
+  },
+  wizardCtaTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  wizardCtaSubtitle: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.92)',
+    lineHeight: 16,
+  },
+  sectionDivider: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.2,
+    marginBottom: 12,
+    marginTop: 4,
   },
   categoriesGrid: {
     flexDirection: 'row',
