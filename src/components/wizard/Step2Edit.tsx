@@ -65,14 +65,13 @@ export default function Step2Edit() {
   const [bakeFailedOnce, setBakeFailedOnce] = useState(false);
   const [position, setPosition] = useState<WatermarkPosition>('bottom-right');
 
-  // Brand logo source priority: customLogoUri (one-off upload) > selected kit > default kit
+  // Brand kit logo (slot 1) — independent from custom logo (slot 3)
   const { data: brandKits = [] } = useBrandKits();
   const selectedKit =
     (wiz.edit.selectedBrandKitId && brandKits.find((k: any) => k.id === wiz.edit.selectedBrandKitId)) ||
     brandKits.find((k: any) => k.is_default) ||
     brandKits[0];
-  const brandLogoUrl: string | null =
-    wiz.edit.customLogoUri ?? selectedKit?.logo_url ?? null;
+  const brandLogoUrl: string | null = selectedKit?.logo_url ?? null;
   const [uploadingCustom, setUploadingCustom] = useState(false);
 
   async function pickCustomLogo() {
@@ -96,14 +95,14 @@ export default function Step2Edit() {
         const { url } = await uploadMedia(result.assets[0].uri, wiz.capture.eventId ?? 'wizard-logo', 'photo');
         wiz.setEdit({
           customLogoUri: url,
-          showBrandLogo: true,
+          showCustomLogo: true,
           brandedImageUrl: null,
         });
       } catch (upErr: any) {
         console.warn('[Step2.customLogo] upload failed, using local URI', upErr?.message);
         wiz.setEdit({
           customLogoUri: result.assets[0].uri,
-          showBrandLogo: true,
+          showCustomLogo: true,
           brandedImageUrl: null,
         });
       }
@@ -191,9 +190,11 @@ export default function Step2Edit() {
   }
 
   const sourceUri = wiz.edit.livePreviewUri ?? wiz.capture.mediaUri;
-  const brandLogoActive = wiz.edit.showBrandLogo && !!brandLogoUrl;
-  const eventLogoActive = wiz.edit.showEventLogo && !!eventLogoUrl;
-  const hasOverlay = !!(wiz.edit.overlayText || brandLogoActive || eventLogoActive);
+  const brandLogoActive  = wiz.edit.showBrandLogo  && !!brandLogoUrl;
+  const eventLogoActive  = wiz.edit.showEventLogo  && !!eventLogoUrl;
+  const customLogoActive = wiz.edit.showCustomLogo && !!wiz.edit.customLogoUri;
+  const activeLogoCount = (brandLogoActive ? 1 : 0) + (eventLogoActive ? 1 : 0) + (customLogoActive ? 1 : 0);
+  const hasOverlay = !!(wiz.edit.overlayText || brandLogoActive || eventLogoActive || customLogoActive);
   const isBaked = !!wiz.edit.brandedImageUrl;
 
   const cycleCorner = (current: LogoCorner): LogoCorner => NEXT_CORNER[current];
@@ -286,6 +287,25 @@ export default function Step2Edit() {
                 />
               </View>
             )}
+            {/* Custom logo overlay (slot 3) — independent from brand kit + event */}
+            {customLogoActive && (
+              <View
+                style={{
+                  position: 'absolute',
+                  ...CORNER_STYLE[wiz.edit.customLogoPosition],
+                  backgroundColor: 'rgba(255,255,255,0.9)',
+                  borderRadius: 10,
+                  padding: 5,
+                  shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 4, shadowOffset: { width: 0, height: 1 },
+                }}
+              >
+                <Image
+                  source={{ uri: wiz.edit.customLogoUri as string }}
+                  style={{ width: 44, height: 44, borderRadius: 6 }}
+                  resizeMode="contain"
+                />
+              </View>
+            )}
             {/* AMOS chip preview — informational; server still bakes the real chip on publish */}
             <View
               style={{
@@ -374,7 +394,7 @@ export default function Step2Edit() {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <PhImage size={16} color={colors.text} weight="bold" />
           <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Logo's op foto</Text>
-          <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary }}>(max. 2)</Text>
+          <Text style={{ fontSize: fontSize.xs, color: colors.textTertiary }}>· {activeLogoCount}/3 actief</Text>
         </View>
 
         {/* Brand logo block — kit picker + custom upload + toggle/position */}
@@ -395,13 +415,11 @@ export default function Step2Edit() {
             <View style={{ flex: 1 }}>
               <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Brand logo</Text>
               <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }} numberOfLines={1}>
-                {wiz.edit.customLogoUri
-                  ? 'Custom upload (alleen deze post)'
-                  : (selectedKit as any)?.name
-                    ? `Kit: ${(selectedKit as any).name}`
-                    : brandLogoUrl
-                      ? 'Default kit'
-                      : 'Geen logo — kies kit of upload'}
+                {(selectedKit as any)?.name
+                  ? `Kit: ${(selectedKit as any).name}`
+                  : brandLogoUrl
+                    ? 'Default kit'
+                    : 'Geen brand logo — voeg toe in BrandKit'}
               </Text>
             </View>
             {brandLogoActive && (
@@ -428,70 +446,41 @@ export default function Step2Edit() {
             </TouchableOpacity>
           </View>
 
-          {/* Kit picker chips (horizontaal scrollable) + custom upload chip */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
-            {brandKits.map((kit: any) => {
-              const isPicked = wiz.edit.customLogoUri == null &&
-                ((wiz.edit.selectedBrandKitId === kit.id) ||
-                 (wiz.edit.selectedBrandKitId == null && kit.is_default));
-              return (
-                <TouchableOpacity
-                  key={kit.id}
-                  onPress={() => wiz.setEdit({
-                    selectedBrandKitId: kit.id,
-                    customLogoUri: null,
-                    brandedImageUrl: null,
-                  })}
-                  style={{
-                    flexDirection: 'row', alignItems: 'center', gap: 5,
-                    paddingHorizontal: 9, paddingVertical: 5,
-                    borderRadius: 999,
-                    backgroundColor: isPicked ? colors.primary + '20' : colors.background,
-                    borderWidth: 1, borderColor: isPicked ? colors.primary : colors.border,
-                  }}
-                >
-                  {kit.logo_url
-                    ? <Image source={{ uri: kit.logo_url }} style={{ width: 16, height: 16, borderRadius: 3 }} resizeMode="contain" />
-                    : <Buildings size={12} color={colors.textTertiary} weight="duotone" />}
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: isPicked ? colors.primary : colors.textSecondary }} numberOfLines={1}>
-                    {kit.name || 'Kit'}
-                  </Text>
-                  {kit.is_default && (
-                    <Text style={{ fontSize: 9, color: colors.textTertiary }}>· default</Text>
-                  )}
-                </TouchableOpacity>
-              );
-            })}
-            {/* Upload custom button */}
-            <TouchableOpacity
-              onPress={pickCustomLogo}
-              disabled={uploadingCustom}
-              style={{
-                flexDirection: 'row', alignItems: 'center', gap: 5,
-                paddingHorizontal: 9, paddingVertical: 5,
-                borderRadius: 999,
-                backgroundColor: wiz.edit.customLogoUri ? colors.primary + '20' : colors.background,
-                borderWidth: 1, borderStyle: 'dashed', borderColor: wiz.edit.customLogoUri ? colors.primary : colors.border,
-                opacity: uploadingCustom ? 0.5 : 1,
-              }}
-            >
-              {uploadingCustom
-                ? <ActivityIndicator size="small" color={colors.primary} />
-                : <UploadSimple size={12} color={wiz.edit.customLogoUri ? colors.primary : colors.textSecondary} weight="bold" />}
-              <Text style={{ fontSize: 11, fontWeight: '700', color: wiz.edit.customLogoUri ? colors.primary : colors.textSecondary }}>
-                {uploadingCustom ? 'Uploaden…' : wiz.edit.customLogoUri ? 'Custom ✓' : 'Upload eigen'}
-              </Text>
-              {wiz.edit.customLogoUri && (
-                <TouchableOpacity
-                  onPress={() => wiz.setEdit({ customLogoUri: null, brandedImageUrl: null })}
-                  style={{ marginLeft: 2 }}
-                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                >
-                  <X size={11} color={colors.primary} weight="bold" />
-                </TouchableOpacity>
-              )}
-            </TouchableOpacity>
-          </ScrollView>
+          {/* Kit picker chips (horizontaal scrollable) — only switches brand slot, doesn't touch custom */}
+          {brandKits.length > 0 && (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+              {brandKits.map((kit: any) => {
+                const isPicked = (wiz.edit.selectedBrandKitId === kit.id) ||
+                                  (wiz.edit.selectedBrandKitId == null && kit.is_default);
+                return (
+                  <TouchableOpacity
+                    key={kit.id}
+                    onPress={() => wiz.setEdit({
+                      selectedBrandKitId: kit.id,
+                      brandedImageUrl: null,
+                    })}
+                    style={{
+                      flexDirection: 'row', alignItems: 'center', gap: 5,
+                      paddingHorizontal: 9, paddingVertical: 5,
+                      borderRadius: 999,
+                      backgroundColor: isPicked ? colors.primary + '20' : colors.background,
+                      borderWidth: 1, borderColor: isPicked ? colors.primary : colors.border,
+                    }}
+                  >
+                    {kit.logo_url
+                      ? <Image source={{ uri: kit.logo_url }} style={{ width: 16, height: 16, borderRadius: 3 }} resizeMode="contain" />
+                      : <Buildings size={12} color={colors.textTertiary} weight="duotone" />}
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: isPicked ? colors.primary : colors.textSecondary }} numberOfLines={1}>
+                      {kit.name || 'Kit'}
+                    </Text>
+                    {kit.is_default && (
+                      <Text style={{ fontSize: 9, color: colors.textTertiary }}>· default</Text>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          )}
         </View>
 
         {/* Event logo row */}
@@ -540,6 +529,79 @@ export default function Step2Edit() {
               {eventLogoActive ? 'Aan' : 'Uit'}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Custom logo row (slot 3) — onafhankelijk van brand kit + event */}
+        <View
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 10,
+            padding: spacing.sm, borderRadius: borderRadius.md,
+            backgroundColor: customLogoActive ? colors.primary + '10' : colors.surface,
+            borderWidth: 1, borderColor: customLogoActive ? colors.primary + '40' : colors.border,
+          }}
+        >
+          <View style={{ width: 36, height: 36, borderRadius: 8, backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }}>
+            {wiz.edit.customLogoUri
+              ? <Image source={{ uri: wiz.edit.customLogoUri }} style={{ width: 36, height: 36 }} resizeMode="contain" />
+              : <UploadSimple size={20} color={colors.textTertiary} weight="duotone" />}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Custom logo</Text>
+            <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary }} numberOfLines={1}>
+              {wiz.edit.customLogoUri ? 'Eigen upload (alleen deze post)' : 'Upload eigen logo voor deze post'}
+            </Text>
+          </View>
+          {customLogoActive && (
+            <TouchableOpacity
+              onPress={() => wiz.setEdit({ customLogoPosition: cycleCorner(wiz.edit.customLogoPosition), brandedImageUrl: null })}
+              style={{ paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, backgroundColor: colors.primary + '15', borderWidth: 1, borderColor: colors.primary + '40' }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>{CORNER_LABEL[wiz.edit.customLogoPosition]}</Text>
+            </TouchableOpacity>
+          )}
+          {/* If no custom uploaded yet → show Upload button. If uploaded → Aan/Uit + ✕ to remove. */}
+          {!wiz.edit.customLogoUri ? (
+            <TouchableOpacity
+              onPress={pickCustomLogo}
+              disabled={uploadingCustom}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 4,
+                paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999,
+                borderWidth: 1, borderStyle: 'dashed', borderColor: colors.border,
+                backgroundColor: colors.background,
+                opacity: uploadingCustom ? 0.5 : 1,
+              }}
+            >
+              {uploadingCustom
+                ? <ActivityIndicator size="small" color={colors.primary} />
+                : <UploadSimple size={11} color={colors.primary} weight="bold" />}
+              <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary }}>
+                {uploadingCustom ? 'Uploaden…' : 'Upload'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity
+                onPress={() => wiz.setEdit({ showCustomLogo: !wiz.edit.showCustomLogo, brandedImageUrl: null })}
+                style={{
+                  paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999,
+                  backgroundColor: customLogoActive ? colors.primary : colors.background,
+                  borderWidth: 1, borderColor: customLogoActive ? colors.primary : colors.border,
+                }}
+              >
+                <Text style={{ fontSize: 11, fontWeight: '700', color: customLogoActive ? '#fff' : colors.textSecondary }}>
+                  {customLogoActive ? 'Aan' : 'Uit'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => wiz.setEdit({ customLogoUri: null, showCustomLogo: false, brandedImageUrl: null })}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: colors.background, borderWidth: 1, borderColor: colors.border, justifyContent: 'center', alignItems: 'center' }}
+              >
+                <X size={11} color={colors.textSecondary} weight="bold" />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 

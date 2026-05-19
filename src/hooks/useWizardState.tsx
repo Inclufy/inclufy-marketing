@@ -53,8 +53,11 @@ export interface WizardEdit {
   eventLogoPosition: LogoCorner;
   /** 309+: pick a specific brand kit (null = default kit) */
   selectedBrandKitId: string | null;
-  /** 309+: one-off custom logo URL uploaded for this post (overrides brand kit logo) */
+  /** 309+: one-off custom logo URL uploaded for this post */
   customLogoUri: string | null;
+  /** 310+: custom logo is its own independent overlay slot (not a brand-kit override) */
+  showCustomLogo: boolean;
+  customLogoPosition: LogoCorner;
   /** Set by Step2 after bakeOverlayIntoImage succeeds — propagates to Step5 preview. */
   brandedImageUrl: string | null;
   /** Optimistic preview URI (local, pre-upload). Step5 falls back to this if brandedImageUrl is null. */
@@ -103,6 +106,8 @@ const defaultState: WizardState = {
     eventLogoPosition: 'bottom-right',
     selectedBrandKitId: null,
     customLogoUri: null,
+    showCustomLogo: false,
+    customLogoPosition: 'bottom-left',
     brandedImageUrl: null,
     livePreviewUri: null,
   },
