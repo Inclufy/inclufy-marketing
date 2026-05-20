@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: Ionicons name=<dynamic: ch?.icon as any || 'globe-outline'> | Ionicons name=<dynamic: channelConfig[ch]?.icon as any>
 import React, { useState, useMemo } from 'react';
 import {
   View,
@@ -15,12 +16,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAllPosts, useDeletePost, useDuplicatePost, usePublishPost, useFetchEngagement } from '../hooks/useEventPosts';
 import { useEvents } from '../hooks/useEvents';
 import type { RootStackParamList, EventPost, Channel, PostStatus } from '../types';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { spacing, borderRadius, fontSize, fontWeight } from '../theme';
 import { useTranslation } from '../i18n';
 import { useTheme } from '../context/ThemeContext';
 import { useThemedStyles } from '../utils/themedStyles';
 
+import { ArrowsClockwise, Article, Calendar, ChatCircle, Copy, FileText, Heart, PaperPlaneTilt, PencilLine, ShareNetwork, Trash } from 'phosphor-react-native';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const channelConfig: Record<Channel, { label: string; color: string; icon: string }> = {
@@ -169,7 +171,12 @@ export default function AllPostsScreen() {
     const canPublish = post.status === 'draft' || post.status === 'approved';
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.85}
+        onPress={() => handleEdit(post)}
+        accessibilityLabel="Open post"
+      >
         {/* Color accent strip */}
         <View style={[styles.cardAccent, { backgroundColor: ch?.color || colors.primary }]} />
 
@@ -201,12 +208,12 @@ export default function AllPostsScreen() {
           <View style={styles.metaRow}>
             {eventName ? (
               <View style={styles.eventTag}>
-                <Ionicons name="calendar-outline" size={11} color={colors.textSecondary} />
+                <Calendar size={11} color={colors.textSecondary} weight="duotone" />
                 <Text style={styles.eventTagText} numberOfLines={1}>{eventName}</Text>
               </View>
             ) : (
               <View style={styles.eventTag}>
-                <Ionicons name="document-text-outline" size={11} color={colors.textTertiary} />
+                <FileText size={11} color={colors.textTertiary} weight="duotone" />
                 <Text style={[styles.eventTagText, { color: colors.textTertiary }]}>{t.allPosts.noEvent}</Text>
               </View>
             )}
@@ -219,15 +226,15 @@ export default function AllPostsScreen() {
           {post.status === 'published' && (
             <View style={styles.engagementRow}>
               <View style={styles.engagementStat}>
-                <Ionicons name="heart-outline" size={13} color={colors.textSecondary} />
+                <Heart size={13} color={colors.textSecondary} weight="duotone" />
                 <Text style={styles.engagementValue}>{post.engagement?.likes ?? 0}</Text>
               </View>
               <View style={styles.engagementStat}>
-                <Ionicons name="chatbubble-outline" size={13} color={colors.textSecondary} />
+                <ChatCircle size={13} color={colors.textSecondary} weight="duotone" />
                 <Text style={styles.engagementValue}>{post.engagement?.comments ?? 0}</Text>
               </View>
               <View style={styles.engagementStat}>
-                <Ionicons name="share-social-outline" size={13} color={colors.textSecondary} />
+                <ShareNetwork size={13} color={colors.textSecondary} weight="duotone" />
                 <Text style={styles.engagementValue}>{post.engagement?.shares ?? 0}</Text>
               </View>
               <View style={{ flex: 1 }} />
@@ -239,7 +246,7 @@ export default function AllPostsScreen() {
                   onPress={() => handleRefreshEngagement(post)}
                   accessibilityLabel="Engagement vernieuwen"
                 >
-                  <Ionicons name="refresh-outline" size={15} color={colors.textSecondary} />
+                  <ArrowsClockwise size={15} color={colors.textSecondary} weight="bold" />
                 </TouchableOpacity>
               )}
             </View>
@@ -248,23 +255,23 @@ export default function AllPostsScreen() {
           {/* Actions — icon buttons */}
           <View style={styles.actionsRow}>
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleEdit(post)}>
-              <Ionicons name="create-outline" size={18} color={colors.primary} />
+              <PencilLine size={18} color={colors.primary} weight="duotone" />
             </TouchableOpacity>
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleCopy(post)}>
-              <Ionicons name="copy-outline" size={18} color={colors.secondary} />
+              <Copy size={18} color={colors.secondary} weight="duotone" />
             </TouchableOpacity>
             {canPublish && (
               <TouchableOpacity style={styles.actionBtn} onPress={() => handlePublish(post)}>
-                <Ionicons name="send-outline" size={18} color="#10D9A0" />
+                <PaperPlaneTilt size={18} color="#10D9A0" weight="duotone" />
               </TouchableOpacity>
             )}
             <View style={{ flex: 1 }} />
             <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(post)}>
-              <Ionicons name="trash-outline" size={18} color="#F8717180" />
+              <Trash size={18} color="#F8717180" weight="duotone" />
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -324,7 +331,7 @@ export default function AllPostsScreen() {
         ) : posts.length === 0 ? (
           <View style={styles.centered}>
             <View style={styles.emptyIcon}>
-              <MaterialCommunityIcons name="post-outline" size={40} color={colors.textSecondary} />
+              <Article size={40} color={colors.textSecondary} weight="duotone" />
             </View>
             <Text style={styles.emptyTitle}>{t.allPosts.noPostsTitle}</Text>
             <Text style={styles.emptySubtitle}>{t.allPosts.noPostsSubtitle}</Text>
