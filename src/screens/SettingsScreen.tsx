@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: Ionicons name=<dynamic: field.icon as any> | Ionicons name=<dynamic: icon> | Ionicons name=<dynamic: isConnected ? 'checkmark-circle-outline' : (platform as any).manualOnly ? 'hand-left-outline' : 'link-outline'> | Ionicons name=<dynamic: platform.icon as any>
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -33,7 +34,9 @@ import { useIsSuperadmin } from '../utils/superadmin';
 import TierSwitcher from '../components/TierSwitcher';
 import WatermarkPreview from '../components/WatermarkPreview';
 import WatermarkSettings from '../components/WatermarkSettings';
+import WatermarkAdminEditor from '../components/WatermarkAdminEditor';
 
+import { ArrowsClockwise, CaretRight, Info, ShieldCheck, SignOut, Sparkle } from 'phosphor-react-native';
 const BIOMETRIC_KEY = 'amos_biometric_enabled';
 
 const SOCIAL_PLATFORMS = [
@@ -751,7 +754,7 @@ export default function SettingsScreen() {
       authUrl = `https://www.facebook.com/v21.0/dialog/oauth?client_id=${metaAppId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'tiktok') {
       const tiktokClientKey = process.env.EXPO_PUBLIC_TIKTOK_CLIENT_KEY || 'sbaw0n7p637do602ql';
-      authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish,video.list')}&response_type=code&state=${encodeURIComponent(state)}`;
+      authUrl = `https://www.tiktok.com/v2/auth/authorize/?client_key=${tiktokClientKey}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent('user.info.basic,video.publish')}&response_type=code&state=${encodeURIComponent(state)}`;
     } else if (platformKey === 'pinterest') {
       // Pinterest OAuth — Trial-Access apps still use the same UI domain
       // (www.pinterest.com/oauth/) but the token-exchange happens against
@@ -832,7 +835,7 @@ export default function SettingsScreen() {
         {value ? <Text style={styles.rowValue}>{value}</Text> : null}
       </View>
       {rightElement ?? (showChevron && onPress ? (
-        <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+        <CaretRight size={18} color={colors.textTertiary} weight="bold" />
       ) : null)}
     </TouchableOpacity>
   );
@@ -859,12 +862,12 @@ export default function SettingsScreen() {
           <View style={styles.separator} />
           <TouchableOpacity style={styles.row} onPress={handleLogout} activeOpacity={0.7}>
             <View style={[styles.rowIconWrap, { backgroundColor: colors.error + '15' }]}>
-              <Ionicons name="log-out-outline" size={20} color={colors.error} />
+              <SignOut size={20} color={colors.error} weight="duotone" />
             </View>
             <View style={styles.rowContent}>
               <Text style={[styles.rowLabel, { color: colors.error }]}>{t.settings.logout}</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.textTertiary} />
+            <CaretRight size={18} color={colors.textTertiary} weight="bold" />
           </TouchableOpacity>
         </View>
 
@@ -887,7 +890,7 @@ export default function SettingsScreen() {
         {isSuperadmin && (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: spacing.md, marginTop: spacing.md, marginBottom: 4 }}>
-              <Ionicons name="shield-checkmark" size={12} color={colors.primary} />
+              <ShieldCheck size={12} color={colors.primary} weight="fill" />
               <Text style={[styles.sectionLabel, { marginTop: 0, marginBottom: 0 }]}>
                 DEVELOPER TOOLS
               </Text>
@@ -900,6 +903,8 @@ export default function SettingsScreen() {
               </View>
               <View style={styles.separator} />
               <TierSwitcher />
+              <View style={styles.separator} />
+              <WatermarkAdminEditor />
               <View style={styles.separator} />
               <WatermarkPreview />
             </View>
@@ -1204,7 +1209,7 @@ export default function SettingsScreen() {
             gap: spacing.sm,
           }}
         >
-          <Ionicons name="sparkles" size={22} color={colors.primary} />
+          <Sparkle size={22} color={colors.primary} weight="fill" />
           <View style={{ flex: 1 }}>
             <Text style={{ fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.primary }}>
               Verbind via wizard
@@ -1213,7 +1218,7 @@ export default function SettingsScreen() {
               Gegidste flow met AI-merkstem analyse — aanbevolen
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={colors.primary} />
+          <CaretRight size={18} color={colors.primary} weight="bold" />
         </TouchableOpacity>
 
         <View style={styles.card}>
@@ -1293,7 +1298,7 @@ export default function SettingsScreen() {
           <View style={styles.separator} />
           <TouchableOpacity style={styles.row} onPress={() => refetchSocial()} activeOpacity={0.7}>
             <View style={[styles.rowIconWrap, { backgroundColor: colors.info + '15' }]}>
-              <Ionicons name="refresh-outline" size={20} color={colors.info} />
+              <ArrowsClockwise size={20} color={colors.info} weight="bold" />
             </View>
             <View style={styles.rowContent}>
               <Text style={styles.rowLabel}>Status vernieuwen</Text>
@@ -1354,7 +1359,7 @@ export default function SettingsScreen() {
 
               <View style={{ backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.md }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                  <Ionicons name="information-circle-outline" size={18} color={colors.info} />
+                  <Info size={18} color={colors.info} weight="regular" />
                   <Text style={{ fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.text }}>Handmatige koppeling</Text>
                 </View>
                 <Text style={{ fontSize: fontSize.xs, color: colors.textSecondary, lineHeight: 18 }}>
