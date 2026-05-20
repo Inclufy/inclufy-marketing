@@ -71,7 +71,7 @@ import { useCampaigns } from '../hooks/useCampaigns';
 import { useUnreadNotificationCount } from '../hooks/useNotifications';
 import { useEvents } from '../hooks/useEvents';
 import { usePublishStreak } from '../hooks/usePublishStreak';
-import { useLibraryPosts } from '../hooks/useLibraryPosts';
+import { useAllPosts } from '../hooks/useEventPosts';
 import type { RootStackParamList } from '../types';
 import { spacing, borderRadius, fontSize, fontWeight, brandGradient } from '../theme';
 import { useThemedStyles } from '../utils/themedStyles';
@@ -701,7 +701,7 @@ export default function HomeScreenV2() {
   const { data: allEvents = [], refetch: refetchEvents } = useEvents();
   const unreadNotifCount = useUnreadNotificationCount();
   const { data: streak, refetch: refetchStreak } = usePublishStreak();
-  const { data: allLibraryPosts = [], refetch: refetchLibraryPosts } = useLibraryPosts();
+  const { data: allPosts = [], refetch: refetchAllPosts } = useAllPosts();
 
   // Agent activity stats — powers the unified "AMOS aan het werk" card
   // (replaces the separate AMOS Hub banner + AgentActivityTile components).
@@ -852,7 +852,8 @@ export default function HomeScreenV2() {
   const recentCampaigns = campaigns.slice(0, 3);
 
   // 312: last 5 publications (newest first) — drives the activity feed.
-  const recentPublications = [...allLibraryPosts]
+  // Sourced from go_posts (user-created social posts) — same table AllPosts reads.
+  const recentPublications = [...allPosts]
     .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
     .slice(0, 5);
 
@@ -866,10 +867,10 @@ export default function HomeScreenV2() {
       refetchFeed(),
       refetchEvents(),
       refetchStreak(),
-      refetchLibraryPosts(),
+      refetchAllPosts(),
     ]);
     setRefreshing(false);
-  }, [refetchStats, refetchCampaigns, refetchFeed, refetchEvents, refetchStreak, refetchLibraryPosts]);
+  }, [refetchStats, refetchCampaigns, refetchFeed, refetchEvents, refetchStreak, refetchAllPosts]);
 
   const dismissAlert = (id: string) =>
     setDismissedAlerts((prev) => new Set(prev).add(id));
@@ -1266,7 +1267,7 @@ export default function HomeScreenV2() {
                 return (
                   <TouchableOpacity
                     key={post.id}
-                    onPress={() => navigation.navigate('LibraryPostDetail' as any, { postId: post.id })}
+                    onPress={() => navigation.navigate('PostReview' as any, { captureId: post.capture_id, eventId: post.event_id || undefined })}
                     activeOpacity={0.85}
                     style={styles.feedRow}
                   >
