@@ -221,7 +221,15 @@ export default function WatermarkAdminEditor() {
           }}
         >
           {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={{ width: 56, height: 56 }} resizeMode="contain" />
+            // key={imageUrl} forces remount on URL change — RN Image's native
+            // cache otherwise keeps showing the previous bitmap even after the
+            // source URI prop has changed.
+            <Image
+              key={imageUrl}
+              source={{ uri: imageUrl }}
+              style={{ width: 56, height: 56 }}
+              resizeMode="contain"
+            />
           ) : (
             <ImageIcon size={26} color="#fff" weight="duotone" />
           )}
