@@ -1,3 +1,4 @@
+// TODO: migrate to Phosphor — unmapped icons: Ionicons name=<dynamic: iconName as 'checkmark-circle'> | Ionicons name=<dynamic: selected ? 'checkmark-circle' : 'ellipse-outline'>
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -13,7 +14,7 @@ import {
 } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import {
   useLibraryPost,
   useScheduleLibraryPost,
@@ -29,6 +30,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../services/supabase';
 import ChannelPreview from '../components/ChannelPreview';
 
+import { CaretLeft, ImageBroken, Rocket, Trash, X } from 'phosphor-react-native';
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 type R = RouteProp<RootStackParamList, 'LibraryPostDetail'>;
 
@@ -62,28 +64,9 @@ export default function LibraryPostDetailScreen() {
 
   const [language, setLanguage] = useState<LibraryLanguage>('nl');
 
-  if (isLoading) {
-    return (
-      <SafeAreaView style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
-        <ActivityIndicator color={colors.primary} />
-      </SafeAreaView>
-    );
-  }
-  if (!post) {
-    return (
-      <SafeAreaView style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
-        <Text style={{ color: colors.text }}>Post niet gevonden</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const tr = post.translations[language] ?? post.translations[post.primary_language];
-  const availableLangs = LANGS.filter((l) => post.translations[l]);
-
   // Channel picker modal — opens before publish so user can override
   // post.channels (default = whatever's in the DB) with any subset of
-  // their connected platforms. Earlier UX showed a plain Alert with
-  // post.channels.join(', ') and gave no way to add channels.
+  // their connected platforms.
   const [channelPickerOpen, setChannelPickerOpen] = useState(false);
   const [pickerChannels, setPickerChannels] = useState<Channel[]>([]);
 
@@ -104,6 +87,24 @@ export default function LibraryPostDetailScreen() {
     },
     staleTime: 60_000,
   });
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+  if (!post) {
+    return (
+      <SafeAreaView style={[styles.container, styles.center, { backgroundColor: colors.background }]}>
+        <Text style={{ color: colors.text }}>Post niet gevonden</Text>
+      </SafeAreaView>
+    );
+  }
+
+  const tr = post.translations[language] ?? post.translations[post.primary_language];
+  const availableLangs = LANGS.filter((l) => post.translations[l]);
 
   function publishNow() {
     if (!post) return;
@@ -187,13 +188,13 @@ export default function LibraryPostDetailScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <CaretLeft size={24} color={colors.text} weight="bold" />
         </TouchableOpacity>
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {post.external_id ?? 'Library post'}
         </Text>
         <TouchableOpacity onPress={confirmDelete}>
-          <Ionicons name="trash-outline" size={22} color={colors.textSecondary} />
+          <Trash size={22} color={colors.textSecondary} weight="duotone" />
         </TouchableOpacity>
       </View>
 
@@ -203,7 +204,7 @@ export default function LibraryPostDetailScreen() {
           <Image source={{ uri: tr.image_url }} style={styles.preview} resizeMode="cover" />
         ) : (
           <View style={[styles.preview, styles.previewEmpty]}>
-            <MaterialCommunityIcons name="image-off-outline" size={40} color="#CBD5E1" />
+            <ImageBroken size={40} color="#CBD5E1" weight="duotone" />
           </View>
         )}
 
@@ -271,7 +272,7 @@ export default function LibraryPostDetailScreen() {
             >
               {publishMut.isPending ? <ActivityIndicator color="#fff" /> : (
                 <>
-                  <Ionicons name="rocket-outline" size={18} color="#fff" />
+                  <Rocket size={18} color="#fff" weight="duotone" />
                   <Text style={styles.actionBtnText}>Nu publiceren</Text>
                 </>
               )}
@@ -321,7 +322,7 @@ export default function LibraryPostDetailScreen() {
                 Kies kanalen
               </Text>
               <TouchableOpacity onPress={() => setChannelPickerOpen(false)}>
-                <Ionicons name="close" size={24} color={colors.textSecondary} />
+                <X size={24} color={colors.textSecondary} weight="bold" />
               </TouchableOpacity>
             </View>
             <Text style={{ fontSize: fontSize.sm, color: colors.textSecondary, marginBottom: spacing.md }}>
