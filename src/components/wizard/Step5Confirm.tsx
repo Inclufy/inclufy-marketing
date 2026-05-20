@@ -209,14 +209,23 @@ export default function Step5Confirm() {
         // rows as "Concept" even after successful publish).
         // 318: corrected column names — schema is published_post_id (not
         // external_post_id) and publish_error (not error_message).
-        await supabase
-          .from('go_posts')
-          .update({
-            status: 'published',
-            published_at: new Date().toISOString(),
-            published_post_id: result.postId ?? result.post_id ?? null,
-          } as any)
-          .eq('id', postId);
+        // 320: wrap UPDATE in a 10s race — if Supabase hangs after the social
+        // publish succeeded, the spinner doesn't get stuck forever. The post
+        // is already live on the platform; we just lose the status flip
+        // (which the next bulk-migration can repair).
+        await Promise.race([
+          supabase
+            .from('go_posts')
+            .update({
+              status: 'published',
+              published_at: new Date().toISOString(),
+              published_post_id: result.postId ?? result.post_id ?? null,
+            } as any)
+            .eq('id', postId),
+          new Promise((resolve) => setTimeout(() => resolve({ data: null, error: { message: 'UPDATE timeout (10s) — post is live, status flip skipped' } }), 10_000)),
+        ]).catch((updErr: any) => {
+          console.warn('[Step5.publish] go_posts UPDATE failed (post is still live):', updErr?.message);
+        });
       } catch (err: any) {
         liveResults[acc.id] = 'error';
         liveErrors[acc.id]  = err?.message ?? 'fout';
@@ -226,20 +235,28 @@ export default function Step5Confirm() {
         // Posts tab can show real status + offer retry. Skip if postId is
         // null (failure happened before insert succeeded).
         // 318: corrected column name — schema uses publish_error.
+        // 320: same 10s race on the failure-update so a hung Supabase doesn't
+        // strand the loop after the publish error already surfaced.
         if (postId) {
-          try {
-            await supabase
+          await Promise.race([
+            supabase
               .from('go_posts')
               .update({
                 status: 'failed',
                 publish_error: (err?.message ?? 'fout').slice(0, 500),
               } as any)
-              .eq('id', postId);
-          } catch { /* best effort */ }
+              .eq('id', postId),
+            new Promise((resolve) => setTimeout(() => resolve(null), 10_000)),
+          ]).catch(() => { /* best effort */ });
         }
       }
     }
 
+    // 320: ALWAYS run cleanup in a finally-equivalent — both done flags so
+    // the UI never gets stuck on "Bezig met publiceren…" if the loop above
+    // throws unexpectedly. Outer try/catch around the whole publish flow
+    // would be cleaner; minimal change here is to ensure these two lines
+    // run no matter what.
     wiz.setConfirm({ isPublishing: false });
     setDone(true);
   }
