@@ -164,7 +164,7 @@ Deno.serve(async (req) => {
     if ((targetMaxW || targetMaxH || presetParam === 'tiktok') && contentType.startsWith('image/')) {
       try {
         const inputBytes = new Uint8Array(await data.arrayBuffer());
-        const img: any = await decodeImage(inputBytes);
+        let img: any = await decodeImage(inputBytes);
         const origW = img.width;
         const origH = img.height;
 
@@ -176,23 +176,45 @@ Deno.serve(async (req) => {
         if (presetParam === 'tiktok') {
           // TikTok Photo Mode (Sandbox) only accepts EXACT 9:16 portrait
           // (1080×1920) or 16:9 landscape (1920×1080). Anything off-ratio
-          // returns picture_size_check_failed. Strategy: scale-to-cover the
-          // target box, then center-crop the overflow.
+          // returns picture_size_check_failed.
+          //
+          // 319 fix: previously we scaled-to-COVER then center-cropped, which
+          // chopped overlays positioned in corners (AMOS chip, brand logo,
+          // overlay text). Now we scale-to-CONTAIN inside the target box and
+          // add letterbox/pillarbox bars to fill the remaining canvas. The
+          // result is still exactly 1080×1920 (so TikTok accepts it) but the
+          // source pixels — including all corner-positioned overlays — are
+          // preserved intact.
+          //
+          // For square sources (1011×1011 from our wizard bake), this means
+          // ~360px black bars top + bottom around the centered square.
           const isPortrait = origH >= origW;
           const targetW = isPortrait ? 1080 : 1920;
           const targetH = isPortrait ? 1920 : 1080;
           const scaleW = targetW / origW;
           const scaleH = targetH / origH;
-          const scale = Math.max(scaleW, scaleH); // cover
+          const scale = Math.min(scaleW, scaleH); // contain (was: max → cover)
           const scaledW = Math.round(origW * scale);
           const scaledH = Math.round(origH * scale);
           img.resize(scaledW, scaledH);
-          const cropX = Math.max(0, Math.floor((scaledW - targetW) / 2));
-          const cropY = Math.max(0, Math.floor((scaledH - targetH) / 2));
-          img.crop(cropX, cropY, targetW, targetH);
+
+          // Compose onto a black 1080×1920 canvas — center the scaled image,
+          // leave letterbox/pillarbox bars around it.
+          const canvas: any = new Image(targetW, targetH);
+          // Fill with opaque black: Image constructor defaults to transparent
+          // (RGBA 0x00000000); set every pixel to opaque black so platforms
+          // that flatten alpha don't end up with strange grey backgrounds.
+          canvas.fill(0x000000ff);
+          const offsetX = Math.floor((targetW - scaledW) / 2);
+          const offsetY = Math.floor((targetH - scaledH) / 2);
+          canvas.composite(img, offsetX, offsetY);
+
+          // Swap reference so the encode step below emits the letterboxed canvas.
+          img = canvas;
+
           newW = targetW;
           newH = targetH;
-          console.log(`[media-proxy] tiktok preset: ${origW}×${origH} → scaled ${scaledW}×${scaledH} → cropped ${cropX},${cropY} → ${targetW}×${targetH}`);
+          console.log(`[media-proxy] tiktok preset (letterbox): ${origW}×${origH} → scaled ${scaledW}×${scaledH} → composed onto ${targetW}×${targetH} at offset (${offsetX},${offsetY})`);
         } else {
           // Generic fit-into-box (preset=max or ?max=N)
           const maxW = targetMaxW ?? Number.MAX_SAFE_INTEGER;
